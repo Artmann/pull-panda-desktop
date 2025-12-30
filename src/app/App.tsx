@@ -1,6 +1,6 @@
 import { type ReactElement } from 'react'
 import { Provider } from 'react-redux'
-import { MemoryRouter, Routes, Route } from 'react-router'
+import { HashRouter, Routes, Route } from 'react-router'
 import { Loader2 } from 'lucide-react'
 
 import type { AppStore } from '@/app/store'
@@ -45,7 +45,7 @@ function AppContent(): ReactElement {
         <TitleBar />
 
         <div className="flex-1 min-h-0 overflow-auto">
-          <MemoryRouter>
+          <HashRouter>
             <Routes>
               <Route
                 path="/"
@@ -56,7 +56,7 @@ function AppContent(): ReactElement {
                 element={<PullRequestPage />}
               />
             </Routes>
-          </MemoryRouter>
+          </HashRouter>
         </div>
       </div>
     )

@@ -94,7 +94,7 @@ function PullRequestCard({
     return 'bg-gray-100 text-gray-800 border-gray-200'
   }, [status])
 
-  const pullRequestPath = `${pullRequest.repositoryOwner}/${pullRequest.repositoryName}/${pullRequest.number.toString()}`
+  const pullRequestPath = `/pull-requests/${pullRequest.id}`
 
   const handleClick = () => {
     navigate(pullRequestPath)
