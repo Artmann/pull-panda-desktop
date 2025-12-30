@@ -4,6 +4,7 @@ import fs from 'node:fs'
 import started from 'electron-squirrel-startup'
 import { Octokit } from '@octokit/rest'
 import { IPC_CHANNELS } from './lib/ipc/channels'
+import { syncPullRequests } from './sync/pullRequests'
 import type {
   DeviceCodeResponse,
   TokenResponse,
@@ -212,6 +213,22 @@ const createWindow = () => {
 app.on('ready', () => {
   setupIpcHandlers()
   createWindow()
+
+  const token = loadToken()
+
+  if (token) {
+    syncPullRequests(token)
+      .then((result) => {
+        console.log(`Synced ${result.synced} pull requests`)
+
+        if (result.errors.length > 0) {
+          console.warn('Sync warnings:', result.errors)
+        }
+      })
+      .catch((error) => {
+        console.error('Failed to sync pull requests:', error)
+      })
+  }
 })
 
 // Quit when all windows are closed, except on macOS. There, it's common
