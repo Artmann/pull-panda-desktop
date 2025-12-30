@@ -13,6 +13,7 @@ import type {
 } from './types/auth'
 
 let bootstrapData: BootstrapData | null = null
+let mainWindow: BrowserWindow | null = null
 
 // Handle creating/removing shortcuts on Windows when installing/uninstalling.
 if (started) {
@@ -196,17 +197,36 @@ function setupIpcHandlers(): void {
       return null
     }
   })
+
+  ipcMain.handle(ipcChannels.WindowClose, () => {
+    mainWindow?.close()
+  })
+
+  ipcMain.handle(ipcChannels.WindowMaximize, () => {
+    if (mainWindow?.isMaximized()) {
+      mainWindow.unmaximize()
+    } else {
+      mainWindow?.maximize()
+    }
+  })
+
+  ipcMain.handle(ipcChannels.WindowMinimize, () => {
+    mainWindow?.minimize()
+  })
 }
 
 const createWindow = () => {
-  const mainWindow = new BrowserWindow({
-    width: 1200,
+  mainWindow = new BrowserWindow({
+    frame: false,
     height: 700,
+    titleBarStyle: 'hidden',
+    trafficLightPosition: { x: 12, y: 10 },
     webPreferences: {
-      preload: path.join(__dirname, 'preload.js'),
       contextIsolation: true,
-      nodeIntegration: false
-    }
+      nodeIntegration: false,
+      preload: path.join(__dirname, 'preload.js')
+    },
+    width: 1200
   })
 
   // and load the index.html of the app.

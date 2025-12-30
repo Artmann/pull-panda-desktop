@@ -6,7 +6,16 @@ import type { DeviceCodeResponse, GitHubUser } from './types/auth'
 
 const electronApi = {
   getBootstrapData: (): Promise<BootstrapData | null> =>
-    ipcRenderer.invoke(ipcChannels.GetBootstrapData)
+    ipcRenderer.invoke(ipcChannels.GetBootstrapData),
+
+  windowClose: (): Promise<void> =>
+    ipcRenderer.invoke(ipcChannels.WindowClose),
+
+  windowMaximize: (): Promise<void> =>
+    ipcRenderer.invoke(ipcChannels.WindowMaximize),
+
+  windowMinimize: (): Promise<void> =>
+    ipcRenderer.invoke(ipcChannels.WindowMinimize)
 }
 
 const authApi = {

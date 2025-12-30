@@ -5,7 +5,10 @@ export const ipcChannels = {
   AuthOpenUrl: 'auth:open-url',
   AuthPollToken: 'auth:poll-token',
   AuthRequestDeviceCode: 'auth:request-device-code',
-  GetBootstrapData: 'get-bootstrap-data'
+  GetBootstrapData: 'get-bootstrap-data',
+  WindowClose: 'window:close',
+  WindowMaximize: 'window:maximize',
+  WindowMinimize: 'window:minimize'
 } as const
 
 export type IpcChannel = (typeof ipcChannels)[keyof typeof ipcChannels]
