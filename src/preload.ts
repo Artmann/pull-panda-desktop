@@ -1,35 +1,44 @@
 import { contextBridge, ipcRenderer } from 'electron'
-import { IPC_CHANNELS } from './lib/ipc/channels'
+
+import { ipcChannels } from './lib/ipc/channels'
+import type { BootstrapData } from './main/bootstrap'
 import type { DeviceCodeResponse, GitHubUser } from './types/auth'
+
+const electronApi = {
+  getBootstrapData: (): Promise<BootstrapData | null> =>
+    ipcRenderer.invoke(ipcChannels.GetBootstrapData)
+}
 
 const authApi = {
   requestDeviceCode: (): Promise<DeviceCodeResponse> =>
-    ipcRenderer.invoke(IPC_CHANNELS.AUTH_REQUEST_DEVICE_CODE),
+    ipcRenderer.invoke(ipcChannels.AuthRequestDeviceCode),
 
   pollForToken: (
     deviceCode: string,
     interval: number
   ): Promise<{ success: boolean }> =>
-    ipcRenderer.invoke(IPC_CHANNELS.AUTH_POLL_TOKEN, deviceCode, interval),
+    ipcRenderer.invoke(ipcChannels.AuthPollToken, deviceCode, interval),
 
   getToken: (): Promise<string | null> =>
-    ipcRenderer.invoke(IPC_CHANNELS.AUTH_GET_TOKEN),
+    ipcRenderer.invoke(ipcChannels.AuthGetToken),
 
   clearToken: (): Promise<{ success: boolean }> =>
-    ipcRenderer.invoke(IPC_CHANNELS.AUTH_CLEAR_TOKEN),
+    ipcRenderer.invoke(ipcChannels.AuthClearToken),
 
   openUrl: (url: string): Promise<{ success: boolean }> =>
-    ipcRenderer.invoke(IPC_CHANNELS.AUTH_OPEN_URL, url),
+    ipcRenderer.invoke(ipcChannels.AuthOpenUrl, url),
 
   getUser: (): Promise<GitHubUser | null> =>
-    ipcRenderer.invoke(IPC_CHANNELS.AUTH_GET_USER)
+    ipcRenderer.invoke(ipcChannels.AuthGetUser)
 }
 
+contextBridge.exposeInMainWorld('electron', electronApi)
 contextBridge.exposeInMainWorld('auth', authApi)
 
 // TypeScript declarations for the exposed API
 declare global {
   interface Window {
     auth: typeof authApi
+    electron: typeof electronApi
   }
 }

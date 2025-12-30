@@ -1,7 +1,7 @@
 import { Github, Loader2 } from 'lucide-react'
-import { Button } from '@/components/ui/button'
-import { DeviceCodeCard } from '@/components/auth/DeviceCodeCard'
-import { useAuth } from '@/lib/store/authContext'
+import { Button } from '@/app/components/ui/button'
+import { DeviceCodeCard } from '@/app/components/auth/DeviceCodeCard'
+import { useAuth } from '@/app/lib/store/authContext'
 
 export function LoginPage() {
   const {

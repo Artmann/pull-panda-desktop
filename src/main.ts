@@ -3,13 +3,16 @@ import path from 'node:path'
 import fs from 'node:fs'
 import started from 'electron-squirrel-startup'
 import { Octokit } from '@octokit/rest'
-import { IPC_CHANNELS } from './lib/ipc/channels'
+import { ipcChannels } from './lib/ipc/channels'
+import { bootstrap, BootstrapData } from './main/bootstrap'
 import { syncPullRequests } from './sync/pullRequests'
 import type {
   DeviceCodeResponse,
   TokenResponse,
   TokenErrorResponse
 } from './types/auth'
+
+let bootstrapData: BootstrapData | null = null
 
 // Handle creating/removing shortcuts on Windows when installing/uninstalling.
 if (started) {
@@ -24,52 +27,55 @@ const GITHUB_SCOPES = 'repo read:user'
 const getTokenPath = () =>
   path.join(app.getPath('userData'), 'github-token.enc')
 
-// Save encrypted token
 function saveToken(token: string): void {
   if (!safeStorage.isEncryptionAvailable()) {
     throw new Error('Encryption not available')
   }
+
   const encrypted = safeStorage.encryptString(token)
+
   fs.writeFileSync(getTokenPath(), encrypted)
 }
 
-// Load and decrypt token
 function loadToken(): string | null {
   const tokenPath = getTokenPath()
+
   if (!fs.existsSync(tokenPath)) {
     return null
   }
+
   if (!safeStorage.isEncryptionAvailable()) {
     return null
   }
+
   try {
     const encrypted = fs.readFileSync(tokenPath)
+
     return safeStorage.decryptString(encrypted)
   } catch {
     return null
   }
 }
 
-// Clear token
 function clearToken(): void {
   const tokenPath = getTokenPath()
+
   if (fs.existsSync(tokenPath)) {
     fs.unlinkSync(tokenPath)
   }
 }
 
-// Request device code from GitHub
 async function requestDeviceCode(): Promise<DeviceCodeResponse> {
   const response = await fetch('https://github.com/login/device/code', {
-    method: 'POST',
+    body: JSON.stringify({
+      client_id: GITHUB_CLIENT_ID,
+      scope: GITHUB_SCOPES
+    }),
     headers: {
       Accept: 'application/json',
       'Content-Type': 'application/json'
     },
-    body: JSON.stringify({
-      client_id: GITHUB_CLIENT_ID,
-      scope: GITHUB_SCOPES
-    })
+    method: 'POST'
   })
 
   if (!response.ok) {
@@ -79,7 +85,6 @@ async function requestDeviceCode(): Promise<DeviceCodeResponse> {
   return response.json()
 }
 
-// Poll for access token
 async function pollForToken(
   deviceCode: string,
   interval: number
@@ -88,16 +93,16 @@ async function pollForToken(
     const response = await fetch(
       'https://github.com/login/oauth/access_token',
       {
-        method: 'POST',
-        headers: {
-          Accept: 'application/json',
-          'Content-Type': 'application/json'
-        },
         body: JSON.stringify({
           client_id: GITHUB_CLIENT_ID,
           device_code: deviceCode,
           grant_type: 'urn:ietf:params:oauth:grant-type:device_code'
-        })
+        }),
+        headers: {
+          Accept: 'application/json',
+          'Content-Type': 'application/json'
+        },
+        method: 'POST'
       }
     )
 
@@ -107,12 +112,14 @@ async function pollForToken(
       if (data.error === 'authorization_pending') {
         // User hasn't authorized yet, wait and retry
         await new Promise((resolve) => setTimeout(resolve, interval * 1000))
+
         return poll()
       } else if (data.error === 'slow_down') {
         // Rate limited, increase interval
         await new Promise((resolve) =>
           setTimeout(resolve, (interval + 5) * 1000)
         )
+
         return poll()
       } else if (data.error === 'expired_token') {
         throw new Error('Device code expired. Please try again.')
@@ -129,10 +136,10 @@ async function pollForToken(
   return poll()
 }
 
-// Get GitHub user info
 async function getGitHubUser(token: string) {
   const octokit = new Octokit({ auth: token })
   const { data } = await octokit.users.getAuthenticated()
+
   return {
     login: data.login,
     avatar_url: data.avatar_url,
@@ -140,40 +147,49 @@ async function getGitHubUser(token: string) {
   }
 }
 
-// Set up IPC handlers
 function setupIpcHandlers(): void {
-  ipcMain.handle(IPC_CHANNELS.AUTH_REQUEST_DEVICE_CODE, async () => {
+  ipcMain.handle(ipcChannels.GetBootstrapData, () => {
+    return bootstrapData
+  })
+
+  ipcMain.handle(ipcChannels.AuthRequestDeviceCode, async () => {
     return requestDeviceCode()
   })
 
   ipcMain.handle(
-    IPC_CHANNELS.AUTH_POLL_TOKEN,
+    ipcChannels.AuthPollToken,
     async (_event, deviceCode: string, interval: number) => {
       const tokenResponse = await pollForToken(deviceCode, interval)
+
       saveToken(tokenResponse.access_token)
+
       return { success: true }
     }
   )
 
-  ipcMain.handle(IPC_CHANNELS.AUTH_GET_TOKEN, async () => {
+  ipcMain.handle(ipcChannels.AuthGetToken, async () => {
     return loadToken()
   })
 
-  ipcMain.handle(IPC_CHANNELS.AUTH_CLEAR_TOKEN, async () => {
+  ipcMain.handle(ipcChannels.AuthClearToken, async () => {
     clearToken()
+
     return { success: true }
   })
 
-  ipcMain.handle(IPC_CHANNELS.AUTH_OPEN_URL, async (_event, url: string) => {
+  ipcMain.handle(ipcChannels.AuthOpenUrl, async (_event, url: string) => {
     await shell.openExternal(url)
+
     return { success: true }
   })
 
-  ipcMain.handle(IPC_CHANNELS.AUTH_GET_USER, async () => {
+  ipcMain.handle(ipcChannels.AuthGetUser, async () => {
     const token = loadToken()
+
     if (!token) {
       return null
     }
+
     try {
       return await getGitHubUser(token)
     } catch {
@@ -183,10 +199,9 @@ function setupIpcHandlers(): void {
 }
 
 const createWindow = () => {
-  // Create the browser window.
   const mainWindow = new BrowserWindow({
-    width: 800,
-    height: 600,
+    width: 1200,
+    height: 700,
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
       contextIsolation: true,
@@ -210,20 +225,25 @@ const createWindow = () => {
 // This method will be called when Electron has finished
 // initialization and is ready to create browser windows.
 // Some APIs can only be used after this event occurs.
-app.on('ready', () => {
+app.on('ready', async () => {
   setupIpcHandlers()
+
+  bootstrapData = await bootstrap()
+
   createWindow()
 
   const token = loadToken()
 
   if (token) {
     syncPullRequests(token)
-      .then((result) => {
+      .then(async (result) => {
         console.log(`Synced ${result.synced} pull requests`)
 
         if (result.errors.length > 0) {
           console.warn('Sync warnings:', result.errors)
         }
+
+        bootstrapData = await bootstrap()
       })
       .catch((error) => {
         console.error('Failed to sync pull requests:', error)

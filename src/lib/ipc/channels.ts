@@ -1,10 +1,11 @@
-export const IPC_CHANNELS = {
-  AUTH_REQUEST_DEVICE_CODE: 'auth:request-device-code',
-  AUTH_POLL_TOKEN: 'auth:poll-token',
-  AUTH_GET_TOKEN: 'auth:get-token',
-  AUTH_CLEAR_TOKEN: 'auth:clear-token',
-  AUTH_OPEN_URL: 'auth:open-url',
-  AUTH_GET_USER: 'auth:get-user'
+export const ipcChannels = {
+  AuthClearToken: 'auth:clear-token',
+  AuthGetToken: 'auth:get-token',
+  AuthGetUser: 'auth:get-user',
+  AuthOpenUrl: 'auth:open-url',
+  AuthPollToken: 'auth:poll-token',
+  AuthRequestDeviceCode: 'auth:request-device-code',
+  GetBootstrapData: 'get-bootstrap-data'
 } as const
 
-export type IpcChannel = (typeof IPC_CHANNELS)[keyof typeof IPC_CHANNELS]
+export type IpcChannel = (typeof ipcChannels)[keyof typeof ipcChannels]

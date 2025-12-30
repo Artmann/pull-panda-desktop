@@ -1,9 +1,27 @@
 import { type ReactElement } from 'react'
+import { Provider } from 'react-redux'
+import { MemoryRouter, Routes, Route } from 'react-router'
 import { Loader2 } from 'lucide-react'
 
-import { AuthProvider, useAuth } from '@/lib/store/authContext'
+import type { AppStore } from '@/app/store'
+import { AuthProvider, useAuth } from '@/app/lib/store/authContext'
 import { LoginPage } from '@/app/pages/LoginPage'
-import { HomePage } from '@/app/pages/HomePage'
+import { HomePage } from '@/app/routes/HomePage'
+import { PullRequestPage } from '@/app/routes/PullRequestPage'
+
+interface AppProps {
+  store: AppStore
+}
+
+export function App({ store }: AppProps): ReactElement {
+  return (
+    <Provider store={store}>
+      <AuthProvider>
+        <AppContent />
+      </AuthProvider>
+    </Provider>
+  )
+}
 
 function AppContent(): ReactElement {
   const { status } = useAuth()
@@ -17,16 +35,21 @@ function AppContent(): ReactElement {
   }
 
   if (status === 'authenticated') {
-    return <HomePage />
+    return (
+      <MemoryRouter>
+        <Routes>
+          <Route
+            path="/"
+            element={<HomePage />}
+          />
+          <Route
+            path="/pull-requests/:id"
+            element={<PullRequestPage />}
+          />
+        </Routes>
+      </MemoryRouter>
+    )
   }
 
   return <LoginPage />
-}
-
-export function App(): ReactElement {
-  return (
-    <AuthProvider>
-      <AppContent />
-    </AuthProvider>
-  )
 }

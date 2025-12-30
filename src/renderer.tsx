@@ -28,11 +28,32 @@
 
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
-import { App } from './app/App'
-import './index.css'
 
-createRoot(document.getElementById('root')!).render(
-  <StrictMode>
-    <App />
-  </StrictMode>
-)
+import { App } from './app/App'
+import { createStore } from './app/store'
+import './app/index.css'
+
+async function main() {
+  const bootstrapData = await window.electron.getBootstrapData()
+
+  const store = createStore({
+    pullRequests: {
+      items: bootstrapData?.pullRequests ?? [],
+      loading: false
+    }
+  })
+
+  const root = document.getElementById('root')
+
+  if (!root) {
+    throw new Error('Root element not found')
+  }
+
+  createRoot(root).render(
+    <StrictMode>
+      <App store={store} />
+    </StrictMode>
+  )
+}
+
+main()
