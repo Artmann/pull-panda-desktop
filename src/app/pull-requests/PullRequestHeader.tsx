@@ -11,7 +11,6 @@ import {
   BreadcrumbSeparator
 } from '../components/ui/breadcrumb'
 import { PullRequestStatusBadge } from '../components/PullRequestStatusBadge'
-import { ReviewBadge } from '../components/ReviewBadge'
 import { ReactElement } from 'react'
 import { cn } from '../lib/utils'
 

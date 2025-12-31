@@ -4,6 +4,7 @@ import { HashRouter, Routes, Route } from 'react-router'
 import { Loader2 } from 'lucide-react'
 
 import type { AppStore } from '@/app/store'
+import { ErrorBoundary } from '@/app/components/ErrorBoundary'
 import { TitleBar } from '@/app/components/TitleBar'
 import { AuthProvider, useAuth } from '@/app/lib/store/authContext'
 import { LoginPage } from '@/app/pages/LoginPage'
@@ -45,18 +46,20 @@ function AppContent(): ReactElement {
         <TitleBar />
 
         <div className="flex-1 min-h-0 overflow-auto">
-          <HashRouter>
-            <Routes>
-              <Route
-                path="/"
-                element={<HomePage />}
-              />
-              <Route
-                path="/pull-requests/:id"
-                element={<PullRequestPage />}
-              />
-            </Routes>
-          </HashRouter>
+          <ErrorBoundary>
+            <HashRouter>
+              <Routes>
+                <Route
+                  path="/"
+                  element={<HomePage />}
+                />
+                <Route
+                  path="/pull-requests/:id"
+                  element={<PullRequestPage />}
+                />
+              </Routes>
+            </HashRouter>
+          </ErrorBoundary>
         </div>
       </div>
     )

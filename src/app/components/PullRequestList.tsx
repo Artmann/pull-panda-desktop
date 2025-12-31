@@ -34,8 +34,8 @@ function PullRequestCard({
 }): ReactElement {
   const navigate = useNavigate()
 
-  const comments = []
-  const allReviews: any[] = []
+  const comments: unknown[] = []
+  const allReviews: Array<{ state: string }> = []
   const commentCount = comments.length
   const approvalCount = allReviews.filter(
     (review) => review.state === 'APPROVED'
