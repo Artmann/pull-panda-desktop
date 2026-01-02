@@ -18,7 +18,8 @@
     "publish": "electron-forge publish",
     "start": "electron-forge start",
     "test": "vitest",
-    "test:run": "vitest run"
+    "test:run": "vitest run",
+    "typecheck": "tsc --noEmit --skipLibCheck"
   },
   "dependencies": {
     "@octokit/graphql": "^9.0.3",

@@ -1,0 +1,43 @@
+name: Release
+
+on:
+  release:
+    types: [created]
+
+permissions:
+  contents: write
+
+jobs:
+  publish:
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: yarn
+
+      - name: Install dependencies
+        run: yarn install
+
+      - name: Set version from tag
+        shell: bash
+        run: npm pkg set version=${GITHUB_REF_NAME#v}.0
+
+      - name: Build artifacts
+        run: yarn make
+
+      - name: Upload to release
+        shell: bash
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run:
+          find out/make -type f \( -name "*.exe" -o -name "*.zip" -o -name
+          "*.deb" -o -name "*.rpm" -o -name "*.nupkg" -o -name "RELEASES" \)
+          -exec gh release upload ${{ github.ref_name }} {} --clobber \;
