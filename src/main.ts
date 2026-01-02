@@ -1,17 +1,24 @@
-import { app, BrowserWindow, ipcMain, shell, safeStorage } from 'electron'
-import path from 'node:path'
-import fs from 'node:fs'
+import { app, BrowserWindow, ipcMain, shell } from 'electron'
 import started from 'electron-squirrel-startup'
-import { Octokit } from '@octokit/rest'
+import path from 'node:path'
+
 import { ipcChannels } from './lib/ipc/channels'
-import { bootstrap, BootstrapData, getPullRequestDetails } from './main/bootstrap'
+import {
+  bootstrap,
+  BootstrapData,
+  getPullRequestDetails
+} from './main/bootstrap'
+import { taskManager } from './main/taskManager'
 import { syncPullRequests } from './sync/pullRequests'
 import { syncPullRequestDetails } from './sync/syncPullRequestDetails'
-import type {
-  DeviceCodeResponse,
-  TokenResponse,
-  TokenErrorResponse
-} from './types/auth'
+import {
+  clearToken,
+  getGitHubUser,
+  loadToken,
+  pollForToken,
+  requestDeviceCode,
+  saveToken
+} from './auth'
 
 let bootstrapData: BootstrapData | null = null
 let mainWindow: BrowserWindow | null = null
@@ -21,137 +28,13 @@ if (started) {
   app.quit()
 }
 
-// GitHub OAuth configuration
-const GITHUB_CLIENT_ID = 'Ov23liTdCH6GSo575kz2'
-const GITHUB_SCOPES = 'repo read:user'
-
-// Token storage path
-const getTokenPath = () =>
-  path.join(app.getPath('userData'), 'github-token.enc')
-
-function saveToken(token: string): void {
-  if (!safeStorage.isEncryptionAvailable()) {
-    throw new Error('Encryption not available')
-  }
-
-  const encrypted = safeStorage.encryptString(token)
-
-  fs.writeFileSync(getTokenPath(), encrypted)
-}
-
-function loadToken(): string | null {
-  const tokenPath = getTokenPath()
-
-  if (!fs.existsSync(tokenPath)) {
-    return null
-  }
-
-  if (!safeStorage.isEncryptionAvailable()) {
-    return null
-  }
-
-  try {
-    const encrypted = fs.readFileSync(tokenPath)
-
-    return safeStorage.decryptString(encrypted)
-  } catch {
-    return null
-  }
-}
-
-function clearToken(): void {
-  const tokenPath = getTokenPath()
-
-  if (fs.existsSync(tokenPath)) {
-    fs.unlinkSync(tokenPath)
-  }
-}
-
-async function requestDeviceCode(): Promise<DeviceCodeResponse> {
-  const response = await fetch('https://github.com/login/device/code', {
-    body: JSON.stringify({
-      client_id: GITHUB_CLIENT_ID,
-      scope: GITHUB_SCOPES
-    }),
-    headers: {
-      Accept: 'application/json',
-      'Content-Type': 'application/json'
-    },
-    method: 'POST'
-  })
-
-  if (!response.ok) {
-    throw new Error(`Failed to request device code: ${response.statusText}`)
-  }
-
-  return response.json()
-}
-
-async function pollForToken(
-  deviceCode: string,
-  interval: number
-): Promise<TokenResponse> {
-  const poll = async (): Promise<TokenResponse> => {
-    const response = await fetch(
-      'https://github.com/login/oauth/access_token',
-      {
-        body: JSON.stringify({
-          client_id: GITHUB_CLIENT_ID,
-          device_code: deviceCode,
-          grant_type: 'urn:ietf:params:oauth:grant-type:device_code'
-        }),
-        headers: {
-          Accept: 'application/json',
-          'Content-Type': 'application/json'
-        },
-        method: 'POST'
-      }
-    )
-
-    const data = (await response.json()) as TokenResponse | TokenErrorResponse
-
-    if ('error' in data) {
-      if (data.error === 'authorization_pending') {
-        // User hasn't authorized yet, wait and retry
-        await new Promise((resolve) => setTimeout(resolve, interval * 1000))
-
-        return poll()
-      } else if (data.error === 'slow_down') {
-        // Rate limited, increase interval
-        await new Promise((resolve) =>
-          setTimeout(resolve, (interval + 5) * 1000)
-        )
-
-        return poll()
-      } else if (data.error === 'expired_token') {
-        throw new Error('Device code expired. Please try again.')
-      } else if (data.error === 'access_denied') {
-        throw new Error('Access denied by user.')
-      } else {
-        throw new Error(data.error_description || data.error)
-      }
-    }
-
-    return data
-  }
-
-  return poll()
-}
-
-async function getGitHubUser(token: string) {
-  const octokit = new Octokit({ auth: token })
-  const { data } = await octokit.users.getAuthenticated()
-
-  return {
-    login: data.login,
-    avatar_url: data.avatar_url,
-    name: data.name
-  }
-}
-
 function setupIpcHandlers(): void {
   ipcMain.handle(ipcChannels.GetBootstrapData, () => {
     return bootstrapData
+  })
+
+  ipcMain.handle(ipcChannels.GetTasks, () => {
+    return taskManager.getTasks()
   })
 
   ipcMain.handle(ipcChannels.AuthRequestDeviceCode, async () => {
@@ -269,6 +152,8 @@ const createWindow = () => {
     width: 1200
   })
 
+  taskManager.setMainWindow(mainWindow)
+
   // and load the index.html of the app.
   if (MAIN_WINDOW_VITE_DEV_SERVER_URL) {
     mainWindow.loadURL(MAIN_WINDOW_VITE_DEV_SERVER_URL)
@@ -290,11 +175,27 @@ async function syncAllPullRequestDetails(token: string): Promise<void> {
     return
   }
 
-  console.log(
-    `Starting background sync for ${bootstrapData.pullRequests.length} PRs`
-  )
+  const pullRequests = bootstrapData.pullRequests
+  const total = pullRequests.length
 
-  for (const pullRequest of bootstrapData.pullRequests) {
+  console.log(`Starting background sync for ${total} PRs`)
+
+  const task = taskManager.createTask('syncPullRequestDetails', {
+    message: 'Synchronizing pull requests...',
+    metadata: { totalPullRequests: total }
+  })
+
+  taskManager.startTask(task.id)
+  taskManager.updateTaskProgress(task.id, {
+    current: 0,
+    total,
+    message: `Syncing 0/${total} pull requests`
+  })
+
+  let completed = 0
+  const errors: string[] = []
+
+  for (const pullRequest of pullRequests) {
     try {
       await syncPullRequestDetails({
         token,
@@ -309,11 +210,30 @@ async function syncAllPullRequestDetails(token: string): Promise<void> {
         pullRequestId: pullRequest.id
       })
     } catch (error) {
+      const message = error instanceof Error ? error.message : 'Unknown error'
+      errors.push(`PR #${pullRequest.number}: ${message}`)
       console.error(
         `Failed to sync details for PR #${pullRequest.number}:`,
         error
       )
     }
+
+    completed++
+
+    taskManager.updateTaskProgress(task.id, {
+      current: completed,
+      total,
+      message: `Syncing ${completed}/${total} pull requests`
+    })
+  }
+
+  if (errors.length > 0) {
+    taskManager.failTask(
+      task.id,
+      `${errors.length} pull requests failed to sync`
+    )
+  } else {
+    taskManager.completeTask(task.id)
   }
 
   console.log('Background sync for all PR details completed')
@@ -329,8 +249,16 @@ app.on('ready', async () => {
   const token = loadToken()
 
   if (token) {
+    const syncTask = taskManager.createTask('syncPullRequests', {
+      message: 'Synchronizing pull requests...'
+    })
+
+    taskManager.startTask(syncTask.id)
+
     syncPullRequests(token)
       .then(async (result) => {
+        taskManager.completeTask(syncTask.id)
+
         console.log(`Synced ${result.synced} pull requests`)
 
         if (result.errors.length > 0) {
@@ -348,6 +276,10 @@ app.on('ready', async () => {
         })
       })
       .catch((error) => {
+        taskManager.failTask(
+          syncTask.id,
+          error instanceof Error ? error.message : 'Unknown error'
+        )
         console.error('Failed to sync pull requests:', error)
       })
   }

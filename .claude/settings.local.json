@@ -3,14 +3,14 @@
     "allow": [
       "Bash(yarn lint:*)",
       "Bash(npx tsc:*)",
-      "Bash(ls -la \"C:\\\\Users\\\\Artga\\\\Code\\\\pull-panda\\\\app\\\\pull-requests\\\\syncers\"\" 2>&1 || find \"C:UsersArtgaCodepull-panda\" -type d -name \"syncers \")",
       "Bash(cat:*)",
       "Bash(npx drizzle-kit:*)",
       "Bash(npm rebuild:*)",
       "Bash(yarn tsc:*)",
       "Bash(yarn vite build:*)",
       "Bash(yarn add:*)",
-      "Bash(yarn test:run:*)"
+      "Bash(yarn test:run:*)",
+      "Bash(find:*)"
     ]
   }
 }

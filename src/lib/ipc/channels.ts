@@ -7,8 +7,10 @@ export const ipcChannels = {
   AuthRequestDeviceCode: 'auth:request-device-code',
   GetBootstrapData: 'get-bootstrap-data',
   GetPullRequestDetails: 'get-pull-request-details',
+  GetTasks: 'tasks:get',
   SyncComplete: 'sync:complete',
   SyncPullRequestDetails: 'sync:pull-request-details',
+  TaskUpdate: 'tasks:update',
   WindowClose: 'window:close',
   WindowMaximize: 'window:maximize',
   WindowMinimize: 'window:minimize'

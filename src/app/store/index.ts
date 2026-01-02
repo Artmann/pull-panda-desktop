@@ -2,10 +2,12 @@ import { configureStore } from '@reduxjs/toolkit'
 
 import navigationReducer, { NavigationState } from './navigationSlice'
 import pullRequestsReducer, { PullRequestsState } from './pullRequestsSlice'
+import tasksReducer, { TasksState } from './tasksSlice'
 
 export interface PreloadedState {
   navigation?: NavigationState
   pullRequests?: PullRequestsState
+  tasks?: TasksState
 }
 
 export function createStore(preloadedState?: PreloadedState) {
@@ -13,7 +15,8 @@ export function createStore(preloadedState?: PreloadedState) {
     preloadedState,
     reducer: {
       navigation: navigationReducer,
-      pullRequests: pullRequestsReducer
+      pullRequests: pullRequestsReducer,
+      tasks: tasksReducer
     }
   })
 }

@@ -4,6 +4,7 @@ import { ipcChannels } from './lib/ipc/channels'
 import type { BootstrapData } from './main/bootstrap'
 import type { DeviceCodeResponse, GitHubUser } from './types/auth'
 import type { PullRequestDetails } from './types/pullRequestDetails'
+import type { Task, TaskUpdateEvent } from './types/task'
 
 interface SyncCompleteEvent {
   type: 'pull-requests' | 'pull-request-details'
@@ -40,6 +41,18 @@ const electronApi = {
 
     return () => {
       ipcRenderer.removeListener(ipcChannels.SyncComplete, handler)
+    }
+  },
+
+  getTasks: (): Promise<Task[]> => ipcRenderer.invoke(ipcChannels.GetTasks),
+
+  onTaskUpdate: (callback: (event: TaskUpdateEvent) => void): (() => void) => {
+    const handler = (_event: unknown, data: TaskUpdateEvent) => callback(data)
+
+    ipcRenderer.on(ipcChannels.TaskUpdate, handler)
+
+    return () => {
+      ipcRenderer.removeListener(ipcChannels.TaskUpdate, handler)
     }
   },
 
