@@ -4,8 +4,9 @@ import fs from 'node:fs'
 import started from 'electron-squirrel-startup'
 import { Octokit } from '@octokit/rest'
 import { ipcChannels } from './lib/ipc/channels'
-import { bootstrap, BootstrapData } from './main/bootstrap'
+import { bootstrap, BootstrapData, getPullRequestDetails } from './main/bootstrap'
 import { syncPullRequests } from './sync/pullRequests'
+import { syncPullRequestDetails } from './sync/syncPullRequestDetails'
 import type {
   DeviceCodeResponse,
   TokenResponse,
@@ -213,6 +214,45 @@ function setupIpcHandlers(): void {
   ipcMain.handle(ipcChannels.WindowMinimize, () => {
     mainWindow?.minimize()
   })
+
+  ipcMain.handle(
+    ipcChannels.GetPullRequestDetails,
+    async (_event, pullRequestId: string) => {
+      return getPullRequestDetails(pullRequestId)
+    }
+  )
+
+  ipcMain.handle(
+    ipcChannels.SyncPullRequestDetails,
+    async (
+      _event,
+      pullRequestId: string,
+      owner: string,
+      repositoryName: string,
+      pullNumber: number
+    ) => {
+      const token = loadToken()
+
+      if (!token) {
+        return { success: false, errors: ['No token available'] }
+      }
+
+      const result = await syncPullRequestDetails({
+        token,
+        pullRequestId,
+        owner,
+        repositoryName,
+        pullNumber
+      })
+
+      mainWindow?.webContents.send(ipcChannels.SyncComplete, {
+        type: 'pull-request-details',
+        pullRequestId
+      })
+
+      return result
+    }
+  )
 }
 
 const createWindow = () => {
@@ -245,6 +285,40 @@ const createWindow = () => {
 // This method will be called when Electron has finished
 // initialization and is ready to create browser windows.
 // Some APIs can only be used after this event occurs.
+async function syncAllPullRequestDetails(token: string): Promise<void> {
+  if (!bootstrapData) {
+    return
+  }
+
+  console.log(
+    `Starting background sync for ${bootstrapData.pullRequests.length} PRs`
+  )
+
+  for (const pullRequest of bootstrapData.pullRequests) {
+    try {
+      await syncPullRequestDetails({
+        token,
+        pullRequestId: pullRequest.id,
+        owner: pullRequest.repositoryOwner,
+        repositoryName: pullRequest.repositoryName,
+        pullNumber: pullRequest.number
+      })
+
+      mainWindow?.webContents.send(ipcChannels.SyncComplete, {
+        type: 'pull-request-details',
+        pullRequestId: pullRequest.id
+      })
+    } catch (error) {
+      console.error(
+        `Failed to sync details for PR #${pullRequest.number}:`,
+        error
+      )
+    }
+  }
+
+  console.log('Background sync for all PR details completed')
+}
+
 app.on('ready', async () => {
   setupIpcHandlers()
 
@@ -264,6 +338,14 @@ app.on('ready', async () => {
         }
 
         bootstrapData = await bootstrap()
+
+        mainWindow?.webContents.send(ipcChannels.SyncComplete, {
+          type: 'pull-requests'
+        })
+
+        syncAllPullRequestDetails(token).catch((error) => {
+          console.error('Failed to sync PR details:', error)
+        })
       })
       .catch((error) => {
         console.error('Failed to sync pull requests:', error)

@@ -3,10 +3,45 @@ import { contextBridge, ipcRenderer } from 'electron'
 import { ipcChannels } from './lib/ipc/channels'
 import type { BootstrapData } from './main/bootstrap'
 import type { DeviceCodeResponse, GitHubUser } from './types/auth'
+import type { PullRequestDetails } from './types/pullRequestDetails'
+
+interface SyncCompleteEvent {
+  type: 'pull-requests' | 'pull-request-details'
+  pullRequestId?: string
+}
 
 const electronApi = {
   getBootstrapData: (): Promise<BootstrapData | null> =>
     ipcRenderer.invoke(ipcChannels.GetBootstrapData),
+
+  getPullRequestDetails: (
+    pullRequestId: string
+  ): Promise<PullRequestDetails | null> =>
+    ipcRenderer.invoke(ipcChannels.GetPullRequestDetails, pullRequestId),
+
+  syncPullRequestDetails: (
+    pullRequestId: string,
+    owner: string,
+    repositoryName: string,
+    pullNumber: number
+  ): Promise<{ success: boolean; errors: string[] }> =>
+    ipcRenderer.invoke(
+      ipcChannels.SyncPullRequestDetails,
+      pullRequestId,
+      owner,
+      repositoryName,
+      pullNumber
+    ),
+
+  onSyncComplete: (callback: (event: SyncCompleteEvent) => void): (() => void) => {
+    const handler = (_event: unknown, data: SyncCompleteEvent) => callback(data)
+
+    ipcRenderer.on(ipcChannels.SyncComplete, handler)
+
+    return () => {
+      ipcRenderer.removeListener(ipcChannels.SyncComplete, handler)
+    }
+  },
 
   windowClose: (): Promise<void> =>
     ipcRenderer.invoke(ipcChannels.WindowClose),

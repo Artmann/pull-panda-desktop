@@ -150,7 +150,7 @@ export function PullRequestPage(): ReactElement {
           </TabsList>
         </div>
 
-        <div className="flex-1 overflow-hidden">
+        <div className="flex-1">
           {tabs.map((tab) => (
             <TabsContent
               key={tab.id}
