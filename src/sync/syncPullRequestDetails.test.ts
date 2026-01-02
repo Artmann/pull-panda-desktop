@@ -1,5 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 
+import type { GraphqlClient } from './test-helpers'
+
 vi.mock('./graphql', () => ({
   createGraphqlClient: vi.fn()
 }))
@@ -33,7 +35,7 @@ import { syncComments } from './syncComments'
 import { syncPullRequestDetails } from './syncPullRequestDetails'
 
 describe('syncPullRequestDetails', () => {
-  const mockClient = vi.fn()
+  const mockClient = vi.fn() as unknown as GraphqlClient
 
   beforeEach(() => {
     vi.clearAllMocks()

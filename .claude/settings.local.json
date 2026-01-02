@@ -10,7 +10,8 @@
       "Bash(yarn vite build:*)",
       "Bash(yarn add:*)",
       "Bash(yarn test:run:*)",
-      "Bash(find:*)"
+      "Bash(find:*)",
+      "Bash(yarn typecheck:*)"
     ]
   }
 }

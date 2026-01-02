@@ -1,7 +1,12 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { eq, and, isNull } from 'drizzle-orm'
 
-import { setupTestDatabase, teardownTestDatabase, mockReviewsResponse } from './test-helpers'
+import {
+  setupTestDatabase,
+  teardownTestDatabase,
+  mockReviewsResponse,
+  type GraphqlClient
+} from './test-helpers'
 import { getDatabase } from '../database'
 import { reviews, comments, commentReactions } from '../database/schema'
 import { syncReviews } from './syncReviews'
@@ -16,7 +21,7 @@ describe('syncReviews', () => {
   })
 
   it('should sync reviews from GitHub response', async () => {
-    const mockClient = vi.fn().mockResolvedValue(mockReviewsResponse)
+    const mockClient = vi.fn().mockResolvedValue(mockReviewsResponse) as unknown as GraphqlClient
 
     await syncReviews({
       client: mockClient,
@@ -45,7 +50,7 @@ describe('syncReviews', () => {
   })
 
   it('should store review metadata correctly', async () => {
-    const mockClient = vi.fn().mockResolvedValue(mockReviewsResponse)
+    const mockClient = vi.fn().mockResolvedValue(mockReviewsResponse) as unknown as GraphqlClient
 
     await syncReviews({
       client: mockClient,
@@ -69,7 +74,7 @@ describe('syncReviews', () => {
   })
 
   it('should sync review comments', async () => {
-    const mockClient = vi.fn().mockResolvedValue(mockReviewsResponse)
+    const mockClient = vi.fn().mockResolvedValue(mockReviewsResponse) as unknown as GraphqlClient
 
     await syncReviews({
       client: mockClient,
@@ -92,7 +97,7 @@ describe('syncReviews', () => {
   })
 
   it('should sync comment reactions', async () => {
-    const mockClient = vi.fn().mockResolvedValue(mockReviewsResponse)
+    const mockClient = vi.fn().mockResolvedValue(mockReviewsResponse) as unknown as GraphqlClient
 
     await syncReviews({
       client: mockClient,
@@ -115,7 +120,7 @@ describe('syncReviews', () => {
   })
 
   it('should handle reviews without comments', async () => {
-    const mockClient = vi.fn().mockResolvedValue(mockReviewsResponse)
+    const mockClient = vi.fn().mockResolvedValue(mockReviewsResponse) as unknown as GraphqlClient
 
     await syncReviews({
       client: mockClient,
@@ -149,7 +154,7 @@ describe('syncReviews', () => {
       syncedAt: new Date().toISOString()
     })
 
-    const mockClient = vi.fn().mockResolvedValue(mockReviewsResponse)
+    const mockClient = vi.fn().mockResolvedValue(mockReviewsResponse) as unknown as GraphqlClient
 
     await syncReviews({
       client: mockClient,
@@ -179,13 +184,13 @@ describe('syncReviews', () => {
       repository: {
         pullRequest: {
           reviews: {
-            nodes: []
+            nodes: [] as unknown[]
           }
         }
       }
     }
 
-    const mockClient = vi.fn().mockResolvedValue(emptyResponse)
+    const mockClient = vi.fn().mockResolvedValue(emptyResponse) as unknown as GraphqlClient
 
     await syncReviews({
       client: mockClient,
@@ -205,7 +210,7 @@ describe('syncReviews', () => {
   })
 
   it('should throw on API errors', async () => {
-    const mockClient = vi.fn().mockRejectedValue(new Error('API error'))
+    const mockClient = vi.fn().mockRejectedValue(new Error('API error')) as unknown as GraphqlClient
 
     await expect(
       syncReviews({
@@ -247,9 +252,9 @@ describe('syncReviews', () => {
                       commit: { oid: 'abc' },
                       originalCommit: { oid: 'def' },
                       pullRequestReview: { id: 'review-add' },
-                      replyTo: null,
+                      replyTo: null as null,
                       author: { login: 'user', avatarUrl: 'https://avatar' },
-                      reactions: { nodes: [] }
+                      reactions: { nodes: [] as unknown[] }
                     }
                   ]
                 }
@@ -260,7 +265,7 @@ describe('syncReviews', () => {
       }
     }
 
-    const mockClient = vi.fn().mockResolvedValue(responseWithAddedLineComment)
+    const mockClient = vi.fn().mockResolvedValue(responseWithAddedLineComment) as unknown as GraphqlClient
 
     await syncReviews({
       client: mockClient,

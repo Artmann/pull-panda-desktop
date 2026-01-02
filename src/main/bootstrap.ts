@@ -43,6 +43,7 @@ export async function bootstrap(): Promise<BootstrapData> {
     closedAt: row.closedAt,
     createdAt: row.createdAt,
     id: row.id,
+    isDraft: row.isDraft,
     isAssignee: row.isAssignee,
     isAuthor: row.isAuthor,
     isReviewer: row.isReviewer,

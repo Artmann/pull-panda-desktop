@@ -22,6 +22,7 @@ export interface PullRequest {
   updatedAt: string
   closedAt: string | null
   mergedAt: string | null
+  isDraft: boolean
   isAuthor: boolean
   isAssignee: boolean
   isReviewer: boolean

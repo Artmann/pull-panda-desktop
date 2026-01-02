@@ -19,6 +19,7 @@ export const pullRequests = sqliteTable('pull_requests', {
   closedAt: text('closed_at'),
   mergedAt: text('merged_at'),
 
+  isDraft: integer('is_draft', { mode: 'boolean' }).notNull().default(false),
   isAuthor: integer('is_author', { mode: 'boolean' }).notNull().default(false),
   isAssignee: integer('is_assignee', { mode: 'boolean' }).notNull().default(false),
   isReviewer: integer('is_reviewer', { mode: 'boolean' }).notNull().default(false),

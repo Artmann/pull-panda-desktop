@@ -1,6 +1,9 @@
 import { vi } from 'vitest'
 
 import { createInMemoryDatabase, setDatabase } from '../database'
+import type { createGraphqlClient } from './graphql'
+
+export type GraphqlClient = ReturnType<typeof createGraphqlClient>
 
 export function setupTestDatabase() {
   const db = createInMemoryDatabase()
@@ -13,7 +16,7 @@ export function teardownTestDatabase() {
 }
 
 export function createMockGraphqlClient() {
-  return vi.fn()
+  return vi.fn() as unknown as GraphqlClient
 }
 
 export function createMockOctokit() {
@@ -191,7 +194,7 @@ export const mockReviewsResponse = {
                   commit: { oid: 'commit-1' },
                   originalCommit: { oid: 'commit-0' },
                   pullRequestReview: { id: 'review-1' },
-                  replyTo: null,
+                  replyTo: null as null,
                   author: {
                     login: 'reviewer1',
                     avatarUrl: 'https://avatars.githubusercontent.com/u/10'
@@ -221,7 +224,7 @@ export const mockReviewsResponse = {
               avatarUrl: 'https://avatars.githubusercontent.com/u/11'
             },
             comments: {
-              nodes: []
+              nodes: [] as unknown[]
             }
           }
         ]
@@ -276,13 +279,13 @@ export const mockCommentsResponse = {
                   commit: { oid: 'commit-2' },
                   originalCommit: { oid: 'commit-1' },
                   pullRequestReview: { id: 'review-2' },
-                  replyTo: null,
+                  replyTo: null as null,
                   author: {
                     login: 'reviewer2',
                     avatarUrl: 'https://avatars.githubusercontent.com/u/11'
                   },
                   reactions: {
-                    nodes: []
+                    nodes: [] as unknown[]
                   }
                 },
                 {
@@ -297,14 +300,14 @@ export const mockCommentsResponse = {
                   diffHunk: '@@ -5,10 +5,15 @@\n function old() {\n+function new() {',
                   commit: { oid: 'commit-2' },
                   originalCommit: { oid: 'commit-1' },
-                  pullRequestReview: null,
+                  pullRequestReview: null as null,
                   replyTo: { id: 'thread-comment-1' },
                   author: {
                     login: 'author',
                     avatarUrl: 'https://avatars.githubusercontent.com/u/1'
                   },
                   reactions: {
-                    nodes: []
+                    nodes: [] as unknown[]
                   }
                 }
               ]
