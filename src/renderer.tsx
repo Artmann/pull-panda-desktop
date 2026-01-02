@@ -38,8 +38,7 @@ async function main() {
 
   const store = createStore({
     pullRequests: {
-      items: bootstrapData?.pullRequests ?? [],
-      loading: false
+      items: bootstrapData?.pullRequests ?? []
     }
   })
 

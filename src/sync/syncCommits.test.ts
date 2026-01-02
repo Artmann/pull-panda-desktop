@@ -1,7 +1,12 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { eq, and, isNull } from 'drizzle-orm'
 
-import { setupTestDatabase, teardownTestDatabase, mockCommitsResponse } from './test-helpers'
+import {
+  setupTestDatabase,
+  teardownTestDatabase,
+  mockCommitsResponse,
+  type GraphqlClient
+} from './test-helpers'
 import { getDatabase } from '../database'
 import { commits } from '../database/schema'
 import { syncCommits } from './syncCommits'
@@ -16,7 +21,7 @@ describe('syncCommits', () => {
   })
 
   it('should sync commits from GitHub response', async () => {
-    const mockClient = vi.fn().mockResolvedValue(mockCommitsResponse)
+    const mockClient = vi.fn().mockResolvedValue(mockCommitsResponse) as unknown as GraphqlClient
 
     await syncCommits({
       client: mockClient,
@@ -45,7 +50,7 @@ describe('syncCommits', () => {
   })
 
   it('should normalize commit messages', async () => {
-    const mockClient = vi.fn().mockResolvedValue(mockCommitsResponse)
+    const mockClient = vi.fn().mockResolvedValue(mockCommitsResponse) as unknown as GraphqlClient
 
     await syncCommits({
       client: mockClient,
@@ -67,7 +72,7 @@ describe('syncCommits', () => {
   })
 
   it('should extract author login from user object', async () => {
-    const mockClient = vi.fn().mockResolvedValue(mockCommitsResponse)
+    const mockClient = vi.fn().mockResolvedValue(mockCommitsResponse) as unknown as GraphqlClient
 
     await syncCommits({
       client: mockClient,
@@ -105,7 +110,7 @@ describe('syncCommits', () => {
                   author: {
                     name: 'Bot User',
                     avatarUrl: 'https://avatars.githubusercontent.com/u/0',
-                    user: null
+                    user: null as null
                   }
                 }
               }
@@ -115,7 +120,7 @@ describe('syncCommits', () => {
       }
     }
 
-    const mockClient = vi.fn().mockResolvedValue(responseWithoutUserLogin)
+    const mockClient = vi.fn().mockResolvedValue(responseWithoutUserLogin) as unknown as GraphqlClient
 
     await syncCommits({
       client: mockClient,
@@ -145,7 +150,7 @@ describe('syncCommits', () => {
       syncedAt: new Date().toISOString()
     })
 
-    const mockClient = vi.fn().mockResolvedValue(mockCommitsResponse)
+    const mockClient = vi.fn().mockResolvedValue(mockCommitsResponse) as unknown as GraphqlClient
 
     await syncCommits({
       client: mockClient,
@@ -171,7 +176,7 @@ describe('syncCommits', () => {
   })
 
   it('should store line statistics', async () => {
-    const mockClient = vi.fn().mockResolvedValue(mockCommitsResponse)
+    const mockClient = vi.fn().mockResolvedValue(mockCommitsResponse) as unknown as GraphqlClient
 
     await syncCommits({
       client: mockClient,
@@ -198,13 +203,13 @@ describe('syncCommits', () => {
       repository: {
         pullRequest: {
           commits: {
-            nodes: []
+            nodes: [] as unknown[]
           }
         }
       }
     }
 
-    const mockClient = vi.fn().mockResolvedValue(emptyResponse)
+    const mockClient = vi.fn().mockResolvedValue(emptyResponse) as unknown as GraphqlClient
 
     await syncCommits({
       client: mockClient,
@@ -224,7 +229,7 @@ describe('syncCommits', () => {
   })
 
   it('should throw on API errors', async () => {
-    const mockClient = vi.fn().mockRejectedValue(new Error('API error'))
+    const mockClient = vi.fn().mockRejectedValue(new Error('API error')) as unknown as GraphqlClient
 
     await expect(
       syncCommits({
