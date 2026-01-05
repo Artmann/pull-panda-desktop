@@ -4,9 +4,7 @@ import { useTasks } from './lib/store/tasksContext'
 import { Loader2 } from 'lucide-react'
 
 export function AppFooter(): ReactElement {
-  const { tasks, runningTasks, hasSyncInProgress } = useTasks()
-
-  console.log({ tasks, runningTasks, hasSyncInProgress })
+  const { runningTasks } = useTasks()
 
   const currentTaskMessage = useMemo((): string | null => {
     const runningTask = runningTasks[0]
