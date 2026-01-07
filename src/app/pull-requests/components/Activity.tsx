@@ -1,11 +1,3 @@
-import {
-  CheckCircle,
-  Eye,
-  GitPullRequest,
-  MessageSquare,
-  MessageSquareIcon,
-  XCircle
-} from 'lucide-react'
 import { memo, useMemo, type ReactElement } from 'react'
 
 import type { PullRequest } from '@/types/pullRequest'
@@ -35,52 +27,62 @@ export function Activity({
   pullRequest,
   reviews
 }: ActivityProps): ReactElement {
-  const topLevelComments = comments.filter(
-    (comment) => !comment.parentCommentGitHubId
-  )
+  const sortedActivity = useMemo(() => {
+    const topLevelComments = comments.filter(
+      (comment) => !comment.parentCommentGitHubId
+    )
 
-  const uniqueReviews = reviews.filter(
-    (review, index, arr) =>
-      arr.findIndex((r) => r.gitHubId === review.gitHubId) === index
-  )
+    // O(M) deduplication using Set instead of O(M²) findIndex
+    const seen = new Set<string>()
+    const uniqueReviews = reviews.filter((review) => {
+      if (seen.has(review.gitHubId)) return false
+      seen.add(review.gitHubId)
+      return true
+    })
 
-  const activityItems: ActivityItem[] = [
-    {
-      id: pullRequest.id,
-      type: 'pull_request_opened',
-      timestamp: pullRequest.createdAt,
-      data: pullRequest
-    },
-    ...topLevelComments.map((comment) => ({
-      id: comment.id,
-      type: 'comment' as const,
-      timestamp: comment.gitHubCreatedAt ?? comment.syncedAt,
-      data: comment
-    })),
-    ...uniqueReviews.map((review) => ({
-      id: review.gitHubId,
-      type: 'review' as const,
-      timestamp: review.gitHubSubmittedAt ?? review.syncedAt,
-      data: review
-    }))
-  ]
+    const activityItems: ActivityItem[] = [
+      {
+        id: pullRequest.id,
+        type: 'pull_request_opened',
+        timestamp: pullRequest.createdAt,
+        data: pullRequest
+      },
+      ...topLevelComments.map((comment) => ({
+        id: comment.id,
+        type: 'comment' as const,
+        timestamp: comment.gitHubCreatedAt ?? comment.syncedAt,
+        data: comment
+      })),
+      ...uniqueReviews.map((review) => ({
+        id: review.gitHubId,
+        type: 'review' as const,
+        timestamp: review.gitHubSubmittedAt ?? review.syncedAt,
+        data: review
+      }))
+    ]
 
-  const filteredActivityItems = activityItems.filter((item) => {
-    if (isReview(item)) {
-      if (item.data.state === 'COMMENTED' && (item.data.body ?? '').trim() === '') {
-        return false
-      }
-    }
+    return activityItems
+      .filter((item) => {
+        if (isReview(item)) {
+          if (
+            item.data.state === 'COMMENTED' &&
+            (item.data.body ?? '').trim() === ''
+          ) {
+            return false
+          }
+        }
+        return true
+      })
+      .sort(
+        (a, b) =>
+          new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
+      )
+  }, [comments, pullRequest, reviews])
 
-    return true
-  })
-
-  const sortedActivity = filteredActivityItems.sort(
-    (a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
-  )
+  console.log('render Activity component')
 
   return (
-    <div className="flex flex-col gap-10 pt-4 w-full">
+    <div className="flex flex-col gap-4 pt-4 w-full">
       {sortedActivity.map((item) => (
         <ActivityItemComponent
           key={item.id}
@@ -105,36 +107,6 @@ const ActivityItemComponent = memo(function ActivityItemComponent({
   item: ActivityItem
   pullRequest: PullRequest
 }): ReactElement {
-  const icon = useMemo(() => {
-    if (isPullRequestOpened(item)) {
-      return <GitPullRequest className="size-3 text-green-500" />
-    }
-
-    if (isComment(item)) {
-      return <MessageSquareIcon className="size-3 text-blue-500" />
-    }
-
-    if (isReview(item)) {
-      const review = item.data
-
-      if (review.state.toLowerCase() === 'approved') {
-        return <CheckCircle className="size-3 text-green-500" />
-      }
-
-      if (review.state.toLowerCase() === 'changes_requested') {
-        return <XCircle className="size-3 text-red-500" />
-      }
-
-      if (review.state.toLowerCase() === 'commented') {
-        return <MessageSquare className="size-3 text-blue-500" />
-      }
-
-      return <Eye className="size-3 text-gray-500" />
-    }
-
-    return <Eye className="size-3 text-gray-500" />
-  }, [item])
-
   const eventText = useMemo(() => {
     if (isComment(item)) {
       return 'commented'
@@ -187,41 +159,30 @@ const ActivityItemComponent = memo(function ActivityItemComponent({
   }, [item])
 
   return (
-    <div
-      className="flex gap-6"
-      key={item.id}
-    >
-      <div>
-        <div className="flex-shrink-0 mt-[1px] p-1.5 bg-white dark:bg-gray-800 rounded-full shadow-sm border border-border">
-          {icon}
-        </div>
-      </div>
+    <div>
+      <div className="flex justify-between items-center gap-4 text-xs">
+        <div className="flex items-center gap-4">
+          <UserAvatar
+            avatarUrl={user.avatarUrl}
+            login={user.login}
+          />
 
-      <div className="flex-1 min-w-0">
-        <div className="flex justify-between items-center gap-4 text-xs">
-          <div className="flex items-center gap-4">
-            <UserAvatar
-              avatarUrl={user.avatarUrl}
-              login={user.login}
-            />
-
-            <div>
-              <span className="font-medium">{user.login}</span>{' '}
-              <span className="text-muted-foreground">{eventText}</span>
-            </div>
-          </div>
-
-          <div className="text-muted-foreground text-xs ml-auto">
-            <TimeAgo dateTime={item.timestamp} />
+          <div>
+            <span className="font-medium">{user.login}</span>{' '}
+            <span className="text-muted-foreground">{eventText}</span>
           </div>
         </div>
 
-        <ActivityItemBody
-          key={`${item.type}-${item.id}`}
-          item={item}
-          pullRequest={pullRequest}
-        />
+        <div className="text-muted-foreground text-xs ml-auto">
+          <TimeAgo dateTime={item.timestamp} />
+        </div>
       </div>
+
+      <ActivityItemBody
+        key={`${item.type}-${item.id}`}
+        item={item}
+        pullRequest={pullRequest}
+      />
     </div>
   )
 })
@@ -242,7 +203,7 @@ function ActivityItemBody({
     return (
       <div className="py-4">
         <Card className="p-0 w-full gap-0">
-          <CardContent className="w-full p-4 text-xs">
+          <CardContent className="w-full p-4 text-sm">
             <CommentBody
               content={comment.body}
               path={comment.path ?? undefined}
@@ -261,7 +222,7 @@ function ActivityItemBody({
     return (
       <div className="py-4">
         <Card className="p-0 w-full gap-0">
-          <CardContent className="w-full p-4 text-xs">
+          <CardContent className="w-full p-4 text-sm">
             <CommentBody content={item.data.body} />
           </CardContent>
         </Card>

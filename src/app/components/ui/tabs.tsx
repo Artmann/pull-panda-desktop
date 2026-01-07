@@ -43,7 +43,7 @@ function TabsTrigger({
         'relative inline-flex h-full flex-1 items-center justify-center gap-1.5 px-4 py-2 text-sm font-medium whitespace-nowrap transition-colors',
         'text-muted-foreground hover:text-foreground',
         'data-[state=active]:text-foreground',
-        'after:absolute after:bottom-0 after:left-0 after:right-0 after:h-0.5 after:bg-transparent after:transition-colors',
+        'after:absolute after:bottom-0 after:left-0 after:right-0 after:h-px after:bg-transparent after:transition-colors',
         'data-[state=active]:after:bg-primary',
         'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
         'disabled:pointer-events-none disabled:opacity-50',

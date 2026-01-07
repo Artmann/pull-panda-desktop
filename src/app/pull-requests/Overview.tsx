@@ -8,7 +8,10 @@ import { SectionHeader } from '@/app/components/SectionHeader'
 import { Activity } from './components/Activity'
 import { CheckList } from './components/CheckList'
 import { IssueCard } from './components/IssueCard'
-import { findIssuesInTheDescriptionOrInTheComments, type FoundIssue } from './issue-finder'
+import {
+  findIssuesInTheDescriptionOrInTheComments,
+  type FoundIssue
+} from './issue-finder'
 
 interface OverviewProps {
   checks: Check[]
@@ -50,7 +53,7 @@ export const Overview = memo(function Overview({
     <article className="flex flex-col gap-8 text-sm pt-6">
       <section>
         {pullRequest.bodyHtml ? (
-          <div className="prose prose-sm dark:prose-invert pull-request-description max-w-none w-full">
+          <div className="prose prose-sm dark:prose-invert pull-request-description max-w-none w-full [&>div>:first-child]:mt-0!">
             <div dangerouslySetInnerHTML={htmlContent} />
           </div>
         ) : (

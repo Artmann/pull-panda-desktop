@@ -11,7 +11,10 @@
       "Bash(yarn add:*)",
       "Bash(yarn test:run:*)",
       "Bash(find:*)",
-      "Bash(yarn typecheck:*)"
+      "Bash(yarn typecheck:*)",
+      "Bash(del pull-panda.db)",
+      "Bash(yarn drizzle-kit push:*)",
+      "Bash(yarn start)"
     ]
   }
 }

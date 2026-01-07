@@ -1,21 +1,111 @@
-import rehypeShiki from '@shikijs/rehype'
 import type { Element, Root } from 'hast'
 import isString from 'lodash/isString'
 import type { ReactElement } from 'react'
-import { memo, useCallback, useEffect, useState } from 'react'
+import { memo, useCallback, useEffect, useRef, useState } from 'react'
 import * as jsxRuntime from 'react/jsx-runtime'
 import rehypeReact, { type Options as RehypeReactOptions } from 'rehype-react'
 import remarkGfm from 'remark-gfm'
 import remarkParse, { type Options as RemarkParseOptions } from 'remark-parse'
+import rehypeRaw from 'rehype-raw'
 import remarkRehype, {
   type Options as RemarkRehypeOptions
 } from 'remark-rehype'
+import { createHighlighter, type Highlighter } from 'shiki'
 import { type Plugin, unified } from 'unified'
 import { visit } from 'unist-util-visit'
 
 import { Skeleton } from './ui/skeleton'
 
 import { cn } from '@/app/lib/utils'
+
+// Shared highlighter instance - created once and reused across all MarkdownBlock components
+let sharedHighlighter: Highlighter | null = null
+let highlighterPromise: Promise<Highlighter> | null = null
+
+async function getSharedHighlighter(): Promise<Highlighter> {
+  if (sharedHighlighter) {
+    return sharedHighlighter
+  }
+
+  if (!highlighterPromise) {
+    highlighterPromise = createHighlighter({
+      themes: ['catppuccin-latte', 'catppuccin-mocha'],
+      langs: [
+        'javascript',
+        'typescript',
+        'python',
+        'java',
+        'c',
+        'go',
+        'ruby',
+        'php',
+        'html',
+        'css',
+        'json',
+        'markdown',
+        'bash',
+        'shell'
+      ]
+    })
+
+    sharedHighlighter = await highlighterPromise
+  }
+
+  return highlighterPromise
+}
+
+// Highlight code blocks in the DOM when they come into view
+async function highlightCodeBlocks(container: HTMLElement): Promise<void> {
+  const codeBlocks = container.querySelectorAll('pre > code')
+
+  if (codeBlocks.length === 0) {
+    return
+  }
+
+  const highlighter = await getSharedHighlighter()
+
+  for (const codeElement of codeBlocks) {
+    const preElement = codeElement.parentElement
+
+    if (!preElement) {
+      continue
+    }
+
+    // Skip if already highlighted
+    if (preElement.classList.contains('shiki')) {
+      continue
+    }
+
+    const code = codeElement.textContent ?? ''
+
+    // Detect language from class name (e.g., "language-typescript")
+    const langClass = Array.from(codeElement.classList).find((c) =>
+      c.startsWith('language-')
+    )
+    const lang = langClass?.replace('language-', '') ?? 'text'
+
+    // Check if language is supported, fallback to text
+    const loadedLangs = highlighter.getLoadedLanguages()
+    const effectiveLang = loadedLangs.includes(lang) ? lang : 'text'
+
+    const highlighted = highlighter.codeToHtml(code, {
+      lang: effectiveLang,
+      themes: {
+        light: 'catppuccin-latte',
+        dark: 'catppuccin-mocha'
+      }
+    })
+
+    // Replace the pre element with highlighted HTML
+    const wrapper = document.createElement('div')
+    wrapper.innerHTML = highlighted
+    const newPre = wrapper.firstElementChild
+
+    if (newPre) {
+      preElement.replaceWith(newPre)
+    }
+  }
+}
 
 export const MarkdownBlock = memo(function MarkdownBlock({
   className,
@@ -26,16 +116,53 @@ export const MarkdownBlock = memo(function MarkdownBlock({
   content: string
   path?: string
 }): ReactElement {
+  const containerRef = useRef<HTMLDivElement>(null)
   const [result, createMarkdownContent] = useRemark({ path })
+  const [isHighlighted, setIsHighlighted] = useState(false)
+  const lastContentRef = useRef<string | null>(null)
 
+  // Parse markdown without syntax highlighting
   useEffect(() => {
+    // Only re-parse if content actually changed
+    if (lastContentRef.current === content) {
+      return
+    }
+    lastContentRef.current = content
     createMarkdownContent(content)
+    setIsHighlighted(false) // Reset when content changes
   }, [content, createMarkdownContent])
+
+  // Lazy syntax highlighting with Intersection Observer
+  useEffect(() => {
+    if (!result || isHighlighted || !containerRef.current) {
+      return
+    }
+
+    const container = containerRef.current
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting && container) {
+          console.log('Highlighting code blocks for markdown block in view')
+          highlightCodeBlocks(container).then(() => {
+            setIsHighlighted(true)
+          })
+          observer.disconnect()
+        }
+      },
+      { rootMargin: '500px 0px' }
+    )
+
+    observer.observe(container)
+
+    return () => observer.disconnect()
+  }, [result, isHighlighted])
 
   return (
     <div
+      ref={containerRef}
       className={cn(
-        'markdown-block w-full max-w-none prose prose-sm dark:prose-invert',
+        'markdown-block w-full max-w-none prose dark:prose-invert [&>:first-child]:mt-0',
         className
       )}
     >
@@ -60,12 +187,14 @@ interface UseRemarkOptions {
   onError?: (error: Error) => void
 }
 
+const defaultOnError = (error: Error) => console.error('Markdown error:', error)
+
 function useRemark({
   path,
   rehypeReactOptions,
   remarkParseOptions,
   remarkRehypeOptions,
-  onError = (error) => console.error('Markdown error:', error)
+  onError = defaultOnError
 }: UseRemarkOptions = {}): [ReactElement | null, (source: string) => void] {
   const [content, setContent] = useState<ReactElement | null>(null)
 
@@ -111,24 +240,17 @@ function useRemark({
     }
   }, [path])
 
+  // Parse markdown WITHOUT syntax highlighting for fast initial render
   const createMarkdown = useCallback(
     (source: string) => {
       void (async () => {
         try {
-          // TypeScript has difficulty inferring the correct types through the unified
-          // plugin chain due to complex generic transformations. The types are safe
-          // at runtime as each plugin validates its input/output types.
           const file = await unified()
             .use(remarkParse, remarkParseOptions)
             .use([remarkGfm])
-            .use(remarkRehype, remarkRehypeOptions)
+            .use(remarkRehype, { ...remarkRehypeOptions, allowDangerousHtml: true })
+            .use(rehypeRaw)
             .use(rehypeDetectLanguageFromPath)
-            .use(rehypeShiki, {
-              themes: {
-                light: 'vitesse-light',
-                dark: 'vitesse-dark'
-              }
-            })
             .use(rehypeReact, {
               ...rehypeReactOptions,
               Fragment: jsxRuntime.Fragment,
