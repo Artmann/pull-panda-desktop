@@ -29,6 +29,8 @@ function transformPullRequest(
     id: pullRequest.id,
     number: pullRequest.number,
     title: pullRequest.title,
+    body: pullRequest.body ?? null,
+    bodyHtml: pullRequest.bodyHTML ?? null,
     state: pullRequest.state,
     url: pullRequest.url,
     repositoryOwner: pullRequest.repository.owner.login,
@@ -128,6 +130,8 @@ export async function syncPullRequests(token: string): Promise<SyncResult> {
         set: {
           number: pullRequest.number,
           title: pullRequest.title,
+          body: pullRequest.body,
+          bodyHtml: pullRequest.bodyHtml,
           state: pullRequest.state,
           url: pullRequest.url,
           repositoryOwner: pullRequest.repositoryOwner,

@@ -2,6 +2,8 @@ export interface GitHubPullRequest {
   id: string
   number: number
   title: string
+  body: string
+  bodyHTML: string
   state: 'OPEN' | 'CLOSED' | 'MERGED'
   url: string
   createdAt: string

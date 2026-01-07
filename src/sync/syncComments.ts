@@ -27,6 +27,7 @@ interface SyncCommentsParams {
 interface GitHubCommentData {
   id: string
   body?: string
+  bodyHTML?: string
   createdAt?: string
   updatedAt?: string
   url?: string
@@ -132,6 +133,7 @@ export async function syncComments({
         pullRequestId,
         reviewId: null,
         body: commentData.body ? normalizeCommentBody(commentData.body) : null,
+        bodyHtml: commentData.bodyHTML ?? null,
         path: commentData.path ?? null,
         line,
         originalLine,
@@ -157,6 +159,7 @@ export async function syncComments({
           target: comments.id,
           set: {
             body: comment.body,
+            bodyHtml: comment.bodyHtml,
             path: comment.path,
             line: comment.line,
             originalLine: comment.originalLine,

@@ -5,7 +5,7 @@ import {
   ListCheckIcon,
   MessageSquareIcon
 } from 'lucide-react'
-import { useEffect, useRef, useState, type ReactElement } from 'react'
+import { useCallback, useEffect, useRef, useState, type ReactElement } from 'react'
 import { Link, useParams } from 'react-router'
 
 import { Button } from '@/app/components/ui/button'
@@ -26,10 +26,12 @@ import {
   TabsTrigger
 } from '@/app/components/ui/tabs'
 import { navigationActions } from '../store/navigationSlice'
+import type { PullRequestDetails } from '@/types/pullRequestDetails'
 
 export function PullRequestPage(): ReactElement {
   const containerRef = useRef<HTMLDivElement>(null)
   const [stickyHeaderProgress, setStickyHeaderProgress] = useState(0)
+  const [details, setDetails] = useState<PullRequestDetails | null>(null)
 
   const { id } = useParams<{ id: string }>()
 
@@ -42,9 +44,44 @@ export function PullRequestPage(): ReactElement {
     (state) => state.navigation.activeTab[id] ?? 'overview'
   )
 
-  const tabs = [
+  const fetchDetails = useCallback(async () => {
+    if (!id) {
+      return
+    }
+
+    const result = await window.electron.getPullRequestDetails(id)
+
+    setDetails(result)
+  }, [id])
+
+  useEffect(
+    function loadPullRequestDetails() {
+      fetchDetails()
+    },
+    [fetchDetails]
+  )
+
+  useEffect(
+    function subscribeToSyncComplete() {
+      const unsubscribe = window.electron.onSyncComplete((event) => {
+        if (event.type === 'pull-request-details' && event.pullRequestId === id) {
+          fetchDetails()
+        }
+      })
+
+      return unsubscribe
+    },
+    [id, fetchDetails]
+  )
+
+  const tabs: Array<{
+    content: ((props: { pullRequest: typeof pullRequest }) => ReactElement) | null
+    id: string
+    label: string
+    icon: typeof MessageSquareIcon
+  }> = [
     {
-      content: Overview,
+      content: null,
       id: 'overview',
       label: 'Overview',
       icon: MessageSquareIcon
@@ -160,7 +197,16 @@ export function PullRequestPage(): ReactElement {
               value={tab.id}
             >
               <div className="w-full">
-                <tab.content pullRequest={pullRequest} />
+                {tab.id === 'overview' ? (
+                  <Overview
+                    checks={details?.checks ?? []}
+                    comments={details?.comments ?? []}
+                    pullRequest={pullRequest}
+                    reviews={details?.reviews ?? []}
+                  />
+                ) : tab.content ? (
+                  <tab.content pullRequest={pullRequest} />
+                ) : null}
               </div>
             </TabsContent>
           ))}

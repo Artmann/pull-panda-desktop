@@ -22,6 +22,8 @@ const searchQuery = `
           id
           number
           title
+          body
+          bodyHTML
           state
           url
           createdAt

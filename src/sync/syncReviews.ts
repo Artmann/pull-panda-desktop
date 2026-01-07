@@ -83,6 +83,7 @@ export async function syncReviews({
         pullRequestId,
         state: reviewData.state ?? 'PENDING',
         body: reviewData.body ? normalizeCommentBody(reviewData.body) : null,
+        bodyHtml: reviewData.bodyHTML ?? null,
         url: reviewData.url ?? null,
         authorLogin: reviewData.author?.login ?? null,
         authorAvatarUrl: reviewData.author?.avatarUrl ?? null,
@@ -100,6 +101,7 @@ export async function syncReviews({
           set: {
             state: review.state,
             body: review.body,
+            bodyHtml: review.bodyHtml,
             url: review.url,
             authorLogin: review.authorLogin,
             authorAvatarUrl: review.authorAvatarUrl,
@@ -145,6 +147,7 @@ export async function syncReviews({
           pullRequestId,
           reviewId,
           body: commentData.body ? normalizeCommentBody(commentData.body) : null,
+          bodyHtml: commentData.bodyHTML ?? null,
           path: commentData.path ?? null,
           line,
           originalLine,
@@ -170,6 +173,7 @@ export async function syncReviews({
             target: comments.id,
             set: {
               body: comment.body,
+              bodyHtml: comment.bodyHtml,
               path: comment.path,
               line: comment.line,
               originalLine: comment.originalLine,
