@@ -59,6 +59,9 @@ function initializeAllTables(sqlite: Database.Database): void {
       updated_at TEXT NOT NULL,
       closed_at TEXT,
       merged_at TEXT,
+      body TEXT,
+      body_html TEXT,
+      is_draft INTEGER NOT NULL DEFAULT 0,
       is_author INTEGER NOT NULL DEFAULT 0,
       is_assignee INTEGER NOT NULL DEFAULT 0,
       is_reviewer INTEGER NOT NULL DEFAULT 0,
@@ -73,6 +76,37 @@ function initializeAllTables(sqlite: Database.Database): void {
     CREATE INDEX IF NOT EXISTS idx_pr_updated ON pull_requests(updated_at);
     CREATE INDEX IF NOT EXISTS idx_pr_repo ON pull_requests(repository_owner, repository_name);
   `)
+
+  // Add columns for existing databases that don't have them yet.
+  try {
+    sqlite.exec(`ALTER TABLE pull_requests ADD COLUMN body TEXT`)
+  } catch {
+    // Column already exists.
+  }
+
+  try {
+    sqlite.exec(`ALTER TABLE pull_requests ADD COLUMN body_html TEXT`)
+  } catch {
+    // Column already exists.
+  }
+
+  try {
+    sqlite.exec(`ALTER TABLE pull_requests ADD COLUMN is_draft INTEGER NOT NULL DEFAULT 0`)
+  } catch {
+    // Column already exists.
+  }
+
+  try {
+    sqlite.exec(`ALTER TABLE comments ADD COLUMN body_html TEXT`)
+  } catch {
+    // Column already exists.
+  }
+
+  try {
+    sqlite.exec(`ALTER TABLE reviews ADD COLUMN body_html TEXT`)
+  } catch {
+    // Column already exists.
+  }
 
   sqlite.exec(`
     CREATE TABLE IF NOT EXISTS reviews (

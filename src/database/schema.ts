@@ -19,6 +19,9 @@ export const pullRequests = sqliteTable('pull_requests', {
   closedAt: text('closed_at'),
   mergedAt: text('merged_at'),
 
+  body: text('body'),
+  bodyHtml: text('body_html'),
+
   isDraft: integer('is_draft', { mode: 'boolean' }).notNull().default(false),
   isAuthor: integer('is_author', { mode: 'boolean' }).notNull().default(false),
   isAssignee: integer('is_assignee', { mode: 'boolean' }).notNull().default(false),
@@ -42,6 +45,7 @@ export const reviews = sqliteTable(
 
     state: text('state').notNull(),
     body: text('body'),
+    bodyHtml: text('body_html'),
     url: text('url'),
 
     authorLogin: text('author_login'),
@@ -68,6 +72,7 @@ export const comments = sqliteTable(
     reviewId: text('review_id'),
 
     body: text('body'),
+    bodyHtml: text('body_html'),
     path: text('path'),
     line: integer('line'),
     originalLine: integer('original_line'),

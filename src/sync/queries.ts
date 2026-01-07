@@ -55,6 +55,7 @@ export const reviewsQuery = `
           nodes {
             id
             body
+            bodyHTML
             createdAt
             state
             submittedAt
@@ -70,6 +71,7 @@ export const reviewsQuery = `
                   avatarUrl
                 }
                 body
+                bodyHTML
                 commit {
                   oid
                 }
@@ -120,6 +122,7 @@ export const commentsQuery = `
               avatarUrl
             }
             body
+            bodyHTML
             createdAt
             id
             updatedAt
@@ -142,6 +145,7 @@ export const commentsQuery = `
             comments(first: 80) {
               nodes {
                 body
+                bodyHTML
                 commit {
                   oid
                 }
@@ -262,6 +266,7 @@ export interface ReviewsQueryResponse {
         nodes?: Array<{
           id: string
           body?: string
+          bodyHTML?: string
           createdAt?: string
           state?: string
           submittedAt?: string
@@ -274,6 +279,7 @@ export interface ReviewsQueryResponse {
             nodes?: Array<{
               id: string
               body?: string
+              bodyHTML?: string
               createdAt?: string
               updatedAt?: string
               url?: string
@@ -311,6 +317,7 @@ export interface CommentsQueryResponse {
         nodes?: Array<{
           id: string
           body?: string
+          bodyHTML?: string
           createdAt?: string
           updatedAt?: string
           url?: string
@@ -334,6 +341,7 @@ export interface CommentsQueryResponse {
             nodes?: Array<{
               id: string
               body?: string
+              bodyHTML?: string
               createdAt?: string
               updatedAt?: string
               url?: string

@@ -4,6 +4,7 @@ export interface Review {
   pullRequestId: string
   state: string
   body: string | null
+  bodyHtml: string | null
   url: string | null
   authorLogin: string | null
   authorAvatarUrl: string | null
@@ -18,6 +19,7 @@ export interface Comment {
   pullRequestId: string
   reviewId: string | null
   body: string | null
+  bodyHtml: string | null
   path: string | null
   line: number | null
   originalLine: number | null
