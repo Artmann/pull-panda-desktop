@@ -187,6 +187,22 @@ body {
 
 /* GitHub-style markdown in PR descriptions */
 .pull-request-description {
+  /* Compact spacing */
+  h1, h2, h3, h4, h5, h6 {
+    margin-top: 1rem;
+    margin-bottom: 0.5rem;
+  }
+
+  p, ul, ol {
+    margin-top: 0.5rem;
+    margin-bottom: 0.5rem;
+  }
+
+  li {
+    margin-top: 0.125rem;
+    margin-bottom: 0.125rem;
+  }
+
   /* Task list styling */
   ul.contains-task-list {
     list-style: none;
