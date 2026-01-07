@@ -79,8 +79,6 @@ export function Activity({
       )
   }, [comments, pullRequest, reviews])
 
-  console.log('render Activity component')
-
   return (
     <div className="flex flex-col gap-4 pt-4 w-full">
       {sortedActivity.map((item) => (
@@ -201,7 +199,10 @@ function ActivityItemBody({
     }
 
     return (
-      <div className="py-4">
+      <div
+        className="py-4"
+        data-testid={`comment-${comment.id}`}
+      >
         <Card className="p-0 w-full gap-0">
           <CardContent className="w-full p-4 text-sm">
             <CommentBody
@@ -220,7 +221,10 @@ function ActivityItemBody({
     }
 
     return (
-      <div className="py-4">
+      <div
+        className="py-4"
+        data-testid={`review-${item.data.id}`}
+      >
         <Card className="p-0 w-full gap-0">
           <CardContent className="w-full p-4 text-sm">
             <CommentBody content={item.data.body} />

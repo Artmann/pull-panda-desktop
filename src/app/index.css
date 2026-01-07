@@ -179,6 +179,12 @@ body {
   font-size: 0.875em;
 }
 
+/* Remove default backticks added by Tailwind typography plugin */
+.prose :where(code):not(:where([class~="not-prose"], [class~="not-prose"] *))::before,
+.prose :where(code):not(:where([class~="not-prose"], [class~="not-prose"] *))::after {
+  content: none;
+}
+
 /* GitHub-style markdown in PR descriptions */
 .pull-request-description {
   /* Task list styling */

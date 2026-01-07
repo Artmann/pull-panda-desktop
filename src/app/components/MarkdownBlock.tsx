@@ -143,7 +143,6 @@ export const MarkdownBlock = memo(function MarkdownBlock({
     const observer = new IntersectionObserver(
       ([entry]) => {
         if (entry.isIntersecting && container) {
-          console.log('Highlighting code blocks for markdown block in view')
           highlightCodeBlocks(container).then(() => {
             setIsHighlighted(true)
           })

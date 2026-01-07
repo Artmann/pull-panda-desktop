@@ -3,6 +3,7 @@ import { memo, useMemo, type ReactElement } from 'react'
 import type { PullRequest } from '@/types/pullRequest'
 import type { Check, Comment, Review } from '@/types/pullRequestDetails'
 
+import { MarkdownBlock } from '@/app/components/MarkdownBlock'
 import { SectionHeader } from '@/app/components/SectionHeader'
 
 import { Activity } from './components/Activity'
@@ -42,20 +43,14 @@ export const Overview = memo(function Overview({
     ]
   )
 
-  const htmlContent = useMemo(
-    () => ({
-      __html: pullRequest.bodyHtml ?? ''
-    }),
-    [pullRequest.bodyHtml]
-  )
-
   return (
     <article className="flex flex-col gap-8 text-sm pt-6">
       <section>
-        {pullRequest.bodyHtml ? (
-          <div className="prose prose-sm dark:prose-invert pull-request-description max-w-none w-full [&>div>:first-child]:mt-0!">
-            <div dangerouslySetInnerHTML={htmlContent} />
-          </div>
+        {pullRequest.body ? (
+          <MarkdownBlock
+            className="pull-request-description *:first:mt-0!"
+            content={pullRequest.body}
+          />
         ) : (
           <div className="text-muted-foreground text-sm">
             No description provided.
