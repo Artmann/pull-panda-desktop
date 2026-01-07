@@ -15,7 +15,7 @@ export const CommentBody = memo(function CommentBody({
 
   return (
     <MarkdownBlock
-      className="w-full max-w-full text-xs"
+      className="w-full max-w-full"
       content={formattedContent}
       path={path}
     />

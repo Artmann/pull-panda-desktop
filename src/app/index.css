@@ -149,6 +149,36 @@ body {
   background: rgba(255, 255, 255, 0.35);
 }
 
+/* Shiki code block styling */
+.shiki {
+  padding: 1rem;
+  border-radius: var(--radius);
+  overflow-x: auto;
+  font-size: 0.875rem;
+  line-height: 1.5;
+}
+
+.dark .shiki,
+.dark .shiki span {
+  color: var(--shiki-dark) !important;
+  background-color: var(--shiki-dark-bg) !important;
+}
+
+/* Markdown code blocks without Shiki */
+.markdown-block pre:not(.shiki) {
+  background-color: var(--muted);
+  padding: 1rem;
+  border-radius: var(--radius);
+  overflow-x: auto;
+}
+
+.markdown-block :not(pre) > code {
+  background-color: var(--muted);
+  padding: 0.125rem 0.375rem;
+  border-radius: 0.25rem;
+  font-size: 0.875em;
+}
+
 /* GitHub-style markdown in PR descriptions */
 .pull-request-description {
   /* Task list styling */
