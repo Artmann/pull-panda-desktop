@@ -14,7 +14,9 @@
       "Bash(yarn typecheck:*)",
       "Bash(del pull-panda.db)",
       "Bash(yarn drizzle-kit push:*)",
-      "Bash(yarn start)"
+      "Bash(yarn start)",
+      "Skill(branch-review)",
+      "Bash(git symbolic-ref:*)"
     ]
   }
 }
