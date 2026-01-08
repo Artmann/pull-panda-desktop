@@ -12,6 +12,9 @@ interface SyncCompleteEvent {
 }
 
 const electronApi = {
+  getApiPort: (): Promise<number | null> =>
+    ipcRenderer.invoke(ipcChannels.ApiGetPort),
+
   getBootstrapData: (): Promise<BootstrapData | null> =>
     ipcRenderer.invoke(ipcChannels.GetBootstrapData),
 

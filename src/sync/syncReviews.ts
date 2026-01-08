@@ -10,8 +10,8 @@ import {
   type NewCommentReaction
 } from '../database/schema'
 
-import { createGraphqlClient } from './graphql'
-import { reviewsQuery, type ReviewsQueryResponse } from './queries'
+import { createRestClient } from './restClient'
+import { etagManager } from './etagManager'
 import {
   generateId,
   normalizeCommentBody,
@@ -19,15 +19,67 @@ import {
 } from './utils'
 
 interface SyncReviewsParams {
-  client: ReturnType<typeof createGraphqlClient>
+  token: string
   pullRequestId: string
   owner: string
   repositoryName: string
   pullNumber: number
 }
 
+interface ReviewData {
+  id: number
+  node_id: string
+  state: string
+  body: string | null
+  body_html?: string
+  html_url: string
+  user: {
+    login: string
+    avatar_url: string
+  } | null
+  submitted_at: string | null
+  commit_id: string
+}
+
+interface ReviewCommentData {
+  id: number
+  node_id: string
+  pull_request_review_id: number | null
+  body: string
+  body_html?: string
+  path: string
+  line: number | null
+  original_line: number | null
+  diff_hunk: string
+  commit_id: string
+  original_commit_id: string
+  in_reply_to_id?: number
+  user: {
+    login: string
+    avatar_url: string
+    id: number
+  } | null
+  html_url: string
+  created_at: string
+  updated_at: string
+  reactions?: {
+    url: string
+    total_count: number
+  }
+}
+
+interface ReactionData {
+  id: number
+  node_id: string
+  content: string
+  user: {
+    login: string
+    id: number
+  } | null
+}
+
 export async function syncReviews({
-  client,
+  token,
   pullRequestId,
   owner,
   repositoryName,
@@ -36,39 +88,67 @@ export async function syncReviews({
   console.time('syncReviews')
 
   try {
-    const response = await client<ReviewsQueryResponse>(reviewsQuery, {
-      owner,
-      repo: repositoryName,
-      pullNumber
-    })
-
-    const reviewsData =
-      response.repository?.pullRequest?.reviews?.nodes?.filter(
-        (review) => review !== null
-      ) ?? []
-
-    console.log(
-      `Syncing ${reviewsData.length} reviews for PR #${pullNumber} in ${owner}/${repositoryName}.`
-    )
-
+    const client = createRestClient(token)
     const database = getDatabase()
     const now = new Date().toISOString()
 
-    const existingReviews = await database
+    // Fetch reviews
+    const reviewsEtagKey = { endpointType: 'reviews', resourceId: pullRequestId }
+    const cachedReviewsEtag = etagManager.get(reviewsEtagKey)
+
+    const reviewsResult = await client.request<ReviewData[]>(
+      'GET /repos/{owner}/{repo}/pulls/{pull_number}/reviews',
+      {
+        owner,
+        repo: repositoryName,
+        pull_number: pullNumber,
+        per_page: 100
+      },
+      { etag: cachedReviewsEtag?.etag ?? undefined }
+    )
+
+    // Fetch review comments
+    const commentsEtagKey = { endpointType: 'review_comments', resourceId: pullRequestId }
+    const cachedCommentsEtag = etagManager.get(commentsEtagKey)
+
+    const commentsResult = await client.request<ReviewCommentData[]>(
+      'GET /repos/{owner}/{repo}/pulls/{pull_number}/comments',
+      {
+        owner,
+        repo: repositoryName,
+        pull_number: pullNumber,
+        per_page: 100
+      },
+      { etag: cachedCommentsEtag?.etag ?? undefined }
+    )
+
+    // If both are 304, skip processing entirely
+    if (reviewsResult.notModified && commentsResult.notModified) {
+      console.log(`[syncReviews] No changes for PR #${pullNumber} (304)`)
+      console.timeEnd('syncReviews')
+
+      return
+    }
+
+    // Process reviews (if changed)
+    const reviewsData = reviewsResult.data ?? []
+    const existingReviews = database
       .select()
       .from(reviews)
       .where(
         and(eq(reviews.pullRequestId, pullRequestId), isNull(reviews.deletedAt))
       )
+      .all()
 
     const syncedReviewGitHubIds: string[] = []
+    const reviewIdMap = new Map<number, string>() // REST id -> local id
+
+    console.log(
+      `Syncing ${reviewsData.length} reviews for PR #${pullNumber} in ${owner}/${repositoryName}.`
+    )
 
     for (const reviewData of reviewsData) {
-      if (!reviewData) {
-        continue
-      }
-
-      const gitHubId = reviewData.id
+      const gitHubId = reviewData.node_id
       syncedReviewGitHubIds.push(gitHubId)
 
       const existingReview = existingReviews.find(
@@ -76,24 +156,25 @@ export async function syncReviews({
       )
 
       const reviewId = existingReview?.id ?? generateId()
+      reviewIdMap.set(reviewData.id, reviewId)
 
       const review: NewReview = {
         id: reviewId,
         gitHubId,
         pullRequestId,
-        state: reviewData.state ?? 'PENDING',
+        state: reviewData.state,
         body: reviewData.body ? normalizeCommentBody(reviewData.body) : null,
-        bodyHtml: reviewData.bodyHTML ?? null,
-        url: reviewData.url ?? null,
-        authorLogin: reviewData.author?.login ?? null,
-        authorAvatarUrl: reviewData.author?.avatarUrl ?? null,
-        gitHubCreatedAt: reviewData.createdAt ?? null,
-        gitHubSubmittedAt: reviewData.submittedAt ?? reviewData.createdAt ?? null,
+        bodyHtml: reviewData.body_html ?? null,
+        url: reviewData.html_url,
+        authorLogin: reviewData.user?.login ?? null,
+        authorAvatarUrl: reviewData.user?.avatar_url ?? null,
+        gitHubCreatedAt: reviewData.submitted_at,
+        gitHubSubmittedAt: reviewData.submitted_at,
         syncedAt: now,
         deletedAt: null
       }
 
-      await database
+      database
         .insert(reviews)
         .values(review)
         .onConflictDoUpdate({
@@ -111,114 +192,169 @@ export async function syncReviews({
             deletedAt: null
           }
         })
+        .run()
+    }
 
-      const commentNodes =
-        reviewData.comments.nodes?.filter((node) => node !== null) ?? []
+    // Soft delete reviews that no longer exist
+    for (const existingReview of existingReviews) {
+      if (!syncedReviewGitHubIds.includes(existingReview.gitHubId)) {
+        database
+          .update(reviews)
+          .set({ deletedAt: now })
+          .where(eq(reviews.id, existingReview.id))
+          .run()
+      }
+    }
 
-      for (const commentData of commentNodes) {
-        if (!commentData) {
-          continue
-        }
+    // Process review comments
+    const commentsData = commentsResult.data ?? []
+    const existingComments = database
+      .select()
+      .from(comments)
+      .where(
+        and(
+          eq(comments.pullRequestId, pullRequestId),
+          isNull(comments.deletedAt)
+        )
+      )
+      .all()
 
-        const existingComment = await database
-          .select()
-          .from(comments)
-          .where(eq(comments.gitHubId, commentData.id))
-          .limit(1)
+    const syncedCommentGitHubIds: string[] = []
+    const commentIdMap = new Map<number, string>() // REST id -> local id
 
-        const commentId = existingComment[0]?.id ?? generateId()
+    for (const commentData of commentsData) {
+      const gitHubId = commentData.node_id
+      syncedCommentGitHubIds.push(gitHubId)
 
-        const lineType = getLineTypeFromDiffHunk(commentData.diffHunk ?? '')
-        let line: number | null = null
-        let originalLine: number | null = null
+      const existingComment = existingComments.find(
+        (c) => c.gitHubId === gitHubId
+      )
 
-        if (lineType === 'remove') {
-          originalLine = commentData.originalLine ?? null
-        } else if (lineType === 'add') {
-          line = commentData.line ?? null
-        } else {
-          line = commentData.line ?? null
-          originalLine = commentData.originalLine ?? null
-        }
+      const commentId = existingComment?.id ?? generateId()
+      commentIdMap.set(commentData.id, commentId)
 
-        const comment: NewComment = {
-          id: commentId,
-          gitHubId: commentData.id,
-          pullRequestId,
-          reviewId,
-          body: commentData.body ? normalizeCommentBody(commentData.body) : null,
-          bodyHtml: commentData.bodyHTML ?? null,
-          path: commentData.path ?? null,
-          line,
-          originalLine,
-          diffHunk: commentData.diffHunk ?? null,
-          commitId: commentData.commit?.oid ?? null,
-          originalCommitId: commentData.originalCommit?.oid ?? null,
-          gitHubReviewId: commentData.pullRequestReview?.id ?? null,
-          gitHubReviewThreadId: null,
-          parentCommentGitHubId: commentData.replyTo?.id ?? null,
-          userLogin: commentData.author?.login ?? null,
-          userAvatarUrl: commentData.author?.avatarUrl ?? null,
-          url: commentData.url ?? null,
-          gitHubCreatedAt: commentData.createdAt ?? null,
-          gitHubUpdatedAt: commentData.updatedAt ?? null,
-          syncedAt: now,
-          deletedAt: null
-        }
+      // Get the local review ID from the map
+      const reviewId = commentData.pull_request_review_id
+        ? reviewIdMap.get(commentData.pull_request_review_id) ?? null
+        : null
 
-        await database
-          .insert(comments)
-          .values(comment)
-          .onConflictDoUpdate({
-            target: comments.id,
-            set: {
-              body: comment.body,
-              bodyHtml: comment.bodyHtml,
-              path: comment.path,
-              line: comment.line,
-              originalLine: comment.originalLine,
-              diffHunk: comment.diffHunk,
-              commitId: comment.commitId,
-              originalCommitId: comment.originalCommitId,
-              gitHubReviewId: comment.gitHubReviewId,
-              parentCommentGitHubId: comment.parentCommentGitHubId,
-              userLogin: comment.userLogin,
-              userAvatarUrl: comment.userAvatarUrl,
-              url: comment.url,
-              gitHubCreatedAt: comment.gitHubCreatedAt,
-              gitHubUpdatedAt: comment.gitHubUpdatedAt,
-              syncedAt: comment.syncedAt,
-              deletedAt: null
-            }
-          })
+      const lineType = getLineTypeFromDiffHunk(commentData.diff_hunk ?? '')
+      let line: number | null = null
+      let originalLine: number | null = null
 
-        const reactions =
-          commentData.reactions.nodes?.filter((r) => r !== null) ?? []
+      if (lineType === 'remove') {
+        originalLine = commentData.original_line
+      } else if (lineType === 'add') {
+        line = commentData.line
+      } else {
+        line = commentData.line
+        originalLine = commentData.original_line
+      }
 
-        for (const reactionData of reactions) {
-          if (!reactionData?.user) {
+      // Find parent comment's gitHubId if this is a reply
+      let parentCommentGitHubId: string | null = null
+
+      if (commentData.in_reply_to_id) {
+        const parentComment = commentsData.find(
+          (c) => c.id === commentData.in_reply_to_id
+        )
+
+        parentCommentGitHubId = parentComment?.node_id ?? null
+      }
+
+      const comment: NewComment = {
+        id: commentId,
+        gitHubId,
+        gitHubNumericId: commentData.id,
+        pullRequestId,
+        reviewId,
+        body: normalizeCommentBody(commentData.body),
+        bodyHtml: commentData.body_html ?? null,
+        path: commentData.path,
+        line,
+        originalLine,
+        diffHunk: commentData.diff_hunk,
+        commitId: commentData.commit_id,
+        originalCommitId: commentData.original_commit_id,
+        gitHubReviewId: commentData.pull_request_review_id
+          ? String(commentData.pull_request_review_id)
+          : null,
+        gitHubReviewThreadId: null,
+        parentCommentGitHubId,
+        userLogin: commentData.user?.login ?? null,
+        userAvatarUrl: commentData.user?.avatar_url ?? null,
+        url: commentData.html_url,
+        gitHubCreatedAt: commentData.created_at,
+        gitHubUpdatedAt: commentData.updated_at,
+        syncedAt: now,
+        deletedAt: null
+      }
+
+      database
+        .insert(comments)
+        .values(comment)
+        .onConflictDoUpdate({
+          target: comments.id,
+          set: {
+            gitHubNumericId: comment.gitHubNumericId,
+            body: comment.body,
+            bodyHtml: comment.bodyHtml,
+            path: comment.path,
+            line: comment.line,
+            originalLine: comment.originalLine,
+            diffHunk: comment.diffHunk,
+            commitId: comment.commitId,
+            originalCommitId: comment.originalCommitId,
+            gitHubReviewId: comment.gitHubReviewId,
+            parentCommentGitHubId: comment.parentCommentGitHubId,
+            userLogin: comment.userLogin,
+            userAvatarUrl: comment.userAvatarUrl,
+            url: comment.url,
+            gitHubCreatedAt: comment.gitHubCreatedAt,
+            gitHubUpdatedAt: comment.gitHubUpdatedAt,
+            syncedAt: comment.syncedAt,
+            deletedAt: null
+          }
+        })
+        .run()
+
+      // Fetch reactions for this comment if it has any
+      if (commentData.reactions && commentData.reactions.total_count > 0) {
+        const reactionsResult = await client.request<ReactionData[]>(
+          'GET /repos/{owner}/{repo}/pulls/comments/{comment_id}/reactions',
+          {
+            owner,
+            repo: repositoryName,
+            comment_id: commentData.id
+          }
+        )
+
+        const reactionsData = reactionsResult.data ?? []
+
+        for (const reactionData of reactionsData) {
+          if (!reactionData.user) {
             continue
           }
 
-          const existingReaction = await database
+          const existingReaction = database
             .select()
             .from(commentReactions)
-            .where(eq(commentReactions.gitHubId, reactionData.id))
-            .limit(1)
+            .where(eq(commentReactions.gitHubId, reactionData.node_id))
+            .get()
 
           const reaction: NewCommentReaction = {
-            id: existingReaction[0]?.id ?? generateId(),
-            gitHubId: reactionData.id,
+            id: existingReaction?.id ?? generateId(),
+            gitHubId: reactionData.node_id,
             commentId,
             pullRequestId,
             content: reactionData.content,
             userLogin: reactionData.user.login,
-            userId: reactionData.user.id,
+            userId: String(reactionData.user.id),
             syncedAt: now,
             deletedAt: null
           }
 
-          await database
+          database
             .insert(commentReactions)
             .values(reaction)
             .onConflictDoUpdate({
@@ -231,17 +367,32 @@ export async function syncReviews({
                 deletedAt: null
               }
             })
+            .run()
         }
       }
     }
 
-    for (const existingReview of existingReviews) {
-      if (!syncedReviewGitHubIds.includes(existingReview.gitHubId)) {
-        await database
-          .update(reviews)
+    // Soft delete comments that no longer exist (only review comments, not issue comments)
+    for (const existingComment of existingComments) {
+      if (
+        existingComment.path && // Has path = review comment
+        !syncedCommentGitHubIds.includes(existingComment.gitHubId)
+      ) {
+        database
+          .update(comments)
           .set({ deletedAt: now })
-          .where(eq(reviews.id, existingReview.id))
+          .where(eq(comments.id, existingComment.id))
+          .run()
       }
+    }
+
+    // Store the new ETags
+    if (reviewsResult.etag) {
+      etagManager.set(reviewsEtagKey, reviewsResult.etag, reviewsResult.lastModified ?? undefined)
+    }
+
+    if (commentsResult.etag) {
+      etagManager.set(commentsEtagKey, commentsResult.etag, commentsResult.lastModified ?? undefined)
     }
 
     console.timeEnd('syncReviews')

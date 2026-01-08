@@ -1,144 +1,68 @@
-import { vi } from 'vitest'
-
 import { createInMemoryDatabase, setDatabase } from '../database'
-import type { createGraphqlClient } from './graphql'
 
-export type GraphqlClient = ReturnType<typeof createGraphqlClient>
+let testDb: Awaited<ReturnType<typeof createInMemoryDatabase>> | null = null
 
-export function setupTestDatabase() {
-  const db = createInMemoryDatabase()
-  setDatabase(db)
-  return db
+export async function setupTestDatabase() {
+  testDb = await createInMemoryDatabase()
+  setDatabase(testDb)
+
+  return testDb
+}
+
+export function setupTestDatabaseSync() {
+  // For backwards compatibility - will throw if called before async init
+  if (!testDb) {
+    throw new Error('Database not initialized. Call setupTestDatabase() in beforeAll()')
+  }
+
+  setDatabase(testDb)
+
+  return testDb
 }
 
 export function teardownTestDatabase() {
   setDatabase(null)
+  testDb = null
 }
 
-export function createMockGraphqlClient() {
-  return vi.fn() as unknown as GraphqlClient
-}
-
-export function createMockGraphqlClientWithResponse<T>(response: T) {
-  return vi.fn().mockResolvedValue(response) as unknown as GraphqlClient
-}
-
-export function createMockGraphqlClientWithError(error: Error) {
-  return vi.fn().mockRejectedValue(error) as unknown as GraphqlClient
-}
-
-export function createMockOctokit() {
-  return {
-    rest: {
-      pulls: {
-        listFiles: vi.fn()
+// REST API mock response for commits
+export const mockRestCommitsResponse = {
+  data: [
+    {
+      sha: 'commit-1',
+      commit: {
+        message: 'Initial commit',
+        author: {
+          name: 'Test User',
+          date: '2024-01-01T09:00:00Z'
+        }
+      },
+      html_url: 'https://github.com/owner/repo/commit/commit-1',
+      author: {
+        login: 'testuser',
+        avatar_url: 'https://avatars.githubusercontent.com/u/1'
+      }
+    },
+    {
+      sha: 'commit-2',
+      commit: {
+        message: 'Add feature\r\n\r\n\r\n\r\nWith description',
+        author: {
+          name: 'Another User',
+          date: '2024-01-02T09:00:00Z'
+        }
+      },
+      html_url: 'https://github.com/owner/repo/commit/commit-2',
+      author: {
+        login: 'anotheruser',
+        avatar_url: 'https://avatars.githubusercontent.com/u/2'
       }
     }
-  }
-}
-
-export const mockChecksResponse = {
-  repository: {
-    pullRequest: {
-      commits: {
-        nodes: [
-          {
-            commit: {
-              oid: 'abc123',
-              statusCheckRollup: {
-                contexts: {
-                  nodes: [
-                    {
-                      __typename: 'CheckRun',
-                      id: 'check-1',
-                      name: 'build',
-                      conclusion: 'SUCCESS',
-                      status: 'COMPLETED',
-                      startedAt: '2024-01-01T10:00:00Z',
-                      completedAt: '2024-01-01T10:05:00Z',
-                      detailsUrl: 'https://github.com/actions/run/1',
-                      summary: 'Build passed',
-                      text: null,
-                      checkSuite: {
-                        workflowRun: {
-                          workflow: {
-                            name: 'CI'
-                          }
-                        }
-                      }
-                    },
-                    {
-                      __typename: 'CheckRun',
-                      id: 'check-2',
-                      name: 'test',
-                      conclusion: 'FAILURE',
-                      status: 'COMPLETED',
-                      startedAt: '2024-01-01T10:00:00Z',
-                      completedAt: '2024-01-01T10:10:00Z',
-                      detailsUrl: 'https://github.com/actions/run/2',
-                      summary: 'Tests failed',
-                      text: '3 tests failed',
-                      checkSuite: {
-                        workflowRun: {
-                          workflow: {
-                            name: 'CI'
-                          }
-                        }
-                      }
-                    }
-                  ]
-                }
-              }
-            }
-          }
-        ]
-      }
-    }
-  }
-}
-
-export const mockCommitsResponse = {
-  repository: {
-    pullRequest: {
-      commits: {
-        nodes: [
-          {
-            commit: {
-              oid: 'commit-1',
-              message: 'Initial commit',
-              url: 'https://github.com/owner/repo/commit/commit-1',
-              additions: 100,
-              deletions: 50,
-              authoredDate: '2024-01-01T09:00:00Z',
-              author: {
-                name: 'Test User',
-                avatarUrl: 'https://avatars.githubusercontent.com/u/1',
-                user: {
-                  login: 'testuser'
-                }
-              }
-            }
-          },
-          {
-            commit: {
-              oid: 'commit-2',
-              message: 'Add feature\r\n\r\n\r\n\r\nWith description',
-              url: 'https://github.com/owner/repo/commit/commit-2',
-              additions: 25,
-              deletions: 10,
-              authoredDate: '2024-01-02T09:00:00Z',
-              author: {
-                name: 'Another User',
-                avatarUrl: 'https://avatars.githubusercontent.com/u/2',
-                user: {
-                  login: 'anotheruser'
-                }
-              }
-            }
-          }
-        ]
-      }
-    }
+  ],
+  headers: {
+    'x-ratelimit-remaining': '4999',
+    'x-ratelimit-limit': '5000',
+    'x-ratelimit-reset': '1704067200'
   }
 }
 
@@ -168,161 +92,134 @@ export const mockFilesResponse = {
       changes: 30,
       patch: '@@ -1,30 +0,0 @@\n-// Removed file'
     }
+  ],
+  headers: {
+    'x-ratelimit-remaining': '4999',
+    'x-ratelimit-limit': '5000',
+    'x-ratelimit-reset': '1704067200'
+  }
+}
+
+// REST API mock responses for check runs
+export const mockRestCheckRunsResponse = {
+  total_count: 2,
+  check_runs: [
+    {
+      id: 1,
+      name: 'build',
+      status: 'completed',
+      conclusion: 'success',
+      started_at: '2024-01-01T10:00:00Z',
+      completed_at: '2024-01-01T10:05:00Z',
+      details_url: 'https://github.com/actions/run/1',
+      head_sha: 'abc123',
+      output: {
+        title: 'Build',
+        summary: 'Build passed'
+      },
+      app: {
+        name: 'GitHub Actions'
+      }
+    },
+    {
+      id: 2,
+      name: 'test',
+      status: 'completed',
+      conclusion: 'failure',
+      started_at: '2024-01-01T10:00:00Z',
+      completed_at: '2024-01-01T10:10:00Z',
+      details_url: 'https://github.com/actions/run/2',
+      head_sha: 'abc123',
+      output: {
+        title: 'Tests',
+        summary: 'Tests failed'
+      },
+      app: {
+        name: 'GitHub Actions'
+      }
+    }
   ]
 }
 
-export const mockReviewsResponse = {
-  repository: {
-    pullRequest: {
-      reviews: {
-        nodes: [
-          {
-            id: 'review-1',
-            body: 'Looks good!',
-            createdAt: '2024-01-01T11:00:00Z',
-            state: 'APPROVED',
-            submittedAt: '2024-01-01T11:05:00Z',
-            url: 'https://github.com/owner/repo/pull/1#pullrequestreview-1',
-            author: {
-              login: 'reviewer1',
-              avatarUrl: 'https://avatars.githubusercontent.com/u/10'
-            },
-            comments: {
-              nodes: [
-                {
-                  id: 'review-comment-1',
-                  body: 'Nice change here',
-                  createdAt: '2024-01-01T11:02:00Z',
-                  updatedAt: '2024-01-01T11:02:00Z',
-                  url: 'https://github.com/owner/repo/pull/1#discussion_r1',
-                  path: 'src/index.ts',
-                  line: 5,
-                  originalLine: 3,
-                  diffHunk: '@@ -1,5 +1,10 @@\n+import { foo }',
-                  commit: { oid: 'commit-1' },
-                  originalCommit: { oid: 'commit-0' },
-                  pullRequestReview: { id: 'review-1' },
-                  replyTo: null as null,
-                  author: {
-                    login: 'reviewer1',
-                    avatarUrl: 'https://avatars.githubusercontent.com/u/10'
-                  },
-                  reactions: {
-                    nodes: [
-                      {
-                        id: 'reaction-1',
-                        content: 'THUMBS_UP',
-                        user: { id: 'user-1', login: 'testuser' }
-                      }
-                    ]
-                  }
-                }
-              ]
-            }
-          },
-          {
-            id: 'review-2',
-            body: 'Please fix these issues',
-            createdAt: '2024-01-01T12:00:00Z',
-            state: 'CHANGES_REQUESTED',
-            submittedAt: '2024-01-01T12:05:00Z',
-            url: 'https://github.com/owner/repo/pull/1#pullrequestreview-2',
-            author: {
-              login: 'reviewer2',
-              avatarUrl: 'https://avatars.githubusercontent.com/u/11'
-            },
-            comments: {
-              nodes: [] as unknown[]
-            }
-          }
-        ]
-      }
+// REST API mock response for reviews
+export const mockRestReviewsResponse = [
+  {
+    id: 1,
+    node_id: 'review-1',
+    state: 'APPROVED',
+    body: 'Looks good!',
+    body_html: '<p>Looks good!</p>',
+    html_url: 'https://github.com/owner/repo/pull/1#pullrequestreview-1',
+    submitted_at: '2024-01-01T11:05:00Z',
+    commit_id: 'abc123',
+    user: {
+      login: 'reviewer1',
+      avatar_url: 'https://avatars.githubusercontent.com/u/10'
+    }
+  },
+  {
+    id: 2,
+    node_id: 'review-2',
+    state: 'CHANGES_REQUESTED',
+    body: 'Please fix these issues',
+    body_html: '<p>Please fix these issues</p>',
+    html_url: 'https://github.com/owner/repo/pull/1#pullrequestreview-2',
+    submitted_at: '2024-01-01T12:05:00Z',
+    commit_id: 'abc123',
+    user: {
+      login: 'reviewer2',
+      avatar_url: 'https://avatars.githubusercontent.com/u/11'
     }
   }
-}
+]
 
-export const mockCommentsResponse = {
-  repository: {
-    pullRequest: {
-      comments: {
-        nodes: [
-          {
-            id: 'pr-comment-1',
-            body: 'This is a PR-level comment',
-            createdAt: '2024-01-01T10:00:00Z',
-            updatedAt: '2024-01-01T10:00:00Z',
-            url: 'https://github.com/owner/repo/pull/1#issuecomment-1',
-            author: {
-              login: 'commenter1',
-              avatarUrl: 'https://avatars.githubusercontent.com/u/20'
-            },
-            reactions: {
-              nodes: [
-                {
-                  id: 'reaction-pr-1',
-                  content: 'HEART',
-                  user: { id: 'user-5', login: 'liker' }
-                }
-              ]
-            }
-          }
-        ]
-      },
-      reviewThreads: {
-        nodes: [
-          {
-            id: 'thread-1',
-            comments: {
-              nodes: [
-                {
-                  id: 'thread-comment-1',
-                  body: 'This needs refactoring',
-                  createdAt: '2024-01-01T13:00:00Z',
-                  updatedAt: '2024-01-01T13:00:00Z',
-                  url: 'https://github.com/owner/repo/pull/1#discussion_r100',
-                  path: 'src/utils.ts',
-                  line: 10,
-                  originalLine: 8,
-                  diffHunk: '@@ -5,10 +5,15 @@\n function old() {\n+function new() {',
-                  commit: { oid: 'commit-2' },
-                  originalCommit: { oid: 'commit-1' },
-                  pullRequestReview: { id: 'review-2' },
-                  replyTo: null as null,
-                  author: {
-                    login: 'reviewer2',
-                    avatarUrl: 'https://avatars.githubusercontent.com/u/11'
-                  },
-                  reactions: {
-                    nodes: [] as unknown[]
-                  }
-                },
-                {
-                  id: 'thread-comment-2',
-                  body: 'I agree, will fix',
-                  createdAt: '2024-01-01T14:00:00Z',
-                  updatedAt: '2024-01-01T14:00:00Z',
-                  url: 'https://github.com/owner/repo/pull/1#discussion_r101',
-                  path: 'src/utils.ts',
-                  line: 10,
-                  originalLine: 8,
-                  diffHunk: '@@ -5,10 +5,15 @@\n function old() {\n+function new() {',
-                  commit: { oid: 'commit-2' },
-                  originalCommit: { oid: 'commit-1' },
-                  pullRequestReview: null as null,
-                  replyTo: { id: 'thread-comment-1' },
-                  author: {
-                    login: 'author',
-                    avatarUrl: 'https://avatars.githubusercontent.com/u/1'
-                  },
-                  reactions: {
-                    nodes: [] as unknown[]
-                  }
-                }
-              ]
-            }
-          }
-        ]
-      }
+// REST API mock response for review comments
+export const mockRestReviewCommentsResponse = [
+  {
+    id: 1,
+    node_id: 'review-comment-1',
+    pull_request_review_id: 1,
+    body: 'Nice change here',
+    body_html: '<p>Nice change here</p>',
+    path: 'src/index.ts',
+    line: 5,
+    original_line: 3,
+    diff_hunk: '@@ -1,5 +1,10 @@\n+import { foo }',
+    commit_id: 'abc123',
+    original_commit_id: 'def456',
+    html_url: 'https://github.com/owner/repo/pull/1#discussion_r1',
+    created_at: '2024-01-01T11:02:00Z',
+    updated_at: '2024-01-01T11:02:00Z',
+    user: {
+      login: 'reviewer1',
+      avatar_url: 'https://avatars.githubusercontent.com/u/10',
+      id: 10
+    },
+    reactions: {
+      url: 'https://api.github.com/repos/owner/repo/pulls/comments/1/reactions',
+      total_count: 1
     }
   }
-}
+]
+
+// REST API mock response for issue comments
+export const mockRestIssueCommentsResponse = [
+  {
+    id: 1,
+    node_id: 'issue-comment-1',
+    body: 'This is a PR-level comment',
+    body_html: '<p>This is a PR-level comment</p>',
+    html_url: 'https://github.com/owner/repo/pull/1#issuecomment-1',
+    created_at: '2024-01-01T10:00:00Z',
+    updated_at: '2024-01-01T10:00:00Z',
+    user: {
+      login: 'commenter1',
+      avatar_url: 'https://avatars.githubusercontent.com/u/20',
+      id: 20
+    },
+    reactions: {
+      url: 'https://api.github.com/repos/owner/repo/issues/comments/1/reactions',
+      total_count: 1
+    }
+  }
+]

@@ -26,12 +26,11 @@ import {
   TabsTrigger
 } from '@/app/components/ui/tabs'
 import { navigationActions } from '../store/navigationSlice'
-import type { PullRequestDetails } from '@/types/pullRequestDetails'
+import { pullRequestDetailsActions } from '../store/pullRequestDetailsSlice'
 
 export function PullRequestPage(): ReactElement {
   const containerRef = useRef<HTMLDivElement>(null)
   const [stickyHeaderProgress, setStickyHeaderProgress] = useState(0)
-  const [details, setDetails] = useState<PullRequestDetails | null>(null)
 
   const { id } = useParams<{ id: string }>()
 
@@ -51,8 +50,13 @@ export function PullRequestPage(): ReactElement {
 
     const result = await window.electron.getPullRequestDetails(id)
 
-    setDetails(result)
-  }, [id])
+    if (result) {
+      dispatch(pullRequestDetailsActions.setDetails({
+        pullRequestId: id,
+        details: result
+      }))
+    }
+  }, [dispatch, id])
 
   useEffect(
     function loadPullRequestDetails() {
@@ -198,12 +202,7 @@ export function PullRequestPage(): ReactElement {
             >
               <div className="w-full">
                 {tab.id === 'overview' ? (
-                  <Overview
-                    checks={details?.checks ?? []}
-                    comments={details?.comments ?? []}
-                    pullRequest={pullRequest}
-                    reviews={details?.reviews ?? []}
-                  />
+                  <Overview pullRequest={pullRequest} />
                 ) : tab.content ? (
                   <tab.content pullRequest={pullRequest} />
                 ) : null}

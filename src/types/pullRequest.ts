@@ -31,6 +31,10 @@ export interface PullRequest {
   labels: PullRequestLabel[]
   assignees: PullRequestAssignee[]
   syncedAt: string
+  detailsSyncedAt: string | null
+  commentCount: number
+  approvalCount: number
+  changesRequestedCount: number
 }
 
 export type PullRequestRelation = 'author' | 'assignee' | 'reviewer'

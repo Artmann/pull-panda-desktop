@@ -30,7 +30,8 @@ export const pullRequests = sqliteTable('pull_requests', {
   labels: text('labels'),
   assignees: text('assignees'),
 
-  syncedAt: text('synced_at').notNull()
+  syncedAt: text('synced_at').notNull(),
+  detailsSyncedAt: text('details_synced_at')
 })
 
 export type PullRequest = typeof pullRequests.$inferSelect
@@ -68,6 +69,7 @@ export const comments = sqliteTable(
   {
     id: text('id').primaryKey(),
     gitHubId: text('github_id').notNull(),
+    gitHubNumericId: integer('github_numeric_id'),
     pullRequestId: text('pull_request_id').notNull(),
     reviewId: text('review_id'),
 
@@ -203,3 +205,19 @@ export const modifiedFiles = sqliteTable(
 
 export type ModifiedFile = typeof modifiedFiles.$inferSelect
 export type NewModifiedFile = typeof modifiedFiles.$inferInsert
+
+export const etags = sqliteTable(
+  'etags',
+  {
+    id: text('id').primaryKey(),
+    endpointType: text('endpoint_type').notNull(),
+    resourceId: text('resource_id').notNull(),
+    etag: text('etag').notNull(),
+    lastModified: text('last_modified'),
+    validatedAt: text('validated_at').notNull()
+  },
+  (table) => [index('etags_endpoint_resource_idx').on(table.endpointType, table.resourceId)]
+)
+
+export type ETag = typeof etags.$inferSelect
+export type NewETag = typeof etags.$inferInsert

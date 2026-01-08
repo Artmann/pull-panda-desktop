@@ -8,6 +8,7 @@ function createMockComment(body: string | null): Comment {
   return {
     id: 'comment-1',
     gitHubId: 'gh-comment-1',
+    gitHubNumericId: null,
     pullRequestId: 'pr-1',
     reviewId: null,
     body,

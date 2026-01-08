@@ -31,7 +31,7 @@ export function StickyPullRequestHeader({
   return (
     <header
       className={`
-        fixed top-8 left-0 right-0
+        fixed top-8 left-0 right-0 z-50
         flex flex-col gap-2
         bg-background
         border-b border-border

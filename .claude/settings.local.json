@@ -16,7 +16,21 @@
       "Bash(yarn drizzle-kit push:*)",
       "Bash(yarn start)",
       "Skill(branch-review)",
-      "Bash(git symbolic-ref:*)"
+      "Bash(git symbolic-ref:*)",
+      "Bash(yarn test)",
+      "Bash(yarn rebuild)",
+      "Bash(npx vitest run)",
+      "Bash(npx vitest:*)",
+      "Bash(npm run db:generate:*)",
+      "WebFetch(domain:docs.github.com)",
+      "Bash(npm run test:run:*)",
+      "Bash(npm install:*)",
+      "Bash(npm run typecheck:*)",
+      "Bash(yarn remove:*)",
+      "Bash(dir node_modules.binvitest*)",
+      "Bash(yarn install)",
+      "Bash(node node_modules/vitest/vitest.mjs run:*)",
+      "Bash(timeout 15 yarn start:*)"
     ]
   }
 }

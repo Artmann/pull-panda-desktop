@@ -1,17 +1,37 @@
-import { Code2 } from 'lucide-react'
-import { Fragment, memo, type ReactElement } from 'react'
+import { Code2, Loader2 } from 'lucide-react'
+import {
+  Fragment,
+  memo,
+  useCallback,
+  useState,
+  type FormEvent,
+  type ReactElement
+} from 'react'
 
+import type { PullRequest } from '@/types/pullRequest'
 import type { Comment } from '@/types/pullRequestDetails'
 
 import { TimeAgo } from '@/app/components/TimeAgo'
 import { Avatar, AvatarFallback, AvatarImage } from '@/app/components/ui/avatar'
+import { Button } from '@/app/components/ui/button'
 import {
   Card,
   CardContent,
+  CardFooter,
   CardHeader,
   CardTitle
 } from '@/app/components/ui/card'
 import { Separator } from '@/app/components/ui/separator'
+import { Textarea } from '@/app/components/ui/textarea'
+import { createComment } from '@/app/lib/api'
+import { useAuth } from '@/app/lib/store/authContext'
+import { getDraftKeyForReply } from '@/app/store/draftsSlice'
+import { useAppDispatch } from '@/app/store/hooks'
+import {
+  createOptimisticComment,
+  pullRequestDetailsActions
+} from '@/app/store/pullRequestDetailsSlice'
+import { useDraft } from '@/app/store/useDraft'
 
 import { CommentBody } from './CommentBody'
 import { SimpleDiff } from '../diffs/SimpleDiff'
@@ -99,17 +119,144 @@ const CommentItem = memo(function CommentItem({
   )
 })
 
+interface CommentReplyProps {
+  comment: Comment
+  pullRequest: PullRequest
+}
+
+const CommentReply = memo(function CommentReply({
+  comment,
+  pullRequest
+}: CommentReplyProps): ReactElement {
+  const draftKey = getDraftKeyForReply(pullRequest.id, comment.gitHubId)
+  const { body, setBody, clearDraft } = useDraft(draftKey)
+  const [isSubmitting, setIsSubmitting] = useState(false)
+
+  const dispatch = useAppDispatch()
+  const { user } = useAuth()
+
+  const isReviewComment = comment.gitHubReviewThreadId !== null
+  const reviewCommentId = isReviewComment ? comment.gitHubNumericId ?? undefined : undefined
+
+  const handleSubmit = useCallback(
+    async (event: FormEvent) => {
+      event.preventDefault()
+
+      if (!body.trim() || isSubmitting || !user) {
+        return
+      }
+
+      const trimmedBody = body.trim()
+
+      // Create optimistic comment and add to store immediately
+      const optimisticComment = createOptimisticComment({
+        body: trimmedBody,
+        pullRequestId: pullRequest.id,
+        userLogin: user.login,
+        userAvatarUrl: user.avatar_url,
+        parentCommentGitHubId: comment.gitHubId,
+        gitHubReviewThreadId: comment.gitHubReviewThreadId ?? undefined
+      })
+
+      dispatch(
+        pullRequestDetailsActions.addComment({
+          pullRequestId: pullRequest.id,
+          comment: optimisticComment
+        })
+      )
+
+      // Clear draft immediately for better UX
+      clearDraft()
+      setIsSubmitting(true)
+
+      try {
+        await createComment({
+          body: trimmedBody,
+          owner: pullRequest.repositoryOwner,
+          pullNumber: pullRequest.number,
+          repo: pullRequest.repositoryName,
+          reviewCommentId
+        })
+
+        // Trigger sync to get the real comment from the server
+        window.electron.syncPullRequestDetails(
+          pullRequest.id,
+          pullRequest.repositoryOwner,
+          pullRequest.repositoryName,
+          pullRequest.number
+        )
+      } catch (error) {
+        console.error('Failed to post comment:', error)
+
+        // Rollback optimistic comment on error
+        dispatch(
+          pullRequestDetailsActions.removeComment({
+            pullRequestId: pullRequest.id,
+            commentId: optimisticComment.id
+          })
+        )
+      } finally {
+        setIsSubmitting(false)
+      }
+    },
+    [
+      body,
+      clearDraft,
+      comment.gitHubId,
+      comment.gitHubReviewThreadId,
+      dispatch,
+      isSubmitting,
+      pullRequest.id,
+      pullRequest.number,
+      pullRequest.repositoryName,
+      pullRequest.repositoryOwner,
+      reviewCommentId,
+      user
+    ]
+  )
+
+  return (
+    <form
+      className="flex items-end gap-2 w-full"
+      onSubmit={handleSubmit}
+    >
+      <Textarea
+        className="flex-1 border-0 focus:ring-0 focus:border-0 shadow-none resize-none min-h-2 box-border text-xs md:text-xs placeholder:text-xs"
+        disabled={isSubmitting}
+        onChange={(event) => setBody(event.target.value)}
+        placeholder="Reply to comment..."
+        value={body}
+      />
+
+      <Button
+        disabled={!body.trim() || isSubmitting}
+        size="sm"
+        type="submit"
+        variant="ghost"
+      >
+        {isSubmitting && <Loader2 className="size-3 animate-spin" />}
+        {isSubmitting ? 'Posting...' : 'Post'}
+      </Button>
+    </form>
+  )
+})
+
 interface CommentThreadCardProps {
   comment: Comment
   allComments: Comment[]
   hideAuthor?: boolean
+  pullRequest?: PullRequest
 }
 
 export const CommentThreadCard = memo(function CommentThreadCard({
   comment,
   allComments,
-  hideAuthor = false
+  hideAuthor = false,
+  pullRequest
 }: CommentThreadCardProps): ReactElement {
+  // Only show reply form for review comments (where GitHub supports threading)
+  const isReviewComment = comment.gitHubReviewThreadId !== null
+
   return (
     <Card className="p-0 w-full gap-0 shadow-none">
       <CardContent className="p-0 w-full">
@@ -119,6 +266,14 @@ export const CommentThreadCard = memo(function CommentThreadCard({
           hideAuthor={hideAuthor}
         />
       </CardContent>
+      {pullRequest && isReviewComment && (
+        <CardFooter className="px-3 pt-1! pb-2 border-t border-border">
+          <CommentReply
+            comment={comment}
+            pullRequest={pullRequest}
+          />
+        </CardFooter>
+      )}
     </Card>
   )
 })
@@ -127,12 +282,14 @@ interface FileCommentThreadCardProps {
   comment: Comment
   allComments: Comment[]
   hideAuthor?: boolean
+  pullRequest?: PullRequest
 }
 
 export const FileCommentThreadCard = memo(function FileCommentThreadCard({
   comment,
   allComments,
-  hideAuthor = false
+  hideAuthor = false,
+  pullRequest
 }: FileCommentThreadCardProps): ReactElement {
   const numberOfLinesToShow = 3
   const line = comment.line ? comment.line : (comment.originalLine ?? 0)
@@ -161,6 +318,14 @@ export const FileCommentThreadCard = memo(function FileCommentThreadCard({
           hideAuthor={hideAuthor}
         />
       </CardContent>
+      {pullRequest && (
+        <CardFooter className="px-3 pt-1! pb-2 border-t border-border">
+          <CommentReply
+            comment={comment}
+            pullRequest={pullRequest}
+          />
+        </CardFooter>
+      )}
     </Card>
   )
 })

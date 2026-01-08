@@ -16,6 +16,7 @@ export interface Review {
 export interface Comment {
   id: string
   gitHubId: string
+  gitHubNumericId: number | null
   pullRequestId: string
   reviewId: string | null
   body: string | null

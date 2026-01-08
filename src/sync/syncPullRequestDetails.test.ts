@@ -1,10 +1,8 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 
-import type { GraphqlClient } from './test-helpers'
-
-vi.mock('./graphql', () => ({
-  createGraphqlClient: vi.fn()
-}))
+import { getDatabase } from '../database'
+import { pullRequests } from '../database/schema'
+import { setupTestDatabase, teardownTestDatabase } from './test-helpers'
 
 vi.mock('./syncChecks', () => ({
   syncChecks: vi.fn()
@@ -26,7 +24,6 @@ vi.mock('./syncComments', () => ({
   syncComments: vi.fn()
 }))
 
-import { createGraphqlClient } from './graphql'
 import { syncChecks } from './syncChecks'
 import { syncCommits } from './syncCommits'
 import { syncFiles } from './syncFiles'
@@ -35,32 +32,51 @@ import { syncComments } from './syncComments'
 import { syncPullRequestDetails } from './syncPullRequestDetails'
 
 describe('syncPullRequestDetails', () => {
-  const mockClient = vi.fn() as unknown as GraphqlClient
-
-  beforeEach(() => {
+  beforeEach(async () => {
+    await setupTestDatabase()
     vi.clearAllMocks()
 
-    vi.mocked(createGraphqlClient).mockReturnValue(mockClient)
     vi.mocked(syncChecks).mockResolvedValue(undefined)
     vi.mocked(syncCommits).mockResolvedValue(undefined)
     vi.mocked(syncFiles).mockResolvedValue(undefined)
     vi.mocked(syncReviews).mockResolvedValue(undefined)
     vi.mocked(syncComments).mockResolvedValue(undefined)
-  })
 
-  it('should create a GraphQL client with the token', async () => {
-    await syncPullRequestDetails({
-      token: 'test-token',
-      pullRequestId: 'pr-123',
-      owner: 'testowner',
+    // Insert test PR records for the tests that need them
+    const db = getDatabase()
+
+    db.insert(pullRequests).values({
+      id: 'pr-123',
+      number: 1,
+      title: 'Test PR',
+      state: 'OPEN',
+      url: 'https://github.com/test/test/pull/1',
+      repositoryOwner: 'testowner',
       repositoryName: 'testrepo',
-      pullNumber: 1
-    })
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      syncedAt: new Date().toISOString()
+    }).run()
 
-    expect(createGraphqlClient).toHaveBeenCalledWith('test-token')
+    db.insert(pullRequests).values({
+      id: 'pr-456',
+      number: 42,
+      title: 'Test PR 2',
+      state: 'OPEN',
+      url: 'https://github.com/test/test/pull/42',
+      repositoryOwner: 'myowner',
+      repositoryName: 'myrepo',
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      syncedAt: new Date().toISOString()
+    }).run()
   })
 
-  it('should call all syncers', async () => {
+  afterEach(() => {
+    teardownTestDatabase()
+  })
+
+  it('should call all syncers with token', async () => {
     await syncPullRequestDetails({
       token: 'test-token',
       pullRequestId: 'pr-123',
@@ -70,7 +86,7 @@ describe('syncPullRequestDetails', () => {
     })
 
     expect(syncChecks).toHaveBeenCalledWith({
-      client: mockClient,
+      token: 'test-token',
       pullRequestId: 'pr-123',
       owner: 'testowner',
       repositoryName: 'testrepo',
@@ -78,7 +94,7 @@ describe('syncPullRequestDetails', () => {
     })
 
     expect(syncCommits).toHaveBeenCalledWith({
-      client: mockClient,
+      token: 'test-token',
       pullRequestId: 'pr-123',
       owner: 'testowner',
       repositoryName: 'testrepo',
@@ -94,7 +110,7 @@ describe('syncPullRequestDetails', () => {
     })
 
     expect(syncReviews).toHaveBeenCalledWith({
-      client: mockClient,
+      token: 'test-token',
       pullRequestId: 'pr-123',
       owner: 'testowner',
       repositoryName: 'testrepo',
@@ -102,7 +118,7 @@ describe('syncPullRequestDetails', () => {
     })
 
     expect(syncComments).toHaveBeenCalledWith({
-      client: mockClient,
+      token: 'test-token',
       pullRequestId: 'pr-123',
       owner: 'testowner',
       repositoryName: 'testrepo',
@@ -137,7 +153,7 @@ describe('syncPullRequestDetails', () => {
       pullNumber: 1
     })
 
-    expect(result.success).toBe(false)
+    expect(result.success).toEqual(false)
     expect(result.errors).toHaveLength(2)
     expect(result.errors).toContain('Checks sync failed: Checks failed')
     expect(result.errors).toContain('Commits sync failed: Commits failed')
@@ -172,7 +188,7 @@ describe('syncPullRequestDetails', () => {
       pullNumber: 1
     })
 
-    expect(result.success).toBe(false)
+    expect(result.success).toEqual(false)
     expect(result.errors).toHaveLength(1)
     expect(result.errors[0]).toContain('Files sync failed')
   })
@@ -192,7 +208,7 @@ describe('syncPullRequestDetails', () => {
       pullNumber: 1
     })
 
-    expect(result.success).toBe(false)
+    expect(result.success).toEqual(false)
     expect(result.errors).toHaveLength(5)
   })
 
@@ -225,7 +241,7 @@ describe('syncPullRequestDetails', () => {
       pullNumber: 1
     })
 
-    expect(result.success).toBe(false)
+    expect(result.success).toEqual(false)
     expect(result.errors[0]).toContain('Checks sync failed: String error')
   })
 })
