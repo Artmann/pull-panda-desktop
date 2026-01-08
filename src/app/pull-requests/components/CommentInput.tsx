@@ -1,7 +1,6 @@
 import { Loader2, Send, X } from 'lucide-react'
 import { memo, useState, type ReactElement } from 'react'
 
-import { Avatar, AvatarFallback, AvatarImage } from '@/app/components/ui/avatar'
 import { Button } from '@/app/components/ui/button'
 import { Textarea } from '@/app/components/ui/textarea'
 import { createComment } from '@/app/lib/api'

@@ -1,5 +1,4 @@
-import { eq, and } from 'drizzle-orm'
-import { randomUUID } from 'node:crypto'
+import { eq } from 'drizzle-orm'
 
 import { getDatabase } from '../database'
 import { etags, type NewETag } from '../database/schema'

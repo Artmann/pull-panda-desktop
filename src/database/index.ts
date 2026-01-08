@@ -18,14 +18,6 @@ function getDatabasePath(): string {
 
 let database: ReturnType<typeof drizzle> | null = null
 let sqliteInstance: SqlJsDatabase | null = null
-let sqlJsInitialized = false
-
-async function initSqlJsOnce() {
-  if (!sqlJsInitialized) {
-    await initSqlJs()
-    sqlJsInitialized = true
-  }
-}
 
 export async function initializeDatabase(): Promise<ReturnType<typeof drizzle>> {
   if (database) {

@@ -177,7 +177,7 @@ describe('CommentReply', () => {
       await Promise.resolve()
     })
 
-    const form = screen.getByPlaceholderText('Reply to comment...').closest('form')!
+    const form = screen.getByPlaceholderText('Reply to comment...').closest('form') as HTMLFormElement
 
     await act(async () => {
       fireEvent.submit(form)
@@ -223,7 +223,7 @@ describe('CommentReply', () => {
       await Promise.resolve()
     })
 
-    const form = screen.getByPlaceholderText('Reply to comment...').closest('form')!
+    const form = screen.getByPlaceholderText('Reply to comment...').closest('form') as HTMLFormElement
 
     await act(async () => {
       fireEvent.submit(form)
@@ -269,7 +269,7 @@ describe('CommentReply', () => {
       await Promise.resolve()
     })
 
-    const form = screen.getByPlaceholderText('Reply to comment...').closest('form')!
+    const form = screen.getByPlaceholderText('Reply to comment...').closest('form') as HTMLFormElement
 
     await act(async () => {
       fireEvent.submit(form)
