@@ -193,8 +193,8 @@ export function CheckList({ checks }: { checks: Check[] }): ReactElement {
         type="single"
       >
         <AccordionItem value="checks">
-          <AccordionTrigger>
-            <div className="flex items-center gap-2 ">
+          <AccordionTrigger className="p-0">
+            <div className="flex items-center gap-2">
               <div>{icon}</div>
               <div>
                 <div className="font-semibold text-foreground">{title}</div>
@@ -218,7 +218,9 @@ export function CheckList({ checks }: { checks: Check[] }): ReactElement {
                         rel="noopener noreferrer"
                         target="_blank"
                       >
-                        <span className="text-sm font-medium">{check.name}</span>
+                        <span className="text-sm font-medium">
+                          {check.name}
+                        </span>
                         <span className="text-xs text-muted-foreground">
                           {getStatusText(check)}
                         </span>
