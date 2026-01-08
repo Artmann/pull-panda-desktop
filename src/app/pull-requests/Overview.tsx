@@ -5,6 +5,7 @@ import type { Check, Comment, Review } from '@/types/pullRequestDetails'
 
 import { MarkdownBlock } from '@/app/components/MarkdownBlock'
 import { SectionHeader } from '@/app/components/SectionHeader'
+import { Separator } from '@/app/components/ui/separator'
 
 import { Activity } from './components/Activity'
 import { CheckList } from './components/CheckList'
@@ -58,14 +59,22 @@ export const Overview = memo(function Overview({
         )}
       </section>
 
+      {issues.length > 0 && <Separator />}
+
       <LinkedIssues issues={issues} />
 
-      {checks && checks.length > 0 && (
-        <section>
-          <SectionHeader>Checks</SectionHeader>
+      <Separator />
 
-          <CheckList checks={checks} />
-        </section>
+      {checks && checks.length > 0 && (
+        <>
+          <section>
+            <SectionHeader>Checks</SectionHeader>
+
+            <CheckList checks={checks} />
+          </section>
+
+          <Separator />
+        </>
       )}
 
       <section>
