@@ -8,10 +8,7 @@ import { UserAvatar } from '@/app/components/UserAvatar'
 import { Card, CardContent } from '@/app/components/ui/card'
 
 import { CommentBody } from './CommentBody'
-import {
-  CommentThreadCard,
-  FileCommentThreadCard
-} from './CommentThread'
+import { CommentThreadCard, FileCommentThreadCard } from './CommentThread'
 
 interface ActivityItem {
   id: string
@@ -84,7 +81,7 @@ export function Activity({
   }, [comments, pullRequest, reviews])
 
   return (
-    <div className="flex flex-col gap-4 pt-4 w-full">
+    <div className="flex flex-col gap-4 w-full">
       {sortedActivity.map((item) => (
         <ActivityItemComponent
           key={item.id}
