@@ -1,5 +1,7 @@
 import { diffWords } from 'diff'
 
+import { escapeHtml } from '@/app/lib/utils'
+
 import type { DiffHunkLine } from './hunks'
 
 export interface LinePair {
@@ -76,15 +78,6 @@ export function computeIntraLineDiff(
   }
 
   return html
-}
-
-function escapeHtml(text: string): string {
-  return text
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#039;')
 }
 
 export function applyIntraLineDiffHighlighting(

@@ -147,7 +147,10 @@ function extractGitHubIssueHashtags(
   repo: string,
   text: string
 ): FoundIssue[] {
-  const issueRegex = /#(\d+)/g
+  // Match #123 pattern but avoid false positives:
+  // - Must be preceded by whitespace, start of string, or punctuation (not letters, digits, or &/#)
+  // - Must be followed by word boundary (whitespace, punctuation, or end of string)
+  const issueRegex = /(?:^|[^\w&#])#(\d+)\b/g
   const issues: FoundIssue[] = []
 
   let match

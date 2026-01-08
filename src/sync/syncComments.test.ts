@@ -1,11 +1,12 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+import { describe, it, expect, beforeEach, afterEach } from 'vitest'
 import { eq, and, isNull } from 'drizzle-orm'
 
 import {
   setupTestDatabase,
   teardownTestDatabase,
   mockCommentsResponse,
-  type GraphqlClient
+  createMockGraphqlClientWithResponse,
+  createMockGraphqlClientWithError
 } from './test-helpers'
 import { getDatabase } from '../database'
 import { comments, commentReactions } from '../database/schema'
@@ -21,7 +22,7 @@ describe('syncComments', () => {
   })
 
   it('should sync comments from GitHub response', async () => {
-    const mockClient = vi.fn().mockResolvedValue(mockCommentsResponse) as unknown as GraphqlClient
+    const mockClient = createMockGraphqlClientWithResponse(mockCommentsResponse)
 
     await syncComments({
       client: mockClient,
@@ -50,7 +51,7 @@ describe('syncComments', () => {
   })
 
   it('should sync PR-level comments', async () => {
-    const mockClient = vi.fn().mockResolvedValue(mockCommentsResponse) as unknown as GraphqlClient
+    const mockClient = createMockGraphqlClientWithResponse(mockCommentsResponse)
 
     await syncComments({
       client: mockClient,
@@ -76,7 +77,7 @@ describe('syncComments', () => {
   })
 
   it('should sync review thread comments', async () => {
-    const mockClient = vi.fn().mockResolvedValue(mockCommentsResponse) as unknown as GraphqlClient
+    const mockClient = createMockGraphqlClientWithResponse(mockCommentsResponse)
 
     await syncComments({
       client: mockClient,
@@ -102,7 +103,7 @@ describe('syncComments', () => {
   })
 
   it('should track reply relationships', async () => {
-    const mockClient = vi.fn().mockResolvedValue(mockCommentsResponse) as unknown as GraphqlClient
+    const mockClient = createMockGraphqlClientWithResponse(mockCommentsResponse)
 
     await syncComments({
       client: mockClient,
@@ -125,7 +126,7 @@ describe('syncComments', () => {
   })
 
   it('should sync comment reactions', async () => {
-    const mockClient = vi.fn().mockResolvedValue(mockCommentsResponse) as unknown as GraphqlClient
+    const mockClient = createMockGraphqlClientWithResponse(mockCommentsResponse)
 
     await syncComments({
       client: mockClient,
@@ -157,7 +158,7 @@ describe('syncComments', () => {
       syncedAt: new Date().toISOString()
     })
 
-    const mockClient = vi.fn().mockResolvedValue(mockCommentsResponse) as unknown as GraphqlClient
+    const mockClient = createMockGraphqlClientWithResponse(mockCommentsResponse)
 
     await syncComments({
       client: mockClient,
@@ -196,7 +197,7 @@ describe('syncComments', () => {
       }
     }
 
-    const mockClient = vi.fn().mockResolvedValue(emptyResponse) as unknown as GraphqlClient
+    const mockClient = createMockGraphqlClientWithResponse(emptyResponse)
 
     await syncComments({
       client: mockClient,
@@ -216,7 +217,7 @@ describe('syncComments', () => {
   })
 
   it('should throw on API errors', async () => {
-    const mockClient = vi.fn().mockRejectedValue(new Error('API error')) as unknown as GraphqlClient
+    const mockClient = createMockGraphqlClientWithError(new Error('API error'))
 
     await expect(
       syncComments({
@@ -266,7 +267,7 @@ describe('syncComments', () => {
       }
     }
 
-    const mockClient = vi.fn().mockResolvedValue(responseWithRemovedLineComment) as unknown as GraphqlClient
+    const mockClient = createMockGraphqlClientWithResponse(responseWithRemovedLineComment)
 
     await syncComments({
       client: mockClient,
@@ -308,7 +309,7 @@ describe('syncComments', () => {
       }
     }
 
-    const mockClient = vi.fn().mockResolvedValue(responseWithWindowsLineEndings) as unknown as GraphqlClient
+    const mockClient = createMockGraphqlClientWithResponse(responseWithWindowsLineEndings)
 
     await syncComments({
       client: mockClient,

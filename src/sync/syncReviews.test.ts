@@ -1,11 +1,12 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+import { describe, it, expect, beforeEach, afterEach } from 'vitest'
 import { eq, and, isNull } from 'drizzle-orm'
 
 import {
   setupTestDatabase,
   teardownTestDatabase,
   mockReviewsResponse,
-  type GraphqlClient
+  createMockGraphqlClientWithResponse,
+  createMockGraphqlClientWithError
 } from './test-helpers'
 import { getDatabase } from '../database'
 import { reviews, comments, commentReactions } from '../database/schema'
@@ -21,7 +22,7 @@ describe('syncReviews', () => {
   })
 
   it('should sync reviews from GitHub response', async () => {
-    const mockClient = vi.fn().mockResolvedValue(mockReviewsResponse) as unknown as GraphqlClient
+    const mockClient = createMockGraphqlClientWithResponse(mockReviewsResponse)
 
     await syncReviews({
       client: mockClient,
@@ -50,7 +51,7 @@ describe('syncReviews', () => {
   })
 
   it('should store review metadata correctly', async () => {
-    const mockClient = vi.fn().mockResolvedValue(mockReviewsResponse) as unknown as GraphqlClient
+    const mockClient = createMockGraphqlClientWithResponse(mockReviewsResponse)
 
     await syncReviews({
       client: mockClient,
@@ -74,7 +75,7 @@ describe('syncReviews', () => {
   })
 
   it('should sync review comments', async () => {
-    const mockClient = vi.fn().mockResolvedValue(mockReviewsResponse) as unknown as GraphqlClient
+    const mockClient = createMockGraphqlClientWithResponse(mockReviewsResponse)
 
     await syncReviews({
       client: mockClient,
@@ -97,7 +98,7 @@ describe('syncReviews', () => {
   })
 
   it('should sync comment reactions', async () => {
-    const mockClient = vi.fn().mockResolvedValue(mockReviewsResponse) as unknown as GraphqlClient
+    const mockClient = createMockGraphqlClientWithResponse(mockReviewsResponse)
 
     await syncReviews({
       client: mockClient,
@@ -120,7 +121,7 @@ describe('syncReviews', () => {
   })
 
   it('should handle reviews without comments', async () => {
-    const mockClient = vi.fn().mockResolvedValue(mockReviewsResponse) as unknown as GraphqlClient
+    const mockClient = createMockGraphqlClientWithResponse(mockReviewsResponse)
 
     await syncReviews({
       client: mockClient,
@@ -154,7 +155,7 @@ describe('syncReviews', () => {
       syncedAt: new Date().toISOString()
     })
 
-    const mockClient = vi.fn().mockResolvedValue(mockReviewsResponse) as unknown as GraphqlClient
+    const mockClient = createMockGraphqlClientWithResponse(mockReviewsResponse)
 
     await syncReviews({
       client: mockClient,
@@ -190,7 +191,7 @@ describe('syncReviews', () => {
       }
     }
 
-    const mockClient = vi.fn().mockResolvedValue(emptyResponse) as unknown as GraphqlClient
+    const mockClient = createMockGraphqlClientWithResponse(emptyResponse)
 
     await syncReviews({
       client: mockClient,
@@ -210,7 +211,7 @@ describe('syncReviews', () => {
   })
 
   it('should throw on API errors', async () => {
-    const mockClient = vi.fn().mockRejectedValue(new Error('API error')) as unknown as GraphqlClient
+    const mockClient = createMockGraphqlClientWithError(new Error('API error'))
 
     await expect(
       syncReviews({
@@ -265,7 +266,7 @@ describe('syncReviews', () => {
       }
     }
 
-    const mockClient = vi.fn().mockResolvedValue(responseWithAddedLineComment) as unknown as GraphqlClient
+    const mockClient = createMockGraphqlClientWithResponse(responseWithAddedLineComment)
 
     await syncReviews({
       client: mockClient,

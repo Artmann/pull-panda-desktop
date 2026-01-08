@@ -19,6 +19,14 @@ export function createMockGraphqlClient() {
   return vi.fn() as unknown as GraphqlClient
 }
 
+export function createMockGraphqlClientWithResponse<T>(response: T) {
+  return vi.fn().mockResolvedValue(response) as unknown as GraphqlClient
+}
+
+export function createMockGraphqlClientWithError(error: Error) {
+  return vi.fn().mockRejectedValue(error) as unknown as GraphqlClient
+}
+
 export function createMockOctokit() {
   return {
     rest: {
