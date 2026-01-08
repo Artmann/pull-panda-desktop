@@ -96,18 +96,6 @@ function initializeAllTables(sqlite: Database.Database): void {
     // Column already exists.
   }
 
-  try {
-    sqlite.exec(`ALTER TABLE comments ADD COLUMN body_html TEXT`)
-  } catch {
-    // Column already exists.
-  }
-
-  try {
-    sqlite.exec(`ALTER TABLE reviews ADD COLUMN body_html TEXT`)
-  } catch {
-    // Column already exists.
-  }
-
   sqlite.exec(`
     CREATE TABLE IF NOT EXISTS reviews (
       id TEXT PRIMARY KEY,
@@ -115,6 +103,7 @@ function initializeAllTables(sqlite: Database.Database): void {
       pull_request_id TEXT NOT NULL,
       state TEXT NOT NULL,
       body TEXT,
+      body_html TEXT,
       url TEXT,
       author_login TEXT,
       author_avatar_url TEXT,
@@ -133,6 +122,7 @@ function initializeAllTables(sqlite: Database.Database): void {
       pull_request_id TEXT NOT NULL,
       review_id TEXT,
       body TEXT,
+      body_html TEXT,
       path TEXT,
       line INTEGER,
       original_line INTEGER,
@@ -152,6 +142,19 @@ function initializeAllTables(sqlite: Database.Database): void {
     );
     CREATE INDEX IF NOT EXISTS idx_comments_pull_request_id ON comments(pull_request_id);
   `)
+
+  // Add body_html columns for existing databases that don't have them yet.
+  try {
+    sqlite.exec(`ALTER TABLE comments ADD COLUMN body_html TEXT`)
+  } catch {
+    // Column already exists.
+  }
+
+  try {
+    sqlite.exec(`ALTER TABLE reviews ADD COLUMN body_html TEXT`)
+  } catch {
+    // Column already exists.
+  }
 
   sqlite.exec(`
     CREATE TABLE IF NOT EXISTS comment_reactions (
