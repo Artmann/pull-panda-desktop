@@ -34,12 +34,7 @@ function PullRequestCard({
 }): ReactElement {
   const navigate = useNavigate()
 
-  const comments: unknown[] = []
-  const allReviews: Array<{ state: string }> = []
-  const commentCount = comments.length
-  const approvalCount = allReviews.filter(
-    (review) => review.state === 'APPROVED'
-  ).length
+  const { approvalCount, changesRequestedCount, commentCount } = pullRequest
 
   const status = useMemo((): string => {
     // Check PR state first (Merged/Closed take priority)
@@ -52,11 +47,7 @@ function PullRequestCard({
     }
 
     // Then check review states for open PRs
-    const hasChangesRequested = allReviews.some(
-      (review) => review.state === 'CHANGES_REQUESTED'
-    )
-
-    if (hasChangesRequested) {
+    if (changesRequestedCount > 0) {
       return 'Changes Requested'
     }
 
@@ -69,7 +60,7 @@ function PullRequestCard({
     }
 
     return 'Pending'
-  }, [allReviews, approvalCount, pullRequest.isDraft, pullRequest.state])
+  }, [approvalCount, changesRequestedCount, pullRequest.isDraft, pullRequest.state])
 
   const statusColorClasses = useMemo((): string => {
     if (status === 'Merged') {

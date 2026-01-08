@@ -2,7 +2,9 @@ import { app, BrowserWindow, ipcMain, shell } from 'electron'
 import started from 'electron-squirrel-startup'
 import path from 'node:path'
 
+import { initializeDatabase, closeDatabase, saveDatabase } from './database'
 import { ipcChannels } from './lib/ipc/channels'
+import { getApiPort, startApiServer } from './main/api'
 import {
   bootstrap,
   BootstrapData,
@@ -29,6 +31,10 @@ if (started) {
 }
 
 function setupIpcHandlers(): void {
+  ipcMain.handle(ipcChannels.ApiGetPort, () => {
+    return getApiPort()
+  })
+
   ipcMain.handle(ipcChannels.GetBootstrapData, () => {
     return bootstrapData
   })
@@ -128,6 +134,9 @@ function setupIpcHandlers(): void {
         pullNumber
       })
 
+      // Save database after sync
+      saveDatabase()
+
       mainWindow?.webContents.send(ipcChannels.SyncComplete, {
         type: 'pull-request-details',
         pullRequestId
@@ -170,15 +179,48 @@ const createWindow = () => {
 // This method will be called when Electron has finished
 // initialization and is ready to create browser windows.
 // Some APIs can only be used after this event occurs.
+function needsSync(pullRequest: {
+  detailsSyncedAt: string | null
+  updatedAt: string
+}): boolean {
+  // Never synced before
+  if (!pullRequest.detailsSyncedAt) {
+    return true
+  }
+
+  const now = Date.now()
+  const updatedAt = new Date(pullRequest.updatedAt).getTime()
+  const detailsSyncedAt = new Date(pullRequest.detailsSyncedAt).getTime()
+
+  // Updated on GitHub since last sync
+  if (updatedAt > detailsSyncedAt) {
+    return true
+  }
+
+  // Use shorter stale threshold for recently active PRs
+  const oneDayMs = 24 * 60 * 60 * 1000
+  const isRecentlyUpdated = now - updatedAt < oneDayMs
+  const staleThresholdMs = isRecentlyUpdated ? 60 * 1000 : 60 * 60 * 1000
+
+  if (now - detailsSyncedAt > staleThresholdMs) {
+    return true
+  }
+
+  return false
+}
+
 async function syncAllPullRequestDetails(token: string): Promise<void> {
   if (!bootstrapData) {
     return
   }
 
-  const pullRequests = bootstrapData.pullRequests
+  const allPullRequests = bootstrapData.pullRequests
+  const pullRequests = allPullRequests.filter(needsSync)
   const total = pullRequests.length
 
-  console.log(`Starting background sync for ${total} PRs`)
+  console.log(
+    `Starting background sync for ${total}/${allPullRequests.length} PRs needing updates`
+  )
 
   const task = taskManager.createTask('syncPullRequestDetails', {
     message: 'Synchronizing pull requests...',
@@ -242,6 +284,11 @@ async function syncAllPullRequestDetails(token: string): Promise<void> {
 app.on('ready', async () => {
   setupIpcHandlers()
 
+  // Initialize database before anything else
+  await initializeDatabase()
+
+  await startApiServer(loadToken)
+
   bootstrapData = await bootstrap()
 
   createWindow()
@@ -283,6 +330,16 @@ app.on('ready', async () => {
         console.error('Failed to sync pull requests:', error)
       })
   }
+})
+
+// Save database periodically (every 30 seconds)
+setInterval(() => {
+  saveDatabase()
+}, 30000)
+
+// Save database before quitting
+app.on('before-quit', () => {
+  closeDatabase()
 })
 
 // Quit when all windows are closed, except on macOS. There, it's common

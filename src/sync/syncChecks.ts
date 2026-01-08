@@ -3,20 +3,52 @@ import { eq, and, isNull } from 'drizzle-orm'
 import { getDatabase } from '../database'
 import { checks, type NewCheck } from '../database/schema'
 
-import { createGraphqlClient } from './graphql'
-import { checksQuery, type ChecksQueryResponse } from './queries'
+import { createRestClient } from './restClient'
+import { etagManager } from './etagManager'
 import { generateId } from './utils'
 
 interface SyncChecksParams {
-  client: ReturnType<typeof createGraphqlClient>
+  token: string
   pullRequestId: string
   owner: string
   repositoryName: string
   pullNumber: number
 }
 
+interface CheckRunData {
+  id: number
+  name: string
+  status: string | null
+  conclusion: string | null
+  started_at: string | null
+  completed_at: string | null
+  details_url: string | null
+  head_sha: string
+  output?: {
+    title?: string | null
+    summary?: string | null
+  }
+  check_suite?: {
+    id: number
+  }
+  app?: {
+    name?: string
+  }
+}
+
+interface CheckRunsResponse {
+  total_count: number
+  check_runs: CheckRunData[]
+}
+
+interface PullRequestData {
+  head: {
+    sha: string
+  }
+}
+
 export async function syncChecks({
-  client,
+  token,
   pullRequestId,
   owner,
   repositoryName,
@@ -25,55 +57,81 @@ export async function syncChecks({
   console.time('syncChecks')
 
   try {
-    const response = await client<ChecksQueryResponse>(checksQuery, {
-      owner,
-      repo: repositoryName,
-      pullNumber
-    })
+    const client = createRestClient(token)
 
-    const commitNode = response.repository?.pullRequest?.commits?.nodes?.[0]
-    const commitSha = commitNode?.commit.oid ?? ''
-    const statusCheckNodes =
-      commitNode?.commit.statusCheckRollup?.contexts?.nodes?.filter(
-        (node) => node !== null
-      ) ?? []
+    // First, get the PR to find the head SHA
+    const prResult = await client.request<PullRequestData>(
+      'GET /repos/{owner}/{repo}/pulls/{pull_number}',
+      {
+        owner,
+        repo: repositoryName,
+        pull_number: pullNumber
+      }
+    )
+
+    if (!prResult.data) {
+      console.log(`[syncChecks] Could not get PR #${pullNumber}`)
+      console.timeEnd('syncChecks')
+
+      return
+    }
+
+    const commitSha = prResult.data.head.sha
+    const etagKey = { endpointType: 'checks', resourceId: pullRequestId }
+
+    // Look up cached ETag
+    const cached = etagManager.get(etagKey)
+
+    const result = await client.request<CheckRunsResponse>(
+      'GET /repos/{owner}/{repo}/commits/{ref}/check-runs',
+      {
+        owner,
+        repo: repositoryName,
+        ref: commitSha,
+        per_page: 100
+      },
+      { etag: cached?.etag ?? undefined }
+    )
+
+    // Skip processing on 304 Not Modified
+    if (result.notModified) {
+      console.log(`[syncChecks] No changes for PR #${pullNumber} (304)`)
+      console.timeEnd('syncChecks')
+
+      return
+    }
+
+    const checkRuns = result.data?.check_runs ?? []
 
     console.log(
-      `Found ${statusCheckNodes.length} status checks for PR #${pullNumber} in ${owner}/${repositoryName}.`
+      `Found ${checkRuns.length} check runs for PR #${pullNumber} in ${owner}/${repositoryName}.`
     )
 
     const database = getDatabase()
     const now = new Date().toISOString()
 
-    const existingChecks = await database
+    const existingChecks = database
       .select()
       .from(checks)
       .where(
         and(eq(checks.pullRequestId, pullRequestId), isNull(checks.deletedAt))
       )
+      .all()
 
     const syncedGitHubIds: string[] = []
 
-    for (const checkNode of statusCheckNodes) {
-      if (!checkNode || checkNode.__typename !== 'CheckRun') {
-        continue
-      }
-
-      const gitHubId = checkNode.id
+    for (const checkRun of checkRuns) {
+      const gitHubId = String(checkRun.id)
       syncedGitHubIds.push(gitHubId)
 
       const durationInSeconds =
-        checkNode.startedAt && checkNode.completedAt
+        checkRun.started_at && checkRun.completed_at
           ? Math.round(
-              (new Date(checkNode.completedAt).getTime() -
-                new Date(checkNode.startedAt).getTime()) /
+              (new Date(checkRun.completed_at).getTime() -
+                new Date(checkRun.started_at).getTime()) /
                 1000
             )
-          : undefined
-
-      const workflowName =
-        checkNode.checkSuite?.workflowRun?.workflow?.name ?? ''
-      const checkName = checkNode.name ?? ''
+          : null
 
       const existingCheck = existingChecks.find((c) => c.gitHubId === gitHubId)
 
@@ -81,22 +139,22 @@ export async function syncChecks({
         id: existingCheck?.id ?? generateId(),
         gitHubId,
         pullRequestId,
-        name: checkName,
-        state: checkNode.status ?? null,
-        conclusion: checkNode.conclusion ?? null,
+        name: checkRun.name,
+        state: checkRun.status,
+        conclusion: checkRun.conclusion,
         commitSha,
-        suiteName: workflowName,
-        durationInSeconds: durationInSeconds ?? null,
-        detailsUrl: checkNode.detailsUrl ?? null,
-        message: checkNode.text ?? checkNode.summary ?? null,
-        url: checkNode.detailsUrl ?? null,
-        gitHubCreatedAt: checkNode.startedAt ?? null,
-        gitHubUpdatedAt: checkNode.completedAt ?? checkNode.startedAt ?? null,
+        suiteName: checkRun.app?.name ?? null,
+        durationInSeconds,
+        detailsUrl: checkRun.details_url,
+        message: checkRun.output?.summary ?? null,
+        url: checkRun.details_url,
+        gitHubCreatedAt: checkRun.started_at,
+        gitHubUpdatedAt: checkRun.completed_at ?? checkRun.started_at,
         syncedAt: now,
         deletedAt: null
       }
 
-      await database
+      database
         .insert(checks)
         .values(checkData)
         .onConflictDoUpdate({
@@ -117,23 +175,28 @@ export async function syncChecks({
             deletedAt: null
           }
         })
+        .run()
     }
 
+    // Soft delete checks that no longer exist
     for (const existingCheck of existingChecks) {
       if (!syncedGitHubIds.includes(existingCheck.gitHubId)) {
-        await database
+        database
           .update(checks)
           .set({ deletedAt: now })
           .where(eq(checks.id, existingCheck.id))
+          .run()
       }
     }
 
-    const syncedChecks = await database
+    // Remove duplicates (same commitSha + name)
+    const syncedChecks = database
       .select()
       .from(checks)
       .where(
         and(eq(checks.pullRequestId, pullRequestId), isNull(checks.deletedAt))
       )
+      .all()
 
     for (const check of syncedChecks) {
       const duplicates = syncedChecks.filter(
@@ -144,11 +207,17 @@ export async function syncChecks({
       )
 
       for (const duplicate of duplicates) {
-        await database
+        database
           .update(checks)
           .set({ deletedAt: now })
           .where(eq(checks.id, duplicate.id))
+          .run()
       }
+    }
+
+    // Store the new ETag
+    if (result.etag) {
+      etagManager.set(etagKey, result.etag, result.lastModified ?? undefined)
     }
 
     console.timeEnd('syncChecks')

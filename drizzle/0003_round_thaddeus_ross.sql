@@ -1,0 +1,1 @@
+ALTER TABLE `comments` ADD `github_numeric_id` integer;

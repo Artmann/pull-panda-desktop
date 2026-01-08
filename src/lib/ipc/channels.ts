@@ -1,4 +1,5 @@
 export const ipcChannels = {
+  ApiGetPort: 'api:get-port',
   AuthClearToken: 'auth:clear-token',
   AuthGetToken: 'auth:get-token',
   AuthGetUser: 'auth:get-user',

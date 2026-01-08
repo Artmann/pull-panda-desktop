@@ -6,8 +6,10 @@ import type { Comment, Review } from '@/types/pullRequestDetails'
 import { TimeAgo } from '@/app/components/TimeAgo'
 import { UserAvatar } from '@/app/components/UserAvatar'
 import { Card, CardContent } from '@/app/components/ui/card'
+import { useAppSelector } from '@/app/store/hooks'
 
 import { CommentBody } from './CommentBody'
+import { NewCommentForm } from './CommentInput'
 import { CommentThreadCard, FileCommentThreadCard } from './CommentThread'
 
 interface ActivityItem {
@@ -18,16 +20,16 @@ interface ActivityItem {
 }
 
 interface ActivityProps {
-  comments: Comment[]
   pullRequest: PullRequest
-  reviews: Review[]
 }
 
-export function Activity({
-  comments,
-  pullRequest,
-  reviews
-}: ActivityProps): ReactElement {
+export function Activity({ pullRequest }: ActivityProps): ReactElement {
+  const details = useAppSelector(
+    (state) => state.pullRequestDetails[pullRequest.id]
+  )
+
+  const comments = details?.comments ?? []
+  const reviews = details?.reviews ?? []
   const sortedActivity = useMemo(() => {
     const topLevelComments = comments.filter(
       (comment) => !comment.parentCommentGitHubId
@@ -82,11 +84,19 @@ export function Activity({
 
   return (
     <div className="flex flex-col gap-4 w-full">
+      <NewCommentForm
+        owner={pullRequest.repositoryOwner}
+        pullNumber={pullRequest.number}
+        pullRequestId={pullRequest.id}
+        repo={pullRequest.repositoryName}
+      />
+
       {sortedActivity.map((item) => (
         <ActivityItemComponent
           key={item.id}
           allComments={comments}
           item={item}
+          pullRequest={pullRequest}
         />
       ))}
 
@@ -101,10 +111,12 @@ export function Activity({
 
 const ActivityItemComponent = memo(function ActivityItemComponent({
   allComments,
-  item
+  item,
+  pullRequest
 }: {
   allComments: Comment[]
   item: ActivityItem
+  pullRequest: PullRequest
 }): ReactElement {
   const eventText = useMemo(() => {
     if (isComment(item)) {
@@ -180,6 +192,7 @@ const ActivityItemComponent = memo(function ActivityItemComponent({
       <ActivityItemBody
         allComments={allComments}
         item={item}
+        pullRequest={pullRequest}
       />
     </div>
   )
@@ -187,10 +200,12 @@ const ActivityItemComponent = memo(function ActivityItemComponent({
 
 function ActivityItemBody({
   allComments,
-  item
+  item,
+  pullRequest
 }: {
   allComments: Comment[]
   item: ActivityItem
+  pullRequest: PullRequest
 }): ReactElement | null {
   if (isComment(item)) {
     const comment = item.data
@@ -208,6 +223,7 @@ function ActivityItemBody({
           allComments={allComments}
           comment={comment}
           hideAuthor={true}
+          pullRequest={pullRequest}
         />
       </div>
     ) : (
@@ -219,6 +235,7 @@ function ActivityItemBody({
           allComments={allComments}
           comment={comment}
           hideAuthor={true}
+          pullRequest={pullRequest}
         />
       </div>
     )

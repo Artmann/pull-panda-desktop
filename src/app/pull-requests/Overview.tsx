@@ -1,11 +1,11 @@
 import { memo, useMemo, type ReactElement } from 'react'
 
 import type { PullRequest } from '@/types/pullRequest'
-import type { Check, Comment, Review } from '@/types/pullRequestDetails'
 
 import { MarkdownBlock } from '@/app/components/MarkdownBlock'
 import { SectionHeader } from '@/app/components/SectionHeader'
 import { Separator } from '@/app/components/ui/separator'
+import { useAppSelector } from '@/app/store/hooks'
 
 import { Activity } from './components/Activity'
 import { CheckList } from './components/CheckList'
@@ -16,18 +16,19 @@ import {
 } from './issue-finder'
 
 interface OverviewProps {
-  checks: Check[]
-  comments: Comment[]
   pullRequest: PullRequest
-  reviews: Review[]
 }
 
 export const Overview = memo(function Overview({
-  checks,
-  comments,
-  pullRequest,
-  reviews
+  pullRequest
 }: OverviewProps): ReactElement {
+  const details = useAppSelector(
+    (state) => state.pullRequestDetails[pullRequest.id]
+  )
+
+  const comments = details?.comments ?? []
+  const checks = details?.checks ?? []
+
   const issues = useMemo(
     () =>
       findIssuesInTheDescriptionOrInTheComments(
@@ -80,11 +81,7 @@ export const Overview = memo(function Overview({
       <section>
         <SectionHeader>Activity</SectionHeader>
 
-        <Activity
-          comments={comments}
-          pullRequest={pullRequest}
-          reviews={reviews}
-        />
+        <Activity pullRequest={pullRequest} />
       </section>
     </article>
   )

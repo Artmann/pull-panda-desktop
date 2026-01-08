@@ -34,7 +34,42 @@ export async function bootstrap(): Promise<BootstrapData> {
 
   const rows = database.select().from(pullRequests).all()
 
+  // Get comment counts per PR
+  const commentRows = database
+    .select()
+    .from(comments)
+    .where(isNull(comments.deletedAt))
+    .all()
+
+  const commentCountByPrId = new Map<string, number>()
+
+  for (const comment of commentRows) {
+    const count = commentCountByPrId.get(comment.pullRequestId) ?? 0
+    commentCountByPrId.set(comment.pullRequestId, count + 1)
+  }
+
+  // Get review counts per PR (approvals and changes requested)
+  const reviewRows = database
+    .select()
+    .from(reviews)
+    .where(isNull(reviews.deletedAt))
+    .all()
+
+  const approvalCountByPrId = new Map<string, number>()
+  const changesRequestedCountByPrId = new Map<string, number>()
+
+  for (const review of reviewRows) {
+    if (review.state === 'APPROVED') {
+      const count = approvalCountByPrId.get(review.pullRequestId) ?? 0
+      approvalCountByPrId.set(review.pullRequestId, count + 1)
+    } else if (review.state === 'CHANGES_REQUESTED') {
+      const count = changesRequestedCountByPrId.get(review.pullRequestId) ?? 0
+      changesRequestedCountByPrId.set(review.pullRequestId, count + 1)
+    }
+  }
+
   const parsedPullRequests: PullRequest[] = rows.map((row) => ({
+    approvalCount: approvalCountByPrId.get(row.id) ?? 0,
     assignees: row.assignees
       ? (JSON.parse(row.assignees) as PullRequestAssignee[])
       : [],
@@ -42,8 +77,11 @@ export async function bootstrap(): Promise<BootstrapData> {
     authorLogin: row.authorLogin,
     body: row.body,
     bodyHtml: row.bodyHtml,
+    changesRequestedCount: changesRequestedCountByPrId.get(row.id) ?? 0,
     closedAt: row.closedAt,
+    commentCount: commentCountByPrId.get(row.id) ?? 0,
     createdAt: row.createdAt,
+    detailsSyncedAt: row.detailsSyncedAt,
     id: row.id,
     isDraft: row.isDraft,
     isAssignee: row.isAssignee,
@@ -143,6 +181,7 @@ export async function getPullRequestDetails(
   const parsedComments: Comment[] = commentRows.map((row) => ({
     id: row.id,
     gitHubId: row.gitHubId,
+    gitHubNumericId: row.gitHubNumericId,
     pullRequestId: row.pullRequestId,
     reviewId: row.reviewId,
     body: row.body,

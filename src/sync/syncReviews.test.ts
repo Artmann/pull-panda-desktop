@@ -1,20 +1,68 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest'
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { eq, and, isNull } from 'drizzle-orm'
 
 import {
   setupTestDatabase,
   teardownTestDatabase,
-  mockReviewsResponse,
-  createMockGraphqlClientWithResponse,
-  createMockGraphqlClientWithError
+  mockRestReviewsResponse,
+  mockRestReviewCommentsResponse
 } from './test-helpers'
 import { getDatabase } from '../database'
 import { reviews, comments, commentReactions } from '../database/schema'
 import { syncReviews } from './syncReviews'
 
+const mockRequest = vi.fn()
+
+vi.mock('./restClient', () => ({
+  createRestClient: () => ({
+    request: mockRequest
+  })
+}))
+
 describe('syncReviews', () => {
-  beforeEach(() => {
-    setupTestDatabase()
+  beforeEach(async () => {
+    await setupTestDatabase()
+    vi.clearAllMocks()
+    mockRequest.mockReset()
+
+    // Set up mock request to handle reviews, comments, and reactions requests
+    mockRequest.mockImplementation((route: string) => {
+      if (route.includes('/reviews')) {
+        return Promise.resolve({
+          data: mockRestReviewsResponse,
+          notModified: false,
+          etag: 'reviews-etag',
+          lastModified: null
+        })
+      }
+
+      if (route.includes('/pulls/comments/{comment_id}/reactions')) {
+        return Promise.resolve({
+          data: [
+            {
+              id: 1,
+              node_id: 'reaction-1',
+              content: '+1',
+              user: { login: 'testuser', id: 1 }
+            }
+          ],
+          notModified: false,
+          etag: 'reactions-etag',
+          lastModified: null
+        })
+      }
+
+      if (route.includes('/comments')) {
+        return Promise.resolve({
+          data: mockRestReviewCommentsResponse,
+          notModified: false,
+          etag: 'comments-etag',
+          lastModified: null
+        })
+      }
+
+      return Promise.resolve({ data: null, notModified: false, etag: null, lastModified: null })
+    })
   })
 
   afterEach(() => {
@@ -22,23 +70,22 @@ describe('syncReviews', () => {
   })
 
   it('should sync reviews from GitHub response', async () => {
-    const mockClient = createMockGraphqlClientWithResponse(mockReviewsResponse)
-
     await syncReviews({
-      client: mockClient,
+      token: 'test-token',
       pullRequestId: 'pr-123',
       owner: 'testowner',
       repositoryName: 'testrepo',
       pullNumber: 1
     })
 
-    expect(mockClient).toHaveBeenCalledWith(
-      expect.any(String),
+    expect(mockRequest).toHaveBeenCalledWith(
+      'GET /repos/{owner}/{repo}/pulls/{pull_number}/reviews',
       expect.objectContaining({
         owner: 'testowner',
         repo: 'testrepo',
-        pullNumber: 1
-      })
+        pull_number: 1
+      }),
+      { etag: undefined }
     )
 
     const db = getDatabase()
@@ -51,10 +98,8 @@ describe('syncReviews', () => {
   })
 
   it('should store review metadata correctly', async () => {
-    const mockClient = createMockGraphqlClientWithResponse(mockReviewsResponse)
-
     await syncReviews({
-      client: mockClient,
+      token: 'test-token',
       pullRequestId: 'pr-123',
       owner: 'testowner',
       repositoryName: 'testrepo',
@@ -75,10 +120,8 @@ describe('syncReviews', () => {
   })
 
   it('should sync review comments', async () => {
-    const mockClient = createMockGraphqlClientWithResponse(mockReviewsResponse)
-
     await syncReviews({
-      client: mockClient,
+      token: 'test-token',
       pullRequestId: 'pr-123',
       owner: 'testowner',
       repositoryName: 'testrepo',
@@ -98,10 +141,8 @@ describe('syncReviews', () => {
   })
 
   it('should sync comment reactions', async () => {
-    const mockClient = createMockGraphqlClientWithResponse(mockReviewsResponse)
-
     await syncReviews({
-      client: mockClient,
+      token: 'test-token',
       pullRequestId: 'pr-123',
       owner: 'testowner',
       repositoryName: 'testrepo',
@@ -114,17 +155,15 @@ describe('syncReviews', () => {
       .from(commentReactions)
       .where(eq(commentReactions.pullRequestId, 'pr-123'))
 
-    const reaction = savedReactions.find((r) => r.content === 'THUMBS_UP')
+    const reaction = savedReactions.find((r) => r.content === '+1')
 
     expect(reaction).toBeDefined()
     expect(reaction?.userLogin).toEqual('testuser')
   })
 
   it('should handle reviews without comments', async () => {
-    const mockClient = createMockGraphqlClientWithResponse(mockReviewsResponse)
-
     await syncReviews({
-      client: mockClient,
+      token: 'test-token',
       pullRequestId: 'pr-123',
       owner: 'testowner',
       repositoryName: 'testrepo',
@@ -155,10 +194,8 @@ describe('syncReviews', () => {
       syncedAt: new Date().toISOString()
     })
 
-    const mockClient = createMockGraphqlClientWithResponse(mockReviewsResponse)
-
     await syncReviews({
-      client: mockClient,
+      token: 'test-token',
       pullRequestId: 'pr-123',
       owner: 'testowner',
       repositoryName: 'testrepo',
@@ -181,20 +218,30 @@ describe('syncReviews', () => {
   })
 
   it('should handle empty reviews response', async () => {
-    const emptyResponse = {
-      repository: {
-        pullRequest: {
-          reviews: {
-            nodes: [] as unknown[]
-          }
-        }
+    mockRequest.mockImplementation((route: string) => {
+      if (route.includes('/reviews')) {
+        return Promise.resolve({
+          data: [],
+          notModified: false,
+          etag: 'reviews-etag',
+          lastModified: null
+        })
       }
-    }
 
-    const mockClient = createMockGraphqlClientWithResponse(emptyResponse)
+      if (route.includes('/comments')) {
+        return Promise.resolve({
+          data: [],
+          notModified: false,
+          etag: 'comments-etag',
+          lastModified: null
+        })
+      }
+
+      return Promise.resolve({ data: null, notModified: false, etag: null, lastModified: null })
+    })
 
     await syncReviews({
-      client: mockClient,
+      token: 'test-token',
       pullRequestId: 'pr-123',
       owner: 'testowner',
       repositoryName: 'testrepo',
@@ -211,11 +258,11 @@ describe('syncReviews', () => {
   })
 
   it('should throw on API errors', async () => {
-    const mockClient = createMockGraphqlClientWithError(new Error('API error'))
+    mockRequest.mockRejectedValue(new Error('API error'))
 
     await expect(
       syncReviews({
-        client: mockClient,
+        token: 'test-token',
         pullRequestId: 'pr-123',
         owner: 'testowner',
         repositoryName: 'testrepo',
@@ -225,51 +272,47 @@ describe('syncReviews', () => {
   })
 
   it('should handle line type detection for added lines', async () => {
-    const responseWithAddedLineComment = {
-      repository: {
-        pullRequest: {
-          reviews: {
-            nodes: [
-              {
-                id: 'review-add',
-                body: '',
-                createdAt: '2024-01-01T11:00:00Z',
-                state: 'COMMENTED',
-                submittedAt: '2024-01-01T11:00:00Z',
-                url: 'https://github.com/review',
-                author: { login: 'user', avatarUrl: 'https://avatar' },
-                comments: {
-                  nodes: [
-                    {
-                      id: 'comment-add',
-                      body: 'Comment on added line',
-                      createdAt: '2024-01-01T11:00:00Z',
-                      updatedAt: '2024-01-01T11:00:00Z',
-                      url: 'https://github.com/comment',
-                      path: 'file.ts',
-                      line: 10,
-                      originalLine: 8,
-                      diffHunk: '@@ -5,5 +5,10 @@\n+added line',
-                      commit: { oid: 'abc' },
-                      originalCommit: { oid: 'def' },
-                      pullRequestReview: { id: 'review-add' },
-                      replyTo: null as null,
-                      author: { login: 'user', avatarUrl: 'https://avatar' },
-                      reactions: { nodes: [] as unknown[] }
-                    }
-                  ]
-                }
-              }
-            ]
-          }
-        }
+    mockRequest.mockImplementation((route: string) => {
+      if (route.includes('/reviews')) {
+        return Promise.resolve({
+          data: [],
+          notModified: false,
+          etag: 'reviews-etag',
+          lastModified: null
+        })
       }
-    }
 
-    const mockClient = createMockGraphqlClientWithResponse(responseWithAddedLineComment)
+      if (route.includes('/comments')) {
+        return Promise.resolve({
+          data: [
+            {
+              id: 100,
+              node_id: 'comment-add',
+              pull_request_review_id: null,
+              body: 'Comment on added line',
+              path: 'file.ts',
+              line: 10,
+              original_line: 8,
+              diff_hunk: '@@ -5,5 +5,10 @@\n+added line',
+              commit_id: 'abc',
+              original_commit_id: 'def',
+              user: { login: 'user', avatar_url: 'https://avatar', id: 1 },
+              html_url: 'https://github.com/comment',
+              created_at: '2024-01-01T11:00:00Z',
+              updated_at: '2024-01-01T11:00:00Z'
+            }
+          ],
+          notModified: false,
+          etag: 'comments-etag',
+          lastModified: null
+        })
+      }
+
+      return Promise.resolve({ data: null, notModified: false, etag: null, lastModified: null })
+    })
 
     await syncReviews({
-      client: mockClient,
+      token: 'test-token',
       pullRequestId: 'pr-123',
       owner: 'testowner',
       repositoryName: 'testrepo',
@@ -284,5 +327,42 @@ describe('syncReviews', () => {
 
     expect(savedComments[0].line).toEqual(10)
     expect(savedComments[0].originalLine).toBeNull()
+  })
+
+  it('should skip processing on 304 Not Modified for both endpoints', async () => {
+    mockRequest.mockImplementation(() => {
+      return Promise.resolve({
+        data: null,
+        notModified: true,
+        etag: 'mock-etag',
+        lastModified: null
+      })
+    })
+
+    const db = getDatabase()
+
+    await db.insert(reviews).values({
+      id: 'existing-1',
+      gitHubId: 'existing-review',
+      pullRequestId: 'pr-123',
+      state: 'APPROVED',
+      syncedAt: new Date().toISOString()
+    })
+
+    await syncReviews({
+      token: 'test-token',
+      pullRequestId: 'pr-123',
+      owner: 'testowner',
+      repositoryName: 'testrepo',
+      pullNumber: 1
+    })
+
+    // Review should not be deleted since we got 304
+    const existingReview = await db
+      .select()
+      .from(reviews)
+      .where(eq(reviews.id, 'existing-1'))
+
+    expect(existingReview[0].deletedAt).toBeNull()
   })
 })

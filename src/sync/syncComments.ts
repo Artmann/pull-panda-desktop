@@ -8,53 +8,49 @@ import {
   type NewCommentReaction
 } from '../database/schema'
 
-import { createGraphqlClient } from './graphql'
-import { commentsQuery, type CommentsQueryResponse } from './queries'
-import {
-  generateId,
-  normalizeCommentBody,
-  getLineTypeFromDiffHunk
-} from './utils'
+import { createRestClient } from './restClient'
+import { etagManager } from './etagManager'
+import { generateId, normalizeCommentBody } from './utils'
 
 interface SyncCommentsParams {
-  client: ReturnType<typeof createGraphqlClient>
+  token: string
   pullRequestId: string
   owner: string
   repositoryName: string
   pullNumber: number
 }
 
-interface GitHubCommentData {
-  id: string
-  body?: string
-  bodyHTML?: string
-  createdAt?: string
-  updatedAt?: string
-  url?: string
-  path?: string
-  line?: number
-  originalLine?: number
-  diffHunk?: string
-  commit?: { oid: string }
-  originalCommit?: { oid: string }
-  pullRequestReview?: { id: string }
-  replyTo?: { id: string }
-  reviewThreadId?: string
-  author?: {
+interface IssueCommentData {
+  id: number
+  node_id: string
+  body: string
+  body_html?: string
+  html_url: string
+  user: {
     login: string
-    avatarUrl: string
-  }
-  reactions: {
-    nodes?: Array<{
-      id: string
-      content: string
-      user?: { id: string; login: string }
-    } | null> | null
+    avatar_url: string
+    id: number
+  } | null
+  created_at: string
+  updated_at: string
+  reactions?: {
+    url: string
+    total_count: number
   }
 }
 
+interface ReactionData {
+  id: number
+  node_id: string
+  content: string
+  user: {
+    login: string
+    id: number
+  } | null
+}
+
 export async function syncComments({
-  client,
+  token,
   pullRequestId,
   owner,
   repositoryName,
@@ -63,112 +59,101 @@ export async function syncComments({
   console.time('syncComments')
 
   try {
-    const response = await client<CommentsQueryResponse>(commentsQuery, {
-      owner,
-      repo: repositoryName,
-      pullNumber
-    })
+    const client = createRestClient(token)
+    const etagKey = { endpointType: 'issue_comments', resourceId: pullRequestId }
 
-    const prComments = response.repository?.pullRequest?.comments?.nodes ?? []
-    const reviewComments =
-      response.repository?.pullRequest?.reviewThreads?.nodes?.flatMap(
-        (thread) =>
-          thread?.comments?.nodes
-            ?.filter((node) => node !== null)
-            .map((node) => ({
-              ...node,
-              reviewThreadId: thread.id
-            })) ?? []
-      ) ?? []
+    // Look up cached ETag
+    const cached = etagManager.get(etagKey)
 
-    const allComments: GitHubCommentData[] = [
-      ...prComments.filter((c): c is NonNullable<typeof c> => c !== null),
-      ...reviewComments
-    ]
+    // Fetch PR-level comments (issue comments)
+    const result = await client.request<IssueCommentData[]>(
+      'GET /repos/{owner}/{repo}/issues/{issue_number}/comments',
+      {
+        owner,
+        repo: repositoryName,
+        issue_number: pullNumber,
+        per_page: 100
+      },
+      { etag: cached?.etag ?? undefined }
+    )
+
+    // Skip processing on 304 Not Modified
+    if (result.notModified) {
+      console.log(`[syncComments] No changes for PR #${pullNumber} (304)`)
+      console.timeEnd('syncComments')
+
+      return
+    }
+
+    const commentsData = result.data ?? []
 
     console.log(
-      `Found ${allComments.length} comments for PR #${pullNumber} in ${owner}/${repositoryName}.`
+      `Found ${commentsData.length} issue comments for PR #${pullNumber} in ${owner}/${repositoryName}.`
     )
 
     const database = getDatabase()
     const now = new Date().toISOString()
 
-    const existingComments = await database
+    // Get existing issue comments (those without a path - not review comments)
+    const existingComments = database
       .select()
       .from(comments)
       .where(
         and(
           eq(comments.pullRequestId, pullRequestId),
-          isNull(comments.deletedAt)
+          isNull(comments.deletedAt),
+          isNull(comments.path)
         )
       )
+      .all()
 
     const syncedGitHubIds: string[] = []
 
-    for (const commentData of allComments) {
-      syncedGitHubIds.push(commentData.id)
+    for (const commentData of commentsData) {
+      const gitHubId = commentData.node_id
+      syncedGitHubIds.push(gitHubId)
 
       const existingComment = existingComments.find(
-        (c) => c.gitHubId === commentData.id
+        (c) => c.gitHubId === gitHubId
       )
 
       const commentId = existingComment?.id ?? generateId()
 
-      const lineType = getLineTypeFromDiffHunk(commentData.diffHunk ?? '')
-      let line: number | null = null
-      let originalLine: number | null = null
-
-      if (lineType === 'remove') {
-        originalLine = commentData.originalLine ?? null
-      } else if (lineType === 'add') {
-        line = commentData.line ?? null
-      } else {
-        line = commentData.line ?? null
-        originalLine = commentData.originalLine ?? null
-      }
-
       const comment: NewComment = {
         id: commentId,
-        gitHubId: commentData.id,
+        gitHubId,
+        gitHubNumericId: commentData.id,
         pullRequestId,
         reviewId: null,
-        body: commentData.body ? normalizeCommentBody(commentData.body) : null,
-        bodyHtml: commentData.bodyHTML ?? null,
-        path: commentData.path ?? null,
-        line,
-        originalLine,
-        diffHunk: commentData.diffHunk ?? null,
-        commitId: commentData.commit?.oid ?? null,
-        originalCommitId: commentData.originalCommit?.oid ?? null,
-        gitHubReviewId: commentData.pullRequestReview?.id ?? null,
-        gitHubReviewThreadId: commentData.reviewThreadId ?? null,
-        parentCommentGitHubId: commentData.replyTo?.id ?? null,
-        userLogin: commentData.author?.login ?? null,
-        userAvatarUrl: commentData.author?.avatarUrl ?? null,
-        url: commentData.url ?? null,
-        gitHubCreatedAt: commentData.createdAt ?? null,
-        gitHubUpdatedAt: commentData.updatedAt ?? null,
+        body: normalizeCommentBody(commentData.body),
+        bodyHtml: commentData.body_html ?? null,
+        path: null,
+        line: null,
+        originalLine: null,
+        diffHunk: null,
+        commitId: null,
+        originalCommitId: null,
+        gitHubReviewId: null,
+        gitHubReviewThreadId: null,
+        parentCommentGitHubId: null,
+        userLogin: commentData.user?.login ?? null,
+        userAvatarUrl: commentData.user?.avatar_url ?? null,
+        url: commentData.html_url,
+        gitHubCreatedAt: commentData.created_at,
+        gitHubUpdatedAt: commentData.updated_at,
         syncedAt: now,
         deletedAt: null
       }
 
-      await database
+      database
         .insert(comments)
         .values(comment)
         .onConflictDoUpdate({
           target: comments.id,
           set: {
+            gitHubNumericId: comment.gitHubNumericId,
             body: comment.body,
             bodyHtml: comment.bodyHtml,
-            path: comment.path,
-            line: comment.line,
-            originalLine: comment.originalLine,
-            diffHunk: comment.diffHunk,
-            commitId: comment.commitId,
-            originalCommitId: comment.originalCommitId,
-            gitHubReviewId: comment.gitHubReviewId,
-            gitHubReviewThreadId: comment.gitHubReviewThreadId,
-            parentCommentGitHubId: comment.parentCommentGitHubId,
             userLogin: comment.userLogin,
             userAvatarUrl: comment.userAvatarUrl,
             url: comment.url,
@@ -178,56 +163,76 @@ export async function syncComments({
             deletedAt: null
           }
         })
+        .run()
 
-      const reactions =
-        commentData.reactions?.nodes?.filter((r) => r !== null) ?? []
+      // Fetch reactions for this comment if it has any
+      if (commentData.reactions && commentData.reactions.total_count > 0) {
+        const reactionsResult = await client.request<ReactionData[]>(
+          'GET /repos/{owner}/{repo}/issues/comments/{comment_id}/reactions',
+          {
+            owner,
+            repo: repositoryName,
+            comment_id: commentData.id
+          }
+        )
 
-      for (const reactionData of reactions) {
-        if (!reactionData?.user) {
-          continue
+        const reactionsData = reactionsResult.data ?? []
+
+        for (const reactionData of reactionsData) {
+          if (!reactionData.user) {
+            continue
+          }
+
+          const existingReaction = database
+            .select()
+            .from(commentReactions)
+            .where(eq(commentReactions.gitHubId, reactionData.node_id))
+            .get()
+
+          const reaction: NewCommentReaction = {
+            id: existingReaction?.id ?? generateId(),
+            gitHubId: reactionData.node_id,
+            commentId,
+            pullRequestId,
+            content: reactionData.content,
+            userLogin: reactionData.user.login,
+            userId: String(reactionData.user.id),
+            syncedAt: now,
+            deletedAt: null
+          }
+
+          database
+            .insert(commentReactions)
+            .values(reaction)
+            .onConflictDoUpdate({
+              target: commentReactions.id,
+              set: {
+                content: reaction.content,
+                userLogin: reaction.userLogin,
+                userId: reaction.userId,
+                syncedAt: reaction.syncedAt,
+                deletedAt: null
+              }
+            })
+            .run()
         }
-
-        const existingReaction = await database
-          .select()
-          .from(commentReactions)
-          .where(eq(commentReactions.gitHubId, reactionData.id))
-          .limit(1)
-
-        const reaction: NewCommentReaction = {
-          id: existingReaction[0]?.id ?? generateId(),
-          gitHubId: reactionData.id,
-          commentId,
-          pullRequestId,
-          content: reactionData.content,
-          userLogin: reactionData.user.login,
-          userId: reactionData.user.id,
-          syncedAt: now,
-          deletedAt: null
-        }
-
-        await database
-          .insert(commentReactions)
-          .values(reaction)
-          .onConflictDoUpdate({
-            target: commentReactions.id,
-            set: {
-              content: reaction.content,
-              userLogin: reaction.userLogin,
-              userId: reaction.userId,
-              syncedAt: reaction.syncedAt,
-              deletedAt: null
-            }
-          })
       }
     }
 
+    // Soft delete issue comments that no longer exist
     for (const existingComment of existingComments) {
       if (!syncedGitHubIds.includes(existingComment.gitHubId)) {
-        await database
+        database
           .update(comments)
           .set({ deletedAt: now })
           .where(eq(comments.id, existingComment.id))
+          .run()
       }
+    }
+
+    // Store the new ETag
+    if (result.etag) {
+      etagManager.set(etagKey, result.etag, result.lastModified ?? undefined)
     }
 
     console.timeEnd('syncComments')
