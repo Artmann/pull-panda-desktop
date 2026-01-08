@@ -48,7 +48,7 @@ export const Overview = memo(function Overview({
       <section>
         {pullRequest.body ? (
           <MarkdownBlock
-            className="pull-request-description *:first:mt-0!"
+            className="pull-request-description prose-sm *:first:mt-0!"
             content={pullRequest.body}
           />
         ) : (
