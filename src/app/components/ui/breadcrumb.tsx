@@ -40,16 +40,31 @@ function BreadcrumbItem({ className, ...props }: React.ComponentProps<'li'>) {
 function BreadcrumbLink({
   asChild,
   className,
+  external,
+  href,
+  onClick,
   ...props
 }: React.ComponentProps<'a'> & {
   asChild?: boolean
+  external?: boolean
 }) {
   const Comp = asChild ? Slot : 'a'
+
+  const handleClick = (event: React.MouseEvent<HTMLAnchorElement>) => {
+    if (external && href) {
+      event.preventDefault()
+      window.auth.openUrl(href)
+    }
+
+    onClick?.(event)
+  }
 
   return (
     <Comp
       data-slot="breadcrumb-link"
-      className={cn('hover:text-foreground transition-colors', className)}
+      className={cn('hover:text-foreground transition-colors cursor-pointer', className)}
+      href={href}
+      onClick={handleClick}
       {...props}
     />
   )

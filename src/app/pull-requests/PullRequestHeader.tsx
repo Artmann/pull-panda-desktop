@@ -135,7 +135,7 @@ function Breadcrumbs({
           <BreadcrumbItem>
             <BreadcrumbLink
               href={`https://github.com/${pullRequest.repositoryOwner}`}
-              target="_blank"
+              external
             >
               <span className="text-xs">{pullRequest.repositoryOwner}</span>
             </BreadcrumbLink>
@@ -146,7 +146,7 @@ function Breadcrumbs({
           <BreadcrumbItem>
             <BreadcrumbLink
               href={`https://github.com/${pullRequest.repositoryOwner}/${pullRequest.repositoryName}`}
-              target="_blank"
+              external
             >
               <span className="text-xs">{pullRequest.repositoryName}</span>
             </BreadcrumbLink>
@@ -155,9 +155,13 @@ function Breadcrumbs({
           <BreadcrumbSeparator />
 
           <BreadcrumbItem>
-            <span className="inline-block text-[11px] text-muted-foreground hover:text-foreground transition-colors mt-[2px]">
-              <BreadcrumbPage>{pullRequest.number}</BreadcrumbPage>
-            </span>
+            <BreadcrumbLink
+              className="text-muted-foreground"
+              external
+              href={`https://github.com/${pullRequest.repositoryOwner}/${pullRequest.repositoryName}/pull/${pullRequest.number}`}
+            >
+              <span className="text-xs">{pullRequest.number}</span>
+            </BreadcrumbLink>
           </BreadcrumbItem>
         </BreadcrumbList>
       </Breadcrumb>
