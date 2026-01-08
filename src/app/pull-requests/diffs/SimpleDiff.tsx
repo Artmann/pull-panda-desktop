@@ -1,6 +1,6 @@
 import { memo, useMemo, type ReactElement } from 'react'
 
-import { cn } from '@/app/lib/utils'
+import { cn, escapeHtml } from '@/app/lib/utils'
 
 import { parseDiffHunk } from './hunks'
 import { applyIntraLineDiffHighlighting } from './intra-line-diff'
@@ -178,13 +178,4 @@ function getLineColorByType(
   }
 
   return cn('bg-background')
-}
-
-function escapeHtml(text: string): string {
-  return text
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#039;')
 }

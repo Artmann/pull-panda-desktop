@@ -1,11 +1,12 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+import { describe, it, expect, beforeEach, afterEach } from 'vitest'
 import { eq, and, isNull } from 'drizzle-orm'
 
 import {
   setupTestDatabase,
   teardownTestDatabase,
   mockChecksResponse,
-  type GraphqlClient
+  createMockGraphqlClientWithResponse,
+  createMockGraphqlClientWithError
 } from './test-helpers'
 import { getDatabase } from '../database'
 import { checks } from '../database/schema'
@@ -21,7 +22,7 @@ describe('syncChecks', () => {
   })
 
   it('should sync checks from GitHub response', async () => {
-    const mockClient = vi.fn().mockResolvedValue(mockChecksResponse) as unknown as GraphqlClient
+    const mockClient = createMockGraphqlClientWithResponse(mockChecksResponse)
 
     await syncChecks({
       client: mockClient,
@@ -50,7 +51,7 @@ describe('syncChecks', () => {
   })
 
   it('should calculate duration in seconds', async () => {
-    const mockClient = vi.fn().mockResolvedValue(mockChecksResponse) as unknown as GraphqlClient
+    const mockClient = createMockGraphqlClientWithResponse(mockChecksResponse)
 
     await syncChecks({
       client: mockClient,
@@ -102,7 +103,7 @@ describe('syncChecks', () => {
       }
     }
 
-    const mockClient = vi.fn().mockResolvedValue(responseWithStatusContext) as unknown as GraphqlClient
+    const mockClient = createMockGraphqlClientWithResponse(responseWithStatusContext)
 
     await syncChecks({
       client: mockClient,
@@ -133,7 +134,7 @@ describe('syncChecks', () => {
       syncedAt: new Date().toISOString()
     })
 
-    const mockClient = vi.fn().mockResolvedValue(mockChecksResponse) as unknown as GraphqlClient
+    const mockClient = createMockGraphqlClientWithResponse(mockChecksResponse)
 
     await syncChecks({
       client: mockClient,
@@ -159,9 +160,9 @@ describe('syncChecks', () => {
   })
 
   it('should handle permission errors gracefully', async () => {
-    const mockClient = vi.fn().mockRejectedValue(
+    const mockClient = createMockGraphqlClientWithError(
       new Error('Resource not accessible by integration')
-    ) as unknown as GraphqlClient
+    )
 
     await expect(
       syncChecks({
@@ -175,7 +176,7 @@ describe('syncChecks', () => {
   })
 
   it('should throw non-permission errors', async () => {
-    const mockClient = vi.fn().mockRejectedValue(new Error('Network error')) as unknown as GraphqlClient
+    const mockClient = createMockGraphqlClientWithError(new Error('Network error'))
 
     await expect(
       syncChecks({
@@ -199,7 +200,7 @@ describe('syncChecks', () => {
       }
     }
 
-    const mockClient = vi.fn().mockResolvedValue(emptyResponse) as unknown as GraphqlClient
+    const mockClient = createMockGraphqlClientWithResponse(emptyResponse)
 
     await syncChecks({
       client: mockClient,
@@ -219,7 +220,7 @@ describe('syncChecks', () => {
   })
 
   it('should store check metadata correctly', async () => {
-    const mockClient = vi.fn().mockResolvedValue(mockChecksResponse) as unknown as GraphqlClient
+    const mockClient = createMockGraphqlClientWithResponse(mockChecksResponse)
 
     await syncChecks({
       client: mockClient,
