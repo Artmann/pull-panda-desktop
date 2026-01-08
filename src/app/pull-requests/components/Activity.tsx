@@ -90,7 +90,6 @@ export function Activity({
           key={item.id}
           allComments={comments}
           item={item}
-          pullRequest={pullRequest}
         />
       ))}
 
@@ -105,12 +104,10 @@ export function Activity({
 
 const ActivityItemComponent = memo(function ActivityItemComponent({
   allComments,
-  item,
-  pullRequest
+  item
 }: {
   allComments: Comment[]
   item: ActivityItem
-  pullRequest: PullRequest
 }): ReactElement {
   const eventText = useMemo(() => {
     if (isComment(item)) {
@@ -184,10 +181,8 @@ const ActivityItemComponent = memo(function ActivityItemComponent({
       </div>
 
       <ActivityItemBody
-        key={`${item.type}-${item.id}`}
         allComments={allComments}
         item={item}
-        pullRequest={pullRequest}
       />
     </div>
   )
@@ -199,7 +194,6 @@ function ActivityItemBody({
 }: {
   allComments: Comment[]
   item: ActivityItem
-  pullRequest: PullRequest
 }): ReactElement | null {
   if (isComment(item)) {
     const comment = item.data
