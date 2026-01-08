@@ -179,6 +179,27 @@ body {
   font-size: 0.875em;
 }
 
+/* Diff highlighting */
+.diff-highlight {
+  padding: 0.1em 0;
+}
+
+.diff-highlight-add {
+  background-color: rgba(46, 160, 67, 0.4);
+}
+
+.diff-highlight-remove {
+  background-color: rgba(248, 81, 73, 0.4);
+}
+
+.dark .diff-highlight-add {
+  background-color: rgba(46, 160, 67, 0.3);
+}
+
+.dark .diff-highlight-remove {
+  background-color: rgba(248, 81, 73, 0.3);
+}
+
 /* Remove default backticks added by Tailwind typography plugin */
 .prose :where(code):not(:where([class~="not-prose"], [class~="not-prose"] *))::before,
 .prose :where(code):not(:where([class~="not-prose"], [class~="not-prose"] *))::after {

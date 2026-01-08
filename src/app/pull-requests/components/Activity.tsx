@@ -8,6 +8,10 @@ import { UserAvatar } from '@/app/components/UserAvatar'
 import { Card, CardContent } from '@/app/components/ui/card'
 
 import { CommentBody } from './CommentBody'
+import {
+  CommentThreadCard,
+  FileCommentThreadCard
+} from './CommentThread'
 
 interface ActivityItem {
   id: string
@@ -84,6 +88,7 @@ export function Activity({
       {sortedActivity.map((item) => (
         <ActivityItemComponent
           key={item.id}
+          allComments={comments}
           item={item}
           pullRequest={pullRequest}
         />
@@ -99,9 +104,11 @@ export function Activity({
 }
 
 const ActivityItemComponent = memo(function ActivityItemComponent({
+  allComments,
   item,
   pullRequest
 }: {
+  allComments: Comment[]
   item: ActivityItem
   pullRequest: PullRequest
 }): ReactElement {
@@ -178,6 +185,7 @@ const ActivityItemComponent = memo(function ActivityItemComponent({
 
       <ActivityItemBody
         key={`${item.type}-${item.id}`}
+        allComments={allComments}
         item={item}
         pullRequest={pullRequest}
       />
@@ -186,31 +194,41 @@ const ActivityItemComponent = memo(function ActivityItemComponent({
 })
 
 function ActivityItemBody({
+  allComments,
   item
 }: {
+  allComments: Comment[]
   item: ActivityItem
   pullRequest: PullRequest
 }): ReactElement | null {
   if (isComment(item)) {
     const comment = item.data
 
-    if (!comment.body) {
+    if (!comment.body && !comment.diffHunk) {
       return null
     }
 
-    return (
+    return comment.diffHunk ? (
       <div
         className="py-4"
         data-testid={`comment-${comment.id}`}
       >
-        <Card className="p-0 w-full gap-0">
-          <CardContent className="w-full p-4 text-sm">
-            <CommentBody
-              content={comment.body}
-              path={comment.path ?? undefined}
-            />
-          </CardContent>
-        </Card>
+        <FileCommentThreadCard
+          allComments={allComments}
+          comment={comment}
+          hideAuthor={true}
+        />
+      </div>
+    ) : (
+      <div
+        className="py-4"
+        data-testid={`comment-${comment.id}`}
+      >
+        <CommentThreadCard
+          allComments={allComments}
+          comment={comment}
+          hideAuthor={true}
+        />
       </div>
     )
   }
