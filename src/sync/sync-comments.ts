@@ -8,8 +8,8 @@ import {
   type NewCommentReaction
 } from '../database/schema'
 
-import { createRestClient } from './restClient'
-import { etagManager } from './etagManager'
+import { createRestClient } from './rest-client'
+import { etagManager } from './etag-manager'
 import { generateId, normalizeCommentBody } from './utils'
 
 interface SyncCommentsParams {
@@ -60,7 +60,10 @@ export async function syncComments({
 
   try {
     const client = createRestClient(token)
-    const etagKey = { endpointType: 'issue_comments', resourceId: pullRequestId }
+    const etagKey = {
+      endpointType: 'issue_comments',
+      resourceId: pullRequestId
+    }
 
     // Look up cached ETag
     const cached = etagManager.get(etagKey)

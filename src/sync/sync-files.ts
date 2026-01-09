@@ -3,8 +3,8 @@ import { eq, and, isNull } from 'drizzle-orm'
 import { getDatabase } from '../database'
 import { modifiedFiles, type NewModifiedFile } from '../database/schema'
 
-import { createRestClient } from './restClient'
-import { etagManager } from './etagManager'
+import { createRestClient } from './rest-client'
+import { etagManager } from './etag-manager'
 import { generateId } from './utils'
 
 interface SyncFilesParams {

@@ -3,8 +3,8 @@ import { eq, and, isNull } from 'drizzle-orm'
 import { getDatabase } from '../database'
 import { checks, type NewCheck } from '../database/schema'
 
-import { createRestClient } from './restClient'
-import { etagManager } from './etagManager'
+import { createRestClient } from './rest-client'
+import { etagManager } from './etag-manager'
 import { generateId } from './utils'
 
 interface SyncChecksParams {
@@ -83,13 +83,17 @@ export async function syncChecks({
       commitSha = headShaCache.get(pullRequestId) ?? null
 
       if (!commitSha) {
-        console.log(`[syncChecks] PR returned 304 but no cached SHA for #${pullNumber}`)
+        console.log(
+          `[syncChecks] PR returned 304 but no cached SHA for #${pullNumber}`
+        )
         console.timeEnd('syncChecks')
 
         return
       }
 
-      console.log(`[syncChecks] PR unchanged for #${pullNumber} (304), using cached SHA`)
+      console.log(
+        `[syncChecks] PR unchanged for #${pullNumber} (304), using cached SHA`
+      )
     } else if (prResult.data) {
       commitSha = prResult.data.head.sha
 
@@ -98,7 +102,11 @@ export async function syncChecks({
 
       // Store PR ETag for future requests
       if (prResult.etag) {
-        etagManager.set(prEtagKey, prResult.etag, prResult.lastModified ?? undefined)
+        etagManager.set(
+          prEtagKey,
+          prResult.etag,
+          prResult.lastModified ?? undefined
+        )
       }
     }
 

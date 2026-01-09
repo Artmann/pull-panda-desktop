@@ -19,7 +19,9 @@ export const tasksSlice = createSlice({
     },
 
     updateTask: (state, action: PayloadAction<Task>) => {
-      const index = state.items.findIndex((task) => task.id === action.payload.id)
+      const index = state.items.findIndex(
+        (task) => task.id === action.payload.id
+      )
 
       if (index >= 0) {
         state.items[index] = action.payload

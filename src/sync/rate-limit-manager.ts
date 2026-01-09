@@ -1,3 +1,5 @@
+import { log } from 'tiny-typescript-logger'
+
 interface RateLimitState {
   remaining: number
   limit: number
@@ -5,62 +7,67 @@ interface RateLimitState {
   lastUpdated: number
 }
 
-interface RateLimitManager {
-  graphql: RateLimitState | null
-  rest: RateLimitState | null
+type RateLimitType = 'graphql' | 'rest'
 
-  updateFromHeaders(type: 'graphql' | 'rest', headers: Record<string, string>): void
-  shouldPause(type: 'graphql' | 'rest'): boolean
-  getWaitTimeMs(type: 'graphql' | 'rest'): number
-  getRemainingQuota(type: 'graphql' | 'rest'): number | null
-}
+const lowQuotaThresholdPercent = 0.1 // 10%
 
-const lowQuotaThreshold = 100
+class RateLimitManager {
+  graphql: RateLimitState | null = null
+  rest: RateLimitState | null = null
 
-function parseHeaders(headers: Record<string, string>): RateLimitState | null {
-  const remaining = headers['x-ratelimit-remaining']
-  const limit = headers['x-ratelimit-limit']
-  const resetAt = headers['x-ratelimit-reset']
-
-  if (!remaining || !limit || !resetAt) {
-    return null
-  }
-
-  return {
-    remaining: parseInt(remaining, 10),
-    limit: parseInt(limit, 10),
-    resetAt: parseInt(resetAt, 10),
-    lastUpdated: Date.now()
-  }
-}
-
-export const rateLimitManager: RateLimitManager = {
-  graphql: null,
-  rest: null,
-
-  updateFromHeaders(type: 'graphql' | 'rest', headers: Record<string, string>): void {
-    const state = parseHeaders(headers)
+  updateFromHeaders(
+    type: RateLimitType,
+    headers: Record<string, string>
+  ): void {
+    const state = this.parseHeaders(headers)
 
     if (state) {
       this[type] = state
 
-      if (state.remaining < lowQuotaThreshold) {
-        console.log(
+      const threshold = Math.max(state.limit * lowQuotaThresholdPercent, 5)
+
+      if (state.remaining < threshold) {
+        log.info(
           `[RateLimit] ${type} quota low: ${state.remaining}/${state.limit}, resets at ${new Date(state.resetAt * 1000).toISOString()}`
         )
       }
     }
-  },
+  }
 
-  shouldPause(type: 'graphql' | 'rest'): boolean {
+  updateFromGraphQL(rateLimit: {
+    limit: number
+    remaining: number
+    resetAt: string
+  }): void {
+    const state: RateLimitState = {
+      remaining: rateLimit.remaining,
+      limit: rateLimit.limit,
+      resetAt: Math.floor(new Date(rateLimit.resetAt).getTime() / 1000),
+      lastUpdated: Date.now()
+    }
+
+    this.graphql = state
+
+    const threshold = Math.max(state.limit * lowQuotaThresholdPercent, 5)
+
+    if (state.remaining < threshold) {
+      log.info(
+        `[RateLimit] graphql quota low: ${state.remaining}/${state.limit}, resets at ${new Date(state.resetAt * 1000).toISOString()}`
+      )
+    }
+  }
+
+  shouldPause(type: RateLimitType): boolean {
     const state = this[type]
 
     if (!state) {
       return false
     }
 
+    const threshold = Math.max(state.limit * lowQuotaThresholdPercent, 5)
+
     // If remaining quota is below threshold, we should pause
-    if (state.remaining < lowQuotaThreshold) {
+    if (state.remaining < threshold) {
       // But only if the reset time hasn't passed yet
       const now = Math.floor(Date.now() / 1000)
 
@@ -68,9 +75,9 @@ export const rateLimitManager: RateLimitManager = {
     }
 
     return false
-  },
+  }
 
-  getWaitTimeMs(type: 'graphql' | 'rest'): number {
+  getWaitTimeMs(type: RateLimitType): number {
     const state = this[type]
 
     if (!state) {
@@ -82,16 +89,37 @@ export const rateLimitManager: RateLimitManager = {
 
     // Add a small buffer (5 seconds) to ensure the reset has actually happened
     return (waitSeconds + 5) * 1000
-  },
+  }
 
-  getRemainingQuota(type: 'graphql' | 'rest'): number | null {
+  getRemainingQuota(type: RateLimitType): number | null {
     const state = this[type]
 
     return state?.remaining ?? null
   }
+
+  private parseHeaders(headers: Record<string, string>): RateLimitState | null {
+    const remaining = headers['x-ratelimit-remaining']
+    const limit = headers['x-ratelimit-limit']
+    const resetAt = headers['x-ratelimit-reset']
+
+    if (!remaining || !limit || !resetAt) {
+      return null
+    }
+
+    return {
+      remaining: parseInt(remaining, 10),
+      limit: parseInt(limit, 10),
+      resetAt: parseInt(resetAt, 10),
+      lastUpdated: Date.now()
+    }
+  }
 }
 
-export function getRetryAfterMs(headers: Record<string, string>): number | null {
+export const rateLimitManager = new RateLimitManager()
+
+export function getRetryAfterMs(
+  headers: Record<string, string>
+): number | null {
   const retryAfter = headers['retry-after']
 
   if (retryAfter) {

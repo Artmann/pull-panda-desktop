@@ -6,10 +6,10 @@ import { Provider } from 'react-redux'
 import { configureStore } from '@reduxjs/toolkit'
 import { describe, it, expect, vi, beforeAll } from 'vitest'
 
-import type { Check, PullRequestDetails } from '@/types/pullRequestDetails'
-import type { PullRequest } from '@/types/pullRequest'
+import type { Check, PullRequestDetails } from '@/types/pull-request-details'
+import type { PullRequest } from '@/types/pull-request'
 
-import pullRequestDetailsReducer from '@/app/store/pullRequestDetailsSlice'
+import pullRequestDetailsReducer from '@/app/store/pull-request-details-slice'
 
 import { ChecksView } from './ChecksView'
 
@@ -48,7 +48,9 @@ function createMockCheck(overrides: Partial<Check> = {}): Check {
   }
 }
 
-function createMockPullRequest(overrides: Partial<PullRequest> = {}): PullRequest {
+function createMockPullRequest(
+  overrides: Partial<PullRequest> = {}
+): PullRequest {
   return {
     id: 'pr-1',
     number: 7,
@@ -323,7 +325,10 @@ describe('ChecksView', () => {
 
     const link = screen.getByRole('link')
 
-    expect(link).toHaveAttribute('href', 'https://github.com/owner/repo/actions/runs/123')
+    expect(link).toHaveAttribute(
+      'href',
+      'https://github.com/owner/repo/actions/runs/123'
+    )
     expect(link).toHaveAttribute('target', '_blank')
     expect(link).toHaveAttribute('rel', 'noopener noreferrer')
   })

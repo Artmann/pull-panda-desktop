@@ -1,6 +1,7 @@
 # Pull Panda App
 
-Electron desktop app for GitHub PR management built with React, TypeScript, and Vite.
+Electron desktop app for GitHub PR management built with React, TypeScript, and
+Vite.
 
 Refer to @CODE_STYLE.md for how to write code in this project.
 
@@ -15,9 +16,12 @@ Refer to @CODE_STYLE.md for how to write code in this project.
 
 ### Electron Process Model
 
-- **Main process** (`src/main.ts`) - Node.js environment, handles IPC, secure storage, GitHub API calls
-- **Preload script** (`src/preload.ts`) - Bridge between main and renderer, exposes `window.auth` API
-- **Renderer process** (`src/renderer.tsx`, `src/app/`) - React UI, no direct Node.js access
+- **Main process** (`src/main.ts`) - Node.js environment, handles IPC, secure
+  storage, GitHub API calls
+- **Preload script** (`src/preload.ts`) - Bridge between main and renderer,
+  exposes `window.auth` API
+- **Renderer process** (`src/renderer.tsx`, `src/app/`) - React UI, no direct
+  Node.js access
 
 ### Key Directories
 
@@ -38,7 +42,8 @@ src/
 
 ### Path Aliases
 
-- `@/*` maps to `./src/*` (configured in tsconfig.json and vite.renderer.config.mts)
+- `@/*` maps to `./src/*` (configured in tsconfig.json and
+  vite.renderer.config.mts)
 
 ## Tech Stack
 

@@ -9,11 +9,11 @@ import {
 } from './test-helpers'
 import { getDatabase } from '../database'
 import { reviews, comments, commentReactions } from '../database/schema'
-import { syncReviews } from './syncReviews'
+import { syncReviews } from './sync-reviews'
 
 const mockRequest = vi.fn()
 
-vi.mock('./restClient', () => ({
+vi.mock('./rest-client', () => ({
   createRestClient: () => ({
     request: mockRequest
   })
@@ -61,7 +61,12 @@ describe('syncReviews', () => {
         })
       }
 
-      return Promise.resolve({ data: null, notModified: false, etag: null, lastModified: null })
+      return Promise.resolve({
+        data: null,
+        notModified: false,
+        etag: null,
+        lastModified: null
+      })
     })
   })
 
@@ -212,7 +217,9 @@ describe('syncReviews', () => {
     const activeReviews = await db
       .select()
       .from(reviews)
-      .where(and(eq(reviews.pullRequestId, 'pr-123'), isNull(reviews.deletedAt)))
+      .where(
+        and(eq(reviews.pullRequestId, 'pr-123'), isNull(reviews.deletedAt))
+      )
 
     expect(activeReviews).toHaveLength(2)
   })
@@ -237,7 +244,12 @@ describe('syncReviews', () => {
         })
       }
 
-      return Promise.resolve({ data: null, notModified: false, etag: null, lastModified: null })
+      return Promise.resolve({
+        data: null,
+        notModified: false,
+        etag: null,
+        lastModified: null
+      })
     })
 
     await syncReviews({
@@ -308,7 +320,12 @@ describe('syncReviews', () => {
         })
       }
 
-      return Promise.resolve({ data: null, notModified: false, etag: null, lastModified: null })
+      return Promise.resolve({
+        data: null,
+        notModified: false,
+        etag: null,
+        lastModified: null
+      })
     })
 
     await syncReviews({

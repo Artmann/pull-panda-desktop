@@ -1,6 +1,6 @@
 import { Link } from 'react-router'
 
-import type { Review } from '@/types/pullRequest'
+import type { Review } from '@/types/pull-request'
 import { Badge } from '@/app/components/ui/badge'
 import {
   Tooltip,

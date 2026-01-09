@@ -62,7 +62,10 @@ function BreadcrumbLink({
   return (
     <Comp
       data-slot="breadcrumb-link"
-      className={cn('hover:text-foreground transition-colors cursor-pointer', className)}
+      className={cn(
+        'hover:text-foreground transition-colors cursor-pointer',
+        className
+      )}
       href={href}
       onClick={handleClick}
       {...props}

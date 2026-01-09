@@ -3,7 +3,12 @@ import { Hono } from 'hono'
 import { and, eq } from 'drizzle-orm'
 
 import { getDatabase } from '../../../database'
-import { pullRequests, comments, type Comment, type NewComment } from '../../../database/schema'
+import {
+  pullRequests,
+  comments,
+  type Comment,
+  type NewComment
+} from '../../../database/schema'
 import { generateId, normalizeCommentBody } from '../../../sync/utils'
 
 export type AppEnv = {
@@ -85,7 +90,9 @@ commentsRoute.post('/', async (context) => {
         diffHunk: data.diff_hunk ?? null,
         commitId: data.commit_id ?? null,
         originalCommitId: data.original_commit_id ?? null,
-        gitHubReviewId: data.pull_request_review_id ? String(data.pull_request_review_id) : null,
+        gitHubReviewId: data.pull_request_review_id
+          ? String(data.pull_request_review_id)
+          : null,
         gitHubReviewThreadId: parentComment?.gitHubReviewThreadId ?? null,
         parentCommentGitHubId: parentComment?.gitHubId ?? null,
         userLogin: data.user?.login ?? null,

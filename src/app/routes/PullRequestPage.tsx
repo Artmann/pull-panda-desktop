@@ -5,7 +5,13 @@ import {
   ListCheckIcon,
   MessageSquareIcon
 } from 'lucide-react'
-import React, { useCallback, useEffect, useRef, useState, type ReactElement } from 'react'
+import React, {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  type ReactElement
+} from 'react'
 import { Link, useParams } from 'react-router'
 
 import { Button } from '@/app/components/ui/button'
@@ -25,8 +31,8 @@ import {
   TabsList,
   TabsTrigger
 } from '@/app/components/ui/tabs'
-import { navigationActions } from '../store/navigationSlice'
-import { pullRequestDetailsActions } from '../store/pullRequestDetailsSlice'
+import { navigationActions } from '../store/navigation-slice'
+import { pullRequestDetailsActions } from '../store/pull-request-details-slice'
 
 export function PullRequestPage(): ReactElement {
   const containerRef = useRef<HTMLDivElement>(null)
@@ -51,10 +57,12 @@ export function PullRequestPage(): ReactElement {
     const result = await window.electron.getPullRequestDetails(id)
 
     if (result) {
-      dispatch(pullRequestDetailsActions.setDetails({
-        pullRequestId: id,
-        details: result
-      }))
+      dispatch(
+        pullRequestDetailsActions.setDetails({
+          pullRequestId: id,
+          details: result
+        })
+      )
     }
   }, [dispatch, id])
 
@@ -68,7 +76,10 @@ export function PullRequestPage(): ReactElement {
   useEffect(
     function subscribeToSyncComplete() {
       const unsubscribe = window.electron.onSyncComplete((event) => {
-        if (event.type === 'pull-request-details' && event.pullRequestId === id) {
+        if (
+          event.type === 'pull-request-details' &&
+          event.pullRequestId === id
+        ) {
           fetchDetails()
         }
       })
@@ -88,7 +99,9 @@ export function PullRequestPage(): ReactElement {
   )
 
   const tabs: Array<{
-    content: React.ComponentType<{ pullRequest: NonNullable<typeof pullRequest> }> | null
+    content: React.ComponentType<{
+      pullRequest: NonNullable<typeof pullRequest>
+    }> | null
     id: string
     label: string
     icon: typeof MessageSquareIcon

@@ -1,7 +1,11 @@
 import { SquaresUnite } from 'lucide-react'
 import { memo, type ReactElement } from 'react'
 
-import { GitHubLogoIcon, JiraLogoIcon, LinearLogoIcon } from '@/app/components/icons'
+import {
+  GitHubLogoIcon,
+  JiraLogoIcon,
+  LinearLogoIcon
+} from '@/app/components/icons'
 
 export const IssueCard = memo(function IssueCard({
   issue

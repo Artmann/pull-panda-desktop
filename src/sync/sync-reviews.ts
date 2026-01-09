@@ -10,8 +10,8 @@ import {
   type NewCommentReaction
 } from '../database/schema'
 
-import { createRestClient } from './restClient'
-import { etagManager } from './etagManager'
+import { createRestClient } from './rest-client'
+import { etagManager } from './etag-manager'
 import {
   generateId,
   normalizeCommentBody,
@@ -93,7 +93,10 @@ export async function syncReviews({
     const now = new Date().toISOString()
 
     // Fetch reviews
-    const reviewsEtagKey = { endpointType: 'reviews', resourceId: pullRequestId }
+    const reviewsEtagKey = {
+      endpointType: 'reviews',
+      resourceId: pullRequestId
+    }
     const cachedReviewsEtag = etagManager.get(reviewsEtagKey)
 
     const reviewsResult = await client.request<ReviewData[]>(
@@ -108,7 +111,10 @@ export async function syncReviews({
     )
 
     // Fetch review comments
-    const commentsEtagKey = { endpointType: 'review_comments', resourceId: pullRequestId }
+    const commentsEtagKey = {
+      endpointType: 'review_comments',
+      resourceId: pullRequestId
+    }
     const cachedCommentsEtag = etagManager.get(commentsEtagKey)
 
     const commentsResult = await client.request<ReviewCommentData[]>(
@@ -235,7 +241,7 @@ export async function syncReviews({
 
       // Get the local review ID from the map
       const reviewId = commentData.pull_request_review_id
-        ? reviewIdMap.get(commentData.pull_request_review_id) ?? null
+        ? (reviewIdMap.get(commentData.pull_request_review_id) ?? null)
         : null
 
       const lineType = getLineTypeFromDiffHunk(commentData.diff_hunk ?? '')
@@ -388,11 +394,19 @@ export async function syncReviews({
 
     // Store the new ETags
     if (reviewsResult.etag) {
-      etagManager.set(reviewsEtagKey, reviewsResult.etag, reviewsResult.lastModified ?? undefined)
+      etagManager.set(
+        reviewsEtagKey,
+        reviewsResult.etag,
+        reviewsResult.lastModified ?? undefined
+      )
     }
 
     if (commentsResult.etag) {
-      etagManager.set(commentsEtagKey, commentsResult.etag, commentsResult.lastModified ?? undefined)
+      etagManager.set(
+        commentsEtagKey,
+        commentsResult.etag,
+        commentsResult.lastModified ?? undefined
+      )
     }
 
     console.timeEnd('syncReviews')

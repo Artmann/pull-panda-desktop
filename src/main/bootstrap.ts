@@ -14,7 +14,7 @@ import type {
   PullRequest,
   PullRequestLabel,
   PullRequestAssignee
-} from '../types/pullRequest'
+} from '../types/pull-request'
 import type {
   PullRequestDetails,
   Review,
@@ -23,7 +23,7 @@ import type {
   Check,
   Commit,
   ModifiedFile
-} from '../types/pullRequestDetails'
+} from '../types/pull-request-details'
 
 export interface BootstrapData {
   pullRequests: PullRequest[]

@@ -102,10 +102,7 @@ const DiffLine = memo(function DiffLine({
       return getLineColorByType('context')
     }
 
-    const clampedIndex = Math.min(
-      Math.max(index, 0),
-      filteredLines.length - 1
-    )
+    const clampedIndex = Math.min(Math.max(index, 0), filteredLines.length - 1)
 
     const currentLine = filteredLines[clampedIndex]
 
@@ -136,8 +133,8 @@ const DiffLine = memo(function DiffLine({
           {line.type === 'truncated'
             ? blankSpace
             : wasRemoved
-              ? line.oldLineNumber ?? blankSpace
-              : line.newLineNumber ?? blankSpace}
+              ? (line.oldLineNumber ?? blankSpace)
+              : (line.newLineNumber ?? blankSpace)}
         </div>
       </div>
 

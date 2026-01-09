@@ -1,12 +1,13 @@
 import { Octokit } from '@octokit/rest'
 import { RequestError } from '@octokit/request-error'
+import { log } from 'tiny-typescript-logger'
 
 import {
   rateLimitManager,
   isRateLimitError,
   getRetryAfterMs,
   sleep
-} from './rateLimitManager'
+} from './rate-limit-manager'
 
 export interface ConditionalRequestOptions {
   etag?: string
@@ -20,20 +21,14 @@ export interface ConditionalRequestResult<T> {
   lastModified: string | null
 }
 
-export interface RestClient {
+export class RestClient {
   octokit: Octokit
 
-  request<T>(
-    route: string,
-    params?: Record<string, unknown>,
-    options?: ConditionalRequestOptions
-  ): Promise<ConditionalRequestResult<T>>
-}
+  constructor(token: string) {
+    this.octokit = new Octokit({ auth: token })
+  }
 
-export function createRestClient(token: string): RestClient {
-  const octokit = new Octokit({ auth: token })
-
-  async function request<T>(
+  async request<T>(
     route: string,
     params?: Record<string, unknown>,
     options?: ConditionalRequestOptions
@@ -41,7 +36,11 @@ export function createRestClient(token: string): RestClient {
     // Check if we should pause before making the request
     if (rateLimitManager.shouldPause('rest')) {
       const waitMs = rateLimitManager.getWaitTimeMs('rest')
-      console.log(`[REST] Rate limit low, waiting ${Math.round(waitMs / 1000)}s until reset`)
+
+      log.info(
+        `[REST] Rate limit low, waiting ${Math.round(waitMs / 1000)}s until reset.`
+      )
+
       await sleep(waitMs)
     }
 
@@ -56,13 +55,16 @@ export function createRestClient(token: string): RestClient {
     }
 
     try {
-      const response = await octokit.request(route, {
+      const response = await this.octokit.request(route, {
         ...params,
         headers
       })
 
       // Update rate limit state from response headers
-      rateLimitManager.updateFromHeaders('rest', response.headers as Record<string, string>)
+      rateLimitManager.updateFromHeaders(
+        'rest',
+        response.headers as Record<string, string>
+      )
 
       return {
         data: response.data as T,
@@ -87,21 +89,22 @@ export function createRestClient(token: string): RestClient {
         const headers = err.response?.headers ?? {}
         const waitMs = getRetryAfterMs(headers) ?? 60000
 
-        console.log(`[REST] Rate limited, waiting ${Math.round(waitMs / 1000)}s before retry`)
+        console.log(
+          `[REST] Rate limited, waiting ${Math.round(waitMs / 1000)}s before retry`
+        )
 
         rateLimitManager.updateFromHeaders('rest', headers)
         await sleep(waitMs)
 
         // Retry the request
-        return request<T>(route, params, options)
+        return this.request<T>(route, params, options)
       }
 
       throw error
     }
   }
+}
 
-  return {
-    octokit,
-    request
-  }
+export function createRestClient(token: string): RestClient {
+  return new RestClient(token)
 }

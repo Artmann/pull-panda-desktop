@@ -1,14 +1,18 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { eq, and, isNull } from 'drizzle-orm'
 
-import { setupTestDatabase, teardownTestDatabase, mockRestCheckRunsResponse } from './test-helpers'
+import {
+  setupTestDatabase,
+  teardownTestDatabase,
+  mockRestCheckRunsResponse
+} from './test-helpers'
 import { getDatabase } from '../database'
 import { checks } from '../database/schema'
-import { syncChecks } from './syncChecks'
+import { syncChecks } from './sync-checks'
 
 const mockRequest = vi.fn()
 
-vi.mock('./restClient', () => ({
+vi.mock('./rest-client', () => ({
   createRestClient: () => ({
     request: mockRequest
   })
@@ -46,7 +50,12 @@ describe('syncChecks', () => {
         })
       }
 
-      return Promise.resolve({ data: null, notModified: false, etag: null, lastModified: null })
+      return Promise.resolve({
+        data: null,
+        notModified: false,
+        etag: null,
+        lastModified: null
+      })
     })
   })
 
@@ -69,7 +78,8 @@ describe('syncChecks', () => {
         owner: 'testowner',
         repo: 'testrepo',
         pull_number: 1
-      }
+      },
+      { etag: undefined }
     )
 
     expect(mockRequest).toHaveBeenCalledWith(
@@ -156,10 +166,17 @@ describe('syncChecks', () => {
       }
 
       if (route.includes('/check-runs')) {
-        return Promise.reject(new Error('Resource not accessible by integration'))
+        return Promise.reject(
+          new Error('Resource not accessible by integration')
+        )
       }
 
-      return Promise.resolve({ data: null, notModified: false, etag: null, lastModified: null })
+      return Promise.resolve({
+        data: null,
+        notModified: false,
+        etag: null,
+        lastModified: null
+      })
     })
 
     await expect(
@@ -183,7 +200,12 @@ describe('syncChecks', () => {
         return Promise.reject(new Error('Network error'))
       }
 
-      return Promise.resolve({ data: null, notModified: false, etag: null, lastModified: null })
+      return Promise.resolve({
+        data: null,
+        notModified: false,
+        etag: null,
+        lastModified: null
+      })
     })
 
     await expect(
@@ -212,7 +234,12 @@ describe('syncChecks', () => {
         })
       }
 
-      return Promise.resolve({ data: null, notModified: false, etag: null, lastModified: null })
+      return Promise.resolve({
+        data: null,
+        notModified: false,
+        etag: null,
+        lastModified: null
+      })
     })
 
     await syncChecks({
@@ -277,7 +304,12 @@ describe('syncChecks', () => {
         })
       }
 
-      return Promise.resolve({ data: null, notModified: false, etag: null, lastModified: null })
+      return Promise.resolve({
+        data: null,
+        notModified: false,
+        etag: null,
+        lastModified: null
+      })
     })
 
     const db = getDatabase()

@@ -1,14 +1,18 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { eq, and, isNull } from 'drizzle-orm'
 
-import { setupTestDatabase, teardownTestDatabase, mockFilesResponse } from './test-helpers'
+import {
+  setupTestDatabase,
+  teardownTestDatabase,
+  mockFilesResponse
+} from './test-helpers'
 import { getDatabase } from '../database'
 import { modifiedFiles } from '../database/schema'
-import { syncFiles } from './syncFiles'
+import { syncFiles } from './sync-files'
 
 const mockRequest = vi.fn()
 
-vi.mock('./restClient', () => ({
+vi.mock('./rest-client', () => ({
   createRestClient: () => ({
     request: mockRequest
   })
@@ -176,7 +180,10 @@ describe('syncFiles', () => {
       .select()
       .from(modifiedFiles)
       .where(
-        and(eq(modifiedFiles.pullRequestId, 'pr-123'), isNull(modifiedFiles.deletedAt))
+        and(
+          eq(modifiedFiles.pullRequestId, 'pr-123'),
+          isNull(modifiedFiles.deletedAt)
+        )
       )
 
     expect(activeFiles).toHaveLength(3)

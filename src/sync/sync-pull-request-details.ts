@@ -2,12 +2,12 @@ import { eq } from 'drizzle-orm'
 
 import { getDatabase } from '../database'
 import { pullRequests } from '../database/schema'
-import { sleep } from './rateLimitManager'
-import { syncChecks } from './syncChecks'
-import { syncComments } from './syncComments'
-import { syncCommits } from './syncCommits'
-import { syncFiles } from './syncFiles'
-import { syncReviews } from './syncReviews'
+import { sleep } from './rate-limit-manager'
+import { syncChecks } from './sync-checks'
+import { syncComments } from './sync-comments'
+import { syncCommits } from './sync-commits'
+import { syncFiles } from './sync-files'
+import { syncReviews } from './sync-reviews'
 
 // Delay between sync operations to avoid burst requests
 const delayBetweenSyncs = 200

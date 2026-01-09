@@ -1,7 +1,7 @@
 import { memo, useMemo, type ReactElement } from 'react'
 
-import type { PullRequest } from '@/types/pullRequest'
-import type { Comment, Review } from '@/types/pullRequestDetails'
+import type { PullRequest } from '@/types/pull-request'
+import type { Comment, Review } from '@/types/pull-request-details'
 
 import { TimeAgo } from '@/app/components/TimeAgo'
 import { UserAvatar } from '@/app/components/UserAvatar'

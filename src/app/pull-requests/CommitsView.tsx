@@ -5,8 +5,8 @@ import { TimeAgo } from '@/app/components/TimeAgo'
 import { UserAvatar } from '@/app/components/UserAvatar'
 import { formatNumber } from '@/app/lib/numbers'
 import { useAppSelector } from '@/app/store/hooks'
-import type { Commit } from '@/types/pullRequestDetails'
-import type { PullRequest } from '@/types/pullRequest'
+import type { Commit } from '@/types/pull-request-details'
+import type { PullRequest } from '@/types/pull-request'
 
 export const CommitsView = memo(function CommitsView({
   pullRequest
@@ -69,7 +69,8 @@ export const CommitsView = memo(function CommitsView({
                           <div>{commit.authorLogin}</div>
                           {commit.gitHubCreatedAt && (
                             <div>
-                              committed <TimeAgo dateTime={commit.gitHubCreatedAt} />
+                              committed{' '}
+                              <TimeAgo dateTime={commit.gitHubCreatedAt} />
                             </div>
                           )}
                         </div>
@@ -82,7 +83,8 @@ export const CommitsView = memo(function CommitsView({
                             <CopyToClipboardButton value={shortHash} />
                           </div>
 
-                          {(commit.linesAdded !== null || commit.linesRemoved !== null) && (
+                          {(commit.linesAdded !== null ||
+                            commit.linesRemoved !== null) && (
                             <div className="text-xs text-muted-foreground opacity-75 flex gap-2">
                               <div className="text-green-600">
                                 +{formatNumber(commit.linesAdded ?? 0)}
@@ -163,7 +165,10 @@ function formatDateHeader(dateString: string): string {
   }
 }
 
-function parseCommitMessage(message: string | null): { title: string; body: string | null } {
+function parseCommitMessage(message: string | null): {
+  title: string
+  body: string | null
+} {
   if (!message) {
     return { title: 'No message', body: null }
   }

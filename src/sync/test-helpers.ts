@@ -12,7 +12,9 @@ export async function setupTestDatabase() {
 export function setupTestDatabaseSync() {
   // For backwards compatibility - will throw if called before async init
   if (!testDb) {
-    throw new Error('Database not initialized. Call setupTestDatabase() in beforeAll()')
+    throw new Error(
+      'Database not initialized. Call setupTestDatabase() in beforeAll()'
+    )
   }
 
   setDatabase(testDb)

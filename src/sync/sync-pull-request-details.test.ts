@@ -4,32 +4,32 @@ import { getDatabase } from '../database'
 import { pullRequests } from '../database/schema'
 import { setupTestDatabase, teardownTestDatabase } from './test-helpers'
 
-vi.mock('./syncChecks', () => ({
+vi.mock('./sync-checks', () => ({
   syncChecks: vi.fn()
 }))
 
-vi.mock('./syncCommits', () => ({
+vi.mock('./sync-commits', () => ({
   syncCommits: vi.fn()
 }))
 
-vi.mock('./syncFiles', () => ({
+vi.mock('./sync-files', () => ({
   syncFiles: vi.fn()
 }))
 
-vi.mock('./syncReviews', () => ({
+vi.mock('./sync-reviews', () => ({
   syncReviews: vi.fn()
 }))
 
-vi.mock('./syncComments', () => ({
+vi.mock('./sync-comments', () => ({
   syncComments: vi.fn()
 }))
 
-import { syncChecks } from './syncChecks'
-import { syncCommits } from './syncCommits'
-import { syncFiles } from './syncFiles'
-import { syncReviews } from './syncReviews'
-import { syncComments } from './syncComments'
-import { syncPullRequestDetails } from './syncPullRequestDetails'
+import { syncChecks } from './sync-checks'
+import { syncCommits } from './sync-commits'
+import { syncFiles } from './sync-files'
+import { syncReviews } from './sync-reviews'
+import { syncComments } from './sync-comments'
+import { syncPullRequestDetails } from './sync-pull-request-details'
 
 describe('syncPullRequestDetails', () => {
   beforeEach(async () => {
@@ -45,31 +45,35 @@ describe('syncPullRequestDetails', () => {
     // Insert test PR records for the tests that need them
     const db = getDatabase()
 
-    db.insert(pullRequests).values({
-      id: 'pr-123',
-      number: 1,
-      title: 'Test PR',
-      state: 'OPEN',
-      url: 'https://github.com/test/test/pull/1',
-      repositoryOwner: 'testowner',
-      repositoryName: 'testrepo',
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-      syncedAt: new Date().toISOString()
-    }).run()
+    db.insert(pullRequests)
+      .values({
+        id: 'pr-123',
+        number: 1,
+        title: 'Test PR',
+        state: 'OPEN',
+        url: 'https://github.com/test/test/pull/1',
+        repositoryOwner: 'testowner',
+        repositoryName: 'testrepo',
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        syncedAt: new Date().toISOString()
+      })
+      .run()
 
-    db.insert(pullRequests).values({
-      id: 'pr-456',
-      number: 42,
-      title: 'Test PR 2',
-      state: 'OPEN',
-      url: 'https://github.com/test/test/pull/42',
-      repositoryOwner: 'myowner',
-      repositoryName: 'myrepo',
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-      syncedAt: new Date().toISOString()
-    }).run()
+    db.insert(pullRequests)
+      .values({
+        id: 'pr-456',
+        number: 42,
+        title: 'Test PR 2',
+        state: 'OPEN',
+        url: 'https://github.com/test/test/pull/42',
+        repositoryOwner: 'myowner',
+        repositoryName: 'myrepo',
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        syncedAt: new Date().toISOString()
+      })
+      .run()
   })
 
   afterEach(() => {

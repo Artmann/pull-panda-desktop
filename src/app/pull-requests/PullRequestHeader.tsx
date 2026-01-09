@@ -1,7 +1,7 @@
 import { GitPullRequest } from 'lucide-react'
 import invariant from 'tiny-invariant'
 
-import { PullRequest } from '@/types/pullRequest'
+import { PullRequest } from '@/types/pull-request'
 import {
   Breadcrumb,
   BreadcrumbItem,

@@ -247,7 +247,10 @@ function useRemark({
           const file = await unified()
             .use(remarkParse, remarkParseOptions)
             .use([remarkGfm])
-            .use(remarkRehype, { ...remarkRehypeOptions, allowDangerousHtml: true })
+            .use(remarkRehype, {
+              ...remarkRehypeOptions,
+              allowDangerousHtml: true
+            })
             .use(rehypeRaw)
             .use(rehypeDetectLanguageFromPath)
             .use(rehypeReact, {

@@ -1,6 +1,10 @@
 import { createSlice, type PayloadAction } from '@reduxjs/toolkit'
 
-import type { Check, Comment, PullRequestDetails } from '@/types/pullRequestDetails'
+import type {
+  Check,
+  Comment,
+  PullRequestDetails
+} from '@/types/pull-request-details'
 
 export interface PullRequestDetailsState {
   [pullRequestId: string]: PullRequestDetails | undefined
@@ -14,15 +18,17 @@ export const pullRequestDetailsSlice = createSlice({
   reducers: {
     setDetails(
       state,
-      action: PayloadAction<{ pullRequestId: string; details: PullRequestDetails }>
+      action: PayloadAction<{
+        pullRequestId: string
+        details: PullRequestDetails
+      }>
     ) {
       const { pullRequestId, details } = action.payload
 
       // When setting details, preserve any optimistic comments (temp- prefix)
       const existing = state[pullRequestId]
-      const optimisticComments = existing?.comments.filter((c) =>
-        c.id.startsWith('temp-')
-      ) ?? []
+      const optimisticComments =
+        existing?.comments.filter((c) => c.id.startsWith('temp-')) ?? []
 
       state[pullRequestId] = {
         ...details,
