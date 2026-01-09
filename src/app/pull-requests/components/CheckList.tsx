@@ -213,8 +213,14 @@ export function CheckList({ checks }: { checks: Check[] }): ReactElement {
                     <div className="flex items-center gap-2">
                       {getCheckIcon(check)}
                       <a
-                        className="hover:underline flex items-baseline gap-2"
+                        className="hover:underline flex items-baseline gap-2 cursor-pointer"
                         href={check.url ?? undefined}
+                        onClick={(event) => {
+                          if (check.url) {
+                            event.preventDefault()
+                            window.electron.openUrl(check.url)
+                          }
+                        }}
                         rel="noopener noreferrer"
                         target="_blank"
                       >
@@ -228,8 +234,12 @@ export function CheckList({ checks }: { checks: Check[] }): ReactElement {
                     </div>
                     {check.url && (
                       <a
-                        className="text-muted-foreground hover:text-foreground transition-colors"
+                        className="text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
                         href={check.url}
+                        onClick={(event) => {
+                          event.preventDefault()
+                          window.electron.openUrl(check.url!)
+                        }}
                         rel="noopener noreferrer"
                         target="_blank"
                       >

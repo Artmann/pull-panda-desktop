@@ -74,6 +74,12 @@ function setupIpcHandlers(): void {
     return { success: true }
   })
 
+  ipcMain.handle(ipcChannels.OpenUrl, async (_event, url: string) => {
+    await shell.openExternal(url)
+
+    return { success: true }
+  })
+
   ipcMain.handle(ipcChannels.AuthGetUser, async () => {
     const token = loadToken()
 

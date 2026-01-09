@@ -5,7 +5,7 @@ import {
   ListCheckIcon,
   MessageSquareIcon
 } from 'lucide-react'
-import { useCallback, useEffect, useRef, useState, type ReactElement } from 'react'
+import React, { useCallback, useEffect, useRef, useState, type ReactElement } from 'react'
 import { Link, useParams } from 'react-router'
 
 import { Button } from '@/app/components/ui/button'
@@ -79,7 +79,7 @@ export function PullRequestPage(): ReactElement {
   )
 
   const tabs: Array<{
-    content: ((props: { pullRequest: typeof pullRequest }) => ReactElement) | null
+    content: React.ComponentType<{ pullRequest: NonNullable<typeof pullRequest> }> | null
     id: string
     label: string
     icon: typeof MessageSquareIcon
