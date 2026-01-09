@@ -1,5 +1,4 @@
-import { graphql } from '@octokit/graphql'
-import { GraphqlResponseError } from '@octokit/graphql'
+import { graphql, GraphqlResponseError } from '@octokit/graphql'
 import { log } from 'tiny-typescript-logger'
 
 import { rateLimitManager, isRateLimitError, sleep } from './rate-limit-manager'

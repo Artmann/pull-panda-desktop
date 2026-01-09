@@ -22,17 +22,33 @@ import { PullRequestPage } from './PullRequestPage'
 
 beforeAll(() => {
   global.IntersectionObserver = class IntersectionObserver {
-    constructor() {}
-    disconnect() {}
-    observe() {}
-    unobserve() {}
+    constructor() {
+      // Mock
+    }
+    disconnect() {
+      // Mock
+    }
+    observe() {
+      // Mock
+    }
+    unobserve() {
+      // Mock
+    }
   } as unknown as typeof IntersectionObserver
 
   global.ResizeObserver = class ResizeObserver {
-    constructor() {}
-    disconnect() {}
-    observe() {}
-    unobserve() {}
+    constructor() {
+      // Mock
+    }
+    disconnect() {
+      // Mock
+    }
+    observe() {
+      // Mock
+    }
+    unobserve() {
+      // Mock
+    }
   } as unknown as typeof ResizeObserver
 })
 
@@ -40,7 +56,9 @@ beforeEach(() => {
   vi.stubGlobal('electron', {
     getPullRequestDetails: vi.fn().mockResolvedValue(null),
     markPullRequestActive: vi.fn(),
-    onSyncComplete: vi.fn().mockReturnValue(() => {})
+    onSyncComplete: vi.fn().mockReturnValue(() => {
+      // Unsubscribe mock
+    })
   })
 
   vi.stubGlobal('auth', {
