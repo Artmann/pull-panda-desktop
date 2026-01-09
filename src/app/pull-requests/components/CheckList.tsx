@@ -8,7 +8,7 @@ import {
 } from 'lucide-react'
 import { useMemo, type ReactElement } from 'react'
 
-import type { Check } from '@/types/pullRequestDetails'
+import type { Check } from '@/types/pull-request-details'
 
 import {
   Accordion,

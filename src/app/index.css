@@ -5,7 +5,9 @@
 
 @custom-variant dark (&:is(.dark *));
 
-* { box-sizing: border-box; }
+* {
+  box-sizing: border-box;
+}
 
 :root {
   --background: oklch(1 0 0);
@@ -201,20 +203,33 @@ body {
 }
 
 /* Remove default backticks added by Tailwind typography plugin */
-.prose :where(code):not(:where([class~="not-prose"], [class~="not-prose"] *))::before,
-.prose :where(code):not(:where([class~="not-prose"], [class~="not-prose"] *))::after {
+.prose
+  :where(code):not(
+    :where([class~='not-prose'], [class~='not-prose'] *)
+  )::before,
+.prose
+  :where(code):not(
+    :where([class~='not-prose'], [class~='not-prose'] *)
+  )::after {
   content: none;
 }
 
 /* GitHub-style markdown in PR descriptions */
 .pull-request-description {
   /* Compact spacing */
-  h1, h2, h3, h4, h5, h6 {
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
     margin-top: 1rem;
     margin-bottom: 0.5rem;
   }
 
-  p, ul, ol {
+  p,
+  ul,
+  ol {
     margin-top: 0.5rem;
     margin-bottom: 0.5rem;
   }
@@ -236,7 +251,7 @@ body {
     gap: 0.5rem;
   }
 
-  .task-list-item input[type="checkbox"] {
+  .task-list-item input[type='checkbox'] {
     margin-top: 0.25rem;
   }
 
@@ -290,7 +305,8 @@ body {
     border-collapse: collapse;
   }
 
-  th, td {
+  th,
+  td {
     border: 1px solid var(--border);
     padding: 0.5rem 0.75rem;
     text-align: left;

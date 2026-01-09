@@ -30,10 +30,7 @@ export const draftsSlice = createSlice({
   name: 'drafts',
   initialState,
   reducers: {
-    setDraft(
-      state,
-      action: PayloadAction<{ key: string; body: string }>
-    ) {
+    setDraft(state, action: PayloadAction<{ key: string; body: string }>) {
       const { key, body } = action.payload
 
       if (body) {

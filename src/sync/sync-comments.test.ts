@@ -8,11 +8,11 @@ import {
 } from './test-helpers'
 import { getDatabase } from '../database'
 import { comments, commentReactions } from '../database/schema'
-import { syncComments } from './syncComments'
+import { syncComments } from './sync-comments'
 
 const mockRequest = vi.fn()
 
-vi.mock('./restClient', () => ({
+vi.mock('./rest-client', () => ({
   createRestClient: () => ({
     request: mockRequest
   })
@@ -51,7 +51,12 @@ describe('syncComments', () => {
         })
       }
 
-      return Promise.resolve({ data: null, notModified: false, etag: null, lastModified: null })
+      return Promise.resolve({
+        data: null,
+        notModified: false,
+        etag: null,
+        lastModified: null
+      })
     })
   })
 
@@ -162,7 +167,9 @@ describe('syncComments', () => {
     const activeComments = await db
       .select()
       .from(comments)
-      .where(and(eq(comments.pullRequestId, 'pr-123'), isNull(comments.deletedAt)))
+      .where(
+        and(eq(comments.pullRequestId, 'pr-123'), isNull(comments.deletedAt))
+      )
 
     expect(activeComments).toHaveLength(1)
   })
@@ -229,7 +236,12 @@ describe('syncComments', () => {
         })
       }
 
-      return Promise.resolve({ data: null, notModified: false, etag: null, lastModified: null })
+      return Promise.resolve({
+        data: null,
+        notModified: false,
+        etag: null,
+        lastModified: null
+      })
     })
 
     await syncComments({

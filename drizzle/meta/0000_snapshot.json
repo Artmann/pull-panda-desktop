@@ -123,9 +123,7 @@
       "indexes": {
         "checks_pull_request_id_idx": {
           "name": "checks_pull_request_id_idx",
-          "columns": [
-            "pull_request_id"
-          ],
+          "columns": ["pull_request_id"],
           "isUnique": false
         }
       },
@@ -204,9 +202,7 @@
       "indexes": {
         "comment_reactions_comment_id_idx": {
           "name": "comment_reactions_comment_id_idx",
-          "columns": [
-            "comment_id"
-          ],
+          "columns": ["comment_id"],
           "isUnique": false
         }
       },
@@ -369,9 +365,7 @@
       "indexes": {
         "comments_pull_request_id_idx": {
           "name": "comments_pull_request_id_idx",
-          "columns": [
-            "pull_request_id"
-          ],
+          "columns": ["pull_request_id"],
           "isUnique": false
         }
       },
@@ -478,9 +472,7 @@
       "indexes": {
         "commits_pull_request_id_idx": {
           "name": "commits_pull_request_id_idx",
-          "columns": [
-            "pull_request_id"
-          ],
+          "columns": ["pull_request_id"],
           "isUnique": false
         }
       },
@@ -573,9 +565,7 @@
       "indexes": {
         "modified_files_pull_request_id_idx": {
           "name": "modified_files_pull_request_id_idx",
-          "columns": [
-            "pull_request_id"
-          ],
+          "columns": ["pull_request_id"],
           "isUnique": false
         }
       },
@@ -821,9 +811,7 @@
       "indexes": {
         "reviews_pull_request_id_idx": {
           "name": "reviews_pull_request_id_idx",
-          "columns": [
-            "pull_request_id"
-          ],
+          "columns": ["pull_request_id"],
           "isUnique": false
         }
       },

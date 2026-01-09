@@ -1,6 +1,6 @@
 import { memo, useMemo, type ReactElement } from 'react'
 
-import type { PullRequest } from '@/types/pullRequest'
+import type { PullRequest } from '@/types/pull-request'
 
 import { MarkdownBlock } from '@/app/components/MarkdownBlock'
 import { SectionHeader } from '@/app/components/SectionHeader'

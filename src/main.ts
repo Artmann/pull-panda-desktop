@@ -10,10 +10,10 @@ import {
   BootstrapData,
   getPullRequestDetails
 } from './main/bootstrap'
-import { backgroundSyncer } from './main/backgroundSyncer'
-import { taskManager } from './main/taskManager'
-import { syncPullRequests } from './sync/pullRequests'
-import { syncPullRequestDetails } from './sync/syncPullRequestDetails'
+import { backgroundSyncer } from './main/background-syncer'
+import { taskManager } from './main/task-manager'
+import { syncPullRequests } from './sync/pull-requests'
+import { syncPullRequestDetails } from './sync/sync-pull-request-details'
 import {
   clearToken,
   getGitHubUser,
@@ -124,6 +124,10 @@ function setupIpcHandlers(): void {
       backgroundSyncer.markPullRequestActive(pullRequestId)
     }
   )
+
+  ipcMain.handle(ipcChannels.GetSyncerStats, () => {
+    return backgroundSyncer.getMonitoringData()
+  })
 
   ipcMain.handle(
     ipcChannels.SyncPullRequestDetails,

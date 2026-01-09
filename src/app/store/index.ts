@@ -4,13 +4,13 @@ import draftsReducer, {
   DraftsState,
   loadDraftsFromStorage,
   saveDraftsToStorage
-} from './draftsSlice'
-import navigationReducer, { NavigationState } from './navigationSlice'
+} from './drafts-slice'
+import navigationReducer, { NavigationState } from './navigation-slice'
 import pullRequestDetailsReducer, {
   PullRequestDetailsState
-} from './pullRequestDetailsSlice'
-import pullRequestsReducer, { PullRequestsState } from './pullRequestsSlice'
-import tasksReducer, { TasksState } from './tasksSlice'
+} from './pull-request-details-slice'
+import pullRequestsReducer, { PullRequestsState } from './pull-requests-slice'
+import tasksReducer, { TasksState } from './tasks-slice'
 
 export interface PreloadedState {
   drafts?: DraftsState

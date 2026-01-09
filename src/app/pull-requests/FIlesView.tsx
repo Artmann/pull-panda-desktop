@@ -1,6 +1,6 @@
 import { ReactElement } from 'react'
 
-import { PullRequest } from '@/types/pullRequest'
+import { PullRequest } from '@/types/pull-request'
 
 export function FilesView({
   pullRequest: _pullRequest

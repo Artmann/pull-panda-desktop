@@ -2,7 +2,7 @@ import { CheckCircle, Clock, MessageCircle } from 'lucide-react'
 import { useMemo, type ReactElement } from 'react'
 import { Link, useNavigate } from 'react-router'
 
-import { PullRequest } from '@/types/pullRequest'
+import { PullRequest } from '@/types/pull-request'
 import { TimeAgo } from './TimeAgo'
 import { cn } from '../lib/utils'
 import { Badge } from './ui/badge'
@@ -60,7 +60,12 @@ function PullRequestCard({
     }
 
     return 'Pending'
-  }, [approvalCount, changesRequestedCount, pullRequest.isDraft, pullRequest.state])
+  }, [
+    approvalCount,
+    changesRequestedCount,
+    pullRequest.isDraft,
+    pullRequest.state
+  ])
 
   const statusColorClasses = useMemo((): string => {
     if (status === 'Merged') {

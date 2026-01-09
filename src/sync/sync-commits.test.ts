@@ -8,11 +8,11 @@ import {
 } from './test-helpers'
 import { getDatabase } from '../database'
 import { commits } from '../database/schema'
-import { syncCommits } from './syncCommits'
+import { syncCommits } from './sync-commits'
 
 const mockRequest = vi.fn()
 
-vi.mock('./restClient', () => ({
+vi.mock('./rest-client', () => ({
   createRestClient: () => ({
     request: mockRequest
   })
@@ -68,9 +68,13 @@ describe('syncCommits', () => {
       .from(commits)
       .where(eq(commits.pullRequestId, 'pr-123'))
 
-    const commitWithMultipleLines = savedCommits.find((c) => c.hash === 'commit-2')
+    const commitWithMultipleLines = savedCommits.find(
+      (c) => c.hash === 'commit-2'
+    )
 
-    expect(commitWithMultipleLines?.message).toEqual('Add feature\n\nWith description')
+    expect(commitWithMultipleLines?.message).toEqual(
+      'Add feature\n\nWith description'
+    )
   })
 
   it('should extract author login from REST API response', async () => {
@@ -122,7 +126,9 @@ describe('syncCommits', () => {
     const activeCommits = await db
       .select()
       .from(commits)
-      .where(and(eq(commits.pullRequestId, 'pr-123'), isNull(commits.deletedAt)))
+      .where(
+        and(eq(commits.pullRequestId, 'pr-123'), isNull(commits.deletedAt))
+      )
 
     expect(activeCommits).toHaveLength(2)
   })

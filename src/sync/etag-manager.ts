@@ -23,11 +23,7 @@ export const etagManager = {
     const database = getDatabase()
     const id = generateETagId(key)
 
-    const result = database
-      .select()
-      .from(etags)
-      .where(eq(etags.id, id))
-      .get()
+    const result = database.select().from(etags).where(eq(etags.id, id)).get()
 
     if (!result) {
       return null
@@ -72,26 +68,18 @@ export const etagManager = {
     const database = getDatabase()
     const id = generateETagId(key)
 
-    database
-      .delete(etags)
-      .where(eq(etags.id, id))
-      .run()
+    database.delete(etags).where(eq(etags.id, id)).run()
   },
 
   deleteByEndpointType(endpointType: string): void {
     const database = getDatabase()
 
-    database
-      .delete(etags)
-      .where(eq(etags.endpointType, endpointType))
-      .run()
+    database.delete(etags).where(eq(etags.endpointType, endpointType)).run()
   },
 
   deleteAll(): void {
     const database = getDatabase()
 
-    database
-      .delete(etags)
-      .run()
+    database.delete(etags).run()
   }
 }

@@ -12,8 +12,8 @@ import { useEffect, useState, type ReactElement, type ReactNode } from 'react'
 import { Badge } from '@/app/components/ui/badge'
 import { cn } from '@/app/lib/utils'
 import { useAppSelector } from '@/app/store/hooks'
-import type { Check } from '@/types/pullRequestDetails'
-import type { PullRequest } from '@/types/pullRequest'
+import type { Check } from '@/types/pull-request-details'
+import type { PullRequest } from '@/types/pull-request'
 
 import { Duration } from './components/Duration'
 
@@ -256,7 +256,9 @@ function CheckStatusIcon({ check }: { check: Check }): ReactElement {
   }
 
   if (
-    ['failure', 'startup_failure'].includes(check.conclusion?.toLowerCase() ?? '')
+    ['failure', 'startup_failure'].includes(
+      check.conclusion?.toLowerCase() ?? ''
+    )
   ) {
     return <XCircleIcon className="size-3 text-red-600" />
   }

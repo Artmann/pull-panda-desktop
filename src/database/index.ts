@@ -19,7 +19,9 @@ function getDatabasePath(): string {
 let database: ReturnType<typeof drizzle> | null = null
 let sqliteInstance: SqlJsDatabase | null = null
 
-export async function initializeDatabase(): Promise<ReturnType<typeof drizzle>> {
+export async function initializeDatabase(): Promise<
+  ReturnType<typeof drizzle>
+> {
   if (database) {
     return database
   }
@@ -58,7 +60,9 @@ export function setDatabase(db: ReturnType<typeof drizzle> | null): void {
   database = db
 }
 
-export async function createInMemoryDatabase(): Promise<ReturnType<typeof drizzle>> {
+export async function createInMemoryDatabase(): Promise<
+  ReturnType<typeof drizzle>
+> {
   const SQL = await initSqlJs()
   const sqlite = new SQL.Database()
   const db = drizzle(sqlite, { schema })
@@ -116,13 +120,22 @@ function initializeAllTables(sqlite: SqlJsDatabase): void {
   `)
 
   sqlite.run(`CREATE INDEX IF NOT EXISTS idx_pr_state ON pull_requests(state)`)
-  sqlite.run(`CREATE INDEX IF NOT EXISTS idx_pr_updated ON pull_requests(updated_at)`)
-  sqlite.run(`CREATE INDEX IF NOT EXISTS idx_pr_repo ON pull_requests(repository_owner, repository_name)`)
+  sqlite.run(
+    `CREATE INDEX IF NOT EXISTS idx_pr_updated ON pull_requests(updated_at)`
+  )
+  sqlite.run(
+    `CREATE INDEX IF NOT EXISTS idx_pr_repo ON pull_requests(repository_owner, repository_name)`
+  )
 
   // Add columns for existing databases that don't have them yet.
   tryAddColumn(sqlite, 'pull_requests', 'body', 'TEXT')
   tryAddColumn(sqlite, 'pull_requests', 'body_html', 'TEXT')
-  tryAddColumn(sqlite, 'pull_requests', 'is_draft', 'INTEGER NOT NULL DEFAULT 0')
+  tryAddColumn(
+    sqlite,
+    'pull_requests',
+    'is_draft',
+    'INTEGER NOT NULL DEFAULT 0'
+  )
   tryAddColumn(sqlite, 'pull_requests', 'details_synced_at', 'TEXT')
 
   sqlite.run(`
@@ -142,7 +155,9 @@ function initializeAllTables(sqlite: SqlJsDatabase): void {
       deleted_at TEXT
     )
   `)
-  sqlite.run(`CREATE INDEX IF NOT EXISTS idx_reviews_pull_request_id ON reviews(pull_request_id)`)
+  sqlite.run(
+    `CREATE INDEX IF NOT EXISTS idx_reviews_pull_request_id ON reviews(pull_request_id)`
+  )
 
   sqlite.run(`
     CREATE TABLE IF NOT EXISTS comments (
@@ -171,7 +186,9 @@ function initializeAllTables(sqlite: SqlJsDatabase): void {
       deleted_at TEXT
     )
   `)
-  sqlite.run(`CREATE INDEX IF NOT EXISTS idx_comments_pull_request_id ON comments(pull_request_id)`)
+  sqlite.run(
+    `CREATE INDEX IF NOT EXISTS idx_comments_pull_request_id ON comments(pull_request_id)`
+  )
 
   // Add columns for existing databases
   tryAddColumn(sqlite, 'comments', 'body_html', 'TEXT')
@@ -191,7 +208,9 @@ function initializeAllTables(sqlite: SqlJsDatabase): void {
       deleted_at TEXT
     )
   `)
-  sqlite.run(`CREATE INDEX IF NOT EXISTS idx_comment_reactions_comment_id ON comment_reactions(comment_id)`)
+  sqlite.run(
+    `CREATE INDEX IF NOT EXISTS idx_comment_reactions_comment_id ON comment_reactions(comment_id)`
+  )
 
   sqlite.run(`
     CREATE TABLE IF NOT EXISTS checks (
@@ -213,7 +232,9 @@ function initializeAllTables(sqlite: SqlJsDatabase): void {
       deleted_at TEXT
     )
   `)
-  sqlite.run(`CREATE INDEX IF NOT EXISTS idx_checks_pull_request_id ON checks(pull_request_id)`)
+  sqlite.run(
+    `CREATE INDEX IF NOT EXISTS idx_checks_pull_request_id ON checks(pull_request_id)`
+  )
 
   sqlite.run(`
     CREATE TABLE IF NOT EXISTS commits (
@@ -232,7 +253,9 @@ function initializeAllTables(sqlite: SqlJsDatabase): void {
       deleted_at TEXT
     )
   `)
-  sqlite.run(`CREATE INDEX IF NOT EXISTS idx_commits_pull_request_id ON commits(pull_request_id)`)
+  sqlite.run(
+    `CREATE INDEX IF NOT EXISTS idx_commits_pull_request_id ON commits(pull_request_id)`
+  )
 
   sqlite.run(`
     CREATE TABLE IF NOT EXISTS modified_files (
@@ -249,7 +272,9 @@ function initializeAllTables(sqlite: SqlJsDatabase): void {
       deleted_at TEXT
     )
   `)
-  sqlite.run(`CREATE INDEX IF NOT EXISTS idx_modified_files_pull_request_id ON modified_files(pull_request_id)`)
+  sqlite.run(
+    `CREATE INDEX IF NOT EXISTS idx_modified_files_pull_request_id ON modified_files(pull_request_id)`
+  )
 
   sqlite.run(`
     CREATE TABLE IF NOT EXISTS etags (
@@ -261,10 +286,17 @@ function initializeAllTables(sqlite: SqlJsDatabase): void {
       validated_at TEXT NOT NULL
     )
   `)
-  sqlite.run(`CREATE INDEX IF NOT EXISTS idx_etags_endpoint_resource ON etags(endpoint_type, resource_id)`)
+  sqlite.run(
+    `CREATE INDEX IF NOT EXISTS idx_etags_endpoint_resource ON etags(endpoint_type, resource_id)`
+  )
 }
 
-function tryAddColumn(sqlite: SqlJsDatabase, table: string, column: string, type: string): void {
+function tryAddColumn(
+  sqlite: SqlJsDatabase,
+  table: string,
+  column: string,
+  type: string
+): void {
   try {
     sqlite.run(`ALTER TABLE ${table} ADD COLUMN ${column} ${type}`)
   } catch {

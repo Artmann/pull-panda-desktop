@@ -6,10 +6,10 @@ import { Provider } from 'react-redux'
 import { configureStore } from '@reduxjs/toolkit'
 import { describe, it, expect, vi, beforeAll } from 'vitest'
 
-import type { Commit, PullRequestDetails } from '@/types/pullRequestDetails'
-import type { PullRequest } from '@/types/pullRequest'
+import type { Commit, PullRequestDetails } from '@/types/pull-request-details'
+import type { PullRequest } from '@/types/pull-request'
 
-import pullRequestDetailsReducer from '@/app/store/pullRequestDetailsSlice'
+import pullRequestDetailsReducer from '@/app/store/pull-request-details-slice'
 
 import { CommitsView } from './CommitsView'
 
@@ -45,7 +45,9 @@ function createMockCommit(overrides: Partial<Commit> = {}): Commit {
   }
 }
 
-function createMockPullRequest(overrides: Partial<PullRequest> = {}): PullRequest {
+function createMockPullRequest(
+  overrides: Partial<PullRequest> = {}
+): PullRequest {
   return {
     id: 'pr-1',
     number: 7,
@@ -168,7 +170,9 @@ describe('CommitsView', () => {
     })
 
     expect(screen.getByText('Add new feature')).toBeInTheDocument()
-    expect(screen.getByText('This adds a new feature to the app.')).toBeInTheDocument()
+    expect(
+      screen.getByText('This adds a new feature to the app.')
+    ).toBeInTheDocument()
   })
 
   it('displays short hash', async () => {

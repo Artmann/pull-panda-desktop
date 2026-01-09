@@ -1,4 +1,4 @@
-import type { Comment } from '@/types/pullRequestDetails'
+import type { Comment } from '@/types/pull-request-details'
 
 export interface FoundIssue {
   source?: 'github' | 'jira' | 'linear'

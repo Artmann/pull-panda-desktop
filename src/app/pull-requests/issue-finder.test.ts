@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 
-import type { Comment } from '@/types/pullRequestDetails'
+import type { Comment } from '@/types/pull-request-details'
 
 import { findIssuesInTheDescriptionOrInTheComments } from './issue-finder'
 

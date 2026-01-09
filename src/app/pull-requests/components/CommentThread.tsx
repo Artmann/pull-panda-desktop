@@ -8,8 +8,8 @@ import {
   type ReactElement
 } from 'react'
 
-import type { PullRequest } from '@/types/pullRequest'
-import type { Comment } from '@/types/pullRequestDetails'
+import type { PullRequest } from '@/types/pull-request'
+import type { Comment } from '@/types/pull-request-details'
 
 import { TimeAgo } from '@/app/components/TimeAgo'
 import { Avatar, AvatarFallback, AvatarImage } from '@/app/components/ui/avatar'
@@ -25,13 +25,13 @@ import { Separator } from '@/app/components/ui/separator'
 import { Textarea } from '@/app/components/ui/textarea'
 import { createComment } from '@/app/lib/api'
 import { useAuth } from '@/app/lib/store/authContext'
-import { getDraftKeyForReply } from '@/app/store/draftsSlice'
+import { getDraftKeyForReply } from '@/app/store/drafts-slice'
 import { useAppDispatch } from '@/app/store/hooks'
 import {
   createOptimisticComment,
   pullRequestDetailsActions
-} from '@/app/store/pullRequestDetailsSlice'
-import { useDraft } from '@/app/store/useDraft'
+} from '@/app/store/pull-request-details-slice'
+import { useDraft } from '@/app/store/use-draft'
 
 import { CommentBody } from './CommentBody'
 import { SimpleDiff } from '../diffs/SimpleDiff'
@@ -136,7 +136,9 @@ const CommentReply = memo(function CommentReply({
   const { user } = useAuth()
 
   const isReviewComment = comment.gitHubReviewThreadId !== null
-  const reviewCommentId = isReviewComment ? comment.gitHubNumericId ?? undefined : undefined
+  const reviewCommentId = isReviewComment
+    ? (comment.gitHubNumericId ?? undefined)
+    : undefined
 
   const handleSubmit = useCallback(
     async (event: FormEvent) => {

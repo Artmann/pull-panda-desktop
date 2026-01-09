@@ -5,7 +5,7 @@ import {
   getRetryAfterMs,
   isRateLimitError,
   sleep
-} from './rateLimitManager'
+} from './rate-limit-manager'
 
 describe('rateLimitManager', () => {
   beforeEach(() => {

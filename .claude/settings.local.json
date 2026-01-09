@@ -33,7 +33,10 @@
       "Bash(timeout 15 yarn start:*)",
       "Bash(cd:*)",
       "Bash(tree:*)",
-      "Bash(yarn list:*)"
+      "Bash(yarn list:*)",
+      "WebFetch(domain:ui.shadcn.com)",
+      "Bash(git mv:*)",
+      "Bash(xargs sed:*)"
     ]
   }
 }

@@ -1,7 +1,7 @@
 import { useCallback } from 'react'
 
 import { useAppDispatch, useAppSelector } from './hooks'
-import { draftsActions } from './draftsSlice'
+import { draftsActions } from './drafts-slice'
 
 export function useDraft(key: string) {
   const dispatch = useAppDispatch()

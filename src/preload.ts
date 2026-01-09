@@ -3,7 +3,8 @@ import { contextBridge, ipcRenderer } from 'electron'
 import { ipcChannels } from './lib/ipc/channels'
 import type { BootstrapData } from './main/bootstrap'
 import type { DeviceCodeResponse, GitHubUser } from './types/auth'
-import type { PullRequestDetails } from './types/pullRequestDetails'
+import type { PullRequestDetails } from './types/pull-request-details'
+import type { MonitoringData } from './types/syncer-monitoring'
 import type { Task, TaskUpdateEvent } from './types/task'
 
 interface SyncCompleteEvent {
@@ -37,7 +38,9 @@ const electronApi = {
       pullNumber
     ),
 
-  onSyncComplete: (callback: (event: SyncCompleteEvent) => void): (() => void) => {
+  onSyncComplete: (
+    callback: (event: SyncCompleteEvent) => void
+  ): (() => void) => {
     const handler = (_event: unknown, data: SyncCompleteEvent) => callback(data)
 
     ipcRenderer.on(ipcChannels.SyncComplete, handler)
@@ -59,8 +62,7 @@ const electronApi = {
     }
   },
 
-  windowClose: (): Promise<void> =>
-    ipcRenderer.invoke(ipcChannels.WindowClose),
+  windowClose: (): Promise<void> => ipcRenderer.invoke(ipcChannels.WindowClose),
 
   windowMaximize: (): Promise<void> =>
     ipcRenderer.invoke(ipcChannels.WindowMaximize),
@@ -72,7 +74,10 @@ const electronApi = {
     ipcRenderer.invoke(ipcChannels.OpenUrl, url),
 
   markPullRequestActive: (pullRequestId: string): Promise<void> =>
-    ipcRenderer.invoke(ipcChannels.PullRequestOpened, pullRequestId)
+    ipcRenderer.invoke(ipcChannels.PullRequestOpened, pullRequestId),
+
+  getSyncerStats: (): Promise<MonitoringData> =>
+    ipcRenderer.invoke(ipcChannels.GetSyncerStats)
 }
 
 const authApi = {

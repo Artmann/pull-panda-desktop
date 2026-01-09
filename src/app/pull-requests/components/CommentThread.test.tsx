@@ -6,13 +6,13 @@ import { Provider } from 'react-redux'
 import { configureStore } from '@reduxjs/toolkit'
 import { describe, it, expect, vi, beforeEach, beforeAll } from 'vitest'
 
-import type { Comment } from '@/types/pullRequestDetails'
-import type { PullRequest } from '@/types/pullRequest'
+import type { Comment } from '@/types/pull-request-details'
+import type { PullRequest } from '@/types/pull-request'
 
 import { createComment } from '@/app/lib/api'
 import { AuthProvider } from '@/app/lib/store/authContext'
-import draftsReducer, { getDraftKeyForReply } from '@/app/store/draftsSlice'
-import pullRequestDetailsReducer from '@/app/store/pullRequestDetailsSlice'
+import draftsReducer, { getDraftKeyForReply } from '@/app/store/drafts-slice'
+import pullRequestDetailsReducer from '@/app/store/pull-request-details-slice'
 
 import { FileCommentThreadCard } from './CommentThread'
 
@@ -89,7 +89,9 @@ function createMockComment(overrides: Partial<Comment> = {}): Comment {
   }
 }
 
-function createMockPullRequest(overrides: Partial<PullRequest> = {}): PullRequest {
+function createMockPullRequest(
+  overrides: Partial<PullRequest> = {}
+): PullRequest {
   return {
     id: 'pr-1',
     number: 7,
@@ -177,7 +179,9 @@ describe('CommentReply', () => {
       await Promise.resolve()
     })
 
-    const form = screen.getByPlaceholderText('Reply to comment...').closest('form') as HTMLFormElement
+    const form = screen
+      .getByPlaceholderText('Reply to comment...')
+      .closest('form') as HTMLFormElement
 
     await act(async () => {
       fireEvent.submit(form)
@@ -223,7 +227,9 @@ describe('CommentReply', () => {
       await Promise.resolve()
     })
 
-    const form = screen.getByPlaceholderText('Reply to comment...').closest('form') as HTMLFormElement
+    const form = screen
+      .getByPlaceholderText('Reply to comment...')
+      .closest('form') as HTMLFormElement
 
     await act(async () => {
       fireEvent.submit(form)
@@ -269,7 +275,9 @@ describe('CommentReply', () => {
       await Promise.resolve()
     })
 
-    const form = screen.getByPlaceholderText('Reply to comment...').closest('form') as HTMLFormElement
+    const form = screen
+      .getByPlaceholderText('Reply to comment...')
+      .closest('form') as HTMLFormElement
 
     await act(async () => {
       fireEvent.submit(form)

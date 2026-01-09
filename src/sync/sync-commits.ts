@@ -3,8 +3,8 @@ import { eq, and, isNull } from 'drizzle-orm'
 import { getDatabase } from '../database'
 import { commits, type NewCommit } from '../database/schema'
 
-import { createRestClient } from './restClient'
-import { etagManager } from './etagManager'
+import { createRestClient } from './rest-client'
+import { etagManager } from './etag-manager'
 import { generateId, normalizeCommentBody } from './utils'
 
 interface SyncCommitsParams {
@@ -102,7 +102,8 @@ export async function syncCommits({
           ? normalizeCommentBody(commitData.commit.message)
           : null,
         url: commitData.html_url ?? null,
-        authorLogin: commitData.author?.login ?? commitData.commit.author?.name ?? null,
+        authorLogin:
+          commitData.author?.login ?? commitData.commit.author?.name ?? null,
         authorAvatarUrl: commitData.author?.avatar_url ?? null,
         linesAdded: null,
         linesRemoved: null,

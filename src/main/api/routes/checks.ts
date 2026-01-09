@@ -3,7 +3,7 @@ import { and, eq, isNull } from 'drizzle-orm'
 
 import { getDatabase } from '../../../database'
 import { checks, pullRequests } from '../../../database/schema'
-import type { Check } from '../../../types/pullRequestDetails'
+import type { Check } from '../../../types/pull-request-details'
 
 export type AppEnv = {
   Variables: {

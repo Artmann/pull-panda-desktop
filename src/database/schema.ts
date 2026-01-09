@@ -24,8 +24,12 @@ export const pullRequests = sqliteTable('pull_requests', {
 
   isDraft: integer('is_draft', { mode: 'boolean' }).notNull().default(false),
   isAuthor: integer('is_author', { mode: 'boolean' }).notNull().default(false),
-  isAssignee: integer('is_assignee', { mode: 'boolean' }).notNull().default(false),
-  isReviewer: integer('is_reviewer', { mode: 'boolean' }).notNull().default(false),
+  isAssignee: integer('is_assignee', { mode: 'boolean' })
+    .notNull()
+    .default(false),
+  isReviewer: integer('is_reviewer', { mode: 'boolean' })
+    .notNull()
+    .default(false),
 
   labels: text('labels'),
   assignees: text('assignees'),
@@ -200,7 +204,9 @@ export const modifiedFiles = sqliteTable(
     syncedAt: text('synced_at').notNull(),
     deletedAt: text('deleted_at')
   },
-  (table) => [index('modified_files_pull_request_id_idx').on(table.pullRequestId)]
+  (table) => [
+    index('modified_files_pull_request_id_idx').on(table.pullRequestId)
+  ]
 )
 
 export type ModifiedFile = typeof modifiedFiles.$inferSelect
@@ -216,7 +222,12 @@ export const etags = sqliteTable(
     lastModified: text('last_modified'),
     validatedAt: text('validated_at').notNull()
   },
-  (table) => [index('etags_endpoint_resource_idx').on(table.endpointType, table.resourceId)]
+  (table) => [
+    index('etags_endpoint_resource_idx').on(
+      table.endpointType,
+      table.resourceId
+    )
+  ]
 )
 
 export type ETag = typeof etags.$inferSelect

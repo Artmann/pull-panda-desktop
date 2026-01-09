@@ -9,6 +9,7 @@ import { TitleBar } from '@/app/components/TitleBar'
 import { AuthProvider, useAuth } from '@/app/lib/store/authContext'
 import { TasksProvider } from '@/app/lib/store/tasksContext'
 import { LoginPage } from '@/app/pages/LoginPage'
+import { BackgroundSyncerPage } from '@/app/routes/BackgroundSyncerPage'
 import { HomePage } from '@/app/routes/HomePage'
 import { PullRequestPage } from '@/app/routes/PullRequestPage'
 import { AppFooter } from './AppFooter'
@@ -56,6 +57,10 @@ function AppContent(): ReactElement {
                 <Route
                   path="/"
                   element={<HomePage />}
+                />
+                <Route
+                  path="/bg"
+                  element={<BackgroundSyncerPage />}
                 />
                 <Route
                   path="/pull-requests/:id"

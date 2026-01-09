@@ -4,10 +4,17 @@ import { eq, and, isNull, inArray } from 'drizzle-orm'
 import { getDatabase } from '../database'
 import { checks, pullRequests } from '../database/schema'
 import { ipcChannels } from '../lib/ipc/channels'
-import { syncChecks } from '../sync/syncChecks'
+import { syncChecks } from '../sync/sync-checks'
+import { rateLimitManager } from '../sync/rate-limit-manager'
+import type {
+  MonitoringData,
+  RateLimitRecord,
+  SyncRecord
+} from '../types/syncer-monitoring'
 
 const syncIntervalWithRunningChecks = 2000
 const syncIntervalWithoutRunningChecks = 10000
+const maxHistorySize = 1000
 
 interface ActivePullRequest {
   id: string
@@ -20,6 +27,9 @@ class BackgroundSyncer {
   private activePullRequests = new Map<string, ActivePullRequest>()
   private timeoutId: NodeJS.Timeout | null = null
   private getToken: (() => string | null) | null = null
+  private syncHistory: SyncRecord[] = []
+  private rateLimitHistory: RateLimitRecord[] = []
+  private syncIdCounter = 0
 
   start(getToken: () => string | null): void {
     if (this.isRunning) {
@@ -120,6 +130,11 @@ class BackgroundSyncer {
         continue
       }
 
+      const syncStartTime = Date.now()
+      const syncId = `sync-${++this.syncIdCounter}`
+      let syncSuccess = true
+      let syncError: string | undefined
+
       try {
         await syncChecks({
           token,
@@ -156,8 +171,28 @@ class BackgroundSyncer {
           nextSyncDelay = Math.min(nextSyncDelay, syncIntervalWithRunningChecks)
         }
       } catch (error) {
-        console.error(`[BackgroundSyncer] Error syncing PR ${pullRequestId}:`, error)
+        syncSuccess = false
+        syncError = error instanceof Error ? error.message : 'Unknown error'
+        console.error(
+          `[BackgroundSyncer] Error syncing PR ${pullRequestId}:`,
+          error
+        )
       }
+
+      // Record sync history
+      const syncEndTime = Date.now()
+      this.recordSync({
+        id: syncId,
+        timestamp: syncStartTime,
+        duration: syncEndTime - syncStartTime,
+        resourceType: 'checks',
+        resourceId: pullRequestId,
+        success: syncSuccess,
+        error: syncError
+      })
+
+      // Record rate limit
+      this.recordRateLimit()
     }
 
     // Schedule next sync
@@ -173,6 +208,68 @@ class BackgroundSyncer {
         pullRequestId
       })
     }
+  }
+
+  private recordSync(record: SyncRecord): void {
+    this.syncHistory.push(record)
+
+    console.log(
+      `[BackgroundSyncer] Recorded sync: ${record.resourceType}:${record.resourceId} took ${record.duration}ms, success=${record.success}`
+    )
+
+    // Keep history bounded
+    if (this.syncHistory.length > maxHistorySize) {
+      this.syncHistory.shift()
+    }
+  }
+
+  private recordRateLimit(): void {
+    const now = Date.now()
+
+    // Record REST rate limit
+    const restRemaining = rateLimitManager.getRemainingQuota('rest')
+    const restState = rateLimitManager.rest
+
+    if (restRemaining !== null && restState) {
+      this.rateLimitHistory.push({
+        timestamp: now,
+        remaining: restRemaining,
+        limit: restState.limit,
+        type: 'rest'
+      })
+    }
+
+    // Record GraphQL rate limit
+    const graphqlRemaining = rateLimitManager.getRemainingQuota('graphql')
+    const graphqlState = rateLimitManager.graphql
+
+    if (graphqlRemaining !== null && graphqlState) {
+      this.rateLimitHistory.push({
+        timestamp: now,
+        remaining: graphqlRemaining,
+        limit: graphqlState.limit,
+        type: 'graphql'
+      })
+    }
+
+    // Keep history bounded
+    while (this.rateLimitHistory.length > maxHistorySize) {
+      this.rateLimitHistory.shift()
+    }
+  }
+
+  getMonitoringData(): MonitoringData {
+    const data = {
+      syncs: [...this.syncHistory],
+      rateLimits: [...this.rateLimitHistory],
+      activePullRequests: Array.from(this.activePullRequests.keys())
+    }
+
+    console.log(
+      `[BackgroundSyncer] getMonitoringData: ${data.syncs.length} syncs, ${data.rateLimits.length} rateLimits, ${data.activePullRequests.length} active PRs`
+    )
+
+    return data
   }
 }
 

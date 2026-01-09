@@ -1,6 +1,6 @@
 import { createSlice } from '@reduxjs/toolkit'
 
-import type { PullRequest } from '@/types/pullRequest'
+import type { PullRequest } from '@/types/pull-request'
 
 export interface PullRequestsState {
   items: PullRequest[]

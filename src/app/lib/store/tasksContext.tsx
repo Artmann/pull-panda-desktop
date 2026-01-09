@@ -1,12 +1,7 @@
-import {
-  createContext,
-  useContext,
-  useEffect,
-  type ReactNode
-} from 'react'
+import { createContext, useContext, useEffect, type ReactNode } from 'react'
 
 import { useAppDispatch, useAppSelector } from '@/app/store/hooks'
-import { tasksActions } from '@/app/store/tasksSlice'
+import { tasksActions } from '@/app/store/tasks-slice'
 import type { Task } from '@/types/task'
 
 interface TasksContextValue {
@@ -38,7 +33,8 @@ export function TasksProvider({ children }: { children: ReactNode }) {
   const runningTasks = tasks.filter((task) => task.status === 'running')
 
   const hasSyncInProgress = runningTasks.some(
-    (task) => task.type === 'syncPullRequests' || task.type === 'syncPullRequestDetails'
+    (task) =>
+      task.type === 'syncPullRequests' || task.type === 'syncPullRequestDetails'
   )
 
   return (

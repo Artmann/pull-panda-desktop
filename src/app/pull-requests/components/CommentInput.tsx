@@ -5,13 +5,13 @@ import { Button } from '@/app/components/ui/button'
 import { Textarea } from '@/app/components/ui/textarea'
 import { createComment } from '@/app/lib/api'
 import { useAuth } from '@/app/lib/store/authContext'
-import { getDraftKeyForComment } from '@/app/store/draftsSlice'
+import { getDraftKeyForComment } from '@/app/store/drafts-slice'
 import { useAppDispatch } from '@/app/store/hooks'
 import {
   createOptimisticComment,
   pullRequestDetailsActions
-} from '@/app/store/pullRequestDetailsSlice'
-import { useDraft } from '@/app/store/useDraft'
+} from '@/app/store/pull-request-details-slice'
+import { useDraft } from '@/app/store/use-draft'
 
 interface CommentInputProps {
   owner: string
