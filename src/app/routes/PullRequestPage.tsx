@@ -12,7 +12,7 @@ import React, {
   useState,
   type ReactElement
 } from 'react'
-import { Link, useParams } from 'react-router'
+import { Link, useParams, useSearchParams } from 'react-router'
 
 import { Button } from '@/app/components/ui/button'
 import { useAppDispatch, useAppSelector } from '@/app/store/hooks'
@@ -24,7 +24,7 @@ import { clamp01 } from '@/math'
 import { Overview } from '../pull-requests/Overview'
 import { CommitsView } from '../pull-requests/CommitsView'
 import { ChecksView } from '../pull-requests/ChecksView'
-import { FilesView } from '../pull-requests/FIlesView'
+import { FilesView } from '../pull-requests/FilesView'
 import {
   Tabs,
   TabsContent,
@@ -45,10 +45,13 @@ export function PullRequestPage(): ReactElement {
   )
 
   const dispatch = useAppDispatch()
-  const activeTab = useAppSelector(
-    (state) => state.navigation.activeTab[id] ?? 'overview'
-  )
+  const [searchParams, setSearchParams] = useSearchParams()
   const details = useAppSelector((state) => state.pullRequestDetails[id ?? ''])
+
+  const tabFromUrl = searchParams.get('tab')
+  const validTabs = ['overview', 'commits', 'checks', 'files']
+  const activeTab =
+    tabFromUrl && validTabs.includes(tabFromUrl) ? tabFromUrl : 'overview'
 
   const fetchDetails = useCallback(async () => {
     if (!id) {
@@ -163,6 +166,7 @@ export function PullRequestPage(): ReactElement {
   }, [])
 
   const handleTabChange = (tabId: string) => {
+    setSearchParams({ tab: tabId })
     dispatch(navigationActions.setActiveTab({ pullRequestId: id, tab: tabId }))
   }
 

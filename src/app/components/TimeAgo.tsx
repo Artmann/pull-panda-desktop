@@ -10,6 +10,7 @@ import {
 } from '@/app/components/ui/tooltip'
 import { cn } from '../lib/utils'
 
+// eslint-disable-next-line import/no-named-as-default-member
 dayjs.extend(relativeTime)
 
 export function TimeAgo({
