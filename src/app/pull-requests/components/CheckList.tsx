@@ -238,7 +238,10 @@ export function CheckList({ checks }: { checks: Check[] }): ReactElement {
                         href={check.url}
                         onClick={(event) => {
                           event.preventDefault()
-                          window.electron.openUrl(check.url!)
+
+                          if (check.url) {
+                            window.electron.openUrl(check.url)
+                          }
                         }}
                         rel="noopener noreferrer"
                         target="_blank"

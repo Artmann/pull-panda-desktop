@@ -62,7 +62,12 @@ beforeEach(() => {
   })
 
   vi.stubGlobal('auth', {
-    getUser: vi.fn().mockResolvedValue({ login: 'testuser', avatarUrl: 'https://example.com/avatar.png' })
+    getUser: vi
+      .fn()
+      .mockResolvedValue({
+        login: 'testuser',
+        avatarUrl: 'https://example.com/avatar.png'
+      })
   })
 })
 
@@ -114,10 +119,12 @@ function createMockDetails(
   }
 }
 
-function createTestStore(options: {
-  pullRequests?: PullRequest[]
-  pullRequestDetails?: Record<string, PullRequestDetails>
-} = {}) {
+function createTestStore(
+  options: {
+    pullRequests?: PullRequest[]
+    pullRequestDetails?: Record<string, PullRequestDetails>
+  } = {}
+) {
   return configureStore({
     reducer: {
       drafts: draftsReducer,
@@ -165,19 +172,137 @@ describe('PullRequestPage', () => {
       const pullRequest = createMockPullRequest({ id: 'pr-1' })
       const details = createMockDetails({
         checks: [
-          { id: 'c1', gitHubId: 'c1', pullRequestId: 'pr-1', name: 'build', state: 'completed', conclusion: 'success', commitSha: 'abc', suiteName: 'CI', durationInSeconds: 60, detailsUrl: null, message: null, url: null, gitHubCreatedAt: null, gitHubUpdatedAt: null, syncedAt: '2024-01-01T00:00:00Z' },
-          { id: 'c2', gitHubId: 'c2', pullRequestId: 'pr-1', name: 'test', state: 'completed', conclusion: 'success', commitSha: 'abc', suiteName: 'CI', durationInSeconds: 120, detailsUrl: null, message: null, url: null, gitHubCreatedAt: null, gitHubUpdatedAt: null, syncedAt: '2024-01-01T00:00:00Z' },
-          { id: 'c3', gitHubId: 'c3', pullRequestId: 'pr-1', name: 'lint', state: 'completed', conclusion: 'success', commitSha: 'abc', suiteName: 'CI', durationInSeconds: 30, detailsUrl: null, message: null, url: null, gitHubCreatedAt: null, gitHubUpdatedAt: null, syncedAt: '2024-01-01T00:00:00Z' }
+          {
+            id: 'c1',
+            gitHubId: 'c1',
+            pullRequestId: 'pr-1',
+            name: 'build',
+            state: 'completed',
+            conclusion: 'success',
+            commitSha: 'abc',
+            suiteName: 'CI',
+            durationInSeconds: 60,
+            detailsUrl: null,
+            message: null,
+            url: null,
+            gitHubCreatedAt: null,
+            gitHubUpdatedAt: null,
+            syncedAt: '2024-01-01T00:00:00Z'
+          },
+          {
+            id: 'c2',
+            gitHubId: 'c2',
+            pullRequestId: 'pr-1',
+            name: 'test',
+            state: 'completed',
+            conclusion: 'success',
+            commitSha: 'abc',
+            suiteName: 'CI',
+            durationInSeconds: 120,
+            detailsUrl: null,
+            message: null,
+            url: null,
+            gitHubCreatedAt: null,
+            gitHubUpdatedAt: null,
+            syncedAt: '2024-01-01T00:00:00Z'
+          },
+          {
+            id: 'c3',
+            gitHubId: 'c3',
+            pullRequestId: 'pr-1',
+            name: 'lint',
+            state: 'completed',
+            conclusion: 'success',
+            commitSha: 'abc',
+            suiteName: 'CI',
+            durationInSeconds: 30,
+            detailsUrl: null,
+            message: null,
+            url: null,
+            gitHubCreatedAt: null,
+            gitHubUpdatedAt: null,
+            syncedAt: '2024-01-01T00:00:00Z'
+          }
         ],
         commits: [
-          { id: 'commit-1', gitHubId: 'sha1', pullRequestId: 'pr-1', hash: 'abc1234567890', message: 'First commit', url: null, authorLogin: 'user', authorAvatarUrl: null, linesAdded: null, linesRemoved: null, gitHubCreatedAt: '2024-01-01T00:00:00Z', syncedAt: '2024-01-01T00:00:00Z' },
-          { id: 'commit-2', gitHubId: 'sha2', pullRequestId: 'pr-1', hash: 'def4567890123', message: 'Second commit', url: null, authorLogin: 'user', authorAvatarUrl: null, linesAdded: null, linesRemoved: null, gitHubCreatedAt: '2024-01-01T00:00:00Z', syncedAt: '2024-01-01T00:00:00Z' }
+          {
+            id: 'commit-1',
+            gitHubId: 'sha1',
+            pullRequestId: 'pr-1',
+            hash: 'abc1234567890',
+            message: 'First commit',
+            url: null,
+            authorLogin: 'user',
+            authorAvatarUrl: null,
+            linesAdded: null,
+            linesRemoved: null,
+            gitHubCreatedAt: '2024-01-01T00:00:00Z',
+            syncedAt: '2024-01-01T00:00:00Z'
+          },
+          {
+            id: 'commit-2',
+            gitHubId: 'sha2',
+            pullRequestId: 'pr-1',
+            hash: 'def4567890123',
+            message: 'Second commit',
+            url: null,
+            authorLogin: 'user',
+            authorAvatarUrl: null,
+            linesAdded: null,
+            linesRemoved: null,
+            gitHubCreatedAt: '2024-01-01T00:00:00Z',
+            syncedAt: '2024-01-01T00:00:00Z'
+          }
         ],
         files: [
-          { id: 'f1', pullRequestId: 'pr-1', filename: 'index.ts', filePath: 'src/index.ts', status: 'modified', additions: 10, deletions: 5, changes: 15, diffHunk: null, syncedAt: '2024-01-01T00:00:00Z' },
-          { id: 'f2', pullRequestId: 'pr-1', filename: 'utils.ts', filePath: 'src/utils.ts', status: 'added', additions: 20, deletions: 0, changes: 20, diffHunk: null, syncedAt: '2024-01-01T00:00:00Z' },
-          { id: 'f3', pullRequestId: 'pr-1', filename: 'old.ts', filePath: 'src/old.ts', status: 'removed', additions: 0, deletions: 15, changes: 15, diffHunk: null, syncedAt: '2024-01-01T00:00:00Z' },
-          { id: 'f4', pullRequestId: 'pr-1', filename: 'README.md', filePath: 'README.md', status: 'modified', additions: 5, deletions: 2, changes: 7, diffHunk: null, syncedAt: '2024-01-01T00:00:00Z' }
+          {
+            id: 'f1',
+            pullRequestId: 'pr-1',
+            filename: 'index.ts',
+            filePath: 'src/index.ts',
+            status: 'modified',
+            additions: 10,
+            deletions: 5,
+            changes: 15,
+            diffHunk: null,
+            syncedAt: '2024-01-01T00:00:00Z'
+          },
+          {
+            id: 'f2',
+            pullRequestId: 'pr-1',
+            filename: 'utils.ts',
+            filePath: 'src/utils.ts',
+            status: 'added',
+            additions: 20,
+            deletions: 0,
+            changes: 20,
+            diffHunk: null,
+            syncedAt: '2024-01-01T00:00:00Z'
+          },
+          {
+            id: 'f3',
+            pullRequestId: 'pr-1',
+            filename: 'old.ts',
+            filePath: 'src/old.ts',
+            status: 'removed',
+            additions: 0,
+            deletions: 15,
+            changes: 15,
+            diffHunk: null,
+            syncedAt: '2024-01-01T00:00:00Z'
+          },
+          {
+            id: 'f4',
+            pullRequestId: 'pr-1',
+            filename: 'README.md',
+            filePath: 'README.md',
+            status: 'modified',
+            additions: 5,
+            deletions: 2,
+            changes: 7,
+            diffHunk: null,
+            syncedAt: '2024-01-01T00:00:00Z'
+          }
         ]
       })
 
