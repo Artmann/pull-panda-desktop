@@ -10,6 +10,7 @@ import {
   BootstrapData,
   getPullRequestDetails
 } from './main/bootstrap'
+import { backgroundSyncer } from './main/backgroundSyncer'
 import { taskManager } from './main/taskManager'
 import { syncPullRequests } from './sync/pullRequests'
 import { syncPullRequestDetails } from './sync/syncPullRequestDetails'
@@ -114,6 +115,13 @@ function setupIpcHandlers(): void {
     ipcChannels.GetPullRequestDetails,
     async (_event, pullRequestId: string) => {
       return getPullRequestDetails(pullRequestId)
+    }
+  )
+
+  ipcMain.handle(
+    ipcChannels.PullRequestOpened,
+    (_event, pullRequestId: string) => {
+      backgroundSyncer.markPullRequestActive(pullRequestId)
     }
   )
 
@@ -299,6 +307,9 @@ app.on('ready', async () => {
 
   createWindow()
 
+  // Start background syncer
+  backgroundSyncer.start(loadToken)
+
   const token = loadToken()
 
   if (token) {
@@ -345,6 +356,7 @@ setInterval(() => {
 
 // Save database before quitting
 app.on('before-quit', () => {
+  backgroundSyncer.stop()
   closeDatabase()
 })
 

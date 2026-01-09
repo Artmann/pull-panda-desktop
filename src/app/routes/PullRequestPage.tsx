@@ -78,6 +78,15 @@ export function PullRequestPage(): ReactElement {
     [id, fetchDetails]
   )
 
+  useEffect(
+    function markPullRequestActive() {
+      if (id) {
+        window.electron.markPullRequestActive(id)
+      }
+    },
+    [id]
+  )
+
   const tabs: Array<{
     content: React.ComponentType<{ pullRequest: NonNullable<typeof pullRequest> }> | null
     id: string

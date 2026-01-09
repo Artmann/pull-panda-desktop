@@ -69,7 +69,10 @@ const electronApi = {
     ipcRenderer.invoke(ipcChannels.WindowMinimize),
 
   openUrl: (url: string): Promise<{ success: boolean }> =>
-    ipcRenderer.invoke(ipcChannels.OpenUrl, url)
+    ipcRenderer.invoke(ipcChannels.OpenUrl, url),
+
+  markPullRequestActive: (pullRequestId: string): Promise<void> =>
+    ipcRenderer.invoke(ipcChannels.PullRequestOpened, pullRequestId)
 }
 
 const authApi = {
