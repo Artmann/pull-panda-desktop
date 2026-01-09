@@ -10,6 +10,7 @@ export const ipcChannels = {
   OpenUrl: 'shell:open-url',
   GetPullRequestDetails: 'get-pull-request-details',
   GetTasks: 'tasks:get',
+  PullRequestOpened: 'pull-request:opened',
   SyncComplete: 'sync:complete',
   SyncPullRequestDetails: 'sync:pull-request-details',
   TaskUpdate: 'tasks:update',

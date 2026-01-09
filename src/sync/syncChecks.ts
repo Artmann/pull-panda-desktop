@@ -47,6 +47,9 @@ interface PullRequestData {
   }
 }
 
+// In-memory cache for head SHAs to avoid refetching PR on 304
+const headShaCache = new Map<string, string>()
+
 export async function syncChecks({
   token,
   pullRequestId,
@@ -59,24 +62,53 @@ export async function syncChecks({
   try {
     const client = createRestClient(token)
 
-    // First, get the PR to find the head SHA
+    // First, get the PR to find the head SHA (with ETag support)
+    const prEtagKey = { endpointType: 'pr-head-sha', resourceId: pullRequestId }
+    const cachedPrEtag = etagManager.get(prEtagKey)
+
     const prResult = await client.request<PullRequestData>(
       'GET /repos/{owner}/{repo}/pulls/{pull_number}',
       {
         owner,
         repo: repositoryName,
         pull_number: pullNumber
-      }
+      },
+      { etag: cachedPrEtag?.etag ?? undefined }
     )
 
-    if (!prResult.data) {
+    let commitSha: string | null = null
+
+    // If PR unchanged (304), use cached SHA
+    if (prResult.notModified) {
+      commitSha = headShaCache.get(pullRequestId) ?? null
+
+      if (!commitSha) {
+        console.log(`[syncChecks] PR returned 304 but no cached SHA for #${pullNumber}`)
+        console.timeEnd('syncChecks')
+
+        return
+      }
+
+      console.log(`[syncChecks] PR unchanged for #${pullNumber} (304), using cached SHA`)
+    } else if (prResult.data) {
+      commitSha = prResult.data.head.sha
+
+      // Cache the SHA for future 304 responses
+      headShaCache.set(pullRequestId, commitSha)
+
+      // Store PR ETag for future requests
+      if (prResult.etag) {
+        etagManager.set(prEtagKey, prResult.etag, prResult.lastModified ?? undefined)
+      }
+    }
+
+    if (!commitSha) {
       console.log(`[syncChecks] Could not get PR #${pullNumber}`)
       console.timeEnd('syncChecks')
 
       return
     }
 
-    const commitSha = prResult.data.head.sha
     const etagKey = { endpointType: 'checks', resourceId: pullRequestId }
 
     // Look up cached ETag

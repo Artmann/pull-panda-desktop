@@ -1,6 +1,6 @@
 import { createSlice, type PayloadAction } from '@reduxjs/toolkit'
 
-import type { Comment, PullRequestDetails } from '@/types/pullRequestDetails'
+import type { Check, Comment, PullRequestDetails } from '@/types/pullRequestDetails'
 
 export interface PullRequestDetailsState {
   [pullRequestId: string]: PullRequestDetails | undefined
@@ -51,6 +51,18 @@ export const pullRequestDetailsSlice = createSlice({
 
       if (details) {
         details.comments = details.comments.filter((c) => c.id !== commentId)
+      }
+    },
+
+    setChecks(
+      state,
+      action: PayloadAction<{ pullRequestId: string; checks: Check[] }>
+    ) {
+      const { pullRequestId, checks } = action.payload
+      const details = state[pullRequestId]
+
+      if (details) {
+        details.checks = checks
       }
     }
   }

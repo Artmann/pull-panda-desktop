@@ -3,6 +3,7 @@ import { Hono } from 'hono'
 import { cors } from 'hono/cors'
 import { AddressInfo } from 'node:net'
 
+import { checksRoute } from './routes/checks'
 import { commentsRoute, type AppEnv } from './routes/comments'
 
 let server: ServerType | null = null
@@ -36,6 +37,7 @@ export function startApiServer(getToken: () => string | null): Promise<number> {
       await next()
     })
 
+    app.route('/api/checks', checksRoute)
     app.route('/api/comments', commentsRoute)
 
     app.get('/api/health', (context) => {
