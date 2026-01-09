@@ -48,6 +48,7 @@ export function PullRequestPage(): ReactElement {
   const activeTab = useAppSelector(
     (state) => state.navigation.activeTab[id] ?? 'overview'
   )
+  const details = useAppSelector((state) => state.pullRequestDetails[id ?? ''])
 
   const fetchDetails = useCallback(async () => {
     if (!id) {
@@ -101,34 +102,38 @@ export function PullRequestPage(): ReactElement {
   const tabs: Array<{
     content: React.ComponentType<{
       pullRequest: NonNullable<typeof pullRequest>
-    }> | null
-    id: string
-    label: string
+    }>
     icon: typeof MessageSquareIcon
+    id: string
+    itemCount?: number
+    label: string
   }> = [
     {
-      content: null,
+      content: Overview,
+      icon: MessageSquareIcon,
       id: 'overview',
-      label: 'Overview',
-      icon: MessageSquareIcon
+      label: 'Overview'
     },
     {
       content: CommitsView,
+      icon: GitCommitIcon,
       id: 'commits',
-      label: 'Commits',
-      icon: GitCommitIcon
+      itemCount: details?.commits?.length ?? 0,
+      label: 'Commits'
     },
     {
       content: ChecksView,
+      icon: ListCheckIcon,
       id: 'checks',
-      label: 'Checks',
-      icon: ListCheckIcon
+      itemCount: details?.checks?.length ?? 0,
+      label: 'Checks'
     },
     {
       content: FilesView,
+      icon: FileCodeIcon,
       id: 'files',
-      label: 'Files',
-      icon: FileCodeIcon
+      itemCount: details?.files?.length ?? 0,
+      label: 'Files'
     }
   ]
 
@@ -204,10 +209,15 @@ export function PullRequestPage(): ReactElement {
             {tabs.map((tab) => (
               <TabsTrigger
                 key={tab.id}
-                className="px-6 py-2 cursor-pointer text-xs flex-1 justify-center"
+                className="px-6 py-2 cursor-pointer text-xs flex-1 flex justify-center items-center"
                 value={tab.id}
               >
                 <tab.icon className="size-3" /> {tab.label}
+                {tab.itemCount !== undefined && (
+                  <div className="text-[11px] bg-muted rounded-sm text-center px-1.5 ml-1.5 mt-1">
+                    {tab.itemCount}
+                  </div>
+                )}
               </TabsTrigger>
             ))}
           </TabsList>
@@ -223,11 +233,7 @@ export function PullRequestPage(): ReactElement {
               value={tab.id}
             >
               <div className="w-full">
-                {tab.id === 'overview' ? (
-                  <Overview pullRequest={pullRequest} />
-                ) : tab.content ? (
-                  <tab.content pullRequest={pullRequest} />
-                ) : null}
+                <tab.content pullRequest={pullRequest} />
               </div>
             </TabsContent>
           ))}
