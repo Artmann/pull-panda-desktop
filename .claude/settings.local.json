@@ -30,7 +30,10 @@
       "Bash(dir node_modules.binvitest*)",
       "Bash(yarn install)",
       "Bash(node node_modules/vitest/vitest.mjs run:*)",
-      "Bash(timeout 15 yarn start:*)"
+      "Bash(timeout 15 yarn start:*)",
+      "Bash(cd:*)",
+      "Bash(tree:*)",
+      "Bash(yarn list:*)"
     ]
   }
 }

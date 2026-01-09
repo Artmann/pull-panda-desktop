@@ -7,6 +7,7 @@ export const ipcChannels = {
   AuthPollToken: 'auth:poll-token',
   AuthRequestDeviceCode: 'auth:request-device-code',
   GetBootstrapData: 'get-bootstrap-data',
+  OpenUrl: 'shell:open-url',
   GetPullRequestDetails: 'get-pull-request-details',
   GetTasks: 'tasks:get',
   SyncComplete: 'sync:complete',
