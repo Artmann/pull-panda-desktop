@@ -1,14 +1,20 @@
 {
-  "name": "pull-panda-app",
-  "productName": "pull-panda-app",
+  "name": "pull-panda-desktop",
+  "productName": "Pull Panda",
   "version": "1.0.0",
-  "description": "My Electron application description",
+  "description": "A delightful code review tool for the AI era",
   "main": ".vite/build/main.js",
   "author": {
     "name": "Christoffer Artmann",
     "email": "artgaard@gmail.com"
   },
-  "keywords": [],
+  "keywords": [
+    "github",
+    "pull-request",
+    "code-review",
+    "electron",
+    "desktop"
+  ],
   "license": "MIT",
   "scripts": {
     "format": "prettier --write .",
