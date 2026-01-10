@@ -21,11 +21,13 @@ interface AppProps {
 export function App({ store }: AppProps): ReactElement {
   return (
     <Provider store={store}>
-      <TasksProvider>
-        <AuthProvider>
-          <AppContent />
-        </AuthProvider>
-      </TasksProvider>
+      <HashRouter>
+        <TasksProvider>
+          <AuthProvider>
+            <AppContent />
+          </AuthProvider>
+        </TasksProvider>
+      </HashRouter>
     </Provider>
   )
 }
@@ -52,22 +54,20 @@ function AppContent(): ReactElement {
 
         <div className="flex-1 min-h-0 overflow-auto">
           <ErrorBoundary>
-            <HashRouter>
-              <Routes>
-                <Route
-                  path="/"
-                  element={<HomePage />}
-                />
-                <Route
-                  path="/bg"
-                  element={<BackgroundSyncerPage />}
-                />
-                <Route
-                  path="/pull-requests/:id"
-                  element={<PullRequestPage />}
-                />
-              </Routes>
-            </HashRouter>
+            <Routes>
+              <Route
+                path="/"
+                element={<HomePage />}
+              />
+              <Route
+                path="/bg"
+                element={<BackgroundSyncerPage />}
+              />
+              <Route
+                path="/pull-requests/:id"
+                element={<PullRequestPage />}
+              />
+            </Routes>
           </ErrorBoundary>
 
           <div className="w-full h-10" />
