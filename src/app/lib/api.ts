@@ -59,6 +59,44 @@ export interface CreateCommentResponse {
   success: boolean
 }
 
+export interface CreateReviewRequest {
+  owner: string
+  pullNumber: number
+  repo: string
+}
+
+export interface CreateReviewResponse {
+  authorAvatarUrl: string | null
+  authorLogin: string | null
+  body: string | null
+  gitHubId: string
+  gitHubNumericId: number
+  id: string
+  state: string
+}
+
+export async function createReview(
+  request: CreateReviewRequest
+): Promise<CreateReviewResponse> {
+  const baseUrl = await getApiBaseUrl()
+
+  const response = await fetch(`${baseUrl}/api/reviews`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify(request)
+  })
+
+  if (!response.ok) {
+    const error = await response.json()
+
+    throw new Error(error.error ?? 'Failed to create review')
+  }
+
+  return response.json()
+}
+
 export async function createComment(
   request: CreateCommentRequest
 ): Promise<CreateCommentResponse> {

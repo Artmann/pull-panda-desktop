@@ -15,24 +15,34 @@ import React, {
 import { Link, useParams, useSearchParams } from 'react-router'
 
 import { Button } from '@/app/components/ui/button'
-import { useAppDispatch, useAppSelector } from '@/app/store/hooks'
 import {
-  PullRequestHeader,
-  StickyPullRequestHeader
-} from '../pull-requests/PullRequestHeader'
-import { clamp01 } from '@/math'
-import { Overview } from '../pull-requests/Overview'
-import { CommitsView } from '../pull-requests/CommitsView'
-import { ChecksView } from '../pull-requests/ChecksView'
-import { FilesView } from '../pull-requests/FilesView'
+  Drawer,
+  DrawerContent,
+  DrawerDescription,
+  DrawerHeader,
+  DrawerTitle
+} from '@/app/components/ui/drawer'
 import {
   Tabs,
   TabsContent,
   TabsList,
   TabsTrigger
 } from '@/app/components/ui/tabs'
-import { navigationActions } from '../store/navigation-slice'
-import { pullRequestDetailsActions } from '../store/pull-request-details-slice'
+import { useAppDispatch, useAppSelector } from '@/app/store/hooks'
+import { navigationActions } from '@/app/store/navigation-slice'
+import { pendingReviewsActions } from '@/app/store/pending-reviews-slice'
+import { pullRequestDetailsActions } from '@/app/store/pull-request-details-slice'
+import { clamp01 } from '@/math'
+
+import { ChecksView } from '../pull-requests/ChecksView'
+import { CommitsView } from '../pull-requests/CommitsView'
+import { FilesView } from '../pull-requests/FilesView'
+import { Overview } from '../pull-requests/Overview'
+import {
+  PullRequestHeader,
+  StickyPullRequestHeader
+} from '../pull-requests/PullRequestHeader'
+import { PullRequestToolbar } from '../pull-requests/PullRequestToolbar'
 
 export function PullRequestPage(): ReactElement {
   const containerRef = useRef<HTMLDivElement>(null)
@@ -47,6 +57,9 @@ export function PullRequestPage(): ReactElement {
   const dispatch = useAppDispatch()
   const [searchParams, setSearchParams] = useSearchParams()
   const details = useAppSelector((state) => state.pullRequestDetails[id ?? ''])
+  const pendingReview = useAppSelector(
+    (state) => state.pendingReviews[id ?? '']
+  )
 
   const tabFromUrl = searchParams.get('tab')
   const validTabs = ['overview', 'commits', 'checks', 'files']
@@ -170,6 +183,12 @@ export function PullRequestPage(): ReactElement {
     dispatch(navigationActions.setActiveTab({ pullRequestId: id, tab: tabId }))
   }
 
+  const handleDrawerOpenChange = (open: boolean) => {
+    if (!open && id) {
+      dispatch(pendingReviewsActions.clearReview({ pullRequestId: id }))
+    }
+  }
+
   if (!pullRequest) {
     return (
       <div className="container mx-auto py-8 px-4">
@@ -202,6 +221,30 @@ export function PullRequestPage(): ReactElement {
       />
 
       <PullRequestHeader pullRequest={pullRequest} />
+
+      <PullRequestToolbar pullRequest={pullRequest} />
+
+      <Drawer
+        direction="right"
+        open={!!pendingReview}
+        onOpenChange={handleDrawerOpenChange}
+      >
+        <DrawerContent>
+          <DrawerHeader>
+            <DrawerTitle>Review</DrawerTitle>
+            <DrawerDescription>
+              Review changes for this pull request.
+            </DrawerDescription>
+          </DrawerHeader>
+
+          <div className="p-4">
+            <p className="text-sm text-muted-foreground">
+              Your review is in progress. Add comments to files and submit when
+              ready.
+            </p>
+          </div>
+        </DrawerContent>
+      </Drawer>
 
       <Tabs
         className="flex flex-col flex-1 min-h-0"
