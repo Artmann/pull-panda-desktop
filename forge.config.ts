@@ -9,14 +9,23 @@ import { FuseV1Options, FuseVersion } from '@electron/fuses'
 
 const config: ForgeConfig = {
   packagerConfig: {
-    asar: true
+    asar: true,
+    executableName: 'pull-panda'
   },
   rebuildConfig: {},
   makers: [
     new MakerSquirrel({}),
     new MakerZIP({}, ['darwin']),
-    new MakerRpm({}),
-    new MakerDeb({})
+    new MakerRpm({
+      options: {
+        bin: 'pull-panda'
+      }
+    }),
+    new MakerDeb({
+      options: {
+        bin: 'pull-panda'
+      }
+    })
   ],
   plugins: [
     new VitePlugin({
