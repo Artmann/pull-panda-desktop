@@ -1,5 +1,9 @@
 # Pull Panda
 
+[![CI](https://github.com/artmann/pull-panda-desktop/actions/workflows/ci.yml/badge.svg)](https://github.com/artmann/pull-panda-desktop/actions/workflows/ci.yml)
+[![GitHub release](https://img.shields.io/github/v/release/artmann/pull-panda-desktop)](https://github.com/artmann/pull-panda-desktop/releases)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
 A delightful code review tool for the AI era.
 
 ## What is Pull Panda?

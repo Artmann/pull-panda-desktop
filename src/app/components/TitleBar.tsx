@@ -1,4 +1,10 @@
-import { ChevronLeftIcon, ChevronRightIcon, MinusIcon, SquareIcon, XIcon } from 'lucide-react'
+import {
+  ChevronLeftIcon,
+  ChevronRightIcon,
+  MinusIcon,
+  SquareIcon,
+  XIcon
+} from 'lucide-react'
 import { type ReactElement, useEffect, useRef } from 'react'
 import { useLocation, useNavigate } from 'react-router'
 
@@ -48,11 +54,17 @@ export function TitleBar(): ReactElement {
         className={cn('flex h-full', isMac && 'ml-[68px]')}
         style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}
       >
-        <NavigationButton disabled={!canGoBack} onClick={handleBack}>
+        <NavigationButton
+          disabled={!canGoBack}
+          onClick={handleBack}
+        >
           <ChevronLeftIcon className="size-4" />
         </NavigationButton>
 
-        <NavigationButton disabled={!canGoForward} onClick={handleForward}>
+        <NavigationButton
+          disabled={!canGoForward}
+          onClick={handleForward}
+        >
           <ChevronRightIcon className="size-4" />
         </NavigationButton>
       </div>
