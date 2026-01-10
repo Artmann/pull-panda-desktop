@@ -36,7 +36,8 @@
       "Bash(yarn list:*)",
       "WebFetch(domain:ui.shadcn.com)",
       "Bash(git mv:*)",
-      "Bash(xargs sed:*)"
+      "Bash(xargs sed:*)",
+      "Bash(git -C /c/Users/Artga/Code/pull-panda-desktop log --oneline -15)"
     ]
   }
 }
