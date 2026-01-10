@@ -24,22 +24,22 @@ This launches the Electron app with hot reload.
 
 ## Commands
 
-| Command | Description |
-|---------|-------------|
-| `yarn start` | Start development server |
-| `yarn test` | Run tests in watch mode |
-| `yarn test:run` | Run tests once |
-| `yarn lint` | Check code with ESLint |
-| `yarn format` | Format code with Prettier |
+| Command          | Description                  |
+| ---------------- | ---------------------------- |
+| `yarn start`     | Start development server     |
+| `yarn test`      | Run tests in watch mode      |
+| `yarn test:run`  | Run tests once               |
+| `yarn lint`      | Check code with ESLint       |
+| `yarn format`    | Format code with Prettier    |
 | `yarn typecheck` | Run TypeScript type checking |
-| `yarn make` | Build distributable packages |
+| `yarn make`      | Build distributable packages |
 
 ## Architecture
 
 Pull Panda uses Electron's process model:
 
-- **Main process** (`src/main.ts`) - Node.js environment, handles IPC,
-  secure storage, GitHub API calls
+- **Main process** (`src/main.ts`) - Node.js environment, handles IPC, secure
+  storage, GitHub API calls
 - **Preload script** (`src/preload.ts`) - Bridge between main and renderer
 - **Renderer process** (`src/app/`) - React UI
 

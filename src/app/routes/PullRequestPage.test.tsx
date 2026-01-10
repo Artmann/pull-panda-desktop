@@ -62,12 +62,10 @@ beforeEach(() => {
   })
 
   vi.stubGlobal('auth', {
-    getUser: vi
-      .fn()
-      .mockResolvedValue({
-        login: 'testuser',
-        avatarUrl: 'https://example.com/avatar.png'
-      })
+    getUser: vi.fn().mockResolvedValue({
+      login: 'testuser',
+      avatarUrl: 'https://example.com/avatar.png'
+    })
   })
 })
 
