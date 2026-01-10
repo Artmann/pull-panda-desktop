@@ -6,6 +6,9 @@ import draftsReducer, {
   saveDraftsToStorage
 } from './drafts-slice'
 import navigationReducer, { NavigationState } from './navigation-slice'
+import pendingReviewsReducer, {
+  PendingReviewsState
+} from './pending-reviews-slice'
 import pullRequestDetailsReducer, {
   PullRequestDetailsState
 } from './pull-request-details-slice'
@@ -15,6 +18,7 @@ import tasksReducer, { TasksState } from './tasks-slice'
 export interface PreloadedState {
   drafts?: DraftsState
   navigation?: NavigationState
+  pendingReviews?: PendingReviewsState
   pullRequestDetails?: PullRequestDetailsState
   pullRequests?: PullRequestsState
   tasks?: TasksState
@@ -29,6 +33,7 @@ export function createStore(preloadedState?: PreloadedState) {
     reducer: {
       drafts: draftsReducer,
       navigation: navigationReducer,
+      pendingReviews: pendingReviewsReducer,
       pullRequestDetails: pullRequestDetailsReducer,
       pullRequests: pullRequestsReducer,
       tasks: tasksReducer

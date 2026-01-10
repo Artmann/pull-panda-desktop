@@ -37,7 +37,13 @@
       "WebFetch(domain:ui.shadcn.com)",
       "Bash(git mv:*)",
       "Bash(xargs sed:*)",
-      "Bash(git -C /c/Users/Artga/Code/pull-panda-desktop log --oneline -15)"
+      "Bash(git -C /c/Users/Artga/Code/pull-panda-desktop log --oneline -15)",
+      "Bash(ls:*)",
+      "WebSearch",
+      "Bash(pnpm dlx:*)",
+      "Bash(npx shadcn@latest add drawer:*)",
+      "Bash(timeout:*)",
+      "Bash(npx shadcn@latest add:*)"
     ]
   }
 }

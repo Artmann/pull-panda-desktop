@@ -6,6 +6,7 @@ import { Loader2 } from 'lucide-react'
 import type { AppStore } from '@/app/store'
 import { ErrorBoundary } from '@/app/components/ErrorBoundary'
 import { TitleBar } from '@/app/components/TitleBar'
+import { Toaster } from '@/app/components/ui/sonner'
 import { AuthProvider, useAuth } from '@/app/lib/store/authContext'
 import { TasksProvider } from '@/app/lib/store/tasksContext'
 import { LoginPage } from '@/app/pages/LoginPage'
@@ -28,6 +29,8 @@ export function App({ store }: AppProps): ReactElement {
           </AuthProvider>
         </TasksProvider>
       </HashRouter>
+
+      <Toaster />
     </Provider>
   )
 }
