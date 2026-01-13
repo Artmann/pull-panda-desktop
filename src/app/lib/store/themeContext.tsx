@@ -77,12 +77,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
 
   const toggleTheme = () => {
     // Toggle between light and dark modes
-    // If system theme is active, switch to the opposite of the current resolved theme
-    if (theme === 'system') {
-      setTheme(systemTheme === 'dark' ? 'light' : 'dark')
-    } else {
-      setTheme(resolvedTheme === 'dark' ? 'light' : 'dark')
-    }
+    setTheme(resolvedTheme === 'dark' ? 'light' : 'dark')
   }
 
   return (

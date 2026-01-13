@@ -42,7 +42,7 @@ function AppContent(): ReactElement {
   // Set up global hotkey for theme toggle (Cmd/Ctrl + Shift + D)
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
-      if ((event.metaKey || event.ctrlKey) && event.shiftKey && event.key === 'D') {
+      if ((event.metaKey || event.ctrlKey) && event.shiftKey && event.code === 'KeyD') {
         event.preventDefault()
         toggleTheme()
       }
