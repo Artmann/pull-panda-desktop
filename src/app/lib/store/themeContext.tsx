@@ -27,8 +27,14 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   // Get system theme and set up listener
   useEffect(() => {
     const updateSystemTheme = async () => {
-      const shouldUseDark = await window.electron.getSystemTheme()
-      setSystemTheme(shouldUseDark ? 'dark' : 'light')
+      try {
+        const shouldUseDark = await window.electron.getSystemTheme()
+        setSystemTheme(shouldUseDark ? 'dark' : 'light')
+      } catch (error) {
+        console.error('Failed to get system theme:', error)
+        // Default to light theme if system theme detection fails
+        setSystemTheme('light')
+      }
     }
 
     updateSystemTheme()
@@ -44,9 +50,14 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   // Load saved theme preference
   useEffect(() => {
     const loadTheme = async () => {
-      const savedTheme = await window.electron.getThemePreference()
-      if (savedTheme) {
-        setThemeState(savedTheme)
+      try {
+        const savedTheme = await window.electron.getThemePreference()
+        if (savedTheme) {
+          setThemeState(savedTheme)
+        }
+      } catch (error) {
+        console.error('Failed to load theme preference:', error)
+        // Keep default 'system' theme if loading fails
       }
     }
     loadTheme()

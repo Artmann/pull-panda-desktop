@@ -22,7 +22,14 @@ export function getThemePreference(): Theme | null {
     }
 
     const data = fs.readFileSync(settingsPath, 'utf8')
-    const parsed = JSON.parse(data)
+
+    let parsed
+    try {
+      parsed = JSON.parse(data)
+    } catch (jsonError) {
+      console.error('Invalid JSON in theme settings file:', jsonError)
+      return null
+    }
 
     // Validate the parsed data
     if (
