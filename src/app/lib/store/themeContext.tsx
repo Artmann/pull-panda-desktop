@@ -20,6 +20,10 @@ const ThemeContext = createContext<ThemeContextValue | null>(null)
 
 const THEME_STORAGE_KEY = 'pull-panda-theme'
 
+function isValidTheme(value: string | null): value is Theme {
+  return value === 'light' || value === 'dark' || value === 'system'
+}
+
 export function ThemeProvider({ children }: { children: ReactNode }) {
   const [theme, setThemeState] = useState<Theme>('system')
   const [systemTheme, setSystemTheme] = useState<ResolvedTheme>('light')
@@ -31,9 +35,9 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   // Load theme preference and detect system theme on mount
   useEffect(() => {
     // Load saved theme preference
-    const stored = localStorage.getItem(THEME_STORAGE_KEY) as Theme | null
+    const stored = localStorage.getItem(THEME_STORAGE_KEY)
 
-    if (stored === 'light' || stored === 'dark' || stored === 'system') {
+    if (isValidTheme(stored)) {
       setThemeState(stored)
     }
 
@@ -72,8 +76,8 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   }
 
   const toggleTheme = () => {
-    // When toggling, cycle through: light -> dark -> light
-    // If system, switch to the opposite of current resolved theme
+    // Toggle between light and dark modes
+    // If system theme is active, switch to the opposite of the current resolved theme
     if (theme === 'system') {
       setTheme(systemTheme === 'dark' ? 'light' : 'dark')
     } else {
