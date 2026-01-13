@@ -5,7 +5,7 @@ export interface PendingReview {
   authorLogin: string | null
   body: string | null
   gitHubId: string
-  gitHubNumericId: number
+  gitHubNumericId: number | null
   id: string
   pullRequestId: string
   state: string

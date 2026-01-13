@@ -5,6 +5,7 @@ import { AddressInfo } from 'node:net'
 
 import { checksRoute } from './routes/checks'
 import { commentsRoute, type AppEnv } from './routes/comments'
+import { pullRequestsRoute } from './routes/pull-requests'
 import { reviewsRoute } from './routes/reviews'
 
 let server: ServerType | null = null
@@ -40,6 +41,7 @@ export function startApiServer(getToken: () => string | null): Promise<number> {
 
     app.route('/api/checks', checksRoute)
     app.route('/api/comments', commentsRoute)
+    app.route('/api/pull-requests', pullRequestsRoute)
     app.route('/api/reviews', reviewsRoute)
 
     app.get('/api/health', (context) => {

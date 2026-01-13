@@ -25,11 +25,23 @@ import type {
   ModifiedFile
 } from '../types/pull-request-details'
 
+export interface PendingReview {
+  authorAvatarUrl: string | null
+  authorLogin: string | null
+  body: string | null
+  gitHubId: string
+  gitHubNumericId: number | null
+  id: string
+  pullRequestId: string
+  state: string
+}
+
 export interface BootstrapData {
+  pendingReviews: Record<string, PendingReview>
   pullRequests: PullRequest[]
 }
 
-export async function bootstrap(): Promise<BootstrapData> {
+export async function bootstrap(userLogin?: string): Promise<BootstrapData> {
   const database = getDatabase()
 
   const rows = database.select().from(pullRequests).all()
@@ -57,6 +69,7 @@ export async function bootstrap(): Promise<BootstrapData> {
 
   const approvalCountByPrId = new Map<string, number>()
   const changesRequestedCountByPrId = new Map<string, number>()
+  const pendingReviews: Record<string, PendingReview> = {}
 
   for (const review of reviewRows) {
     if (review.state === 'APPROVED') {
@@ -65,6 +78,21 @@ export async function bootstrap(): Promise<BootstrapData> {
     } else if (review.state === 'CHANGES_REQUESTED') {
       const count = changesRequestedCountByPrId.get(review.pullRequestId) ?? 0
       changesRequestedCountByPrId.set(review.pullRequestId, count + 1)
+    } else if (
+      review.state === 'PENDING' &&
+      userLogin &&
+      review.authorLogin === userLogin
+    ) {
+      pendingReviews[review.pullRequestId] = {
+        authorAvatarUrl: review.authorAvatarUrl,
+        authorLogin: review.authorLogin,
+        body: review.body,
+        gitHubId: review.gitHubId,
+        gitHubNumericId: review.gitHubNumericId,
+        id: review.id,
+        pullRequestId: review.pullRequestId,
+        state: review.state
+      }
     }
   }
 
@@ -100,12 +128,14 @@ export async function bootstrap(): Promise<BootstrapData> {
   }))
 
   return {
+    pendingReviews,
     pullRequests: parsedPullRequests
   }
 }
 
 export async function getPullRequestDetails(
-  pullRequestId: string
+  pullRequestId: string,
+  userLogin?: string
 ): Promise<PullRequestDetails | null> {
   const database = getDatabase()
 
@@ -166,6 +196,7 @@ export async function getPullRequestDetails(
   const parsedReviews: Review[] = reviewRows.map((row) => ({
     id: row.id,
     gitHubId: row.gitHubId,
+    gitHubNumericId: row.gitHubNumericId,
     pullRequestId: row.pullRequestId,
     state: row.state,
     body: row.body,
@@ -260,11 +291,19 @@ export async function getPullRequestDetails(
     syncedAt: row.syncedAt
   }))
 
+  const pendingReview = userLogin
+    ? (parsedReviews.find(
+        (review) =>
+          review.state === 'PENDING' && review.authorLogin === userLogin
+      ) ?? null)
+    : null
+
   return {
     checks: parsedChecks,
     comments: parsedComments,
     commits: parsedCommits,
     files: parsedFiles,
+    pendingReview,
     reactions: parsedReactions,
     reviews: parsedReviews
   }

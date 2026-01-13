@@ -6,8 +6,8 @@ import {
   MessageSquareIcon
 } from 'lucide-react'
 import React, {
-  useCallback,
   useEffect,
+  useMemo,
   useRef,
   useState,
   type ReactElement
@@ -16,22 +16,14 @@ import { Link, useParams, useSearchParams } from 'react-router'
 
 import { Button } from '@/app/components/ui/button'
 import {
-  Drawer,
-  DrawerContent,
-  DrawerDescription,
-  DrawerHeader,
-  DrawerTitle
-} from '@/app/components/ui/drawer'
-import {
   Tabs,
   TabsContent,
   TabsList,
   TabsTrigger
 } from '@/app/components/ui/tabs'
+import { markPullRequestActive } from '@/app/lib/api'
 import { useAppDispatch, useAppSelector } from '@/app/store/hooks'
 import { navigationActions } from '@/app/store/navigation-slice'
-import { pendingReviewsActions } from '@/app/store/pending-reviews-slice'
-import { pullRequestDetailsActions } from '@/app/store/pull-request-details-slice'
 import { clamp01 } from '@/math'
 
 import { ChecksView } from '../pull-requests/ChecksView'
@@ -43,6 +35,7 @@ import {
   StickyPullRequestHeader
 } from '../pull-requests/PullRequestHeader'
 import { PullRequestToolbar } from '../pull-requests/PullRequestToolbar'
+import { ReviewDrawer } from '../pull-requests/ReviewDrawer'
 
 export function PullRequestPage(): ReactElement {
   const containerRef = useRef<HTMLDivElement>(null)
@@ -57,59 +50,16 @@ export function PullRequestPage(): ReactElement {
   const dispatch = useAppDispatch()
   const [searchParams, setSearchParams] = useSearchParams()
   const details = useAppSelector((state) => state.pullRequestDetails[id ?? ''])
-  const pendingReview = useAppSelector(
-    (state) => state.pendingReviews[id ?? '']
-  )
 
   const tabFromUrl = searchParams.get('tab')
   const validTabs = ['overview', 'commits', 'checks', 'files']
   const activeTab =
     tabFromUrl && validTabs.includes(tabFromUrl) ? tabFromUrl : 'overview'
 
-  const fetchDetails = useCallback(async () => {
-    if (!id) {
-      return
-    }
-
-    const result = await window.electron.getPullRequestDetails(id)
-
-    if (result) {
-      dispatch(
-        pullRequestDetailsActions.setDetails({
-          pullRequestId: id,
-          details: result
-        })
-      )
-    }
-  }, [dispatch, id])
-
   useEffect(
-    function loadPullRequestDetails() {
-      fetchDetails()
-    },
-    [fetchDetails]
-  )
-
-  useEffect(
-    function subscribeToSyncComplete() {
-      const unsubscribe = window.electron.onSyncComplete((event) => {
-        if (
-          event.type === 'pull-request-details' &&
-          event.pullRequestId === id
-        ) {
-          fetchDetails()
-        }
-      })
-
-      return unsubscribe
-    },
-    [id, fetchDetails]
-  )
-
-  useEffect(
-    function markPullRequestActive() {
+    function activatePullRequest() {
       if (id) {
-        window.electron.markPullRequestActive(id)
+        markPullRequestActive(id)
       }
     },
     [id]
@@ -123,35 +73,38 @@ export function PullRequestPage(): ReactElement {
     id: string
     itemCount?: number
     label: string
-  }> = [
-    {
-      content: Overview,
-      icon: MessageSquareIcon,
-      id: 'overview',
-      label: 'Overview'
-    },
-    {
-      content: CommitsView,
-      icon: GitCommitIcon,
-      id: 'commits',
-      itemCount: details?.commits?.length ?? 0,
-      label: 'Commits'
-    },
-    {
-      content: ChecksView,
-      icon: ListCheckIcon,
-      id: 'checks',
-      itemCount: details?.checks?.length ?? 0,
-      label: 'Checks'
-    },
-    {
-      content: FilesView,
-      icon: FileCodeIcon,
-      id: 'files',
-      itemCount: details?.files?.length ?? 0,
-      label: 'Files'
-    }
-  ]
+  }> = useMemo(
+    () => [
+      {
+        content: Overview,
+        icon: MessageSquareIcon,
+        id: 'overview',
+        label: 'Overview'
+      },
+      {
+        content: CommitsView,
+        icon: GitCommitIcon,
+        id: 'commits',
+        itemCount: details?.commits?.length ?? 0,
+        label: 'Commits'
+      },
+      {
+        content: ChecksView,
+        icon: ListCheckIcon,
+        id: 'checks',
+        itemCount: details?.checks?.length ?? 0,
+        label: 'Checks'
+      },
+      {
+        content: FilesView,
+        icon: FileCodeIcon,
+        id: 'files',
+        itemCount: details?.files?.length ?? 0,
+        label: 'Files'
+      }
+    ],
+    [details?.commits.length, details?.checks.length, details?.files.length]
+  )
 
   useEffect(function trackScrollPosition() {
     const scrollContainer = containerRef.current?.closest('.overflow-auto')
@@ -181,12 +134,6 @@ export function PullRequestPage(): ReactElement {
   const handleTabChange = (tabId: string) => {
     setSearchParams({ tab: tabId })
     dispatch(navigationActions.setActiveTab({ pullRequestId: id, tab: tabId }))
-  }
-
-  const handleDrawerOpenChange = (open: boolean) => {
-    if (!open && id) {
-      dispatch(pendingReviewsActions.clearReview({ pullRequestId: id }))
-    }
   }
 
   if (!pullRequest) {
@@ -224,27 +171,7 @@ export function PullRequestPage(): ReactElement {
 
       <PullRequestToolbar pullRequest={pullRequest} />
 
-      <Drawer
-        direction="right"
-        open={!!pendingReview}
-        onOpenChange={handleDrawerOpenChange}
-      >
-        <DrawerContent>
-          <DrawerHeader>
-            <DrawerTitle>Review</DrawerTitle>
-            <DrawerDescription>
-              Review changes for this pull request.
-            </DrawerDescription>
-          </DrawerHeader>
-
-          <div className="p-4">
-            <p className="text-sm text-muted-foreground">
-              Your review is in progress. Add comments to files and submit when
-              ready.
-            </p>
-          </div>
-        </DrawerContent>
-      </Drawer>
+      <ReviewDrawer pullRequest={pullRequest} />
 
       <Tabs
         className="flex flex-col flex-1 min-h-0"

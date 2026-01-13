@@ -3,7 +3,16 @@
 Electron desktop app for GitHub PR management built with React, TypeScript, and
 Vite.
 
-Refer to @CODE_STYLE.md for how to write code in this project.
+- Refer to @CODE_STYLE.md for how to write code in this project.
+- Before using `useEffect`, review
+  https://react.dev/learn/you-might-not-need-an-effect.
+- When creating or updating resources:
+  1. Create or Update the resource in the Redux state.
+  2. Make an API request to apply the change.
+  3. If the API request is successful: 3.1 Update the Redux store with the data
+     from the API response.
+  4. If the API request fails: 4.1 Rollback the Redux changes. 4.2 Show a error
+     toast with a descriptive, helpful error message.
 
 ## Commands
 

@@ -11,7 +11,6 @@ export const ipcChannels = {
   GetSyncerStats: 'syncer:get-stats',
   GetTasks: 'tasks:get',
   OpenUrl: 'shell:open-url',
-  PullRequestOpened: 'pull-request:opened',
   SyncComplete: 'sync:complete',
   SyncPullRequestDetails: 'sync:pull-request-details',
   TaskUpdate: 'tasks:update',

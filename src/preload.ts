@@ -73,9 +73,6 @@ const electronApi = {
   openUrl: (url: string): Promise<{ success: boolean }> =>
     ipcRenderer.invoke(ipcChannels.OpenUrl, url),
 
-  markPullRequestActive: (pullRequestId: string): Promise<void> =>
-    ipcRenderer.invoke(ipcChannels.PullRequestOpened, pullRequestId),
-
   getSyncerStats: (): Promise<MonitoringData> =>
     ipcRenderer.invoke(ipcChannels.GetSyncerStats)
 }

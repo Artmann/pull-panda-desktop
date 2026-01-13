@@ -65,3 +65,7 @@ export function getDraftKeyForReply(
 ): string {
   return `draft-reply:${pullRequestId}:${parentCommentGitHubId}`
 }
+
+export function getDraftKeyForReviewBody(pullRequestId: string): string {
+  return `draft-review-body:${pullRequestId}`
+}

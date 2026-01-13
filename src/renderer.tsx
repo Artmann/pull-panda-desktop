@@ -37,6 +37,7 @@ async function main() {
   const bootstrapData = await window.electron.getBootstrapData()
 
   const store = createStore({
+    pendingReviews: bootstrapData?.pendingReviews ?? {},
     pullRequests: {
       items: bootstrapData?.pullRequests ?? []
     }

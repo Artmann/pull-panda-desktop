@@ -1,6 +1,7 @@
 export interface Review {
   id: string
   gitHubId: string
+  gitHubNumericId: number | null
   pullRequestId: string
   state: string
   body: string | null
@@ -100,6 +101,7 @@ export interface PullRequestDetails {
   comments: Comment[]
   commits: Commit[]
   files: ModifiedFile[]
+  pendingReview?: Review | null
   reactions: CommentReaction[]
   reviews: Review[]
 }
