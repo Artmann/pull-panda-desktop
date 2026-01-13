@@ -7,8 +7,9 @@ import {
   type ReactNode
 } from 'react'
 
-export type Theme = 'light' | 'dark' | 'system'
-export type ResolvedTheme = 'light' | 'dark'
+import type { Theme, ResolvedTheme } from '@/types/theme'
+
+export type { Theme, ResolvedTheme }
 
 interface ThemeContextValue {
   theme: Theme

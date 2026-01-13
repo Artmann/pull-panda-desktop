@@ -6,7 +6,7 @@ import type { DeviceCodeResponse, GitHubUser } from './types/auth'
 import type { PullRequestDetails } from './types/pull-request-details'
 import type { MonitoringData } from './types/syncer-monitoring'
 import type { Task, TaskUpdateEvent } from './types/task'
-import type { Theme } from './app/lib/store/themeContext'
+import type { Theme } from './types/theme'
 
 interface SyncCompleteEvent {
   type: 'pull-requests' | 'pull-request-details'

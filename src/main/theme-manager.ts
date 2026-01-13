@@ -2,7 +2,7 @@ import { app } from 'electron'
 import path from 'node:path'
 import fs from 'node:fs'
 
-type Theme = 'light' | 'dark' | 'system'
+import type { Theme } from '@/types/theme'
 
 const SETTINGS_FILE = 'theme-settings.json'
 
