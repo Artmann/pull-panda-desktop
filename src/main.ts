@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain, shell } from 'electron'
+import { app, BrowserWindow, ipcMain, nativeTheme, shell } from 'electron'
 import started from 'electron-squirrel-startup'
 import path from 'node:path'
 
@@ -22,6 +22,10 @@ import {
   requestDeviceCode,
   saveToken
 } from './auth'
+import {
+  getThemePreference,
+  setThemePreference
+} from './main/theme-manager'
 
 let bootstrapData: BootstrapData | null = null
 let mainWindow: BrowserWindow | null = null
@@ -129,6 +133,18 @@ function setupIpcHandlers(): void {
     return backgroundSyncer.getMonitoringData()
   })
 
+  ipcMain.handle(ipcChannels.GetThemePreference, () => {
+    return getThemePreference()
+  })
+
+  ipcMain.handle(ipcChannels.SetThemePreference, (_event, theme: string) => {
+    setThemePreference(theme as 'light' | 'dark' | 'system')
+  })
+
+  ipcMain.handle(ipcChannels.GetSystemTheme, () => {
+    return nativeTheme.shouldUseDarkColors
+  })
+
   ipcMain.handle(
     ipcChannels.SyncPullRequestDetails,
     async (
@@ -180,6 +196,14 @@ const createWindow = () => {
   })
 
   taskManager.setMainWindow(mainWindow)
+
+  // Listen for system theme changes
+  nativeTheme.on('updated', () => {
+    mainWindow?.webContents.send(
+      ipcChannels.SystemThemeChange,
+      nativeTheme.shouldUseDarkColors
+    )
+  })
 
   // and load the index.html of the app.
   if (MAIN_WINDOW_VITE_DEV_SERVER_URL) {

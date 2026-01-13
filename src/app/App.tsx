@@ -8,6 +8,7 @@ import { ErrorBoundary } from '@/app/components/ErrorBoundary'
 import { TitleBar } from '@/app/components/TitleBar'
 import { AuthProvider, useAuth } from '@/app/lib/store/authContext'
 import { TasksProvider } from '@/app/lib/store/tasksContext'
+import { ThemeProvider } from '@/app/lib/store/themeContext'
 import { LoginPage } from '@/app/pages/LoginPage'
 import { BackgroundSyncerPage } from '@/app/routes/BackgroundSyncerPage'
 import { HomePage } from '@/app/routes/HomePage'
@@ -22,11 +23,13 @@ export function App({ store }: AppProps): ReactElement {
   return (
     <Provider store={store}>
       <HashRouter>
-        <TasksProvider>
-          <AuthProvider>
-            <AppContent />
-          </AuthProvider>
-        </TasksProvider>
+        <ThemeProvider>
+          <TasksProvider>
+            <AuthProvider>
+              <AppContent />
+            </AuthProvider>
+          </TasksProvider>
+        </ThemeProvider>
       </HashRouter>
     </Provider>
   )

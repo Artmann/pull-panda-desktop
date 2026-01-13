@@ -6,6 +6,7 @@ import type { DeviceCodeResponse, GitHubUser } from './types/auth'
 import type { PullRequestDetails } from './types/pull-request-details'
 import type { MonitoringData } from './types/syncer-monitoring'
 import type { Task, TaskUpdateEvent } from './types/task'
+import type { Theme } from './app/lib/store/themeContext'
 
 interface SyncCompleteEvent {
   type: 'pull-requests' | 'pull-request-details'
@@ -77,7 +78,29 @@ const electronApi = {
     ipcRenderer.invoke(ipcChannels.PullRequestOpened, pullRequestId),
 
   getSyncerStats: (): Promise<MonitoringData> =>
-    ipcRenderer.invoke(ipcChannels.GetSyncerStats)
+    ipcRenderer.invoke(ipcChannels.GetSyncerStats),
+
+  getThemePreference: (): Promise<Theme | null> =>
+    ipcRenderer.invoke(ipcChannels.GetThemePreference),
+
+  setThemePreference: (theme: Theme): Promise<void> =>
+    ipcRenderer.invoke(ipcChannels.SetThemePreference, theme),
+
+  getSystemTheme: (): Promise<boolean> =>
+    ipcRenderer.invoke(ipcChannels.GetSystemTheme),
+
+  onSystemThemeChange: (
+    callback: (shouldUseDarkColors: boolean) => void
+  ): (() => void) => {
+    const handler = (_event: unknown, shouldUseDarkColors: boolean) =>
+      callback(shouldUseDarkColors)
+
+    ipcRenderer.on(ipcChannels.SystemThemeChange, handler)
+
+    return () => {
+      ipcRenderer.removeListener(ipcChannels.SystemThemeChange, handler)
+    }
+  }
 }
 
 const authApi = {
