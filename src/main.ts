@@ -137,9 +137,17 @@ function setupIpcHandlers(): void {
     return getThemePreference()
   })
 
-  ipcMain.handle(ipcChannels.SetThemePreference, (_event, theme: string) => {
-    setThemePreference(theme as 'light' | 'dark' | 'system')
-  })
+  ipcMain.handle(
+    ipcChannels.SetThemePreference,
+    (_event, theme: unknown) => {
+      // Validate theme value
+      if (theme === 'light' || theme === 'dark' || theme === 'system') {
+        setThemePreference(theme)
+      } else {
+        console.error('Invalid theme value:', theme)
+      }
+    }
+  )
 
   ipcMain.handle(ipcChannels.GetSystemTheme, () => {
     return nativeTheme.shouldUseDarkColors

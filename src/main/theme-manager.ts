@@ -22,8 +22,22 @@ export function getThemePreference(): Theme | null {
     }
 
     const data = fs.readFileSync(settingsPath, 'utf8')
-    const settings: ThemeSettings = JSON.parse(data)
-    return settings.theme
+    const parsed = JSON.parse(data)
+
+    // Validate the parsed data
+    if (
+      typeof parsed === 'object' &&
+      parsed !== null &&
+      'theme' in parsed &&
+      (parsed.theme === 'light' ||
+        parsed.theme === 'dark' ||
+        parsed.theme === 'system')
+    ) {
+      return parsed.theme
+    }
+
+    console.error('Invalid theme settings format:', parsed)
+    return null
   } catch (error) {
     console.error('Failed to load theme preference:', error)
     return null
