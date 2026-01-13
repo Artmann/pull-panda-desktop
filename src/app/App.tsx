@@ -1,4 +1,4 @@
-import { type ReactElement } from 'react'
+import { type ReactElement, useEffect } from 'react'
 import { Provider } from 'react-redux'
 import { HashRouter, Routes, Route } from 'react-router'
 import { Loader2 } from 'lucide-react'
@@ -8,6 +8,7 @@ import { ErrorBoundary } from '@/app/components/ErrorBoundary'
 import { TitleBar } from '@/app/components/TitleBar'
 import { AuthProvider, useAuth } from '@/app/lib/store/authContext'
 import { TasksProvider } from '@/app/lib/store/tasksContext'
+import { ThemeProvider, useTheme } from '@/app/lib/store/themeContext'
 import { LoginPage } from '@/app/pages/LoginPage'
 import { BackgroundSyncerPage } from '@/app/routes/BackgroundSyncerPage'
 import { HomePage } from '@/app/routes/HomePage'
@@ -22,11 +23,13 @@ export function App({ store }: AppProps): ReactElement {
   return (
     <Provider store={store}>
       <HashRouter>
-        <TasksProvider>
-          <AuthProvider>
-            <AppContent />
-          </AuthProvider>
-        </TasksProvider>
+        <ThemeProvider>
+          <TasksProvider>
+            <AuthProvider>
+              <AppContent />
+            </AuthProvider>
+          </TasksProvider>
+        </ThemeProvider>
       </HashRouter>
     </Provider>
   )
@@ -34,6 +37,23 @@ export function App({ store }: AppProps): ReactElement {
 
 function AppContent(): ReactElement {
   const { status } = useAuth()
+  const { toggleTheme } = useTheme()
+
+  // Set up global hotkey for theme toggle (Cmd/Ctrl + Shift + D)
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if ((event.metaKey || event.ctrlKey) && event.shiftKey && event.key === 'D') {
+        event.preventDefault()
+        toggleTheme()
+      }
+    }
+
+    document.addEventListener('keydown', handleKeyDown)
+
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown)
+    }
+  }, [toggleTheme])
 
   if (status === 'loading') {
     return (
