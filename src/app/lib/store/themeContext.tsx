@@ -28,17 +28,16 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   const resolvedTheme: ResolvedTheme =
     theme === 'system' ? systemTheme : theme
 
-  // Load theme preference from localStorage on mount
+  // Load theme preference and detect system theme on mount
   useEffect(() => {
+    // Load saved theme preference
     const stored = localStorage.getItem(THEME_STORAGE_KEY) as Theme | null
 
     if (stored === 'light' || stored === 'dark' || stored === 'system') {
       setThemeState(stored)
     }
-  }, [])
 
-  // Detect system theme preference
-  useEffect(() => {
+    // Set up system theme detection
     const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)')
 
     const updateSystemTheme = (e: MediaQueryListEvent | MediaQueryList) => {
