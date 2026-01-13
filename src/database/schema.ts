@@ -46,6 +46,7 @@ export const reviews = sqliteTable(
   {
     id: text('id').primaryKey(),
     gitHubId: text('github_id').notNull(),
+    gitHubNumericId: integer('github_numeric_id'),
     pullRequestId: text('pull_request_id').notNull(),
 
     state: text('state').notNull(),

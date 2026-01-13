@@ -75,6 +75,15 @@ export interface CreateReviewResponse {
   state: string
 }
 
+export interface SubmitReviewRequest {
+  body?: string
+  event: 'APPROVE' | 'REQUEST_CHANGES' | 'COMMENT'
+  owner: string
+  pullNumber: number
+  repo: string
+  reviewId: number
+}
+
 export async function createReview(
   request: CreateReviewRequest
 ): Promise<CreateReviewResponse> {
@@ -97,6 +106,35 @@ export async function createReview(
   return response.json()
 }
 
+export async function submitReview(
+  request: SubmitReviewRequest
+): Promise<void> {
+  const baseUrl = await getApiBaseUrl()
+
+  const response = await fetch(
+    `${baseUrl}/api/reviews/${request.reviewId}/submit`,
+    {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        body: request.body,
+        event: request.event,
+        owner: request.owner,
+        pullNumber: request.pullNumber,
+        repo: request.repo
+      })
+    }
+  )
+
+  if (!response.ok) {
+    const error = await response.json()
+
+    throw new Error(error.error ?? 'Failed to submit review')
+  }
+}
+
 export async function createComment(
   request: CreateCommentRequest
 ): Promise<CreateCommentResponse> {
@@ -117,6 +155,35 @@ export async function createComment(
   }
 
   return response.json()
+}
+
+export async function markPullRequestActive(
+  pullRequestId: string
+): Promise<void> {
+  const baseUrl = await getApiBaseUrl()
+
+  const response = await fetch(
+    `${baseUrl}/api/pull-requests/${pullRequestId}/activate`,
+    {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      }
+    }
+  )
+
+  if (!response.ok) {
+    let message = 'Failed to mark pull request active'
+
+    try {
+      const error = await response.json()
+      message = error.error ?? message
+    } catch {
+      // Response wasn't JSON
+    }
+
+    throw new Error(message)
+  }
 }
 
 const checksRequestTimeout = 10000

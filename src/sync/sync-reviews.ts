@@ -167,6 +167,7 @@ export async function syncReviews({
       const review: NewReview = {
         id: reviewId,
         gitHubId,
+        gitHubNumericId: reviewData.id,
         pullRequestId,
         state: reviewData.state,
         body: reviewData.body ? normalizeCommentBody(reviewData.body) : null,
@@ -186,6 +187,7 @@ export async function syncReviews({
         .onConflictDoUpdate({
           target: reviews.id,
           set: {
+            gitHubNumericId: review.gitHubNumericId,
             state: review.state,
             body: review.body,
             bodyHtml: review.bodyHtml,

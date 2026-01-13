@@ -114,14 +114,19 @@ function setupIpcHandlers(): void {
   ipcMain.handle(
     ipcChannels.GetPullRequestDetails,
     async (_event, pullRequestId: string) => {
-      return getPullRequestDetails(pullRequestId)
-    }
-  )
+      const token = loadToken()
+      let userLogin: string | undefined
 
-  ipcMain.handle(
-    ipcChannels.PullRequestOpened,
-    (_event, pullRequestId: string) => {
-      backgroundSyncer.markPullRequestActive(pullRequestId)
+      if (token) {
+        try {
+          const user = await getGitHubUser(token)
+          userLogin = user?.login
+        } catch {
+          // Ignore error, userLogin will be undefined
+        }
+      }
+
+      return getPullRequestDetails(pullRequestId, userLogin)
     }
   )
 
@@ -299,6 +304,22 @@ async function syncAllPullRequestDetails(token: string): Promise<void> {
   console.log('Background sync for all PR details completed')
 }
 
+async function getUserLogin(): Promise<string | undefined> {
+  const token = loadToken()
+
+  if (!token) {
+    return undefined
+  }
+
+  try {
+    const user = await getGitHubUser(token)
+
+    return user?.login
+  } catch {
+    return undefined
+  }
+}
+
 app.on('ready', async () => {
   setupIpcHandlers()
 
@@ -307,7 +328,8 @@ app.on('ready', async () => {
 
   await startApiServer(loadToken)
 
-  bootstrapData = await bootstrap()
+  const userLogin = await getUserLogin()
+  bootstrapData = await bootstrap(userLogin)
 
   createWindow()
 
@@ -333,7 +355,8 @@ app.on('ready', async () => {
           console.warn('Sync warnings:', result.errors)
         }
 
-        bootstrapData = await bootstrap()
+        const currentUserLogin = await getUserLogin()
+        bootstrapData = await bootstrap(currentUserLogin)
 
         mainWindow?.webContents.send(ipcChannels.SyncComplete, {
           type: 'pull-requests'

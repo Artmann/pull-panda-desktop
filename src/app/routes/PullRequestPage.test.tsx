@@ -12,6 +12,7 @@ import type { PullRequestDetails } from '@/types/pull-request-details'
 
 import draftsReducer from '@/app/store/drafts-slice'
 import navigationReducer from '@/app/store/navigation-slice'
+import pendingReviewsReducer from '@/app/store/pending-reviews-slice'
 import pullRequestDetailsReducer from '@/app/store/pull-request-details-slice'
 import pullRequestsReducer from '@/app/store/pull-requests-slice'
 import tasksReducer from '@/app/store/tasks-slice'
@@ -54,12 +55,20 @@ beforeAll(() => {
 
 beforeEach(() => {
   vi.stubGlobal('electron', {
+    getApiPort: vi.fn().mockResolvedValue(3000),
     getPullRequestDetails: vi.fn().mockResolvedValue(null),
-    markPullRequestActive: vi.fn(),
     onSyncComplete: vi.fn().mockReturnValue(() => {
       // Unsubscribe mock
     })
   })
+
+  vi.stubGlobal(
+    'fetch',
+    vi.fn().mockResolvedValue({
+      ok: true,
+      json: vi.fn().mockResolvedValue({ success: true })
+    })
+  )
 
   vi.stubGlobal('auth', {
     getUser: vi.fn().mockResolvedValue({
@@ -127,12 +136,14 @@ function createTestStore(
     reducer: {
       drafts: draftsReducer,
       navigation: navigationReducer,
+      pendingReviews: pendingReviewsReducer,
       pullRequestDetails: pullRequestDetailsReducer,
       pullRequests: pullRequestsReducer,
       tasks: tasksReducer
     },
     preloadedState: {
       drafts: {},
+      pendingReviews: {},
       pullRequests: {
         items: options.pullRequests ?? [],
         lastSyncedAt: null,

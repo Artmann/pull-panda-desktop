@@ -25,8 +25,10 @@ export function PullRequestToolbar({
     (state) => state.pendingReviews[pullRequest.id]
   )
 
+  const hasPendingReview = Boolean(pendingReview)
+
   const handleStartReview = async () => {
-    if (pendingReview) {
+    if (hasPendingReview) {
       return
     }
 
@@ -72,10 +74,10 @@ export function PullRequestToolbar({
   return (
     <div
       className={`
-        fixed bottom-4 left-1/2 -translate-x-1/2
+        fixed bottom-10 left-1/2 -translate-x-1/2 z-30
         bg-background
-        rounded-sm border border-border
-        px-1 py-1
+        rounded-sm border border-border shadow-sm
+        p-1.5
         flex items-center gap-2
     `}
     >
@@ -98,7 +100,7 @@ export function PullRequestToolbar({
       <Separator orientation="vertical" />
 
       <div className="flex items-center gap-1">
-        {pendingReview ? (
+        {hasPendingReview ? (
           <Button
             size="xs"
             variant="outline"
