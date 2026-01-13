@@ -15,6 +15,21 @@ code review should be a smooth, focused experience rather than a chore.
 - Authorize with your GitHub account
 - See all PRs that need your attention in one place
 - Review faster with a clean, modern interface
+- Dark mode support with automatic system theme detection
+
+## Features
+
+### Dark Mode
+
+Pull Panda supports both light and dark themes with automatic system theme
+detection. You can:
+
+- Toggle between light and dark mode using **Cmd/Ctrl+Shift+D**
+- Let the app follow your system theme automatically
+- Your theme preference persists across app restarts
+
+Code blocks use the beautiful Catppuccin color schemes (Latte for light mode,
+Mocha for dark mode) for syntax highlighting.
 
 ## Download
 
