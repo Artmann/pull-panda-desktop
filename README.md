@@ -6,6 +6,8 @@
 
 A delightful code review tool for the AI era.
 
+![Pull Panda Screenshot](images/pull-request-overview.png)
+
 ## What is Pull Panda?
 
 Pull Panda is a desktop app that makes reviewing GitHub pull requests faster and
