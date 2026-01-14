@@ -30,15 +30,20 @@ export function DeviceCodeCard({
 
   return (
     <Card className="w-full max-w-md">
-      <CardHeader className="text-center">
+      <CardHeader>
         <CardTitle>Sign in to GitHub</CardTitle>
         <CardDescription>
           Enter the code below at{' '}
-          <span className="font-mono text-foreground">{verificationUri}</span>
+          <span
+            className="font-mono text-foreground text-xs cursor-pointer"
+            onClick={onOpenUrl}
+          >
+            {verificationUri}
+          </span>
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
-        <div className="flex items-center justify-center gap-2">
+        <div className="flex items-center gap-2">
           <code className="rounded-lg bg-muted px-6 py-4 text-3xl font-bold tracking-widest">
             {userCode}
           </code>
@@ -56,17 +61,7 @@ export function DeviceCodeCard({
           </Button>
         </div>
 
-        <div className="flex flex-col gap-2">
-          <Button
-            onClick={onOpenUrl}
-            className="w-full"
-          >
-            <ExternalLink className="mr-2 h-4 w-4" />
-            Open GitHub
-          </Button>
-        </div>
-
-        <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
+        <div className="flex items-center gap-2 text-sm text-muted-foreground">
           <Loader2 className="h-4 w-4 animate-spin" />
           Waiting for authorization...
         </div>

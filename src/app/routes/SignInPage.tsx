@@ -1,6 +1,8 @@
-import { Github, Loader2 } from 'lucide-react'
-import { Button } from '@/app/components/ui/button'
+import { AlertCircleIcon, Github, Loader2 } from 'lucide-react'
+
 import { DeviceCodeCard } from '@/app/components/auth/DeviceCodeCard'
+import { Alert, AlertDescription, AlertTitle } from '@/app/components/ui/alert'
+import { Button } from '@/app/components/ui/button'
 import { useAuth } from '@/app/lib/store/authContext'
 
 export function SignInPage() {
@@ -17,7 +19,7 @@ export function SignInPage() {
   const isPolling = status === 'polling' && userCode && verificationUri
 
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center p-4">
+    <div className="w-full h-full flex flex-col justify-center items-center p-8">
       {isPolling ? (
         <DeviceCodeCard
           userCode={userCode}
@@ -25,29 +27,42 @@ export function SignInPage() {
           onOpenUrl={openVerificationUrl}
         />
       ) : (
-        <div className="flex flex-col items-center gap-6 text-center">
-          <div className="space-y-2">
-            <h1 className="text-3xl font-bold">Pull Panda</h1>
-            <p className="text-muted-foreground">
-              Connect your GitHub account to get started
-            </p>
-          </div>
+        <div>
+          <div className="flex flex-col gap-2">
+            <div className="flex items-center gap-2">
+              <h1 className="text-3xl font-semibold">Pull Panda</h1>
+            </div>
 
-          <Button
-            size="lg"
-            onClick={startLogin}
-            disabled={isLoading}
-            className="gap-2"
-          >
-            {isLoading ? (
-              <Loader2 className="h-5 w-5 animate-spin" />
-            ) : (
-              <Github className="h-5 w-5" />
+            <div className="text-muted-foreground text-left text-lg mb-4">
+              Make great code reviews the default for your team.
+            </div>
+
+            {error && (
+              <Alert variant="destructive">
+                <AlertCircleIcon />
+                <AlertTitle>Sign in failed</AlertTitle>
+                <AlertDescription>
+                  <div>{error}</div>
+                </AlertDescription>
+              </Alert>
             )}
-            {isLoading ? 'Connecting...' : 'Sign in with GitHub'}
-          </Button>
 
-          {error && <p className="text-sm text-destructive">{error}</p>}
+            <div className="py-4">
+              <Button
+                className="gap-2"
+                disabled={isLoading}
+                size="lg"
+                onClick={startLogin}
+              >
+                {isLoading ? (
+                  <Loader2 className="h-5 w-5 animate-spin" />
+                ) : (
+                  <Github className="h-5 w-5" />
+                )}
+                {isLoading ? 'Connecting...' : 'Sign in with GitHub'}
+              </Button>
+            </div>
+          </div>
         </div>
       )}
     </div>
