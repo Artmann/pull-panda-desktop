@@ -84,6 +84,13 @@ export interface SubmitReviewRequest {
   reviewId: number
 }
 
+export interface DeleteReviewRequest {
+  owner: string
+  pullNumber: number
+  repo: string
+  reviewId: number
+}
+
 export async function createReview(
   request: CreateReviewRequest
 ): Promise<CreateReviewResponse> {
@@ -132,6 +139,33 @@ export async function submitReview(
     const error = await response.json()
 
     throw new Error(error.error ?? 'Failed to submit review')
+  }
+}
+
+export async function deleteReview(
+  request: DeleteReviewRequest
+): Promise<void> {
+  const baseUrl = await getApiBaseUrl()
+  const params = new URLSearchParams({
+    owner: request.owner,
+    pullNumber: String(request.pullNumber),
+    repo: request.repo
+  })
+
+  const response = await fetch(
+    `${baseUrl}/api/reviews/${request.reviewId}?${params}`,
+    {
+      method: 'DELETE',
+      headers: {
+        'Content-Type': 'application/json'
+      }
+    }
+  )
+
+  if (!response.ok) {
+    const error = await response.json()
+
+    throw new Error(error.error ?? 'Failed to delete review')
   }
 }
 

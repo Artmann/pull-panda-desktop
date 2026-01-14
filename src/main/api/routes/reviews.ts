@@ -100,6 +100,45 @@ reviewsRoute.post('/', async (context) => {
   }
 })
 
+reviewsRoute.delete('/:reviewId', async (context) => {
+  const token = context.get('token')
+  const reviewId = parseInt(context.req.param('reviewId'), 10)
+  const owner = context.req.query('owner')
+  const repo = context.req.query('repo')
+  const pullNumber = parseInt(context.req.query('pullNumber') ?? '', 10)
+
+  if (isNaN(reviewId) || reviewId <= 0) {
+    return context.json(
+      { error: `Invalid review ID: ${context.req.param('reviewId')}` },
+      400
+    )
+  }
+
+  if (!owner || !repo || isNaN(pullNumber)) {
+    return context.json({ error: 'Missing required query parameters' }, 400)
+  }
+
+  const octokit = new Octokit({ auth: token })
+
+  try {
+    await octokit.rest.pulls.deletePendingReview({
+      owner,
+      pull_number: pullNumber,
+      repo,
+      review_id: reviewId
+    })
+
+    return context.json({ success: true })
+  } catch (error) {
+    console.error('Failed to delete review:', error)
+
+    const message =
+      error instanceof Error ? error.message : 'Failed to delete review'
+
+    return context.json({ error: message }, 500)
+  }
+})
+
 reviewsRoute.post('/:reviewId/submit', async (context) => {
   const token = context.get('token')
   const reviewId = parseInt(context.req.param('reviewId'), 10)

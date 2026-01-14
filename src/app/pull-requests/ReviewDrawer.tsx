@@ -10,7 +10,7 @@ import {
   DrawerTitle
 } from '@/app/components/ui/drawer'
 import { Textarea } from '@/app/components/ui/textarea'
-import { submitReview } from '@/app/lib/api'
+import { deleteReview, submitReview } from '@/app/lib/api'
 import { getDraftKeyForReviewBody } from '@/app/store/drafts-slice'
 import { useAppDispatch, useAppSelector } from '@/app/store/hooks'
 import { pendingReviewsActions } from '@/app/store/pending-reviews-slice'
@@ -109,6 +109,59 @@ export function ReviewDrawer({ pullRequest }: ReviewDrawerProps): ReactElement {
     }
   }
 
+  const handleCancelReview = async () => {
+    if (!pendingReview) {
+      return
+    }
+
+    const reviewId = pendingReview.gitHubNumericId
+
+    if (typeof reviewId !== 'number' || reviewId <= 0) {
+      // No review on GitHub yet, just clear locally
+      dispatch(
+        pendingReviewsActions.clearReview({ pullRequestId: pullRequest.id })
+      )
+
+      return
+    }
+
+    // Store previous state for rollback
+    const previousReview = { ...pendingReview }
+    const previousBody = reviewBody
+
+    // Optimistically update UI
+    setIsSubmitting(true)
+    clearDraft()
+    dispatch(
+      pendingReviewsActions.clearReview({ pullRequestId: pullRequest.id })
+    )
+
+    try {
+      await deleteReview({
+        owner: pullRequest.repositoryOwner,
+        pullNumber: pullRequest.number,
+        repo: pullRequest.repositoryName,
+        reviewId
+      })
+    } catch (error) {
+      // Rollback on error
+      dispatch(
+        pendingReviewsActions.setReview({
+          pullRequestId: pullRequest.id,
+          review: previousReview
+        })
+      )
+      setReviewBody(previousBody)
+
+      const message =
+        error instanceof Error ? error.message : 'Failed to cancel review'
+
+      toast.error(message)
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
   return (
     <Drawer
       direction="right"
@@ -117,7 +170,7 @@ export function ReviewDrawer({ pullRequest }: ReviewDrawerProps): ReactElement {
       onOpenChange={handleOpenChange}
     >
       <DrawerContent
-        className="transition-all"
+        className="flex flex-col transition-all"
         style={{ width: isCollapsed ? 10 : undefined }}
       >
         <div className="absolute -left-3 top-1/2 -translate-y-1/2">
@@ -176,6 +229,18 @@ export function ReviewDrawer({ pullRequest }: ReviewDrawerProps): ReactElement {
               Approve
             </Button>
           </div>
+        </div>
+
+        <div className="mt-auto p-4 pt-0">
+          <Button
+            className="w-full"
+            disabled={isSubmitting}
+            onClick={handleCancelReview}
+            size="sm"
+            variant="ghost"
+          >
+            Cancel review
+          </Button>
         </div>
       </DrawerContent>
     </Drawer>
