@@ -38,6 +38,7 @@ export interface PendingReview {
 
 export interface BootstrapData {
   pendingReviews: Record<string, PendingReview>
+  pullRequestDetails: Record<string, PullRequestDetails>
   pullRequests: PullRequest[]
 }
 
@@ -127,8 +128,19 @@ export async function bootstrap(userLogin?: string): Promise<BootstrapData> {
     url: row.url
   }))
 
+  const pullRequestDetails: Record<string, PullRequestDetails> = {}
+
+  for (const pullRequest of parsedPullRequests) {
+    const details = await getPullRequestDetails(pullRequest.id, userLogin)
+
+    if (details) {
+      pullRequestDetails[pullRequest.id] = details
+    }
+  }
+
   return {
     pendingReviews,
+    pullRequestDetails,
     pullRequests: parsedPullRequests
   }
 }

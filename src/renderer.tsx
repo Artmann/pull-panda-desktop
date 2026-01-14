@@ -38,6 +38,7 @@ async function main() {
 
   const store = createStore({
     pendingReviews: bootstrapData?.pendingReviews ?? {},
+    pullRequestDetails: bootstrapData?.pullRequestDetails ?? {},
     pullRequests: {
       items: bootstrapData?.pullRequests ?? []
     }
