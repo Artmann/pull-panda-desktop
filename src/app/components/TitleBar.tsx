@@ -51,26 +51,28 @@ export function TitleBar(): ReactElement {
   return (
     <div className="title-bar h-8 flex items-center justify-between bg-background border-b border-border select-none">
       <div
-        className={cn('flex h-full', isMac && 'ml-[68px]')}
+        className={cn('flex-1 max-w-50 h-full', isMac && 'pl-17')}
         style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}
       >
-        <NavigationButton
-          disabled={!canGoBack}
-          onClick={handleBack}
-        >
-          <ChevronLeftIcon className="size-4" />
-        </NavigationButton>
+        <div className="h-full flex items-center float-right">
+          <NavigationButton
+            disabled={!canGoBack}
+            onClick={handleBack}
+          >
+            <ChevronLeftIcon className="size-4" />
+          </NavigationButton>
 
-        <NavigationButton
-          disabled={!canGoForward}
-          onClick={handleForward}
-        >
-          <ChevronRightIcon className="size-4" />
-        </NavigationButton>
+          <NavigationButton
+            disabled={!canGoForward}
+            onClick={handleForward}
+          >
+            <ChevronRightIcon className="size-4" />
+          </NavigationButton>
+        </div>
       </div>
 
       <div
-        className="flex-1 h-full flex items-center justify-center"
+        className="flex-1 h-full min-w-90 flex items-center justify-center"
         style={{ WebkitAppRegion: 'drag' } as React.CSSProperties}
       >
         <span className="text-xs text-muted-foreground font-medium">
@@ -78,24 +80,26 @@ export function TitleBar(): ReactElement {
         </span>
       </div>
 
-      {!isMac && (
-        <div className="flex h-full">
-          <WindowButton onClick={handleMinimize}>
-            <MinusIcon className="size-4" />
-          </WindowButton>
+      <div className="h-full flex-1 max-w-50">
+        {!isMac && (
+          <div className="h-full flex items-center float-right">
+            <WindowButton onClick={handleMinimize}>
+              <MinusIcon className="size-4" />
+            </WindowButton>
 
-          <WindowButton onClick={handleMaximize}>
-            <SquareIcon className="size-3" />
-          </WindowButton>
+            <WindowButton onClick={handleMaximize}>
+              <SquareIcon className="size-3" />
+            </WindowButton>
 
-          <WindowButton
-            className="hover:bg-red-500 hover:text-white"
-            onClick={handleClose}
-          >
-            <XIcon className="size-4" />
-          </WindowButton>
-        </div>
-      )}
+            <WindowButton
+              className="hover:bg-red-500 hover:text-white"
+              onClick={handleClose}
+            >
+              <XIcon className="size-4" />
+            </WindowButton>
+          </div>
+        )}
+      </div>
     </div>
   )
 }
