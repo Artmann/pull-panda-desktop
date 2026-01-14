@@ -224,3 +224,15 @@ export async function getChecks(
     clearTimeout(timeoutId)
   }
 }
+
+export async function triggerSync(): Promise<void> {
+  const baseUrl = await getApiBaseUrl()
+
+  const response = await fetch(`${baseUrl}/api/syncs`, {
+    method: 'POST'
+  })
+
+  if (!response.ok) {
+    throw new Error('Failed to trigger sync')
+  }
+}

@@ -14,9 +14,11 @@ interface AuthContextValue {
   userCode: string | null
   verificationUri: string | null
   error: string | null
+  isNewSignIn: boolean
   startLogin: () => Promise<void>
   logout: () => Promise<void>
   openVerificationUrl: () => Promise<void>
+  clearNewSignIn: () => void
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null)
@@ -29,6 +31,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [error, setError] = useState<string | null>(null)
   const [deviceCode, setDeviceCode] = useState<string | null>(null)
   const [pollInterval, setPollInterval] = useState<number>(5)
+  const [isNewSignIn, setIsNewSignIn] = useState(false)
 
   // Check for existing auth on mount
   useEffect(() => {
@@ -65,6 +68,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
         setUser(authenticatedUser)
         setStatus('authenticated')
+        setIsNewSignIn(true)
         setUserCode(null)
         setVerificationUri(null)
         setDeviceCode(null)
@@ -118,6 +122,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, [verificationUri])
 
+  const clearNewSignIn = useCallback(() => {
+    setIsNewSignIn(false)
+  }, [])
+
   return (
     <AuthContext.Provider
       value={{
@@ -126,9 +134,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         userCode,
         verificationUri,
         error,
+        isNewSignIn,
         startLogin,
         logout,
-        openVerificationUrl
+        openVerificationUrl,
+        clearNewSignIn
       }}
     >
       {children}

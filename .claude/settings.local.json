@@ -43,7 +43,8 @@
       "Bash(pnpm dlx:*)",
       "Bash(npx shadcn@latest add drawer:*)",
       "Bash(timeout:*)",
-      "Bash(npx shadcn@latest add:*)"
+      "Bash(npx shadcn@latest add:*)",
+      "Bash(grep:*)"
     ]
   }
 }
