@@ -42,7 +42,10 @@ export const ModifiedFileCard = memo(function ModifiedFileCard({
 
       <FileCardBody>
         {file.diffHunk ? (
-          <SimpleDiff diffHunk={file.diffHunk} />
+          <SimpleDiff
+            diffHunk={file.diffHunk}
+            filePath={file.filePath}
+          />
         ) : (
           <div className="py-2 px-3 text-muted-foreground">
             No changes to display.

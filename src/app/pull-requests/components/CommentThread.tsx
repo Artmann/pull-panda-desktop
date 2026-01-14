@@ -310,6 +310,7 @@ export const FileCommentThreadCard = memo(function FileCommentThreadCard({
         {comment.diffHunk && (
           <SimpleDiff
             diffHunk={comment.diffHunk}
+            filePath={comment.path ?? undefined}
             lineStart={lineStart}
             lineEnd={lineEnd}
           />

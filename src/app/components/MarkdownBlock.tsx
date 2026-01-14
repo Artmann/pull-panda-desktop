@@ -10,49 +10,17 @@ import rehypeRaw from 'rehype-raw'
 import remarkRehype, {
   type Options as RemarkRehypeOptions
 } from 'remark-rehype'
-import { createHighlighter, type Highlighter } from 'shiki'
 import { type Plugin, unified } from 'unified'
 import { visit } from 'unist-util-visit'
 
 import { Skeleton } from './ui/skeleton'
 
+import {
+  getLanguageFromPath,
+  getSharedHighlighter,
+  themes
+} from '@/app/lib/highlighter'
 import { cn } from '@/app/lib/utils'
-
-// Shared highlighter instance - created once and reused across all MarkdownBlock components
-let sharedHighlighter: Highlighter | null = null
-let highlighterPromise: Promise<Highlighter> | null = null
-
-async function getSharedHighlighter(): Promise<Highlighter> {
-  if (sharedHighlighter) {
-    return sharedHighlighter
-  }
-
-  if (!highlighterPromise) {
-    highlighterPromise = createHighlighter({
-      themes: ['catppuccin-latte', 'catppuccin-mocha'],
-      langs: [
-        'javascript',
-        'typescript',
-        'python',
-        'java',
-        'c',
-        'go',
-        'ruby',
-        'php',
-        'html',
-        'css',
-        'json',
-        'markdown',
-        'bash',
-        'shell'
-      ]
-    })
-
-    sharedHighlighter = await highlighterPromise
-  }
-
-  return highlighterPromise
-}
 
 // Highlight code blocks in the DOM when they come into view
 async function highlightCodeBlocks(container: HTMLElement): Promise<void> {
@@ -91,8 +59,8 @@ async function highlightCodeBlocks(container: HTMLElement): Promise<void> {
     const highlighted = highlighter.codeToHtml(code, {
       lang: effectiveLang,
       themes: {
-        light: 'catppuccin-latte',
-        dark: 'catppuccin-mocha'
+        light: themes.light,
+        dark: themes.dark
       }
     })
 
@@ -212,7 +180,7 @@ function useRemark({
           return
         }
 
-        const suggestedLanguage = suggestedLanguageFromPath(path)
+        const suggestedLanguage = getLanguageFromPath(path)
 
         if (!suggestedLanguage) {
           return
@@ -277,41 +245,4 @@ function useRemark({
   )
 
   return [content, createMarkdown]
-}
-
-function suggestedLanguageFromPath(path?: string): string | undefined {
-  if (!path) {
-    return undefined
-  }
-
-  const extension = path.split('.').pop()?.toLowerCase()
-
-  switch (extension) {
-    case 'js':
-    case 'jsx':
-      return 'javascript'
-    case 'ts':
-    case 'tsx':
-      return 'typescript'
-    case 'py':
-      return 'python'
-    case 'java':
-      return 'java'
-    case 'c':
-    case 'cpp':
-      return 'c'
-    case 'go':
-      return 'go'
-    case 'rb':
-      return 'ruby'
-    case 'php':
-      return 'php'
-    case 'html':
-    case 'htm':
-      return 'html'
-    case 'css':
-      return 'css'
-    default:
-      return undefined
-  }
 }

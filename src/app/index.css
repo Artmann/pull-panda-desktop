@@ -202,6 +202,11 @@ body {
   background-color: rgba(248, 81, 73, 0.3);
 }
 
+/* Syntax highlighting in diffs - dark mode support */
+.dark .diff-table span[style] {
+  color: var(--shiki-dark) !important;
+}
+
 /* Remove default backticks added by Tailwind typography plugin */
 .prose
   :where(code):not(

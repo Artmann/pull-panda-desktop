@@ -1,21 +1,86 @@
-import { memo, useMemo, type ReactElement } from 'react'
+import {
+  memo,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ReactElement
+} from 'react'
 
+import {
+  getLanguageFromPath,
+  getSharedHighlighter,
+  themes
+} from '@/app/lib/highlighter'
 import { cn, escapeHtml } from '@/app/lib/utils'
 
-import { parseDiffHunk } from './hunks'
+import { parseDiffHunk, type DiffHunkLine } from './hunks'
 import { applyIntraLineDiffHighlighting } from './intra-line-diff'
+
+async function highlightLines(
+  lines: DiffHunkLine[],
+  language: string,
+  intraLineDiffMap: Map<number, string>
+): Promise<Map<number, string>> {
+  const highlighter = await getSharedHighlighter()
+  const loadedLangs = highlighter.getLoadedLanguages()
+  const effectiveLang = loadedLangs.includes(language) ? language : 'text'
+
+  if (effectiveLang === 'text') {
+    return new Map()
+  }
+
+  const result = new Map<number, string>()
+
+  for (let i = 0; i < lines.length; i++) {
+    // Skip lines that have intra-line diff highlighting
+    if (intraLineDiffMap.has(i)) {
+      continue
+    }
+
+    const line = lines[i]
+
+    if (line.type === 'truncated') {
+      continue
+    }
+
+    // Use codeToHtml and extract the inner content
+    const html = highlighter.codeToHtml(line.content, {
+      lang: effectiveLang,
+      themes: {
+        light: themes.light,
+        dark: themes.dark
+      }
+    })
+
+    // Extract content from <pre><code>...</code></pre>
+    const codeMatch = html.match(/<code[^>]*>([\s\S]*?)<\/code>/)
+    const innerHtml = codeMatch ? codeMatch[1] : escapeHtml(line.content)
+
+    result.set(i, innerHtml)
+  }
+
+  return result
+}
 
 interface SimpleDiffProps {
   diffHunk: string
+  filePath?: string
   lineEnd?: number
   lineStart?: number
 }
 
 export const SimpleDiff = memo(function SimpleDiff({
   diffHunk,
+  filePath,
   lineEnd,
   lineStart
 }: SimpleDiffProps): ReactElement {
+  const containerRef = useRef<HTMLDivElement>(null)
+  const [syntaxHighlightedLines, setSyntaxHighlightedLines] = useState<
+    Map<number, string>
+  >(new Map())
+
   const hunk = useMemo(() => parseDiffHunk(diffHunk), [diffHunk])
 
   const filteredLines = useMemo(() => {
@@ -42,16 +107,63 @@ export const SimpleDiff = memo(function SimpleDiff({
     [filteredLines]
   )
 
+  // Apply syntax highlighting lazily when component becomes visible
+  useEffect(() => {
+    if (!filePath || filteredLines.length === 0) {
+      return
+    }
+
+    const language = getLanguageFromPath(filePath)
+
+    if (!language) {
+      return
+    }
+
+    const container = containerRef.current
+
+    if (!container) {
+      return
+    }
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          void highlightLines(filteredLines, language, intraLineDiffMap).then(
+            (highlighted) => {
+              setSyntaxHighlightedLines(highlighted)
+            }
+          )
+          observer.disconnect()
+        }
+      },
+      { rootMargin: '500px 0px' }
+    )
+
+    observer.observe(container)
+
+    return () => observer.disconnect()
+  }, [filePath, filteredLines, intraLineDiffMap])
+
   const highlightedLines = useMemo(() => {
     return filteredLines.map((line, index) => {
+      // Intra-line diff takes precedence (word-level highlighting)
       const intraLineDiff = intraLineDiffMap.get(index)
+
       if (intraLineDiff) {
         return intraLineDiff
       }
 
+      // Use syntax highlighting if available
+      const syntaxHighlighted = syntaxHighlightedLines.get(index)
+
+      if (syntaxHighlighted) {
+        return syntaxHighlighted
+      }
+
+      // Fallback to escaped plain text
       return escapeHtml(line.content)
     })
-  }, [filteredLines, intraLineDiffMap])
+  }, [filteredLines, intraLineDiffMap, syntaxHighlightedLines])
 
   if (filteredLines.length === 0) {
     return (
@@ -62,7 +174,10 @@ export const SimpleDiff = memo(function SimpleDiff({
   }
 
   return (
-    <div className="diff-table w-full font-mono font-normal antialiased text-xs leading-6">
+    <div
+      ref={containerRef}
+      className="diff-table w-full font-mono font-normal antialiased text-xs leading-6"
+    >
       {filteredLines.map((line, index) => {
         const key = line.newLineNumber
           ? `new-${String(line.newLineNumber)}`
