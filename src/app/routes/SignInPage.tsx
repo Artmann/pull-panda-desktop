@@ -3,7 +3,7 @@ import { Button } from '@/app/components/ui/button'
 import { DeviceCodeCard } from '@/app/components/auth/DeviceCodeCard'
 import { useAuth } from '@/app/lib/store/authContext'
 
-export function LoginPage() {
+export function SignInPage() {
   const {
     status,
     userCode,

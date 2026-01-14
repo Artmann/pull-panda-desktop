@@ -1,6 +1,6 @@
 import { type ReactElement } from 'react'
 import { Provider } from 'react-redux'
-import { HashRouter, Routes, Route } from 'react-router'
+import { HashRouter, Routes, Route, Navigate } from 'react-router'
 import { Loader2 } from 'lucide-react'
 
 import type { AppStore } from '@/app/store'
@@ -9,7 +9,7 @@ import { TitleBar } from '@/app/components/TitleBar'
 import { Toaster } from '@/app/components/ui/sonner'
 import { AuthProvider, useAuth } from '@/app/lib/store/authContext'
 import { TasksProvider } from '@/app/lib/store/tasksContext'
-import { LoginPage } from '@/app/pages/LoginPage'
+import { SignInPage } from '@/app/routes/SignInPage'
 import { BackgroundSyncerPage } from '@/app/routes/BackgroundSyncerPage'
 import { HomePage } from '@/app/routes/HomePage'
 import { PullRequestPage } from '@/app/routes/PullRequestPage'
@@ -50,44 +50,38 @@ function AppContent(): ReactElement {
     )
   }
 
-  if (status === 'authenticated') {
-    return (
-      <div className="h-screen flex flex-col">
-        <TitleBar />
-
-        <div className="flex-1 min-h-0 overflow-auto">
-          <ErrorBoundary>
-            <Routes>
-              <Route
-                path="/"
-                element={<HomePage />}
-              />
-              <Route
-                path="/bg"
-                element={<BackgroundSyncerPage />}
-              />
-              <Route
-                path="/pull-requests/:id"
-                element={<PullRequestPage />}
-              />
-            </Routes>
-          </ErrorBoundary>
-
-          <div className="w-full h-10" />
-        </div>
-
-        <AppFooter />
-      </div>
-    )
-  }
+  const isAuthenticated = status === 'authenticated'
 
   return (
     <div className="h-screen flex flex-col">
       <TitleBar />
 
       <div className="flex-1 min-h-0 overflow-auto">
-        <LoginPage />
+        <ErrorBoundary>
+          <Routes>
+            <Route
+              path="/sign-in"
+              element={isAuthenticated ? <Navigate to="/" /> : <SignInPage />}
+            />
+            <Route
+              path="/"
+              element={isAuthenticated ? <HomePage /> : <Navigate to="/sign-in" />}
+            />
+            <Route
+              path="/bg"
+              element={isAuthenticated ? <BackgroundSyncerPage /> : <Navigate to="/sign-in" />}
+            />
+            <Route
+              path="/pull-requests/:id"
+              element={isAuthenticated ? <PullRequestPage /> : <Navigate to="/sign-in" />}
+            />
+          </Routes>
+        </ErrorBoundary>
+
+        {isAuthenticated && <div className="w-full h-10" />}
       </div>
+
+      {isAuthenticated && <AppFooter />}
     </div>
   )
 }

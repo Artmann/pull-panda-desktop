@@ -20,6 +20,8 @@ Vite.
 - `yarn make` - Build distributable packages
 - `yarn lint` - Run ESLint
 - `yarn format` - Format code with Prettier
+- `yarn drizzle-kit generate` - Generate new migration from schema changes
+- `yarn drizzle-kit migrate` - Apply pending migrations
 
 ## Architecture
 
@@ -59,7 +61,16 @@ src/
 - **Framework:** Electron 39 + React 19
 - **Build:** Vite + Electron Forge
 - **Styling:** Tailwind CSS 4 + shadcn/ui
+- **Database:** SQLite via sql.js + Drizzle ORM
 - **Auth:** GitHub OAuth Device Flow with encrypted token storage (safeStorage)
+
+## Database
+
+- Schema defined in `src/database/schema.ts`.
+- Migrations stored in `drizzle/` and run automatically on app startup.
+- After modifying the schema, run `yarn drizzle-kit generate` to create a new
+  migration.
+- To reset the database, delete `pull-panda.db` and restart the app.
 
 ## Security
 
