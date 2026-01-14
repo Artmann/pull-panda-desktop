@@ -1,5 +1,7 @@
+import { Plus } from 'lucide-react'
 import {
   memo,
+  useCallback,
   useEffect,
   useMemo,
   useRef,
@@ -13,9 +15,14 @@ import {
   themes
 } from '@/app/lib/highlighter'
 import { cn, escapeHtml } from '@/app/lib/utils'
+import type { PendingReviewComment } from '@/app/store/pending-review-comments-slice'
+import type { PullRequest } from '@/types/pull-request'
 
-import { parseDiffHunk, type DiffHunkLine } from './hunks'
+import { getLinePosition, parseDiffHunk, type DiffHunkLine } from './hunks'
+import { InlineCommentInput } from './InlineCommentInput'
 import { applyIntraLineDiffHighlighting } from './intra-line-diff'
+import { PendingComment } from './PendingComment'
+import { Button } from '@/app/components/ui/button'
 
 async function highlightLines(
   lines: DiffHunkLine[],
@@ -68,18 +75,25 @@ interface SimpleDiffProps {
   filePath?: string
   lineEnd?: number
   lineStart?: number
+  pendingComments?: PendingReviewComment[]
+  pullRequest?: PullRequest
 }
 
 export const SimpleDiff = memo(function SimpleDiff({
   diffHunk,
   filePath,
   lineEnd,
-  lineStart
+  lineStart,
+  pendingComments = [],
+  pullRequest
 }: SimpleDiffProps): ReactElement {
   const containerRef = useRef<HTMLDivElement>(null)
   const [syntaxHighlightedLines, setSyntaxHighlightedLines] = useState<
     Map<number, string>
   >(new Map())
+  const [activeCommentLineIndex, setActiveCommentLineIndex] = useState<
+    number | null
+  >(null)
 
   const hunk = useMemo(() => parseDiffHunk(diffHunk), [diffHunk])
 
@@ -165,6 +179,45 @@ export const SimpleDiff = memo(function SimpleDiff({
     })
   }, [filteredLines, intraLineDiffMap, syntaxHighlightedLines])
 
+  const handleLineClick = useCallback(
+    (index: number) => {
+      if (!pullRequest || !filePath) {
+        return
+      }
+
+      const line = filteredLines[index]
+
+      if (line.type === 'truncated') {
+        return
+      }
+
+      setActiveCommentLineIndex(index)
+    },
+    [pullRequest, filePath, filteredLines]
+  )
+
+  const handleCloseComment = useCallback(() => {
+    setActiveCommentLineIndex(null)
+  }, [])
+
+  const getCommentsForLine = useCallback(
+    (line: DiffHunkLine) => {
+      const position = getLinePosition(line)
+
+      if (!position || !filePath) {
+        return []
+      }
+
+      return pendingComments.filter(
+        (comment) =>
+          comment.path === filePath &&
+          comment.line === position.line &&
+          comment.side === position.side
+      )
+    },
+    [pendingComments, filePath]
+  )
+
   if (filteredLines.length === 0) {
     return (
       <div className="p-4 text-center text-muted-foreground text-sm">
@@ -172,6 +225,8 @@ export const SimpleDiff = memo(function SimpleDiff({
       </div>
     )
   }
+
+  const canComment = Boolean(pullRequest && filePath)
 
   return (
     <div
@@ -185,14 +240,39 @@ export const SimpleDiff = memo(function SimpleDiff({
             ? `old-${String(line.oldLineNumber)}`
             : `idx-${String(index)}`
 
+        const lineComments = getCommentsForLine(line)
+        const isActiveCommentLine = activeCommentLineIndex === index
+        const canCommentOnLine =
+          canComment && line.type !== 'truncated' && getLinePosition(line)
+
         return (
-          <DiffLine
-            key={key}
-            filteredLines={filteredLines}
-            highlightedLines={highlightedLines}
-            index={index}
-            line={line}
-          />
+          <div key={key}>
+            <DiffLine
+              canComment={Boolean(canCommentOnLine)}
+              filteredLines={filteredLines}
+              highlightedLines={highlightedLines}
+              index={index}
+              line={line}
+              onClick={() => handleLineClick(index)}
+            />
+
+            {lineComments.map((comment) => (
+              <PendingComment
+                key={comment.id}
+                comment={comment}
+                pullRequestId={pullRequest?.id ?? ''}
+              />
+            ))}
+
+            {isActiveCommentLine && pullRequest && filePath && (
+              <InlineCommentInput
+                filePath={filePath}
+                line={line}
+                onCancel={handleCloseComment}
+                pullRequest={pullRequest}
+              />
+            )}
+          </div>
         )
       })}
     </div>
@@ -202,22 +282,29 @@ export const SimpleDiff = memo(function SimpleDiff({
 const blankSpace = '\u00A0'
 
 const DiffLine = memo(function DiffLine({
+  canComment,
   filteredLines,
   highlightedLines,
   index,
-  line
+  line,
+  onClick
 }: {
+  canComment: boolean
   filteredLines: ReturnType<typeof parseDiffHunk>['lines']
   highlightedLines: string[]
   index: number
   line: ReturnType<typeof parseDiffHunk>['lines'][number]
+  onClick: () => void
 }) {
-  const getLineColor = (index: number) => {
+  const getLineColor = (lineIndex: number) => {
     if (filteredLines.length === 0) {
       return getLineColorByType('context')
     }
 
-    const clampedIndex = Math.min(Math.max(index, 0), filteredLines.length - 1)
+    const clampedIndex = Math.min(
+      Math.max(lineIndex, 0),
+      filteredLines.length - 1
+    )
 
     const currentLine = filteredLines[clampedIndex]
 
@@ -229,10 +316,22 @@ const DiffLine = memo(function DiffLine({
 
   return (
     <div
-      className="flex gap-0"
+      className="flex gap-0 group relative"
       data-testid={`diff-line-${index}`}
     >
-      <div className={cn('text-right user-select-none')}>
+      <div className={cn('text-right user-select-none relative')}>
+        {canComment && (
+          <Button
+            className="absolute left-2 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity size-5 flex items-center justify-center cursor-pointer"
+            size="icon-sm"
+            type="button"
+            variant="outline"
+            onClick={onClick}
+          >
+            <Plus className="size-3" />
+          </Button>
+        )}
+
         <div
           className={cn(
             'px-3',

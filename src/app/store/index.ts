@@ -6,6 +6,11 @@ import draftsReducer, {
   saveDraftsToStorage
 } from './drafts-slice'
 import navigationReducer, { NavigationState } from './navigation-slice'
+import pendingReviewCommentsReducer, {
+  loadPendingReviewCommentsFromStorage,
+  PendingReviewCommentsState,
+  savePendingReviewCommentsToStorage
+} from './pending-review-comments-slice'
 import pendingReviewsReducer, {
   PendingReviewsState
 } from './pending-reviews-slice'
@@ -18,6 +23,7 @@ import tasksReducer, { TasksState } from './tasks-slice'
 export interface PreloadedState {
   drafts?: DraftsState
   navigation?: NavigationState
+  pendingReviewComments?: PendingReviewCommentsState
   pendingReviews?: PendingReviewsState
   pullRequestDetails?: PullRequestDetailsState
   pullRequests?: PullRequestsState
@@ -28,11 +34,13 @@ export function createStore(preloadedState?: PreloadedState) {
   const store = configureStore({
     preloadedState: {
       ...preloadedState,
-      drafts: loadDraftsFromStorage()
+      drafts: loadDraftsFromStorage(),
+      pendingReviewComments: loadPendingReviewCommentsFromStorage()
     },
     reducer: {
       drafts: draftsReducer,
       navigation: navigationReducer,
+      pendingReviewComments: pendingReviewCommentsReducer,
       pendingReviews: pendingReviewsReducer,
       pullRequestDetails: pullRequestDetailsReducer,
       pullRequests: pullRequestsReducer,
@@ -49,6 +57,18 @@ export function createStore(preloadedState?: PreloadedState) {
     if (currentDrafts !== previousDrafts) {
       previousDrafts = currentDrafts
       saveDraftsToStorage(currentDrafts)
+    }
+  })
+
+  // Sync pending review comments to localStorage on every change
+  let previousPendingReviewComments = store.getState().pendingReviewComments
+
+  store.subscribe(() => {
+    const currentPendingReviewComments = store.getState().pendingReviewComments
+
+    if (currentPendingReviewComments !== previousPendingReviewComments) {
+      previousPendingReviewComments = currentPendingReviewComments
+      savePendingReviewCommentsToStorage(currentPendingReviewComments)
     }
   })
 

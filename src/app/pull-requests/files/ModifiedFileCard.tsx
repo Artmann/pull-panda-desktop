@@ -1,10 +1,11 @@
 import { ExternalLinkIcon } from 'lucide-react'
-import { memo, type ReactElement } from 'react'
+import { memo, useMemo, type ReactElement } from 'react'
 
 import type { ModifiedFile } from '@/types/pull-request-details'
 import type { PullRequest } from '@/types/pull-request'
 
 import { CopyToClipboardButton } from '@/app/components/CopyToClipboardButton'
+import { useAppSelector } from '@/app/store/hooks'
 import { FileCard, FileCardBody, FileCardHeader } from '../components/FileCard'
 import { SimpleDiff } from '../diffs/SimpleDiff'
 
@@ -19,6 +20,15 @@ export const ModifiedFileCard = memo(function ModifiedFileCard({
 }: ModifiedFileCardProps): ReactElement {
   const filePath = file.filePath
   const viewFileUrl = `https://github.com/${pullRequest.repositoryOwner}/${pullRequest.repositoryName}/blob/HEAD/${encodeURI(filePath)}`
+
+  const allPendingComments = useAppSelector(
+    (state) => state.pendingReviewComments[pullRequest.id] ?? []
+  )
+
+  const fileComments = useMemo(
+    () => allPendingComments.filter((comment) => comment.path === filePath),
+    [allPendingComments, filePath]
+  )
 
   return (
     <FileCard>
@@ -45,6 +55,8 @@ export const ModifiedFileCard = memo(function ModifiedFileCard({
           <SimpleDiff
             diffHunk={file.diffHunk}
             filePath={file.filePath}
+            pendingComments={fileComments}
+            pullRequest={pullRequest}
           />
         ) : (
           <div className="py-2 px-3 text-muted-foreground">

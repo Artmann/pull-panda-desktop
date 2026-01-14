@@ -75,8 +75,16 @@ export interface CreateReviewResponse {
   state: string
 }
 
+export interface ReviewComment {
+  body: string
+  line: number
+  path: string
+  side: 'LEFT' | 'RIGHT'
+}
+
 export interface SubmitReviewRequest {
   body?: string
+  comments?: ReviewComment[]
   event: 'APPROVE' | 'REQUEST_CHANGES' | 'COMMENT'
   owner: string
   pullNumber: number
@@ -127,6 +135,7 @@ export async function submitReview(
       },
       body: JSON.stringify({
         body: request.body,
+        comments: request.comments,
         event: request.event,
         owner: request.owner,
         pullNumber: request.pullNumber,

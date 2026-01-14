@@ -69,3 +69,12 @@ export function getDraftKeyForReply(
 export function getDraftKeyForReviewBody(pullRequestId: string): string {
   return `draft-review-body:${pullRequestId}`
 }
+
+export function getDraftKeyForInlineComment(
+  pullRequestId: string,
+  filePath: string,
+  lineNumber: number,
+  side: 'LEFT' | 'RIGHT'
+): string {
+  return `draft-inline:${pullRequestId}:${filePath}:${lineNumber}:${side}`
+}

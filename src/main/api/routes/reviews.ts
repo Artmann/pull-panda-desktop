@@ -14,8 +14,16 @@ interface CreateReviewRequest {
   repo: string
 }
 
+interface ReviewComment {
+  body: string
+  line: number
+  path: string
+  side: 'LEFT' | 'RIGHT'
+}
+
 interface SubmitReviewRequest {
   body?: string
+  comments?: ReviewComment[]
   event: 'APPROVE' | 'REQUEST_CHANGES' | 'COMMENT'
   owner: string
   pullNumber: number
@@ -167,16 +175,45 @@ reviewsRoute.post('/:reviewId/submit', async (context) => {
   }
 
   const octokit = new Octokit({ auth: token })
+  const hasComments = request.comments && request.comments.length > 0
 
   try {
-    await octokit.rest.pulls.submitReview({
-      body: request.body ?? '',
-      event: request.event,
-      owner: request.owner,
-      pull_number: request.pullNumber,
-      repo: request.repo,
-      review_id: reviewId
-    })
+    if (hasComments) {
+      // When we have comments, we need to delete the existing pending review
+      // and create a new one with all comments included in a single call.
+      // GitHub's submitReview doesn't accept comments, but createReview does.
+      await octokit.rest.pulls.deletePendingReview({
+        owner: request.owner,
+        pull_number: request.pullNumber,
+        repo: request.repo,
+        review_id: reviewId
+      })
+
+      // Create and submit review with comments in one call
+      await octokit.rest.pulls.createReview({
+        body: request.body ?? '',
+        comments: request.comments?.map((comment) => ({
+          body: comment.body,
+          line: comment.line,
+          path: comment.path,
+          side: comment.side
+        })),
+        event: request.event,
+        owner: request.owner,
+        pull_number: request.pullNumber,
+        repo: request.repo
+      })
+    } else {
+      // No comments, just submit the existing pending review
+      await octokit.rest.pulls.submitReview({
+        body: request.body ?? '',
+        event: request.event,
+        owner: request.owner,
+        pull_number: request.pullNumber,
+        repo: request.repo,
+        review_id: reviewId
+      })
+    }
 
     return context.json({ success: true })
   } catch (error) {

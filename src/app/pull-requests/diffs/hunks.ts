@@ -14,6 +14,42 @@ export interface DiffHunkLine {
   type: 'add' | 'remove' | 'context' | 'truncated'
 }
 
+export interface LinePosition {
+  line: number
+  side: 'LEFT' | 'RIGHT'
+}
+
+/**
+ * Get the line number and side for a GitHub review comment.
+ * - For removed lines: use old line number, LEFT side
+ * - For added/context lines: use new line number, RIGHT side
+ */
+export function getLinePosition(diffLine: DiffHunkLine): LinePosition | null {
+  if (diffLine.type === 'truncated') {
+    return null
+  }
+
+  if (diffLine.type === 'remove') {
+    if (diffLine.oldLineNumber === null) {
+      return null
+    }
+
+    return {
+      line: diffLine.oldLineNumber,
+      side: 'LEFT'
+    }
+  }
+
+  if (diffLine.newLineNumber === null) {
+    return null
+  }
+
+  return {
+    line: diffLine.newLineNumber,
+    side: 'RIGHT'
+  }
+}
+
 export function parseDiffHunk(diffHunk: string): ParsedDiffHunk {
   const hunkHeaderRegex = /@@\s-(\d+),(\d+)\s\+(\d+),(\d+)\s@@/g
   const hunkHeaders = [...diffHunk.matchAll(hunkHeaderRegex)]
