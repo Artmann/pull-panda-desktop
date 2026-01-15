@@ -1,29 +1,55 @@
-import { useEffect } from 'react'
+import { useHotkeys } from 'react-hotkeys-hook'
 
 import { useCommandContext } from './context'
 import { commandRegistry } from './registry'
-import { eventToShortcut, isInputFocused } from './utils'
+import type { Shortcut } from './types'
+
+// Convert our Shortcut type to react-hotkeys-hook format
+function shortcutToHotkeyString(shortcut: Shortcut): string {
+  const parts: string[] = []
+
+  if (shortcut.mod) parts.push('mod')
+  if (shortcut.shift) parts.push('shift')
+  if (shortcut.alt) parts.push('alt')
+  parts.push(shortcut.key.toLowerCase())
+
+  return parts.join('+')
+}
 
 export function ShortcutListener(): null {
   const { context } = useCommandContext()
 
-  useEffect(() => {
-    function handleKeyDown(event: KeyboardEvent) {
-      // Don't intercept shortcuts when user is typing
-      if (isInputFocused()) return
+  // Get all registered shortcuts
+  const commands = commandRegistry.getAll()
+  const commandsWithShortcuts = commands.filter(
+    (cmd): cmd is typeof cmd & { shortcut: Shortcut } => cmd.shortcut !== undefined
+  )
+  const hotkeyStrings = commandsWithShortcuts
+    .map((cmd) => shortcutToHotkeyString(cmd.shortcut))
+    .join(', ')
 
-      const shortcut = eventToShortcut(event)
-      const command = commandRegistry.findByShortcut(shortcut)
+  useHotkeys(
+    hotkeyStrings || 'placeholder-that-never-matches',
+    (event, handler) => {
+      // Find the command that matches this hotkey
+      const pressedKey = handler.keys?.join('+') ?? ''
 
-      if (command && command.isAvailable(context)) {
-        event.preventDefault()
-        command.execute(context)
+      for (const command of commandsWithShortcuts) {
+        const commandHotkey = shortcutToHotkeyString(command.shortcut)
+
+        if (commandHotkey === pressedKey && command.isAvailable(context)) {
+          event.preventDefault()
+          command.execute(context)
+          break
+        }
       }
-    }
-
-    window.addEventListener('keydown', handleKeyDown)
-    return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [context])
+    },
+    {
+      enableOnFormTags: false,
+      preventDefault: false
+    },
+    [context, commandsWithShortcuts]
+  )
 
   return null
 }
