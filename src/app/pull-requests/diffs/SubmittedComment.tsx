@@ -2,6 +2,7 @@ import { memo, type ReactElement } from 'react'
 
 import { Avatar, AvatarFallback, AvatarImage } from '@/app/components/ui/avatar'
 import { MarkdownBlock } from '@/app/components/MarkdownBlock'
+import { TimeAgo } from '@/app/components/TimeAgo'
 import type { Comment } from '@/types/pull-request-details'
 
 interface SubmittedCommentProps {
@@ -28,6 +29,10 @@ export const SubmittedComment = memo(function SubmittedComment({
         <div className="flex-1 flex flex-col gap-2">
           <div className="flex items-center gap-2">
             <span className="font-medium text-sm">{authorLogin}</span>
+
+            {comment.gitHubCreatedAt && (
+              <TimeAgo dateTime={comment.gitHubCreatedAt} />
+            )}
           </div>
 
           <MarkdownBlock
