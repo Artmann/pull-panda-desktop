@@ -129,7 +129,7 @@ export const MarkdownBlock = memo(function MarkdownBlock({
     <div
       ref={containerRef}
       className={cn(
-        'markdown-block w-full max-w-none prose dark:prose-invert [&>:first-child]:mt-0',
+        'markdown-block w-full max-w-none prose dark:prose-invert [&>:first-child]:mt-0 [&_p]:mb-2 [&_p:last-child]:mb-0',
         className
       )}
     >

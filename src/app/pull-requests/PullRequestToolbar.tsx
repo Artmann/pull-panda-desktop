@@ -97,25 +97,28 @@ export function PullRequestToolbar({
         </Button>
       </div>
 
-      <Separator orientation="vertical" />
-
-      <div className="flex items-center gap-1">
-        {hasPendingReview ? (
-          <Button
-            size="xs"
-            variant="outline"
-          >
-            Review in progress
-          </Button>
-        ) : (
-          <Button
-            onClick={handleStartReview}
-            size="xs"
-          >
-            Start review
-          </Button>
-        )}
-      </div>
+      {!pullRequest.isAuthor && (
+        <>
+          <Separator orientation="vertical" />
+          <div className="flex items-center gap-1">
+            {hasPendingReview ? (
+              <Button
+                size="xs"
+                variant="outline"
+              >
+                Review in progress
+              </Button>
+            ) : (
+              <Button
+                onClick={handleStartReview}
+                size="xs"
+              >
+                Start review
+              </Button>
+            )}
+          </div>
+        </>
+      )}
     </div>
   )
 }
