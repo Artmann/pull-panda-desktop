@@ -1,5 +1,4 @@
-import type { Command, CommandContext, CommandGroup, Shortcut } from './types'
-import { shortcutsMatch } from './utils'
+import type { Command, CommandContext, CommandGroup } from './types'
 
 class CommandRegistry {
   private commands: Map<string, Command> = new Map()
@@ -35,13 +34,6 @@ class CommandRegistry {
     }
 
     return grouped
-  }
-
-  findByShortcut(shortcut: Shortcut): Command | undefined {
-    return this.getAll().find(
-      (command) =>
-        command.shortcut && shortcutsMatch(command.shortcut, shortcut)
-    )
   }
 }
 

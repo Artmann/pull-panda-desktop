@@ -1,6 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
-
-import { isMac } from './utils'
+import { useHotkeys } from 'react-hotkeys-hook'
 
 // Store the open state setter for external access
 let setCommandPaletteOpenExternal: ((open: boolean) => void) | null = null
@@ -13,11 +12,9 @@ export function closeCommandPalette() {
   setCommandPaletteOpenExternal?.(false)
 }
 
-// Placeholder component - UI to be implemented
 export function CommandPalette() {
   const [open, setOpen] = useState(false)
 
-  // Store setter for external access
   const setOpenCallback = useCallback((value: boolean) => {
     setOpen(value)
   }, [])
@@ -29,25 +26,21 @@ export function CommandPalette() {
     }
   }, [setOpenCallback])
 
-  // Listen for Mod+K to open
-  useEffect(() => {
-    function handleKeyDown(event: KeyboardEvent) {
-      const modKey = isMac() ? event.metaKey : event.ctrlKey
+  // Mod+K to toggle
+  useHotkeys('mod+k', (event) => {
+    event.preventDefault()
+    setOpen((prev) => !prev)
+  })
 
-      if (event.key === 'k' && modKey) {
-        event.preventDefault()
-        setOpen((prev) => !prev)
-      }
-
-      if (event.key === 'Escape' && open) {
-        event.preventDefault()
-        setOpen(false)
-      }
-    }
-
-    window.addEventListener('keydown', handleKeyDown)
-    return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [open])
+  // Escape to close
+  useHotkeys(
+    'escape',
+    (event) => {
+      event.preventDefault()
+      setOpen(false)
+    },
+    { enabled: open }
+  )
 
   if (!open) return null
 
