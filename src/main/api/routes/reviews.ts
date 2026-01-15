@@ -185,12 +185,22 @@ reviewsRoute.post('/:reviewId/submit', async (context) => {
       // When we have comments, we need to delete the existing pending review
       // and create a new one with all comments included in a single call.
       // GitHub's submitReview doesn't accept comments, but createReview does.
-      await octokit.rest.pulls.deletePendingReview({
-        owner: request.owner,
-        pull_number: request.pullNumber,
-        repo: request.repo,
-        review_id: reviewId
-      })
+      try {
+        await octokit.rest.pulls.deletePendingReview({
+          owner: request.owner,
+          pull_number: request.pullNumber,
+          repo: request.repo,
+          review_id: reviewId
+        })
+      } catch (deleteError) {
+        // Ignore 404 - the review may not exist or was already submitted.
+        // We'll create a new one with the comments below.
+        const status = (deleteError as { status?: number }).status
+
+        if (status !== 404) {
+          throw deleteError
+        }
+      }
 
       // Create and submit review with comments in one call
       await octokit.rest.pulls.createReview({
@@ -207,15 +217,33 @@ reviewsRoute.post('/:reviewId/submit', async (context) => {
         repo: request.repo
       })
     } else {
-      // No comments, just submit the existing pending review
-      await octokit.rest.pulls.submitReview({
-        body: request.body ?? '',
-        event: request.event,
-        owner: request.owner,
-        pull_number: request.pullNumber,
-        repo: request.repo,
-        review_id: reviewId
-      })
+      // No comments - try to submit the existing pending review,
+      // or create a new one if it doesn't exist.
+      try {
+        await octokit.rest.pulls.submitReview({
+          body: request.body ?? '',
+          event: request.event,
+          owner: request.owner,
+          pull_number: request.pullNumber,
+          repo: request.repo,
+          review_id: reviewId
+        })
+      } catch (submitError) {
+        const status = (submitError as { status?: number }).status
+
+        if (status === 404) {
+          // Review doesn't exist, create a new one
+          await octokit.rest.pulls.createReview({
+            body: request.body ?? '',
+            event: request.event,
+            owner: request.owner,
+            pull_number: request.pullNumber,
+            repo: request.repo
+          })
+        } else {
+          throw submitError
+        }
+      }
     }
 
     // Sync PR details from GitHub and notify frontend

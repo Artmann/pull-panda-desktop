@@ -16,12 +16,14 @@ import {
 } from '@/app/lib/highlighter'
 import { cn, escapeHtml } from '@/app/lib/utils'
 import type { PendingReviewComment } from '@/app/store/pending-review-comments-slice'
+import type { Comment } from '@/types/pull-request-details'
 import type { PullRequest } from '@/types/pull-request'
 
 import { getLinePosition, parseDiffHunk, type DiffHunkLine } from './hunks'
 import { InlineCommentInput } from './InlineCommentInput'
 import { applyIntraLineDiffHighlighting } from './intra-line-diff'
 import { PendingComment } from './PendingComment'
+import { SubmittedComment } from './SubmittedComment'
 import { Button } from '@/app/components/ui/button'
 
 async function highlightLines(
@@ -77,6 +79,7 @@ interface SimpleDiffProps {
   lineStart?: number
   pendingComments?: PendingReviewComment[]
   pullRequest?: PullRequest
+  submittedComments?: Comment[]
 }
 
 export const SimpleDiff = memo(function SimpleDiff({
@@ -85,7 +88,8 @@ export const SimpleDiff = memo(function SimpleDiff({
   lineEnd,
   lineStart,
   pendingComments = [],
-  pullRequest
+  pullRequest,
+  submittedComments = []
 }: SimpleDiffProps): ReactElement {
   const containerRef = useRef<HTMLDivElement>(null)
   const [syntaxHighlightedLines, setSyntaxHighlightedLines] = useState<
@@ -200,7 +204,7 @@ export const SimpleDiff = memo(function SimpleDiff({
     setActiveCommentLineIndex(null)
   }, [])
 
-  const getCommentsForLine = useCallback(
+  const getPendingCommentsForLine = useCallback(
     (line: DiffHunkLine) => {
       const position = getLinePosition(line)
 
@@ -216,6 +220,31 @@ export const SimpleDiff = memo(function SimpleDiff({
       )
     },
     [pendingComments, filePath]
+  )
+
+  const getSubmittedCommentsForLine = useCallback(
+    (line: DiffHunkLine) => {
+      const position = getLinePosition(line)
+
+      if (!position || !filePath) {
+        return []
+      }
+
+      return submittedComments.filter((comment) => {
+        if (comment.path !== filePath) {
+          return false
+        }
+
+        // For LEFT side (removed lines), check originalLine
+        // For RIGHT side (added/context lines), check line
+        if (position.side === 'LEFT') {
+          return comment.originalLine === position.line
+        }
+
+        return comment.line === position.line
+      })
+    },
+    [submittedComments, filePath]
   )
 
   if (filteredLines.length === 0) {
@@ -240,7 +269,8 @@ export const SimpleDiff = memo(function SimpleDiff({
             ? `old-${String(line.oldLineNumber)}`
             : `idx-${String(index)}`
 
-        const lineComments = getCommentsForLine(line)
+        const linePendingComments = getPendingCommentsForLine(line)
+        const lineSubmittedComments = getSubmittedCommentsForLine(line)
         const isActiveCommentLine = activeCommentLineIndex === index
         const canCommentOnLine =
           canComment && line.type !== 'truncated' && getLinePosition(line)
@@ -256,7 +286,14 @@ export const SimpleDiff = memo(function SimpleDiff({
               onClick={() => handleLineClick(index)}
             />
 
-            {lineComments.map((comment) => (
+            {lineSubmittedComments.map((comment) => (
+              <SubmittedComment
+                key={comment.id}
+                comment={comment}
+              />
+            ))}
+
+            {linePendingComments.map((comment) => (
               <PendingComment
                 key={comment.id}
                 comment={comment}

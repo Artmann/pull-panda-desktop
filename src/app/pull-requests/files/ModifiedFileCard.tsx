@@ -25,9 +25,18 @@ export const ModifiedFileCard = memo(function ModifiedFileCard({
     (state) => state.pendingReviewComments[pullRequest.id] ?? []
   )
 
-  const fileComments = useMemo(
+  const allSubmittedComments = useAppSelector(
+    (state) => state.pullRequestDetails[pullRequest.id]?.comments ?? []
+  )
+
+  const filePendingComments = useMemo(
     () => allPendingComments.filter((comment) => comment.path === filePath),
     [allPendingComments, filePath]
+  )
+
+  const fileSubmittedComments = useMemo(
+    () => allSubmittedComments.filter((comment) => comment.path === filePath),
+    [allSubmittedComments, filePath]
   )
 
   return (
@@ -55,8 +64,9 @@ export const ModifiedFileCard = memo(function ModifiedFileCard({
           <SimpleDiff
             diffHunk={file.diffHunk}
             filePath={file.filePath}
-            pendingComments={fileComments}
+            pendingComments={filePendingComments}
             pullRequest={pullRequest}
+            submittedComments={fileSubmittedComments}
           />
         ) : (
           <div className="py-2 px-3 text-muted-foreground">
