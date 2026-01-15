@@ -1,9 +1,12 @@
+import { BrowserWindow } from 'electron'
 import { Octokit } from '@octokit/rest'
 import { Hono } from 'hono'
 import { and, eq } from 'drizzle-orm'
 
 import { getDatabase } from '../../../database'
 import { pullRequests } from '../../../database/schema'
+import { ipcChannels } from '../../../lib/ipc/channels'
+import { syncPullRequestDetails } from '../../../sync/sync-pull-request-details'
 import { generateId } from '../../../sync/utils'
 
 import type { AppEnv } from './comments'
@@ -212,6 +215,40 @@ reviewsRoute.post('/:reviewId/submit', async (context) => {
         pull_number: request.pullNumber,
         repo: request.repo,
         review_id: reviewId
+      })
+    }
+
+    // Sync PR details from GitHub and notify frontend
+    const database = getDatabase()
+
+    const pullRequest = database
+      .select()
+      .from(pullRequests)
+      .where(
+        and(
+          eq(pullRequests.repositoryOwner, request.owner),
+          eq(pullRequests.repositoryName, request.repo),
+          eq(pullRequests.number, request.pullNumber)
+        )
+      )
+      .get()
+
+    if (pullRequest) {
+      // Sync in the background - don't block the response
+      syncPullRequestDetails({
+        token,
+        pullRequestId: pullRequest.id,
+        owner: request.owner,
+        repositoryName: request.repo,
+        pullNumber: request.pullNumber
+      }).then(() => {
+        // Notify frontend that data has been updated
+        for (const window of BrowserWindow.getAllWindows()) {
+          window.webContents.send(ipcChannels.ResourceUpdated, {
+            type: 'pull-request-details',
+            pullRequestId: pullRequest.id
+          })
+        }
       })
     }
 

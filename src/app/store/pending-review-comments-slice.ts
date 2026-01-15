@@ -60,10 +60,7 @@ export const pendingReviewCommentsSlice = createSlice({
       delete state[action.payload.pullRequestId]
     },
 
-    loadComments(
-      _state,
-      action: PayloadAction<PendingReviewCommentsState>
-    ) {
+    loadComments(_state, action: PayloadAction<PendingReviewCommentsState>) {
       return action.payload
     },
 

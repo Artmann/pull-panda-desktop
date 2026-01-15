@@ -55,10 +55,7 @@ function SidePanelHeader({
   )
 }
 
-function SidePanelTitle({
-  className,
-  ...props
-}: React.ComponentProps<'h3'>) {
+function SidePanelTitle({ className, ...props }: React.ComponentProps<'h3'>) {
   return (
     <h3
       className={cn('text-foreground font-semibold', className)}
@@ -111,11 +108,7 @@ function SidePanelFooter({
 }: SidePanelFooterProps) {
   return (
     <div
-      className={cn(
-        'mt-auto p-4',
-        collapsed && 'hidden',
-        className
-      )}
+      className={cn('mt-auto p-4', collapsed && 'hidden', className)}
       {...props}
     />
   )

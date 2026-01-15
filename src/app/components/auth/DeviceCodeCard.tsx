@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Copy, Check, ExternalLink, Loader2 } from 'lucide-react'
+import { Check, Copy, Loader2 } from 'lucide-react'
 import { Button } from '@/app/components/ui/button'
 import {
   Card,

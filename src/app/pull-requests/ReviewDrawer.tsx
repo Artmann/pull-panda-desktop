@@ -1,8 +1,4 @@
-import {
-  ChevronLeftIcon,
-  ChevronRightIcon,
-  Trash2
-} from 'lucide-react'
+import { ChevronLeftIcon, ChevronRightIcon, Trash2 } from 'lucide-react'
 import { ReactElement, useState } from 'react'
 import { toast } from 'sonner'
 
@@ -192,7 +188,10 @@ export function ReviewDrawer({ pullRequest }: ReviewDrawerProps): ReactElement {
   }
 
   return (
-    <SidePanel collapsed={isCollapsed} open={Boolean(pendingReview)}>
+    <SidePanel
+      collapsed={isCollapsed}
+      open={Boolean(pendingReview)}
+    >
       <div className="absolute -left-3 top-1/2 -translate-y-1/2">
         <Button
           size="icon-xs"
@@ -289,7 +288,11 @@ export function ReviewDrawer({ pullRequest }: ReviewDrawerProps): ReactElement {
             </div>
           )}
 
-          <div className={pendingComments.length === 0 ? 'mt-auto p-4 pt-0' : 'p-4 pt-2'}>
+          <div
+            className={
+              pendingComments.length === 0 ? 'mt-auto p-4 pt-0' : 'p-4 pt-2'
+            }
+          >
             <Button
               className="w-full"
               disabled={isSubmitting}

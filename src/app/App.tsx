@@ -1,4 +1,4 @@
-import { type ReactElement } from 'react'
+import { useEffect, type ReactElement } from 'react'
 import { Provider } from 'react-redux'
 import { HashRouter, Routes, Route, Navigate } from 'react-router'
 import { Loader2 } from 'lucide-react'
@@ -14,6 +14,8 @@ import { HomePage } from '@/app/routes/HomePage'
 import { OnboardingPage } from '@/app/routes/OnboardingPage'
 import { PullRequestPage } from '@/app/routes/PullRequestPage'
 import { SignInPage } from '@/app/routes/SignInPage'
+import { useAppDispatch } from '@/app/store/hooks'
+import { pullRequestDetailsActions } from '@/app/store/pull-request-details-slice'
 import { AppFooter } from './AppFooter'
 
 interface AppProps {
@@ -38,6 +40,29 @@ export function App({ store }: AppProps): ReactElement {
 
 function AppContent(): ReactElement {
   const { status, isNewSignIn } = useAuth()
+  const dispatch = useAppDispatch()
+
+  // Listen for resource updates from the main process
+  useEffect(() => {
+    const unsubscribe = window.electron.onResourceUpdated(async (event) => {
+      if (event.type === 'pull-request-details' && event.pullRequestId) {
+        const details = await window.electron.getPullRequestDetails(
+          event.pullRequestId
+        )
+
+        if (details) {
+          dispatch(
+            pullRequestDetailsActions.setDetails({
+              pullRequestId: event.pullRequestId,
+              details
+            })
+          )
+        }
+      }
+    })
+
+    return unsubscribe
+  }, [dispatch])
 
   if (status === 'loading') {
     return (

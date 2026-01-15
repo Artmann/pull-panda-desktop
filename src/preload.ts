@@ -12,6 +12,11 @@ interface SyncCompleteEvent {
   pullRequestId?: string
 }
 
+interface ResourceUpdatedEvent {
+  type: 'pull-request-details'
+  pullRequestId: string
+}
+
 const electronApi = {
   getApiPort: (): Promise<number | null> =>
     ipcRenderer.invoke(ipcChannels.ApiGetPort),
@@ -47,6 +52,19 @@ const electronApi = {
 
     return () => {
       ipcRenderer.removeListener(ipcChannels.SyncComplete, handler)
+    }
+  },
+
+  onResourceUpdated: (
+    callback: (event: ResourceUpdatedEvent) => void
+  ): (() => void) => {
+    const handler = (_event: unknown, data: ResourceUpdatedEvent) =>
+      callback(data)
+
+    ipcRenderer.on(ipcChannels.ResourceUpdated, handler)
+
+    return () => {
+      ipcRenderer.removeListener(ipcChannels.ResourceUpdated, handler)
     }
   },
 

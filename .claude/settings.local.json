@@ -44,7 +44,9 @@
       "Bash(npx shadcn@latest add drawer:*)",
       "Bash(timeout:*)",
       "Bash(npx shadcn@latest add:*)",
-      "Bash(grep:*)"
+      "Bash(grep:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)"
     ]
   }
 }
