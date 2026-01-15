@@ -32,7 +32,8 @@ export const ModifiedFileCard = memo(function ModifiedFileCard({
 
   const allSubmittedComments = useAppSelector(
     (state) =>
-      state.pullRequestDetails[pullRequest.id]?.comments ?? emptySubmittedComments
+      state.pullRequestDetails[pullRequest.id]?.comments ??
+      emptySubmittedComments
   )
 
   const filePendingComments = useMemo(

@@ -58,7 +58,10 @@ export function startApiServer(getToken: () => string | null): Promise<number> {
 
       console.error('API Error:', error)
 
-      return context.json({ error: { message } }, statusCode as ContentfulStatusCode)
+      return context.json(
+        { error: { message } },
+        statusCode as ContentfulStatusCode
+      )
     })
 
     try {

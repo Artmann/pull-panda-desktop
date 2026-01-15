@@ -4,6 +4,11 @@ import { HashRouter, Routes, Route, Navigate } from 'react-router'
 import { Loader2 } from 'lucide-react'
 
 import type { AppStore } from '@/app/store'
+import {
+  CommandContextProvider,
+  CommandPalette,
+  ShortcutListener
+} from '@/app/commands'
 import { ErrorBoundary } from '@/app/components/ErrorBoundary'
 import { TitleBar } from '@/app/components/TitleBar'
 import { Toaster } from '@/app/components/ui/sonner'
@@ -28,7 +33,11 @@ export function App({ store }: AppProps): ReactElement {
       <HashRouter>
         <TasksProvider>
           <AuthProvider>
-            <AppContent />
+            <CommandContextProvider>
+              <ShortcutListener />
+              <CommandPalette />
+              <AppContent />
+            </CommandContextProvider>
           </AuthProvider>
         </TasksProvider>
       </HashRouter>
