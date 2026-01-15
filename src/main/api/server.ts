@@ -1,6 +1,7 @@
 import { serve, ServerType } from '@hono/node-server'
 import { Hono } from 'hono'
 import { cors } from 'hono/cors'
+import type { ContentfulStatusCode } from 'hono/utils/http-status'
 import { AddressInfo } from 'node:net'
 
 import { BackendError } from './errors'
@@ -57,7 +58,7 @@ export function startApiServer(getToken: () => string | null): Promise<number> {
 
       console.error('API Error:', error)
 
-      return context.json({ error: { message } }, statusCode)
+      return context.json({ error: { message } }, statusCode as ContentfulStatusCode)
     })
 
     try {
