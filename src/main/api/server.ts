@@ -3,6 +3,7 @@ import { Hono } from 'hono'
 import { cors } from 'hono/cors'
 import { AddressInfo } from 'node:net'
 
+import { BackendError } from './errors'
 import { checksRoute } from './routes/checks'
 import { commentsRoute, type AppEnv } from './routes/comments'
 import { pullRequestsRoute } from './routes/pull-requests'
@@ -48,6 +49,15 @@ export function startApiServer(getToken: () => string | null): Promise<number> {
 
     app.get('/api/health', (context) => {
       return context.json({ status: 'ok' })
+    })
+
+    app.onError((error, context) => {
+      const statusCode = error instanceof BackendError ? error.statusCode : 500
+      const message = error instanceof Error ? error.message : 'Unknown error'
+
+      console.error('API Error:', error)
+
+      return context.json({ error: { message } }, statusCode)
     })
 
     try {

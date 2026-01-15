@@ -22,6 +22,8 @@ import { pendingReviewsActions } from '@/app/store/pending-reviews-slice'
 import { useDraft } from '@/app/store/use-draft'
 import { PullRequest } from '@/types/pull-request'
 
+const emptyPendingComments: PendingReviewComment[] = []
+
 interface ReviewDrawerProps {
   pullRequest: PullRequest
 }
@@ -36,7 +38,8 @@ export function ReviewDrawer({ pullRequest }: ReviewDrawerProps): ReactElement {
   )
 
   const pendingComments = useAppSelector(
-    (state) => state.pendingReviewComments[pullRequest.id] ?? []
+    (state) =>
+      state.pendingReviewComments[pullRequest.id] ?? emptyPendingComments
   )
 
   const draftKey = getDraftKeyForReviewBody(pullRequest.id)

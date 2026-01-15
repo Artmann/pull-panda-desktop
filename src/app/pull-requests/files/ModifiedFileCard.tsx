@@ -1,13 +1,17 @@
 import { ExternalLinkIcon } from 'lucide-react'
 import { memo, useMemo, type ReactElement } from 'react'
 
-import type { ModifiedFile } from '@/types/pull-request-details'
+import type { Comment, ModifiedFile } from '@/types/pull-request-details'
 import type { PullRequest } from '@/types/pull-request'
 
 import { CopyToClipboardButton } from '@/app/components/CopyToClipboardButton'
 import { useAppSelector } from '@/app/store/hooks'
+import { type PendingReviewComment } from '@/app/store/pending-review-comments-slice'
 import { FileCard, FileCardBody, FileCardHeader } from '../components/FileCard'
 import { SimpleDiff } from '../diffs/SimpleDiff'
+
+const emptyPendingComments: PendingReviewComment[] = []
+const emptySubmittedComments: Comment[] = []
 
 interface ModifiedFileCardProps {
   file: ModifiedFile
@@ -22,11 +26,13 @@ export const ModifiedFileCard = memo(function ModifiedFileCard({
   const viewFileUrl = `https://github.com/${pullRequest.repositoryOwner}/${pullRequest.repositoryName}/blob/HEAD/${encodeURI(filePath)}`
 
   const allPendingComments = useAppSelector(
-    (state) => state.pendingReviewComments[pullRequest.id] ?? []
+    (state) =>
+      state.pendingReviewComments[pullRequest.id] ?? emptyPendingComments
   )
 
   const allSubmittedComments = useAppSelector(
-    (state) => state.pullRequestDetails[pullRequest.id]?.comments ?? []
+    (state) =>
+      state.pullRequestDetails[pullRequest.id]?.comments ?? emptySubmittedComments
   )
 
   const filePendingComments = useMemo(
