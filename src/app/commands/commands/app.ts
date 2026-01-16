@@ -1,3 +1,4 @@
+import { RefreshCw, Search } from 'lucide-react'
 import { toast } from 'sonner'
 
 import { triggerSync } from '@/app/lib/api'
@@ -5,13 +6,14 @@ import { triggerSync } from '@/app/lib/api'
 import { commandRegistry } from '../registry'
 
 // Command palette command (handled by CommandPalette component directly)
-// This is registered so it appears in the palette's command list
+// Hidden from the palette since you're already in it
 commandRegistry.register({
   id: 'app.command-palette',
   label: 'Open command palette',
+  icon: Search,
   group: 'app',
   shortcut: { key: 'k', mod: true },
-  isAvailable: () => true,
+  isAvailable: () => false,
   execute: () => {
     // Handled by CommandPalette's own keydown listener
   }
@@ -21,6 +23,7 @@ commandRegistry.register({
 commandRegistry.register({
   id: 'app.sync',
   label: 'Sync pull requests',
+  icon: RefreshCw,
   group: 'app',
   shortcut: { key: 'r', shift: true },
   isAvailable: () => true,

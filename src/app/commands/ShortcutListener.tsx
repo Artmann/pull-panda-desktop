@@ -22,7 +22,8 @@ export function ShortcutListener(): null {
   // Get all registered shortcuts
   const commands = commandRegistry.getAll()
   const commandsWithShortcuts = commands.filter(
-    (cmd): cmd is typeof cmd & { shortcut: Shortcut } => cmd.shortcut !== undefined
+    (cmd): cmd is typeof cmd & { shortcut: Shortcut } =>
+      cmd.shortcut !== undefined
   )
   const hotkeyStrings = commandsWithShortcuts
     .map((cmd) => shortcutToHotkeyString(cmd.shortcut))

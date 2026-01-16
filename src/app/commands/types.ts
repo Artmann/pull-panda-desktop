@@ -1,3 +1,5 @@
+import type { LucideIcon } from 'lucide-react'
+
 import type {
   Comment,
   ModifiedFile,
@@ -33,7 +35,7 @@ export type Command = {
   id: string
   label: string
   group: CommandGroup
-  icon?: string
+  icon?: LucideIcon
   shortcut?: Shortcut
   isAvailable: (context: CommandContext) => boolean
   execute: (context: CommandContext) => void | Promise<void>

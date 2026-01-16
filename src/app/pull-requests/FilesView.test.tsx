@@ -12,6 +12,7 @@ import type {
 } from '@/types/pull-request-details'
 import type { PullRequest } from '@/types/pull-request'
 
+import pendingReviewCommentsReducer from '@/app/store/pending-review-comments-slice'
 import pullRequestDetailsReducer from '@/app/store/pull-request-details-slice'
 
 import { FilesView } from './FilesView'
@@ -119,9 +120,11 @@ function createTestStore(
 ) {
   return configureStore({
     reducer: {
+      pendingReviewComments: pendingReviewCommentsReducer,
       pullRequestDetails: pullRequestDetailsReducer
     },
     preloadedState: {
+      pendingReviewComments: {},
       pullRequestDetails: options.pullRequestDetails ?? {}
     }
   })

@@ -7,9 +7,6 @@ export function setStore(store: AppStore): void {
   storeInstance = store
 }
 
-export function getStore(): AppStore {
-  if (!storeInstance) {
-    throw new Error('Store not initialized. Is CommandContextProvider mounted?')
-  }
+export function getStore(): AppStore | null {
   return storeInstance
 }
