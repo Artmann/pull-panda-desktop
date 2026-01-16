@@ -1,3 +1,4 @@
+import { MessageSquarePlus } from 'lucide-react'
 import { toast } from 'sonner'
 
 import { createReview } from '@/app/lib/api'
@@ -13,23 +14,29 @@ import { getStore } from '../store-accessor'
 commandRegistry.register({
   id: 'review.start',
   label: 'Start review',
+  icon: MessageSquarePlus,
   group: 'review',
   shortcut: { key: 'r' },
   isAvailable: (ctx) => {
-    if (ctx.view !== 'pr-detail' || !ctx.pullRequest) return false
+    const store = getStore()
+
+    if (ctx.view !== 'pr-detail' || !ctx.pullRequest || !store) return false
 
     // Check if there's already a pending review
-    const state = getStore().getState()
+    const state = store.getState()
+
     return !state.pendingReviews[ctx.pullRequest.id]
   },
   execute: async (ctx) => {
-    if (!ctx.pullRequest) return
+    const store = getStore()
+
+    if (!ctx.pullRequest || !store) return
 
     const pullRequest = ctx.pullRequest
     const optimisticReview = createOptimisticReview(pullRequest.id)
 
     // Optimistic update
-    getStore().dispatch(
+    store.dispatch(
       pendingReviewsActions.setReview({
         pullRequestId: pullRequest.id,
         review: optimisticReview
@@ -43,7 +50,7 @@ commandRegistry.register({
         repo: pullRequest.repositoryName
       })
 
-      getStore().dispatch(
+      store.dispatch(
         pendingReviewsActions.setReview({
           pullRequestId: pullRequest.id,
           review: {
@@ -55,7 +62,7 @@ commandRegistry.register({
     } catch (error) {
       console.error('Failed to start review:', error)
 
-      getStore().dispatch(
+      store.dispatch(
         pendingReviewsActions.clearReview({ pullRequestId: pullRequest.id })
       )
 

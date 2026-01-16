@@ -8,6 +8,7 @@ import { describe, it, expect } from 'vitest'
 
 import type { PullRequest } from '@/types/pull-request'
 
+import pendingReviewCommentsReducer from '@/app/store/pending-review-comments-slice'
 import pendingReviewsReducer from '@/app/store/pending-reviews-slice'
 
 import { PullRequestToolbar } from './PullRequestToolbar'
@@ -49,9 +50,11 @@ function createMockPullRequest(
 function createTestStore() {
   return configureStore({
     reducer: {
+      pendingReviewComments: pendingReviewCommentsReducer,
       pendingReviews: pendingReviewsReducer
     },
     preloadedState: {
+      pendingReviewComments: {},
       pendingReviews: {}
     }
   })
