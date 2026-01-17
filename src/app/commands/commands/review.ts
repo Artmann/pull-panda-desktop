@@ -13,7 +13,7 @@ import { getStore } from '../store-accessor'
 // Start review command
 commandRegistry.register({
   id: 'review.start',
-  label: 'Start review',
+  label: 'Start Review',
   icon: MessageSquarePlus,
   group: 'pull request',
   shortcut: { key: 'r' },

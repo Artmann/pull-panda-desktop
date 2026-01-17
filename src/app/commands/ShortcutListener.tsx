@@ -1,5 +1,6 @@
 import { useHotkeys } from 'react-hotkeys-hook'
 
+import { openCommandPaletteWithCommand } from './CommandPalette'
 import { useCommandContext } from './context'
 import { commandRegistry } from './registry'
 import type { Shortcut } from './types'
@@ -33,14 +34,35 @@ export function ShortcutListener(): null {
     hotkeyStrings || 'placeholder-that-never-matches',
     (event, handler) => {
       // Find the command that matches this hotkey
-      const pressedKey = handler.keys?.join('+') ?? ''
+      // handler.keys only contains non-modifier keys, so we need to reconstruct
+      const key = handler.keys?.[0] ?? ''
+      const hasMod = event.metaKey || event.ctrlKey
+      const hasShift = event.shiftKey
+      const hasAlt = event.altKey
 
       for (const command of commandsWithShortcuts) {
-        const commandHotkey = shortcutToHotkeyString(command.shortcut)
+        const shortcut = command.shortcut
+        const keyMatches = shortcut.key.toLowerCase() === key.toLowerCase()
+        const modMatches = !!shortcut.mod === hasMod
+        const shiftMatches = !!shortcut.shift === hasShift
+        const altMatches = !!shortcut.alt === hasAlt
 
-        if (commandHotkey === pressedKey && command.isAvailable(context)) {
+        if (
+          keyMatches &&
+          modMatches &&
+          shiftMatches &&
+          altMatches &&
+          command.isAvailable(context)
+        ) {
           event.preventDefault()
-          command.execute(context)
+
+          // For parameterized commands, open the palette in params mode
+          if (command.param) {
+            openCommandPaletteWithCommand(command)
+          } else {
+            command.execute(context)
+          }
+
           break
         }
       }

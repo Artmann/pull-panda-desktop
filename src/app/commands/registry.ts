@@ -3,8 +3,8 @@ import type { Command, CommandContext, CommandGroup } from './types'
 class CommandRegistry {
   private commands: Map<string, Command> = new Map()
 
-  register(command: Command): void {
-    this.commands.set(command.id, command)
+  register<T = unknown>(command: Command<T>): void {
+    this.commands.set(command.id, command as Command)
   }
 
   unregister(id: string): void {

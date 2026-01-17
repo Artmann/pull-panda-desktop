@@ -24,7 +24,7 @@ commandRegistry.register({
 // Copy PR link command
 commandRegistry.register({
   id: 'pr.copy-link',
-  label: 'Copy link',
+  label: 'Copy Link',
   icon: Copy,
   group: 'pull request',
   shortcut: { key: 'c', mod: true, shift: true },
@@ -45,7 +45,7 @@ commandRegistry.register({
 // Copy branch name command
 commandRegistry.register({
   id: 'pr.copy-branch',
-  label: 'Copy branch name',
+  label: 'Copy Branch Name',
   icon: GitBranch,
   group: 'pull request',
   isAvailable: (ctx) =>

@@ -391,4 +391,280 @@ describe('CommandPalette', () => {
       expect(screen.getByRole('textbox')).toHaveValue('')
     })
   })
+
+  describe('parameterized commands', () => {
+    it('transitions to params mode when selecting a parameterized command', async () => {
+      const command = createMockCommand({
+        id: 'test.param',
+        label: 'Open Item',
+        param: {
+          type: 'select',
+          placeholder: 'Select an item...',
+          getOptions: () => [
+            { id: '1', label: 'Item One', value: 1 },
+            { id: '2', label: 'Item Two', value: 2 }
+          ]
+        }
+      })
+
+      commandRegistry.register(command)
+
+      render(<CommandPalette />)
+
+      act(() => {
+        openCommandPalette()
+      })
+
+      await waitFor(() => {
+        expect(screen.getByText('Open Item')).toBeInTheDocument()
+      })
+
+      fireEvent.click(screen.getByText('Open Item'))
+
+      await waitFor(() => {
+        // Should show the command label as header
+        expect(screen.getByText('Open Item')).toBeInTheDocument()
+        // Should show options
+        expect(screen.getByText('Item One')).toBeInTheDocument()
+        expect(screen.getByText('Item Two')).toBeInTheDocument()
+        // Should show custom placeholder
+        expect(
+          screen.getByPlaceholderText('Select an item...')
+        ).toBeInTheDocument()
+      })
+    })
+
+    it('filters options based on search query', async () => {
+      const user = userEvent.setup()
+
+      const command = createMockCommand({
+        id: 'test.filter',
+        label: 'Search Items',
+        param: {
+          type: 'select',
+          getOptions: (_context, query) => {
+            const items = [
+              { id: '1', label: 'Apple', value: 'apple' },
+              { id: '2', label: 'Banana', value: 'banana' },
+              { id: '3', label: 'Cherry', value: 'cherry' }
+            ]
+
+            return items.filter((item) =>
+              item.label.toLowerCase().includes(query.toLowerCase())
+            )
+          }
+        }
+      })
+
+      commandRegistry.register(command)
+
+      render(<CommandPalette />)
+
+      act(() => {
+        openCommandPalette()
+      })
+
+      await waitFor(() => {
+        expect(screen.getByText('Search Items')).toBeInTheDocument()
+      })
+
+      fireEvent.click(screen.getByText('Search Items'))
+
+      await waitFor(() => {
+        expect(screen.getByText('Apple')).toBeInTheDocument()
+        expect(screen.getByText('Banana')).toBeInTheDocument()
+        expect(screen.getByText('Cherry')).toBeInTheDocument()
+      })
+
+      const input = screen.getByRole('textbox')
+      await user.type(input, 'ban')
+
+      await waitFor(() => {
+        expect(screen.queryByText('Apple')).not.toBeInTheDocument()
+        expect(screen.getByText('Banana')).toBeInTheDocument()
+        expect(screen.queryByText('Cherry')).not.toBeInTheDocument()
+      })
+    })
+
+    it('executes command with selected value when clicking an option', async () => {
+      const executeHandler = vi.fn()
+
+      const command = createMockCommand({
+        id: 'test.select',
+        label: 'Select Item',
+        execute: executeHandler,
+        param: {
+          type: 'select',
+          getOptions: () => [
+            { id: '1', label: 'First', value: 'first-value' },
+            { id: '2', label: 'Second', value: 'second-value' }
+          ]
+        }
+      })
+
+      commandRegistry.register(command)
+
+      render(<CommandPalette />)
+
+      act(() => {
+        openCommandPalette()
+      })
+
+      await waitFor(() => {
+        expect(screen.getByText('Select Item')).toBeInTheDocument()
+      })
+
+      fireEvent.click(screen.getByText('Select Item'))
+
+      await waitFor(() => {
+        expect(screen.getByText('Second')).toBeInTheDocument()
+      })
+
+      fireEvent.click(screen.getByText('Second'))
+
+      expect(executeHandler).toHaveBeenCalledWith(mockContext, 'second-value')
+    })
+
+    it('goes back to commands mode when clicking back button', async () => {
+      const command = createMockCommand({
+        id: 'test.back',
+        label: 'Test Back',
+        param: {
+          type: 'select',
+          getOptions: () => [{ id: '1', label: 'Option', value: 1 }]
+        }
+      })
+
+      commandRegistry.register(command)
+
+      render(<CommandPalette />)
+
+      act(() => {
+        openCommandPalette()
+      })
+
+      await waitFor(() => {
+        expect(screen.getByText('Test Back')).toBeInTheDocument()
+      })
+
+      fireEvent.click(screen.getByText('Test Back'))
+
+      await waitFor(() => {
+        expect(screen.getByText('Option')).toBeInTheDocument()
+      })
+
+      // Find and click the back button
+      const backButton = screen.getByRole('button')
+      fireEvent.click(backButton)
+
+      await waitFor(() => {
+        // Should be back in commands mode
+        expect(
+          screen.getByPlaceholderText('Type a command or search...')
+        ).toBeInTheDocument()
+        expect(screen.queryByText('Option')).not.toBeInTheDocument()
+      })
+    })
+
+    it('shows description for options when provided', async () => {
+      const command = createMockCommand({
+        id: 'test.desc',
+        label: 'With Description',
+        param: {
+          type: 'select',
+          getOptions: () => [
+            {
+              id: '1',
+              label: 'Main Label',
+              description: 'This is the description',
+              value: 1
+            }
+          ]
+        }
+      })
+
+      commandRegistry.register(command)
+
+      render(<CommandPalette />)
+
+      act(() => {
+        openCommandPalette()
+      })
+
+      await waitFor(() => {
+        expect(screen.getByText('With Description')).toBeInTheDocument()
+      })
+
+      fireEvent.click(screen.getByText('With Description'))
+
+      await waitFor(() => {
+        expect(screen.getByText('Main Label')).toBeInTheDocument()
+        expect(screen.getByText('This is the description')).toBeInTheDocument()
+      })
+    })
+
+    it('shows "No results found" when options are empty', async () => {
+      const command = createMockCommand({
+        id: 'test.empty',
+        label: 'Empty Options',
+        param: {
+          type: 'select',
+          getOptions: () => []
+        }
+      })
+
+      commandRegistry.register(command)
+
+      render(<CommandPalette />)
+
+      act(() => {
+        openCommandPalette()
+      })
+
+      await waitFor(() => {
+        expect(screen.getByText('Empty Options')).toBeInTheDocument()
+      })
+
+      fireEvent.click(screen.getByText('Empty Options'))
+
+      await waitFor(() => {
+        expect(screen.getByText('No results found')).toBeInTheDocument()
+      })
+    })
+
+    it('closes palette after selecting an option', async () => {
+      const command = createMockCommand({
+        id: 'test.close-select',
+        label: 'Select and Close',
+        param: {
+          type: 'select',
+          getOptions: () => [{ id: '1', label: 'Click Me', value: 1 }]
+        }
+      })
+
+      commandRegistry.register(command)
+
+      render(<CommandPalette />)
+
+      act(() => {
+        openCommandPalette()
+      })
+
+      await waitFor(() => {
+        expect(screen.getByText('Select and Close')).toBeInTheDocument()
+      })
+
+      fireEvent.click(screen.getByText('Select and Close'))
+
+      await waitFor(() => {
+        expect(screen.getByText('Click Me')).toBeInTheDocument()
+      })
+
+      fireEvent.click(screen.getByText('Click Me'))
+
+      await waitFor(() => {
+        expect(getPalette()).toHaveStyle({ display: 'none' })
+      })
+    })
+  })
 })

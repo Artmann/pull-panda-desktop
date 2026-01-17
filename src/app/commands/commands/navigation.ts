@@ -1,7 +1,9 @@
-import { ArrowRight, Home } from 'lucide-react'
+import { ArrowRight, GitPullRequest, Home } from 'lucide-react'
 
 import { commandRegistry } from '../registry'
 import { getNavigate } from '../context'
+import { getStore } from '../store-accessor'
+import type { PullRequest } from '@/types/pull-request'
 
 // Tab names as used in the app
 const tabs = ['overview', 'commits', 'checks', 'files'] as const
@@ -11,7 +13,7 @@ tabs.forEach((tab, index) => {
   commandRegistry.register({
     id: `navigation.tab-${tab}`,
     icon: ArrowRight,
-    label: `Go to ${tab.charAt(0).toUpperCase() + tab.slice(1)}`,
+    label: `Go To ${tab.charAt(0).toUpperCase() + tab.slice(1)}`,
     group: 'navigation',
     shortcut: { key: String(index + 1) },
     isAvailable: (ctx) =>
@@ -27,7 +29,7 @@ tabs.forEach((tab, index) => {
 // Go home command
 commandRegistry.register({
   id: 'navigation.home',
-  label: 'Go to home',
+  label: 'Go To Home',
   icon: Home,
   group: 'navigation',
   shortcut: { key: 'h', mod: true },
@@ -35,5 +37,48 @@ commandRegistry.register({
   execute: () => {
     const navigate = getNavigate()
     navigate('/')
+  }
+})
+
+// Open Pull Request command (parameterized)
+commandRegistry.register<PullRequest>({
+  id: 'navigation.open-pr',
+  label: 'Open Pull Request',
+  icon: GitPullRequest,
+  group: 'navigation',
+  shortcut: { key: 'p', mod: true },
+  isAvailable: () => true,
+  param: {
+    type: 'select',
+    placeholder: 'Search pull requests...',
+    getOptions: (_context, query) => {
+      const store = getStore()
+
+      if (!store) return []
+
+      const pullRequests = store.getState().pullRequests.items
+      const lowerQuery = query.toLowerCase()
+
+      return pullRequests
+        .filter(
+          (pullRequest) =>
+            pullRequest.title.toLowerCase().includes(lowerQuery) ||
+            pullRequest.number.toString().includes(query)
+        )
+        .slice(0, 20)
+        .map((pullRequest) => ({
+          id: pullRequest.id,
+          label: `#${pullRequest.number} ${pullRequest.title}`,
+          description: `${pullRequest.repositoryOwner}/${pullRequest.repositoryName}`,
+          value: pullRequest
+        }))
+    }
+  },
+  execute: (_context, pullRequest) => {
+    if (!pullRequest) return
+
+    const navigate = getNavigate()
+
+    navigate(`/pull-requests/${pullRequest.id}`)
   }
 })
