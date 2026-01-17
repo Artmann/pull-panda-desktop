@@ -9,7 +9,7 @@ import { commandRegistry } from '../registry'
 // Hidden from the palette since you're already in it
 commandRegistry.register({
   id: 'app.command-palette',
-  label: 'Open command palette',
+  label: 'Open Command Palette',
   icon: Search,
   group: 'app',
   shortcut: { key: 'k', mod: true },
@@ -22,7 +22,7 @@ commandRegistry.register({
 // Sync pull requests command
 commandRegistry.register({
   id: 'app.sync',
-  label: 'Sync pull requests',
+  label: 'Sync Pull Requests',
   icon: RefreshCw,
   group: 'app',
   shortcut: { key: 'r', shift: true },

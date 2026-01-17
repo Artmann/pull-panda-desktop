@@ -9,11 +9,7 @@ import type { PullRequest } from '@/types/pull-request'
 
 export type CommandView = 'home' | 'pr-detail' | 'other'
 
-export type CommandGroup =
-  | 'navigation'
-  | 'view'
-  | 'pull request'
-  | 'app'
+export type CommandGroup = 'navigation' | 'view' | 'pull request' | 'app'
 
 export type CommandContext = {
   view: CommandView
@@ -30,12 +26,27 @@ export type Shortcut = {
   alt?: boolean
 }
 
-export type Command = {
+export type CommandOption<T = unknown> = {
+  id: string
+  label: string
+  description?: string
+  icon?: LucideIcon
+  value: T
+}
+
+export type CommandParam<T = unknown> = {
+  type: 'select'
+  placeholder?: string
+  getOptions: (context: CommandContext, query: string) => CommandOption<T>[]
+}
+
+export type Command<T = unknown> = {
   id: string
   label: string
   group: CommandGroup
   icon?: LucideIcon
   shortcut?: Shortcut
+  param?: CommandParam<T>
   isAvailable: (context: CommandContext) => boolean
-  execute: (context: CommandContext) => void | Promise<void>
+  execute: (context: CommandContext, value?: T) => void | Promise<void>
 }
