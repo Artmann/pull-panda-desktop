@@ -11,7 +11,7 @@ tabs.forEach((tab, index) => {
   commandRegistry.register({
     id: `navigation.tab-${tab}`,
     icon: ArrowRight,
-    label: `Go to ${tab.charAt(0).toUpperCase() + tab.slice(1)} tab`,
+    label: `Go to ${tab.charAt(0).toUpperCase() + tab.slice(1)}`,
     group: 'navigation',
     shortcut: { key: String(index + 1) },
     isAvailable: (ctx) =>

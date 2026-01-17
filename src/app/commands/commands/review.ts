@@ -15,7 +15,7 @@ commandRegistry.register({
   id: 'review.start',
   label: 'Start review',
   icon: MessageSquarePlus,
-  group: 'review',
+  group: 'pull request',
   shortcut: { key: 'r' },
   isAvailable: (ctx) => {
     const store = getStore()

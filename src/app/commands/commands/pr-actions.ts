@@ -8,7 +8,7 @@ commandRegistry.register({
   id: 'pr.open-in-github',
   label: 'Open in GitHub',
   icon: ExternalLink,
-  group: 'pr-actions',
+  group: 'pull request',
   shortcut: { key: 'o' },
   isAvailable: (ctx) =>
     ctx.view === 'pr-detail' && ctx.pullRequest !== undefined,
@@ -26,7 +26,7 @@ commandRegistry.register({
   id: 'pr.copy-link',
   label: 'Copy link',
   icon: Copy,
-  group: 'pr-actions',
+  group: 'pull request',
   shortcut: { key: 'c', mod: true, shift: true },
   isAvailable: (ctx) =>
     ctx.view === 'pr-detail' && ctx.pullRequest !== undefined,
@@ -47,7 +47,7 @@ commandRegistry.register({
   id: 'pr.copy-branch',
   label: 'Copy branch name',
   icon: GitBranch,
-  group: 'pr-actions',
+  group: 'pull request',
   isAvailable: (ctx) =>
     ctx.view === 'pr-detail' && ctx.pullRequest !== undefined,
   execute: async () => {

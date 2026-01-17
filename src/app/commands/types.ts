@@ -11,9 +11,8 @@ export type CommandView = 'home' | 'pr-detail' | 'other'
 
 export type CommandGroup =
   | 'navigation'
-  | 'review'
   | 'view'
-  | 'pr-actions'
+  | 'pull request'
   | 'app'
 
 export type CommandContext = {
