@@ -160,7 +160,7 @@ function setupIpcHandlers(): void {
       // Save database after sync
       saveDatabase()
 
-      mainWindow?.webContents.send(ipcChannels.SyncComplete, {
+      mainWindow?.webContents.send(ipcChannels.ResourceUpdated, {
         type: 'pull-request-details',
         pullRequestId
       })
@@ -270,7 +270,7 @@ async function syncAllPullRequestDetails(token: string): Promise<void> {
         pullNumber: pullRequest.number
       })
 
-      mainWindow?.webContents.send(ipcChannels.SyncComplete, {
+      mainWindow?.webContents.send(ipcChannels.ResourceUpdated, {
         type: 'pull-request-details',
         pullRequestId: pullRequest.id
       })

@@ -260,7 +260,7 @@ export const SimpleDiff = memo(function SimpleDiff({
   return (
     <div
       ref={containerRef}
-      className="diff-table w-full font-mono font-normal antialiased text-xs leading-6 bg-muted rounded-lg overflow-hidden"
+      className="diff-table w-full font-mono font-normal antialiased text-xs leading-6 dark:bg-muted rounded-lg overflow-hidden"
     >
       {filteredLines.map((line, index) => {
         const key = line.newLineNumber
@@ -425,5 +425,5 @@ function getLineColorByType(
     return cn('bg-muted/50')
   }
 
-  return cn('bg-transparent')
+  return cn('bg-gray-50 dark:bg-transparent')
 }

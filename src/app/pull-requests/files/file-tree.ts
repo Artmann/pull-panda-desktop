@@ -90,9 +90,24 @@ export function extractGroupedFilesFromTree(
     }
   }
 
+  // Collect root-level files (files not in any directory)
+  const rootFiles: Array<{ filePath: string }> = []
+
   Object.values(tree).forEach((rootNode) => {
-    traverseNode(rootNode)
+    if (rootNode.type === 'file') {
+      rootFiles.push({ filePath: rootNode.path })
+    } else {
+      traverseNode(rootNode)
+    }
   })
+
+  // Add root files as a group at the beginning
+  if (rootFiles.length > 0) {
+    groups.unshift({
+      groupName: '.',
+      files: rootFiles
+    })
+  }
 
   return groups
 }
