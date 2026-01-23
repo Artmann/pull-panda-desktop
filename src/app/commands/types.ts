@@ -9,7 +9,12 @@ import type { PullRequest } from '@/types/pull-request'
 
 export type CommandView = 'home' | 'pr-detail' | 'other'
 
-export type CommandGroup = 'navigation' | 'view' | 'pull request' | 'app'
+export type CommandGroup =
+  | 'appearance'
+  | 'app'
+  | 'navigation'
+  | 'pull request'
+  | 'view'
 
 export type CommandContext = {
   view: CommandView
