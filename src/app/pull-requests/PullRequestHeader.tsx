@@ -72,7 +72,7 @@ export function PullRequestHeader({
       <div className="flex flex-col gap-3 transition-all h-auto overflow-hidden">
         <div className="flex items-center gap-2">
           <div>
-            <PullRequestStatusBadge status={pullRequest.state} />
+            <PullRequestStatusBadge pullRequest={pullRequest} />
           </div>
           {/* 
           <div className="text-xs text-gray-500 dark:text-gray-400">
