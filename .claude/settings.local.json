@@ -49,7 +49,9 @@
       "Bash(git commit:*)",
       "Bash(npm run lint)",
       "Bash(npx eslint:*)",
-      "Bash(yarn vitest:*)"
+      "Bash(yarn vitest:*)",
+      "mcp__playwriter__execute",
+      "Bash(yarn test:*)"
     ]
   }
 }

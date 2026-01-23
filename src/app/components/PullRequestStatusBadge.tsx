@@ -1,48 +1,74 @@
-import { memo, useMemo, type ReactElement } from 'react'
+import { useMemo, type ReactElement } from 'react'
 
-import { Badge } from '@/app/components/ui/badge'
+import { cn } from '@/app/lib/utils'
+import { PullRequest } from '@/types/pull-request'
+import { Badge } from './ui/badge'
 
-export const PullRequestStatusBadge = memo(function PullRequestStatusBadge({
-  status
-}: {
-  status?: string
-}): ReactElement {
-  const variant = useMemo((): 'default' | 'secondary' | 'destructive' => {
-    if (!status) {
-      return 'default'
+type PullRequestStatus =
+  | 'Approved'
+  | 'Changes Requested'
+  | 'Closed'
+  | 'Draft'
+  | 'Merged'
+  | 'Pending'
+
+interface PullRequestStatusBadgeProps {
+  pullRequest: PullRequest
+}
+
+export function PullRequestStatusBadge({
+  pullRequest
+}: PullRequestStatusBadgeProps): ReactElement {
+  const { approvalCount, changesRequestedCount } = pullRequest
+
+  const status = useMemo((): PullRequestStatus => {
+    if (pullRequest.state === 'MERGED') {
+      return 'Merged'
     }
 
-    const normalizedStatus = status.toLowerCase()
-
-    if (normalizedStatus === 'closed') {
-      return 'destructive'
+    if (pullRequest.state === 'CLOSED') {
+      return 'Closed'
     }
 
-    if (normalizedStatus === 'merged') {
-      return 'default'
+    if (changesRequestedCount > 0) {
+      return 'Changes Requested'
     }
 
-    if (normalizedStatus === 'draft') {
-      return 'secondary'
+    if (approvalCount > 0) {
+      return 'Approved'
     }
 
-    return 'default'
-  }, [status])
-
-  const displayText = useMemo(() => {
-    if (!status) {
-      return 'open'
+    if (pullRequest.isDraft) {
+      return 'Draft'
     }
 
-    return status.toLowerCase()
+    return 'Pending'
+  }, [
+    approvalCount,
+    changesRequestedCount,
+    pullRequest.isDraft,
+    pullRequest.state
+  ])
+
+  const statusColorClasses = useMemo((): string => {
+    const colorMap: Record<PullRequestStatus, string> = {
+      Approved: 'bg-green-100 text-green-800 border-green-200',
+      'Changes Requested': 'bg-red-100 text-red-800 border-red-200',
+      Closed: 'bg-red-100 text-red-800 border-red-200',
+      Draft: 'bg-gray-100 text-gray-800 border-gray-200',
+      Merged: 'bg-purple-100 text-purple-800 border-purple-200',
+      Pending: 'bg-yellow-100 text-yellow-800 border-yellow-200'
+    }
+
+    return colorMap[status]
   }, [status])
 
   return (
     <Badge
-      className="capitalize"
-      variant={variant}
+      variant="outline"
+      className={cn(statusColorClasses, 'capitalize text-xs')}
     >
-      {displayText}
+      {status}
     </Badge>
   )
-})
+}
