@@ -88,10 +88,7 @@ describe('TitleBar', () => {
 
     render(<TitleBar />)
 
-    const buttons = screen.getAllByRole('button')
-    const backButton = buttons[0]
-
-    expect(backButton).toBeDisabled()
+    expect(screen.getByTestId('title-bar-back')).toBeDisabled()
   })
 
   it('enables back button when history index is greater than 0', () => {
@@ -99,10 +96,7 @@ describe('TitleBar', () => {
 
     render(<TitleBar />)
 
-    const buttons = screen.getAllByRole('button')
-    const backButton = buttons[0]
-
-    expect(backButton).not.toBeDisabled()
+    expect(screen.getByTestId('title-bar-back')).not.toBeDisabled()
   })
 
   it('disables forward button when at max history index', () => {
@@ -110,10 +104,7 @@ describe('TitleBar', () => {
 
     render(<TitleBar />)
 
-    const buttons = screen.getAllByRole('button')
-    const forwardButton = buttons[1]
-
-    expect(forwardButton).toBeDisabled()
+    expect(screen.getByTestId('title-bar-forward')).toBeDisabled()
   })
 
   it('calls navigate(-1) when back button is clicked', () => {
@@ -121,10 +112,7 @@ describe('TitleBar', () => {
 
     render(<TitleBar />)
 
-    const buttons = screen.getAllByRole('button')
-    const backButton = buttons[0]
-
-    fireEvent.click(backButton)
+    fireEvent.click(screen.getByTestId('title-bar-back'))
 
     expect(mockNavigate).toHaveBeenCalledWith(-1)
   })
@@ -144,10 +132,7 @@ describe('TitleBar', () => {
     mockLocation.pathname = '/'
     rerender(<TitleBar />)
 
-    const buttons = screen.getAllByRole('button')
-    const forwardButton = buttons[1]
-
-    fireEvent.click(forwardButton)
+    fireEvent.click(screen.getByTestId('title-bar-forward'))
 
     expect(mockNavigate).toHaveBeenCalledWith(1)
   })
@@ -173,10 +158,7 @@ describe('TitleBar', () => {
     rerender(<TitleBar />)
 
     // Forward button should be enabled since max was 2
-    const buttons = screen.getAllByRole('button')
-    const forwardButton = buttons[1]
-
-    expect(forwardButton).not.toBeDisabled()
+    expect(screen.getByTestId('title-bar-forward')).not.toBeDisabled()
   })
 
   it('handles undefined history state gracefully', () => {
@@ -184,10 +166,7 @@ describe('TitleBar', () => {
 
     render(<TitleBar />)
 
-    const buttons = screen.getAllByRole('button')
-    const backButton = buttons[0]
-
-    expect(backButton).toBeDisabled()
+    expect(screen.getByTestId('title-bar-back')).toBeDisabled()
   })
 
   it('handles null idx in history state gracefully', () => {
@@ -195,10 +174,7 @@ describe('TitleBar', () => {
 
     render(<TitleBar />)
 
-    const buttons = screen.getAllByRole('button')
-    const backButton = buttons[0]
-
-    expect(backButton).toBeDisabled()
+    expect(screen.getByTestId('title-bar-back')).toBeDisabled()
   })
 
   describe('window controls', () => {
@@ -210,19 +186,15 @@ describe('TitleBar', () => {
 
       render(<TitleBar />)
 
-      const buttons = screen.getAllByRole('button')
-
-      // Should have navigation (2) + window controls (3) = 5 buttons
-      expect(buttons.length).toEqual(5)
+      expect(screen.getByTestId('title-bar-minimize')).toBeInTheDocument()
+      expect(screen.getByTestId('title-bar-maximize')).toBeInTheDocument()
+      expect(screen.getByTestId('title-bar-close')).toBeInTheDocument()
     })
 
     it('calls windowMinimize when minimize button is clicked', () => {
       render(<TitleBar />)
 
-      const buttons = screen.getAllByRole('button')
-      const minimizeButton = buttons[2]
-
-      fireEvent.click(minimizeButton)
+      fireEvent.click(screen.getByTestId('title-bar-minimize'))
 
       expect(window.electron.windowMinimize).toHaveBeenCalled()
     })
@@ -230,10 +202,7 @@ describe('TitleBar', () => {
     it('calls windowMaximize when maximize button is clicked', () => {
       render(<TitleBar />)
 
-      const buttons = screen.getAllByRole('button')
-      const maximizeButton = buttons[3]
-
-      fireEvent.click(maximizeButton)
+      fireEvent.click(screen.getByTestId('title-bar-maximize'))
 
       expect(window.electron.windowMaximize).toHaveBeenCalled()
     })
@@ -241,10 +210,7 @@ describe('TitleBar', () => {
     it('calls windowClose when close button is clicked', () => {
       render(<TitleBar />)
 
-      const buttons = screen.getAllByRole('button')
-      const closeButton = buttons[4]
-
-      fireEvent.click(closeButton)
+      fireEvent.click(screen.getByTestId('title-bar-close'))
 
       expect(window.electron.windowClose).toHaveBeenCalled()
     })

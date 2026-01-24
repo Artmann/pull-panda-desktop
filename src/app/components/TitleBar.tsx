@@ -1,7 +1,9 @@
 import {
   ChevronLeftIcon,
   ChevronRightIcon,
+  HomeIcon,
   MinusIcon,
+  SettingsIcon,
   SquareIcon,
   XIcon
 } from 'lucide-react'
@@ -27,6 +29,8 @@ export function TitleBar(): ReactElement {
 
   const canGoBack = historyIndex > 0
   const canGoForward = historyIndex < maxHistoryIndexRef.current
+  const isHomeActive = location.pathname === '/'
+  const isSettingsActive = location.pathname === '/settings'
 
   const handleBack = () => {
     navigate(-1)
@@ -58,6 +62,7 @@ export function TitleBar(): ReactElement {
           <NavigationButton
             disabled={!canGoBack}
             onClick={handleBack}
+            testId="title-bar-back"
           >
             <ChevronLeftIcon className="size-4" />
           </NavigationButton>
@@ -65,9 +70,26 @@ export function TitleBar(): ReactElement {
           <NavigationButton
             disabled={!canGoForward}
             onClick={handleForward}
+            testId="title-bar-forward"
           >
             <ChevronRightIcon className="size-4" />
           </NavigationButton>
+
+          <TitleBarLink
+            isActive={isHomeActive}
+            testId="title-bar-home"
+            to="/"
+          >
+            <HomeIcon className="size-4" />
+          </TitleBarLink>
+
+          <TitleBarLink
+            isActive={isSettingsActive}
+            testId="title-bar-settings"
+            to="/settings"
+          >
+            <SettingsIcon className="size-4" />
+          </TitleBarLink>
         </div>
       </div>
 
@@ -83,17 +105,24 @@ export function TitleBar(): ReactElement {
       <div className="h-full flex-1 max-w-50">
         {!isMac && (
           <div className="h-full flex items-center float-right">
-            <WindowButton onClick={handleMinimize}>
+            <WindowButton
+              onClick={handleMinimize}
+              testId="title-bar-minimize"
+            >
               <MinusIcon className="size-4" />
             </WindowButton>
 
-            <WindowButton onClick={handleMaximize}>
+            <WindowButton
+              onClick={handleMaximize}
+              testId="title-bar-maximize"
+            >
               <SquareIcon className="size-3" />
             </WindowButton>
 
             <WindowButton
               className="hover:bg-red-500 hover:text-white"
               onClick={handleClose}
+              testId="title-bar-close"
             >
               <XIcon className="size-4" />
             </WindowButton>
@@ -108,12 +137,14 @@ interface WindowButtonProps {
   children: React.ReactNode
   className?: string
   onClick: () => void
+  testId?: string
 }
 
 function WindowButton({
   children,
   className,
-  onClick
+  onClick,
+  testId
 }: WindowButtonProps): ReactElement {
   return (
     <button
@@ -121,6 +152,7 @@ function WindowButton({
         'w-12 h-full flex items-center justify-center text-muted-foreground hover:bg-muted hover:text-foreground transition-colors',
         className
       )}
+      data-testid={testId}
       onClick={onClick}
       style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}
     >
@@ -133,12 +165,14 @@ interface NavigationButtonProps {
   children: React.ReactNode
   disabled: boolean
   onClick: () => void
+  testId?: string
 }
 
 function NavigationButton({
   children,
   disabled,
-  onClick
+  onClick,
+  testId
 }: NavigationButtonProps): ReactElement {
   return (
     <button
@@ -148,8 +182,40 @@ function NavigationButton({
           ? 'text-muted-foreground/40 cursor-default'
           : 'text-muted-foreground hover:bg-muted hover:text-foreground'
       )}
+      data-testid={testId}
       disabled={disabled}
       onClick={onClick}
+    >
+      {children}
+    </button>
+  )
+}
+
+interface TitleBarLinkProps {
+  children: React.ReactNode
+  isActive: boolean
+  testId?: string
+  to: string
+}
+
+function TitleBarLink({
+  children,
+  isActive,
+  testId,
+  to
+}: TitleBarLinkProps): ReactElement {
+  const navigate = useNavigate()
+
+  return (
+    <button
+      className={cn(
+        'w-8 h-full flex items-center justify-center transition-colors',
+        isActive
+          ? 'text-foreground cursor-default'
+          : 'text-muted-foreground hover:bg-muted hover:text-foreground'
+      )}
+      data-testid={testId}
+      onClick={() => navigate(to)}
     >
       {children}
     </button>

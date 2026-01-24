@@ -19,6 +19,7 @@ import { BackgroundSyncerPage } from '@/app/routes/BackgroundSyncerPage'
 import { HomePage } from '@/app/routes/HomePage'
 import { OnboardingPage } from '@/app/routes/OnboardingPage'
 import { PullRequestPage } from '@/app/routes/PullRequestPage'
+import { SettingsPage } from '@/app/routes/SettingsPage'
 import { SignInPage } from '@/app/routes/SignInPage'
 import { useAppDispatch } from '@/app/store/hooks'
 import { pullRequestDetailsActions } from '@/app/store/pull-request-details-slice'
@@ -141,6 +142,12 @@ function AppContent(): ReactElement {
                 ) : (
                   <Navigate to="/sign-in" />
                 )
+              }
+            />
+            <Route
+              path="/settings"
+              element={
+                isAuthenticated ? <SettingsPage /> : <Navigate to="/sign-in" />
               }
             />
           </Routes>
