@@ -9,7 +9,8 @@ import { PullRequestTable } from '../components/PullRequestTable'
 export function HomePage(): ReactElement {
   const { user } = useAuth()
   const pullRequests = useAppSelector((state) => state.pullRequests.items)
-  const displayName = user?.name ?? user?.login ?? 'User'
+  const fullName = user?.name ?? user?.login ?? 'User'
+  const displayName = fullName.split(' ')[0]
 
   const openPullRequests = pullRequests.filter((pr) => pr.state === 'OPEN')
 
