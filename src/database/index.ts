@@ -28,6 +28,16 @@ function getMigrationsPath(): string {
   return path.join(process.resourcesPath, 'drizzle')
 }
 
+function getWasmPath(): string {
+  const isDevelopment = !app?.isPackaged
+
+  if (isDevelopment) {
+    return path.join(process.cwd(), 'node_modules', 'sql.js', 'dist', 'sql-wasm.wasm')
+  }
+
+  return path.join(process.resourcesPath, 'sql-wasm.wasm')
+}
+
 let database: ReturnType<typeof drizzle> | null = null
 let sqliteInstance: SqlJsDatabase | null = null
 
@@ -38,7 +48,8 @@ export async function initializeDatabase(): Promise<
     return database
   }
 
-  const SQL = await initSqlJs()
+  const wasmBinary = fs.readFileSync(getWasmPath())
+  const SQL = await initSqlJs({ wasmBinary })
   const databasePath = getDatabasePath()
 
   let fileBuffer: Buffer | null = null
@@ -77,7 +88,8 @@ export function setDatabase(db: ReturnType<typeof drizzle> | null): void {
 export async function createInMemoryDatabase(): Promise<
   ReturnType<typeof drizzle>
 > {
-  const SQL = await initSqlJs()
+  const wasmBinary = fs.readFileSync(getWasmPath())
+  const SQL = await initSqlJs({ wasmBinary })
   const sqlite = new SQL.Database()
   const db = drizzle(sqlite, { schema })
 

@@ -10,7 +10,11 @@ import { FuseV1Options, FuseVersion } from '@electron/fuses'
 const config: ForgeConfig = {
   packagerConfig: {
     asar: true,
-    executableName: 'pull-panda'
+    executableName: 'pull-panda',
+    extraResource: [
+      './node_modules/sql.js/dist/sql-wasm.wasm',
+      './drizzle'
+    ]
   },
   rebuildConfig: {},
   makers: [
