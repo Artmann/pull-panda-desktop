@@ -48,7 +48,11 @@ export async function initializeDatabase(): Promise<
     return database
   }
 
-  const wasmBinary = fs.readFileSync(getWasmPath())
+  const wasmBuffer = fs.readFileSync(getWasmPath())
+  const wasmBinary = wasmBuffer.buffer.slice(
+    wasmBuffer.byteOffset,
+    wasmBuffer.byteOffset + wasmBuffer.byteLength
+  ) as ArrayBuffer
   const SQL = await initSqlJs({ wasmBinary })
   const databasePath = getDatabasePath()
 
@@ -88,7 +92,11 @@ export function setDatabase(db: ReturnType<typeof drizzle> | null): void {
 export async function createInMemoryDatabase(): Promise<
   ReturnType<typeof drizzle>
 > {
-  const wasmBinary = fs.readFileSync(getWasmPath())
+  const wasmBuffer = fs.readFileSync(getWasmPath())
+  const wasmBinary = wasmBuffer.buffer.slice(
+    wasmBuffer.byteOffset,
+    wasmBuffer.byteOffset + wasmBuffer.byteLength
+  ) as ArrayBuffer
   const SQL = await initSqlJs({ wasmBinary })
   const sqlite = new SQL.Database()
   const db = drizzle(sqlite, { schema })
