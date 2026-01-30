@@ -57,7 +57,9 @@
       "Bash(open:*)",
       "Bash(git push)",
       "Bash(codesign:*)",
-      "Bash(spctl --assess --verbose:*)"
+      "Bash(spctl --assess --verbose:*)",
+      "Bash(security find-identity:*)",
+      "mcp__github__issue_read"
     ]
   }
 }

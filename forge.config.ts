@@ -1,3 +1,5 @@
+import path from 'node:path'
+
 import type { ForgeConfig } from '@electron-forge/shared-types'
 import { MakerSquirrel } from '@electron-forge/maker-squirrel'
 import { MakerZIP } from '@electron-forge/maker-zip'
@@ -11,16 +13,23 @@ const config: ForgeConfig = {
   packagerConfig: {
     asar: true,
     executableName: 'pull-panda',
-    appBundleId: 'com.pullpanda.desktop',
-    extraResource: [
-      './node_modules/sql.js/dist/sql-wasm.wasm',
-      './drizzle'
-    ],
+    appBundleId: 'io.pullpanda.app',
+    extraResource: ['./node_modules/sql.js/dist/sql-wasm.wasm', './drizzle'],
     ...(process.env.APPLE_TEAM_ID && {
       osxSign: {
-        optionsForFile: () => ({
-          entitlements: './entitlements.plist'
-        })
+        identity: 'Developer ID Application',
+        optionsForFile: (filePath: string) => {
+          // Only apply custom entitlements to the main app bundle.
+          // Individual binaries and helper apps use just hardenedRuntime.
+          const isMainAppBundle = filePath.endsWith('.app') && !filePath.includes('Helper')
+
+          return {
+            hardenedRuntime: true,
+            ...(isMainAppBundle && {
+              entitlements: path.resolve(__dirname, 'entitlements.plist')
+            })
+          }
+        }
       },
       osxNotarize: {
         appleId: process.env.APPLE_ID!,
