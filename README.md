@@ -26,6 +26,19 @@ Grab the latest release for your platform:
 
 Available for Windows, macOS, and Linux.
 
+### macOS Installation
+
+After downloading, macOS may show "Pull Panda is damaged and can't be opened."
+This is because the app is not yet signed with an Apple Developer certificate.
+
+To fix this, run in Terminal:
+
+```bash
+xattr -cr ~/Downloads/"Pull Panda.app"
+```
+
+Then try opening the app again.
+
 ## Built With
 
 Electron, React, TypeScript, and Tailwind CSS. See

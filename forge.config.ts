@@ -11,10 +11,23 @@ const config: ForgeConfig = {
   packagerConfig: {
     asar: true,
     executableName: 'pull-panda',
+    appBundleId: 'com.pullpanda.desktop',
     extraResource: [
       './node_modules/sql.js/dist/sql-wasm.wasm',
       './drizzle'
-    ]
+    ],
+    ...(process.env.APPLE_TEAM_ID && {
+      osxSign: {
+        optionsForFile: () => ({
+          entitlements: './entitlements.plist'
+        })
+      },
+      osxNotarize: {
+        appleId: process.env.APPLE_ID!,
+        appleIdPassword: process.env.APPLE_APP_SPECIFIC_PASSWORD!,
+        teamId: process.env.APPLE_TEAM_ID
+      }
+    })
   },
   rebuildConfig: {},
   makers: [

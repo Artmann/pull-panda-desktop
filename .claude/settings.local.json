@@ -51,7 +51,13 @@
       "Bash(npx eslint:*)",
       "Bash(yarn vitest:*)",
       "mcp__playwriter__execute",
-      "Bash(yarn test:*)"
+      "Bash(yarn test:*)",
+      "mcp__deepwiki__ask_question",
+      "Bash(yarn make:*)",
+      "Bash(open:*)",
+      "Bash(git push)",
+      "Bash(codesign:*)",
+      "Bash(spctl --assess --verbose:*)"
     ]
   }
 }
