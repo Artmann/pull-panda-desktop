@@ -105,6 +105,7 @@
     "@vitejs/plugin-react": "^5.1.2",
     "drizzle-kit": "^0.31.8",
     "electron": "39.2.7",
+    "electron-icon-builder": "^2.0.1",
     "eslint": "^8.57.1",
     "eslint-import-resolver-typescript": "^4.4.4",
     "eslint-plugin-import": "^2.32.0",

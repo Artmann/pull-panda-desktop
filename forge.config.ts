@@ -12,6 +12,7 @@ import { FuseV1Options, FuseVersion } from '@electron/fuses'
 const config: ForgeConfig = {
   packagerConfig: {
     asar: true,
+    icon: './icon',
     executableName: 'pull-panda',
     appBundleId: 'io.pullpanda.app',
     extraResource: ['./node_modules/sql.js/dist/sql-wasm.wasm', './drizzle'],
@@ -40,16 +41,20 @@ const config: ForgeConfig = {
   },
   rebuildConfig: {},
   makers: [
-    new MakerSquirrel({}),
+    new MakerSquirrel({
+      setupIcon: './icon.ico'
+    }),
     new MakerZIP({}, ['darwin']),
     new MakerRpm({
       options: {
-        bin: 'pull-panda'
+        bin: 'pull-panda',
+        icon: './icon.png'
       }
     }),
     new MakerDeb({
       options: {
-        bin: 'pull-panda'
+        bin: 'pull-panda',
+        icon: './icon.png'
       }
     })
   ],

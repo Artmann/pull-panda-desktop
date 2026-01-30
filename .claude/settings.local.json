@@ -59,7 +59,8 @@
       "Bash(codesign:*)",
       "Bash(spctl --assess --verbose:*)",
       "Bash(security find-identity:*)",
-      "mcp__github__issue_read"
+      "mcp__github__issue_read",
+      "Bash(npx electron-icon-builder:*)"
     ]
   }
 }
