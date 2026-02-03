@@ -60,7 +60,10 @@
       "Bash(spctl --assess --verbose:*)",
       "Bash(security find-identity:*)",
       "mcp__github__issue_read",
-      "Bash(npx electron-icon-builder:*)"
+      "Bash(npx electron-icon-builder:*)",
+      "Bash(npm search:*)",
+      "mcp__package-registry__get-npm-package-details",
+      "mcp__context7__resolve-library-id"
     ]
   }
 }

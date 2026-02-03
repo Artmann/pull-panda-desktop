@@ -2,7 +2,7 @@ import path from 'node:path'
 
 import type { ForgeConfig } from '@electron-forge/shared-types'
 import { MakerSquirrel } from '@electron-forge/maker-squirrel'
-import { MakerZIP } from '@electron-forge/maker-zip'
+import { MakerDMG } from '@electron-forge/maker-dmg'
 import { MakerDeb } from '@electron-forge/maker-deb'
 import { MakerRpm } from '@electron-forge/maker-rpm'
 import { VitePlugin } from '@electron-forge/plugin-vite'
@@ -44,7 +44,7 @@ const config: ForgeConfig = {
     new MakerSquirrel({
       setupIcon: './icon.ico'
     }),
-    new MakerZIP({}, ['darwin']),
+    new MakerDMG({}),
     new MakerRpm({
       options: {
         bin: 'pull-panda',
