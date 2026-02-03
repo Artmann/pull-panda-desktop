@@ -63,7 +63,10 @@
       "Bash(npx electron-icon-builder:*)",
       "Bash(npm search:*)",
       "mcp__package-registry__get-npm-package-details",
-      "mcp__context7__resolve-library-id"
+      "mcp__context7__resolve-library-id",
+      "Bash(file:*)",
+      "Bash(git -C /Users/artmann/code/pull-panda-desktop log --oneline --all -20 -- \"icon*\")",
+      "Bash(git -C /Users/artmann/code/pull-panda-desktop show acf4c93 --stat)"
     ]
   }
 }
