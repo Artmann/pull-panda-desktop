@@ -5,6 +5,7 @@ import { render, act, waitFor } from '@testing-library/react'
 import { configureStore } from '@reduxjs/toolkit'
 import { describe, it, expect, vi, beforeAll, beforeEach } from 'vitest'
 
+import type { PullRequest } from '@/types/pull-request'
 import type { PullRequestDetails } from '@/types/pull-request-details'
 
 import draftsReducer from '@/app/store/drafts-slice'
@@ -104,6 +105,40 @@ function createMockDetails(
   }
 }
 
+function createMockPullRequest(
+  overrides: Partial<PullRequest> = {}
+): PullRequest {
+  return {
+    id: 'pr-1',
+    number: 1,
+    title: 'Test PR',
+    body: null,
+    bodyHtml: null,
+    state: 'OPEN',
+    url: 'https://github.com/owner/repo/pull/1',
+    repositoryOwner: 'owner',
+    repositoryName: 'repo',
+    authorLogin: 'testuser',
+    authorAvatarUrl: null,
+    createdAt: '2024-01-01T00:00:00Z',
+    updatedAt: '2024-01-01T00:00:00Z',
+    closedAt: null,
+    mergedAt: null,
+    isDraft: false,
+    isAuthor: true,
+    isAssignee: false,
+    isReviewer: false,
+    labels: [],
+    assignees: [],
+    syncedAt: '2024-01-01T00:00:00Z',
+    detailsSyncedAt: '2024-01-01T00:01:00Z',
+    commentCount: 0,
+    approvalCount: 0,
+    changesRequestedCount: 0,
+    ...overrides
+  }
+}
+
 describe('App', () => {
   describe('ResourceUpdated event handling', () => {
     let resourceUpdatedCallback:
@@ -116,6 +151,7 @@ describe('App', () => {
       vi.stubGlobal('electron', {
         getApiPort: vi.fn().mockResolvedValue(3000),
         getBootstrapData: vi.fn().mockResolvedValue(null),
+        getPullRequest: vi.fn().mockResolvedValue(null),
         getPullRequestDetails: vi.fn().mockResolvedValue(null),
         getTasks: vi.fn().mockResolvedValue([]),
         onResourceUpdated: vi.fn((callback) => {
@@ -230,6 +266,76 @@ describe('App', () => {
       expect(window.electron.getPullRequestDetails).toHaveBeenCalledWith(
         'pr-123'
       )
+    })
+
+    it('upserts the pull request after details sync completes', async () => {
+      const mockDetails = createMockDetails()
+      const mockPullRequest = createMockPullRequest({
+        id: 'pr-123',
+        number: 42,
+        url: 'https://github.com/owner/repo/pull/42',
+        detailsSyncedAt: '2024-01-01T00:02:00Z'
+      })
+
+      vi.mocked(window.electron.getPullRequestDetails).mockResolvedValue(
+        mockDetails
+      )
+      vi.mocked(window.electron.getPullRequest).mockResolvedValue(
+        mockPullRequest
+      )
+
+      const store = createTestStore()
+
+      await act(async () => {
+        render(<App store={store} />)
+      })
+
+      await act(async () => {
+        resourceUpdatedCallback?.({
+          type: 'pull-request-details',
+          pullRequestId: 'pr-123'
+        })
+      })
+
+      await waitFor(() => {
+        const state = store.getState()
+        expect(state.pullRequests.items).toContainEqual(mockPullRequest)
+      })
+    })
+
+    it('does not upsert the pull request when detailsSyncedAt is missing', async () => {
+      const mockDetails = createMockDetails()
+      const mockPullRequest = createMockPullRequest({
+        id: 'pr-456',
+        number: 43,
+        url: 'https://github.com/owner/repo/pull/43',
+        detailsSyncedAt: null
+      })
+
+      vi.mocked(window.electron.getPullRequestDetails).mockResolvedValue(
+        mockDetails
+      )
+      vi.mocked(window.electron.getPullRequest).mockResolvedValue(
+        mockPullRequest
+      )
+
+      const store = createTestStore()
+
+      await act(async () => {
+        render(<App store={store} />)
+      })
+
+      await act(async () => {
+        resourceUpdatedCallback?.({
+          type: 'pull-request-details',
+          pullRequestId: 'pr-456'
+        })
+      })
+
+      await waitFor(() => {
+        const state = store.getState()
+        expect(state.pullRequests.items).toHaveLength(0)
+      })
     })
 
     it('does not update Redux when getPullRequestDetails returns null', async () => {

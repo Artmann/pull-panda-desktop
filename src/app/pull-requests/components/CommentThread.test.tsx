@@ -50,7 +50,8 @@ const mockUser = {
 
 vi.stubGlobal('electron', {
   syncPullRequestDetails: mockSyncPullRequestDetails,
-  getApiPort: vi.fn().mockResolvedValue(3000)
+  getApiPort: vi.fn().mockResolvedValue(3000),
+  getPullRequest: vi.fn().mockResolvedValue(null)
 })
 
 vi.stubGlobal('auth', {

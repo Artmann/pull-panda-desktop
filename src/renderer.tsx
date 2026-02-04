@@ -30,17 +30,21 @@ import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 
 import { App } from './app/App'
+import { filterReadyPullRequests } from './app/lib/pull-requests'
 import { createStore } from './app/store'
 import './app/index.css'
 
 async function main() {
   const bootstrapData = await window.electron.getBootstrapData()
+  const readyPullRequests = filterReadyPullRequests(
+    bootstrapData?.pullRequests
+  )
 
   const store = createStore({
     pendingReviews: bootstrapData?.pendingReviews ?? {},
     pullRequestDetails: bootstrapData?.pullRequestDetails ?? {},
     pullRequests: {
-      items: bootstrapData?.pullRequests ?? []
+      items: readyPullRequests
     }
   })
 

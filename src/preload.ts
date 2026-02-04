@@ -3,6 +3,7 @@ import { contextBridge, ipcRenderer } from 'electron'
 import { ipcChannels } from './lib/ipc/channels'
 import type { BootstrapData } from './main/bootstrap'
 import type { DeviceCodeResponse, GitHubUser } from './types/auth'
+import type { PullRequest } from './types/pull-request'
 import type { PullRequestDetails } from './types/pull-request-details'
 import type { MonitoringData } from './types/syncer-monitoring'
 import type { Task, TaskUpdateEvent } from './types/task'
@@ -23,6 +24,9 @@ const electronApi = {
 
   getBootstrapData: (): Promise<BootstrapData | null> =>
     ipcRenderer.invoke(ipcChannels.GetBootstrapData),
+
+  getPullRequest: (pullRequestId: string): Promise<PullRequest | null> =>
+    ipcRenderer.invoke(ipcChannels.GetPullRequest, pullRequestId),
 
   getPullRequestDetails: (
     pullRequestId: string

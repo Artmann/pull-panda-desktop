@@ -8,6 +8,7 @@ import { getApiPort, startApiServer } from './main/api'
 import {
   bootstrap,
   BootstrapData,
+  getPullRequest,
   getPullRequestDetails
 } from './main/bootstrap'
 import { backgroundSyncer } from './main/background-syncer'
@@ -39,6 +40,13 @@ function setupIpcHandlers(): void {
   ipcMain.handle(ipcChannels.GetBootstrapData, () => {
     return bootstrapData
   })
+
+  ipcMain.handle(
+    ipcChannels.GetPullRequest,
+    async (_event, pullRequestId: string) => {
+      return getPullRequest(pullRequestId)
+    }
+  )
 
   ipcMain.handle(ipcChannels.GetTasks, () => {
     return taskManager.getTasks()
