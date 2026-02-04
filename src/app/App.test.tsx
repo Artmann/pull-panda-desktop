@@ -5,6 +5,7 @@ import { render, act, waitFor } from '@testing-library/react'
 import { configureStore } from '@reduxjs/toolkit'
 import { describe, it, expect, vi, beforeAll, beforeEach } from 'vitest'
 
+import type { PullRequest } from '@/types/pull-request'
 import type { PullRequestDetails } from '@/types/pull-request-details'
 
 import draftsReducer from '@/app/store/drafts-slice'
@@ -100,6 +101,40 @@ function createMockDetails(
     files: [],
     reactions: [],
     reviews: [],
+    ...overrides
+  }
+}
+
+function createMockPullRequest(
+  overrides: Partial<PullRequest> = {}
+): PullRequest {
+  return {
+    id: 'pr-1',
+    number: 1,
+    title: 'Test PR',
+    body: null,
+    bodyHtml: null,
+    state: 'OPEN',
+    url: 'https://github.com/owner/repo/pull/1',
+    repositoryOwner: 'owner',
+    repositoryName: 'repo',
+    authorLogin: 'testuser',
+    authorAvatarUrl: null,
+    createdAt: '2024-01-01T00:00:00Z',
+    updatedAt: '2024-01-01T00:00:00Z',
+    closedAt: null,
+    mergedAt: null,
+    isDraft: false,
+    isAuthor: true,
+    isAssignee: false,
+    isReviewer: false,
+    labels: [],
+    assignees: [],
+    syncedAt: '2024-01-01T00:00:00Z',
+    detailsSyncedAt: '2024-01-01T00:01:00Z',
+    commentCount: 0,
+    approvalCount: 0,
+    changesRequestedCount: 0,
     ...overrides
   }
 }
@@ -235,34 +270,12 @@ describe('App', () => {
 
     it('upserts the pull request after details sync completes', async () => {
       const mockDetails = createMockDetails()
-      const mockPullRequest = {
+      const mockPullRequest = createMockPullRequest({
         id: 'pr-123',
         number: 42,
-        title: 'Test PR',
-        body: null,
-        bodyHtml: null,
-        state: 'OPEN',
         url: 'https://github.com/owner/repo/pull/42',
-        repositoryOwner: 'owner',
-        repositoryName: 'repo',
-        authorLogin: 'testuser',
-        authorAvatarUrl: null,
-        createdAt: '2024-01-01T00:00:00Z',
-        updatedAt: '2024-01-01T00:00:00Z',
-        closedAt: null,
-        mergedAt: null,
-        isDraft: false,
-        isAuthor: true,
-        isAssignee: false,
-        isReviewer: false,
-        labels: [],
-        assignees: [],
-        syncedAt: '2024-01-01T00:00:00Z',
-        detailsSyncedAt: '2024-01-01T00:02:00Z',
-        commentCount: 0,
-        approvalCount: 0,
-        changesRequestedCount: 0
-      }
+        detailsSyncedAt: '2024-01-01T00:02:00Z'
+      })
 
       vi.mocked(window.electron.getPullRequestDetails).mockResolvedValue(
         mockDetails
@@ -292,34 +305,12 @@ describe('App', () => {
 
     it('does not upsert the pull request when detailsSyncedAt is missing', async () => {
       const mockDetails = createMockDetails()
-      const mockPullRequest = {
+      const mockPullRequest = createMockPullRequest({
         id: 'pr-456',
         number: 43,
-        title: 'Test PR',
-        body: null,
-        bodyHtml: null,
-        state: 'OPEN',
         url: 'https://github.com/owner/repo/pull/43',
-        repositoryOwner: 'owner',
-        repositoryName: 'repo',
-        authorLogin: 'testuser',
-        authorAvatarUrl: null,
-        createdAt: '2024-01-01T00:00:00Z',
-        updatedAt: '2024-01-01T00:00:00Z',
-        closedAt: null,
-        mergedAt: null,
-        isDraft: false,
-        isAuthor: true,
-        isAssignee: false,
-        isReviewer: false,
-        labels: [],
-        assignees: [],
-        syncedAt: '2024-01-01T00:00:00Z',
-        detailsSyncedAt: null,
-        commentCount: 0,
-        approvalCount: 0,
-        changesRequestedCount: 0
-      }
+        detailsSyncedAt: null
+      })
 
       vi.mocked(window.electron.getPullRequestDetails).mockResolvedValue(
         mockDetails
