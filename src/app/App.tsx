@@ -22,6 +22,7 @@ import { PullRequestPage } from '@/app/routes/PullRequestPage'
 import { SignInPage } from '@/app/routes/SignInPage'
 import { useAppDispatch } from '@/app/store/hooks'
 import { pullRequestDetailsActions } from '@/app/store/pull-request-details-slice'
+import { pullRequestsActions } from '@/app/store/pull-requests-slice'
 import { AppFooter } from './AppFooter'
 
 interface AppProps {
@@ -68,6 +69,14 @@ function AppContent(): ReactElement {
               details
             })
           )
+        }
+
+        const pullRequest = await window.electron.getPullRequest(
+          event.pullRequestId
+        )
+
+        if (pullRequest?.detailsSyncedAt) {
+          dispatch(pullRequestsActions.upsertItem(pullRequest))
         }
       }
     })

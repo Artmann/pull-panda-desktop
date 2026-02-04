@@ -42,6 +42,50 @@ export interface BootstrapData {
   pullRequests: PullRequest[]
 }
 
+interface PullRequestCounts {
+  approvalCount: number
+  changesRequestedCount: number
+  commentCount: number
+}
+
+type PullRequestRow = typeof pullRequests.$inferSelect
+
+function buildPullRequest(
+  row: PullRequestRow,
+  counts: PullRequestCounts
+): PullRequest {
+  return {
+    approvalCount: counts.approvalCount,
+    assignees: row.assignees
+      ? (JSON.parse(row.assignees) as PullRequestAssignee[])
+      : [],
+    authorAvatarUrl: row.authorAvatarUrl,
+    authorLogin: row.authorLogin,
+    body: row.body,
+    bodyHtml: row.bodyHtml,
+    changesRequestedCount: counts.changesRequestedCount,
+    closedAt: row.closedAt,
+    commentCount: counts.commentCount,
+    createdAt: row.createdAt,
+    detailsSyncedAt: row.detailsSyncedAt,
+    id: row.id,
+    isDraft: row.isDraft,
+    isAssignee: row.isAssignee,
+    isAuthor: row.isAuthor,
+    isReviewer: row.isReviewer,
+    labels: row.labels ? (JSON.parse(row.labels) as PullRequestLabel[]) : [],
+    mergedAt: row.mergedAt,
+    number: row.number,
+    repositoryName: row.repositoryName,
+    repositoryOwner: row.repositoryOwner,
+    state: row.state as PullRequest['state'],
+    syncedAt: row.syncedAt,
+    title: row.title,
+    updatedAt: row.updatedAt,
+    url: row.url
+  }
+}
+
 export async function bootstrap(userLogin?: string): Promise<BootstrapData> {
   const database = getDatabase()
 
@@ -97,36 +141,13 @@ export async function bootstrap(userLogin?: string): Promise<BootstrapData> {
     }
   }
 
-  const parsedPullRequests: PullRequest[] = rows.map((row) => ({
-    approvalCount: approvalCountByPrId.get(row.id) ?? 0,
-    assignees: row.assignees
-      ? (JSON.parse(row.assignees) as PullRequestAssignee[])
-      : [],
-    authorAvatarUrl: row.authorAvatarUrl,
-    authorLogin: row.authorLogin,
-    body: row.body,
-    bodyHtml: row.bodyHtml,
-    changesRequestedCount: changesRequestedCountByPrId.get(row.id) ?? 0,
-    closedAt: row.closedAt,
-    commentCount: commentCountByPrId.get(row.id) ?? 0,
-    createdAt: row.createdAt,
-    detailsSyncedAt: row.detailsSyncedAt,
-    id: row.id,
-    isDraft: row.isDraft,
-    isAssignee: row.isAssignee,
-    isAuthor: row.isAuthor,
-    isReviewer: row.isReviewer,
-    labels: row.labels ? (JSON.parse(row.labels) as PullRequestLabel[]) : [],
-    mergedAt: row.mergedAt,
-    number: row.number,
-    repositoryName: row.repositoryName,
-    repositoryOwner: row.repositoryOwner,
-    state: row.state as PullRequest['state'],
-    syncedAt: row.syncedAt,
-    title: row.title,
-    updatedAt: row.updatedAt,
-    url: row.url
-  }))
+  const parsedPullRequests: PullRequest[] = rows.map((row) =>
+    buildPullRequest(row, {
+      approvalCount: approvalCountByPrId.get(row.id) ?? 0,
+      changesRequestedCount: changesRequestedCountByPrId.get(row.id) ?? 0,
+      commentCount: commentCountByPrId.get(row.id) ?? 0
+    })
+  )
 
   const pullRequestDetails: Record<string, PullRequestDetails> = {}
 
@@ -319,4 +340,53 @@ export async function getPullRequestDetails(
     reactions: parsedReactions,
     reviews: parsedReviews
   }
+}
+
+export async function getPullRequest(
+  pullRequestId: string
+): Promise<PullRequest | null> {
+  const database = getDatabase()
+
+  const row = database
+    .select()
+    .from(pullRequests)
+    .where(eq(pullRequests.id, pullRequestId))
+    .get()
+
+  if (!row) {
+    return null
+  }
+
+  const commentCount = database
+    .select()
+    .from(comments)
+    .where(
+      and(eq(comments.pullRequestId, pullRequestId), isNull(comments.deletedAt))
+    )
+    .all().length
+
+  const reviewRows = database
+    .select()
+    .from(reviews)
+    .where(
+      and(eq(reviews.pullRequestId, pullRequestId), isNull(reviews.deletedAt))
+    )
+    .all()
+
+  let approvalCount = 0
+  let changesRequestedCount = 0
+
+  for (const review of reviewRows) {
+    if (review.state === 'APPROVED') {
+      approvalCount++
+    } else if (review.state === 'CHANGES_REQUESTED') {
+      changesRequestedCount++
+    }
+  }
+
+  return buildPullRequest(row, {
+    approvalCount,
+    changesRequestedCount,
+    commentCount
+  })
 }

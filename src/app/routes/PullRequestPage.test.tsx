@@ -57,6 +57,7 @@ beforeAll(() => {
 beforeEach(() => {
   vi.stubGlobal('electron', {
     getApiPort: vi.fn().mockResolvedValue(3000),
+    getPullRequest: vi.fn().mockResolvedValue(null),
     getPullRequestDetails: vi.fn().mockResolvedValue(null),
     onSyncComplete: vi.fn().mockReturnValue(() => {
       // Unsubscribe mock
