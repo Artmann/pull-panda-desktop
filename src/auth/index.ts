@@ -53,11 +53,20 @@ function getTokenPath(): string {
   return path.join(app.getPath('userData'), 'github-token.enc')
 }
 
+function getPlainTokenPath(): string {
+  return path.join(app.getPath('userData'), 'github-token.txt')
+}
+
 export function clearToken(): void {
   const tokenPath = getTokenPath()
+  const plainPath = getPlainTokenPath()
 
   if (fs.existsSync(tokenPath)) {
     fs.unlinkSync(tokenPath)
+  }
+
+  if (fs.existsSync(plainPath)) {
+    fs.unlinkSync(plainPath)
   }
 }
 
@@ -73,23 +82,33 @@ export async function getGitHubUser(token: string) {
 }
 
 export function loadToken(): string | null {
-  const tokenPath = getTokenPath()
+  // Try encrypted storage first
+  if (safeStorage.isEncryptionAvailable()) {
+    const tokenPath = getTokenPath()
 
-  if (!fs.existsSync(tokenPath)) {
-    return null
+    if (fs.existsSync(tokenPath)) {
+      try {
+        const encrypted = fs.readFileSync(tokenPath)
+
+        return safeStorage.decryptString(encrypted)
+      } catch {
+        return null
+      }
+    }
   }
 
-  if (!safeStorage.isEncryptionAvailable()) {
-    return null
+  // Fallback to plain text storage (for unsigned builds)
+  const plainPath = getPlainTokenPath()
+
+  if (fs.existsSync(plainPath)) {
+    try {
+      return fs.readFileSync(plainPath, 'utf-8').trim()
+    } catch {
+      return null
+    }
   }
 
-  try {
-    const encrypted = fs.readFileSync(tokenPath)
-
-    return safeStorage.decryptString(encrypted)
-  } catch {
-    return null
-  }
+  return null
 }
 
 export async function pollForToken(
@@ -164,11 +183,13 @@ export async function requestDeviceCode(): Promise<DeviceCodeResponse> {
 }
 
 export function saveToken(token: string): void {
-  if (!safeStorage.isEncryptionAvailable()) {
-    throw new Error('Encryption not available')
+  if (safeStorage.isEncryptionAvailable()) {
+    const encrypted = safeStorage.encryptString(token)
+
+    fs.writeFileSync(getTokenPath(), encrypted)
+  } else {
+    // Fallback: store in plain text (less secure, but works for unsigned builds)
+    console.warn('safeStorage not available, storing token in plain text')
+    fs.writeFileSync(getPlainTokenPath(), token, 'utf-8')
   }
-
-  const encrypted = safeStorage.encryptString(token)
-
-  fs.writeFileSync(getTokenPath(), encrypted)
 }
