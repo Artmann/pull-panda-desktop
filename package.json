@@ -28,7 +28,6 @@
     "typecheck": "tsc --noEmit --skipLibCheck"
   },
   "dependencies": {
-    "@hono/node-server": "^1.19.7",
     "@octokit/graphql": "^9.0.3",
     "@octokit/rest": "^22.0.1",
     "@radix-ui/react-accordion": "^1.2.12",

@@ -1,8 +1,9 @@
-import { serve, ServerType } from '@hono/node-server'
+import http, { IncomingMessage, Server, ServerResponse } from 'node:http'
+import { AddressInfo } from 'node:net'
+
 import { Hono } from 'hono'
 import { cors } from 'hono/cors'
 import type { ContentfulStatusCode } from 'hono/utils/http-status'
-import { AddressInfo } from 'node:net'
 
 import { BackendError } from './errors'
 import { checksRoute } from './routes/checks'
@@ -11,7 +12,7 @@ import { pullRequestsRoute } from './routes/pull-requests'
 import { reviewsRoute } from './routes/reviews'
 import { syncsRoute } from './routes/syncs'
 
-let server: ServerType | null = null
+let server: Server | null = null
 let apiPort: number | null = null
 
 export function getApiPort(): number | null {
@@ -65,16 +66,59 @@ export function startApiServer(getToken: () => string | null): Promise<number> {
     })
 
     try {
-      server = serve({
-        fetch: app.fetch,
-        port: 0
+      server = http.createServer(async (request: IncomingMessage, response: ServerResponse) => {
+        const url = `http://localhost${request.url}`
+        const headers = new Headers()
+
+        for (const [key, value] of Object.entries(request.headers)) {
+          if (value) {
+            headers.set(key, Array.isArray(value) ? value.join(', ') : value)
+          }
+        }
+
+        let body: BodyInit | undefined
+
+        if (request.method !== 'GET' && request.method !== 'HEAD') {
+          const buffer = await new Promise<Buffer>((resolve) => {
+            const chunks: Buffer[] = []
+            request.on('data', (chunk) => chunks.push(chunk))
+            request.on('end', () => resolve(Buffer.concat(chunks)))
+          })
+
+          body = buffer.toString()
+        }
+
+        const fetchRequest = new Request(url, {
+          method: request.method,
+          headers,
+          body
+        })
+
+        const fetchResponse = await app.fetch(fetchRequest)
+
+        response.statusCode = fetchResponse.status
+
+        fetchResponse.headers.forEach((value, key) => {
+          response.setHeader(key, value)
+        })
+
+        const responseBody = await fetchResponse.arrayBuffer()
+        response.end(Buffer.from(responseBody))
       })
 
-      const address = server.address() as AddressInfo
-      apiPort = address.port
+      server.listen(0, () => {
+        if (!server) {
+          return reject(new Error('Server was unexpectedly null'))
+        }
 
-      console.log(`API server started on port ${apiPort}`)
-      resolve(apiPort)
+        const address = server.address() as AddressInfo
+        apiPort = address.port
+
+        console.log(`API server started on port ${apiPort}`)
+        resolve(apiPort)
+      })
+
+      server.on('error', reject)
     } catch (error) {
       reject(error)
     }
