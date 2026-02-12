@@ -72,7 +72,14 @@
       "Bash(npm info:*)",
       "Bash(npx electron-forge:*)",
       "WebFetch(domain:www.electronjs.org)",
-      "Bash(chmod:*)"
+      "Bash(chmod:*)",
+      "WebFetch(domain:shiki.style)",
+      "WebFetch(domain:github.com)",
+      "WebFetch(domain:raw.githubusercontent.com)",
+      "WebFetch(domain:unpkg.com)",
+      "WebFetch(domain:app.unpkg.com)",
+      "WebFetch(domain:www.wulongxin.com)",
+      "Bash(git rebase:*)"
     ]
   }
 }
