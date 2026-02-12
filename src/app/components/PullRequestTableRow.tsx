@@ -32,9 +32,7 @@ export function PullRequestTableRow({
     >
       <TableCell>
         <div className="flex flex-col gap-0.5">
-          <span className="font-medium truncate max-w-md">
-            {pullRequest.title}
-          </span>
+          <span className="truncate max-w-md">{pullRequest.title}</span>
 
           <span className="text-xs text-muted-foreground">{repoSlug}</span>
         </div>
@@ -65,13 +63,13 @@ export function PullRequestTableRow({
 
       <TableCell>
         <div className="flex items-center gap-3 text-muted-foreground">
-          <div className="flex items-center gap-1">
-            <MessageCircle className="h-4 w-4" />
+          <div className="flex items-center gap-2">
+            <MessageCircle className="size-3" />
             <span className="text-sm">{pullRequest.commentCount}</span>
           </div>
 
           <div className="flex items-center gap-1">
-            <CheckCircle className="h-4 w-4" />
+            <CheckCircle className="size-3" />
             <span className="text-sm">{pullRequest.approvalCount}</span>
           </div>
         </div>
