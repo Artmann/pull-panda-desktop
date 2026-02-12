@@ -52,12 +52,12 @@ export function PullRequestStatusBadge({
 
   const statusColorClasses = useMemo((): string => {
     const colorMap: Record<PullRequestStatus, string> = {
-      Approved: 'bg-green-100 text-green-800 border-green-200',
-      'Changes Requested': 'bg-red-100 text-red-800 border-red-200',
-      Closed: 'bg-red-100 text-red-800 border-red-200',
-      Draft: 'bg-gray-100 text-gray-800 border-gray-200',
-      Merged: 'bg-purple-100 text-purple-800 border-purple-200',
-      Pending: 'bg-yellow-100 text-yellow-800 border-yellow-200'
+      Approved: 'bg-[#40a02b] text-white/70 border-transparent',
+      'Changes Requested': 'bg-[#e64553] text-white/70 border-transparent',
+      Closed: 'bg-[#e64553] text-white/70 border-transparent',
+      Draft: 'bg-[#7c7f93] text-white/70 border-transparent',
+      Merged: 'bg-[#8839ef] text-white/70 border-transparent',
+      Pending: 'bg-[#7287fd] text-white/70 border-transparent'
     }
 
     return colorMap[status]
@@ -66,7 +66,7 @@ export function PullRequestStatusBadge({
   return (
     <Badge
       variant="outline"
-      className={cn(statusColorClasses, 'capitalize text-xs')}
+      className={cn(statusColorClasses, 'capitalize text-[10px]')}
     >
       {status}
     </Badge>

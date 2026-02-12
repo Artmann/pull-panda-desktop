@@ -22,14 +22,14 @@ export function Pagination({
   const canGoForward = currentPage < totalPages
 
   return (
-    <div className="flex items-center justify-center gap-2">
+    <div className="flex items-center justify-center gap-3 py-4">
       <Button
         disabled={!canGoBack}
         onClick={() => onPageChange(currentPage - 1)}
-        size="sm"
+        size="icon-xs"
         variant="outline"
       >
-        <ChevronLeft className="h-4 w-4" />
+        <ChevronLeft className="size-2" />
         <span className="sr-only">Previous page</span>
       </Button>
 
@@ -40,10 +40,10 @@ export function Pagination({
       <Button
         disabled={!canGoForward}
         onClick={() => onPageChange(currentPage + 1)}
-        size="sm"
+        size="icon-xs"
         variant="outline"
       >
-        <ChevronRight className="h-4 w-4" />
+        <ChevronRight className="size-2" />
         <span className="sr-only">Next page</span>
       </Button>
     </div>

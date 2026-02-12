@@ -14,13 +14,14 @@ export function PullRequestFilter({
 }: PullRequestFilterProps): ReactElement {
   return (
     <div className="relative max-w-sm">
-      <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+      <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 size-3 text-muted-foreground" />
 
       <Input
-        className="pl-8"
+        className="pl-7"
         maxLength={100}
         onChange={(event) => onChange(event.target.value)}
         placeholder="Filter pull requests..."
+        size="sm"
         type="text"
         value={value}
       />

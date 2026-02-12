@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type ReactElement } from 'react'
+import { useMemo, useState, type ReactElement } from 'react'
 
 import { PullRequest } from '@/types/pull-request'
 import { Pagination } from './Pagination'
@@ -50,12 +50,9 @@ export function PullRequestTable({
     return filteredPullRequests.slice(startIndex, endIndex)
   }, [currentPage, filteredPullRequests])
 
-  useEffect(() => {
-    setCurrentPage(1)
-  }, [filterValue])
-
   const handleFilterChange = (value: string) => {
     setFilterValue(value)
+    setCurrentPage(1)
   }
 
   const handlePageChange = (page: number) => {
