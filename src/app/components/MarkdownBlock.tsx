@@ -1,5 +1,6 @@
 import type { Element, Root } from 'hast'
 import isString from 'lodash/isString'
+import { useTheme } from 'next-themes'
 import type { ReactElement } from 'react'
 import { memo, useCallback, useEffect, useRef, useState } from 'react'
 import * as jsxRuntime from 'react/jsx-runtime'
@@ -15,15 +16,20 @@ import { visit } from 'unist-util-visit'
 
 import { Skeleton } from './ui/skeleton'
 
+import type { DarkCodeTheme, LightCodeTheme } from '@/app/lib/codeThemes'
 import {
   getLanguageFromPath,
-  getSharedHighlighter,
-  themes
+  getSharedHighlighter
 } from '@/app/lib/highlighter'
+import { useCodeTheme } from '@/app/lib/store/codeThemeContext'
 import { cn } from '@/app/lib/utils'
 
 // Highlight code blocks in the DOM when they come into view
-async function highlightCodeBlocks(container: HTMLElement): Promise<void> {
+async function highlightCodeBlocks(
+  container: HTMLElement,
+  lightTheme: LightCodeTheme,
+  darkTheme: DarkCodeTheme
+): Promise<void> {
   const codeBlocks = container.querySelectorAll('pre > code')
 
   if (codeBlocks.length === 0) {
@@ -59,8 +65,8 @@ async function highlightCodeBlocks(container: HTMLElement): Promise<void> {
     const highlighted = highlighter.codeToHtml(code, {
       lang: effectiveLang,
       themes: {
-        light: themes.light,
-        dark: themes.dark
+        dark: darkTheme,
+        light: lightTheme
       }
     })
 
@@ -88,6 +94,13 @@ export const MarkdownBlock = memo(function MarkdownBlock({
   const [result, createMarkdownContent] = useRemark({ path })
   const [isHighlighted, setIsHighlighted] = useState(false)
   const lastContentRef = useRef<string | null>(null)
+  const { darkBackground, darkTheme, lightBackground, lightTheme } =
+    useCodeTheme()
+  const { resolvedTheme } = useTheme()
+  const codeBackground =
+    resolvedTheme === 'dark' ? darkBackground : lightBackground
+
+  console.log('Mardkown Block code bg:', codeBackground)
 
   // Parse markdown without syntax highlighting
   useEffect(() => {
@@ -111,7 +124,7 @@ export const MarkdownBlock = memo(function MarkdownBlock({
     const observer = new IntersectionObserver(
       ([entry]) => {
         if (entry.isIntersecting && container) {
-          highlightCodeBlocks(container).then(() => {
+          highlightCodeBlocks(container, lightTheme, darkTheme).then(() => {
             setIsHighlighted(true)
           })
           observer.disconnect()
@@ -123,7 +136,7 @@ export const MarkdownBlock = memo(function MarkdownBlock({
     observer.observe(container)
 
     return () => observer.disconnect()
-  }, [result, isHighlighted])
+  }, [result, isHighlighted, lightTheme, darkTheme])
 
   return (
     <div
@@ -132,6 +145,7 @@ export const MarkdownBlock = memo(function MarkdownBlock({
         'markdown-block w-full max-w-none prose dark:prose-invert [&>:first-child]:mt-0 [&_p]:mb-2 [&_p:last-child]:mb-0',
         className
       )}
+      style={{ '--code-bg': codeBackground } as React.CSSProperties}
     >
       {result ? (
         result

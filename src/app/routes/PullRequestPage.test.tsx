@@ -19,6 +19,7 @@ import pullRequestsReducer from '@/app/store/pull-requests-slice'
 import tasksReducer from '@/app/store/tasks-slice'
 
 import { AuthProvider } from '@/app/lib/store/authContext'
+import { CodeThemeProvider } from '@/app/lib/store/codeThemeContext'
 
 import { PullRequestPage } from './PullRequestPage'
 
@@ -164,16 +165,18 @@ function renderWithProviders(
 ) {
   return render(
     <Provider store={store}>
-      <AuthProvider>
-        <MemoryRouter initialEntries={[`/pr/${pullRequestId}`]}>
-          <Routes>
-            <Route
-              element={<PullRequestPage />}
-              path="/pr/:id"
-            />
-          </Routes>
-        </MemoryRouter>
-      </AuthProvider>
+      <CodeThemeProvider>
+        <AuthProvider>
+          <MemoryRouter initialEntries={[`/pr/${pullRequestId}`]}>
+            <Routes>
+              <Route
+                element={<PullRequestPage />}
+                path="/pr/:id"
+              />
+            </Routes>
+          </MemoryRouter>
+        </AuthProvider>
+      </CodeThemeProvider>
     </Provider>
   )
 }

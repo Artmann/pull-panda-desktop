@@ -1,4 +1,6 @@
-import { createHighlighter, type Highlighter } from 'shiki'
+import { type BundledTheme, createHighlighter, type Highlighter } from 'shiki'
+
+import { allCodeThemeValues } from './codeThemes'
 
 let sharedHighlighter: Highlighter | null = null
 let highlighterPromise: Promise<Highlighter> | null = null
@@ -20,11 +22,6 @@ const supportedLanguages = [
   'shell'
 ]
 
-const themes = {
-  light: 'catppuccin-latte',
-  dark: 'catppuccin-mocha'
-} as const
-
 export async function getSharedHighlighter(): Promise<Highlighter> {
   if (sharedHighlighter) {
     return sharedHighlighter
@@ -32,7 +29,7 @@ export async function getSharedHighlighter(): Promise<Highlighter> {
 
   if (!highlighterPromise) {
     highlighterPromise = createHighlighter({
-      themes: [themes.light, themes.dark],
+      themes: allCodeThemeValues as unknown as BundledTheme[],
       langs: supportedLanguages
     })
 
@@ -91,4 +88,4 @@ export function getLanguageFromPath(path?: string): string | undefined {
   }
 }
 
-export { themes, supportedLanguages }
+export { supportedLanguages }

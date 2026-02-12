@@ -51,7 +51,13 @@
       "Bash(npx eslint:*)",
       "Bash(yarn vitest:*)",
       "mcp__playwriter__execute",
-      "Bash(yarn test:*)"
+      "Bash(yarn test:*)",
+      "WebFetch(domain:shiki.style)",
+      "WebFetch(domain:github.com)",
+      "WebFetch(domain:raw.githubusercontent.com)",
+      "WebFetch(domain:unpkg.com)",
+      "WebFetch(domain:app.unpkg.com)",
+      "WebFetch(domain:www.wulongxin.com)"
     ]
   }
 }

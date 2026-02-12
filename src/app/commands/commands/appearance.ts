@@ -11,6 +11,7 @@ commandRegistry.register({
   isAvailable: () => true,
   execute: () => {
     const setTheme = getThemeSetter()
+
     setTheme('light')
   }
 })
@@ -23,6 +24,7 @@ commandRegistry.register({
   isAvailable: () => true,
   execute: () => {
     const setTheme = getThemeSetter()
+
     setTheme('dark')
   }
 })
@@ -35,6 +37,7 @@ commandRegistry.register({
   isAvailable: () => true,
   execute: () => {
     const setTheme = getThemeSetter()
+
     setTheme('system')
   }
 })
