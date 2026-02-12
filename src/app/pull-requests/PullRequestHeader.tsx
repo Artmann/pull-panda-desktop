@@ -111,7 +111,7 @@ function Title({
   return (
     <h1
       className={cn(
-        'font-semibold leading-tight text-gray-900 transition-all duration-200 ease-out',
+        'font-semibold leading-tight text-gray-900 dark:text-gray-100 transition-all duration-200 ease-out',
         size === 'sm' ? 'text-xl' : 'text-2xl'
       )}
     >
