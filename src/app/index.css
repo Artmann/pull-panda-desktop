@@ -194,23 +194,24 @@ body {
 
 /* Diff highlighting */
 .diff-highlight {
+  color: inherit;
   padding: 0.1em 0;
 }
 
 .diff-highlight-add {
-  background-color: rgba(46, 160, 67, 0.4);
+  background-color: rgba(0, 255, 0, 0.15);
 }
 
 .diff-highlight-remove {
-  background-color: rgba(248, 81, 73, 0.4);
+  background-color: rgba(255, 0, 0, 0.15);
 }
 
 .dark .diff-highlight-add {
-  background-color: rgba(46, 160, 67, 0.3);
+  background-color: rgba(0, 255, 0, 0.2);
 }
 
 .dark .diff-highlight-remove {
-  background-color: rgba(248, 81, 73, 0.3);
+  background-color: rgba(255, 0, 0, 0.2);
 }
 
 /* Syntax highlighting in diffs - dark mode support */

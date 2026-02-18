@@ -11,18 +11,14 @@ import {
   defaultDarkTheme,
   defaultLightTheme,
   getThemeBackgroundColor,
-  getThemeDiffColors,
   type DarkCodeTheme,
-  type LightCodeTheme,
-  type ThemeDiffColors
+  type LightCodeTheme
 } from '@/app/lib/codeThemes'
 
 type CodeThemeContextType = {
   darkBackground: string
-  darkDiffColors: ThemeDiffColors
   darkTheme: DarkCodeTheme
   lightBackground: string
-  lightDiffColors: ThemeDiffColors
   lightTheme: LightCodeTheme
   setDarkTheme: (theme: DarkCodeTheme) => void
   setLightTheme: (theme: LightCodeTheme) => void
@@ -55,16 +51,8 @@ export function CodeThemeProvider({
       localStorage.getItem(storageKeyDark) ?? defaultDarkTheme
     )
   )
-  const [darkDiffColors, setDarkDiffColors] = useState<ThemeDiffColors>(() =>
-    getThemeDiffColors(localStorage.getItem(storageKeyDark) ?? defaultDarkTheme)
-  )
   const [lightBackground, setLightBackground] = useState<string>(() =>
     getThemeBackgroundColor(
-      localStorage.getItem(storageKeyLight) ?? defaultLightTheme
-    )
-  )
-  const [lightDiffColors, setLightDiffColors] = useState<ThemeDiffColors>(() =>
-    getThemeDiffColors(
       localStorage.getItem(storageKeyLight) ?? defaultLightTheme
     )
   )
@@ -72,14 +60,12 @@ export function CodeThemeProvider({
   const setDarkTheme = (theme: DarkCodeTheme) => {
     setDarkThemeState(theme)
     setDarkBackground(getThemeBackgroundColor(theme))
-    setDarkDiffColors(getThemeDiffColors(theme))
     localStorage.setItem(storageKeyDark, theme)
   }
 
   const setLightTheme = (theme: LightCodeTheme) => {
     setLightThemeState(theme)
     setLightBackground(getThemeBackgroundColor(theme))
-    setLightDiffColors(getThemeDiffColors(theme))
     localStorage.setItem(storageKeyLight, theme)
   }
 
@@ -91,10 +77,8 @@ export function CodeThemeProvider({
     <CodeThemeContext.Provider
       value={{
         darkBackground,
-        darkDiffColors,
         darkTheme,
         lightBackground,
-        lightDiffColors,
         lightTheme,
         setDarkTheme,
         setLightTheme
