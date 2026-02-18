@@ -9,6 +9,7 @@ import {
 } from 'lucide-react'
 import { useEffect, useState, type ReactElement, type ReactNode } from 'react'
 
+import { MarkdownBlock } from '@/app/components/MarkdownBlock'
 import { Badge } from '@/app/components/ui/badge'
 import { cn } from '@/app/lib/utils'
 import { useAppSelector } from '@/app/store/hooks'
@@ -102,6 +103,14 @@ export function ChecksView({
               return 'success'
             }
 
+            const allChecksCompleted = suiteChecks.every(
+              (check) => check.state?.toLowerCase() === 'completed'
+            )
+
+            if (allChecksCompleted) {
+              return 'success'
+            }
+
             return 'pending'
           }
 
@@ -132,9 +141,12 @@ export function ChecksView({
                       <div className="font-medium group-hover:text-accent-foreground transition-colors">
                         {check.name}
                       </div>
-                      <div className="text-muted-foreground text-xs">
-                        {check.message ?? ''}
-                      </div>
+                      {check.message && (
+                        <MarkdownBlock
+                          className="text-muted-foreground text-xs [&_a]:text-primary [&_a]:underline"
+                          content={check.message}
+                        />
+                      )}
                     </div>
 
                     <div className="text-muted-foreground text-xs">
