@@ -129,16 +129,13 @@ export function ChecksView({
 
               <div className="flex flex-col gap-2 pl-4">
                 {suiteChecks.map((check) => (
-                  <CheckRow
-                    key={check.id}
-                    url={check.detailsUrl}
-                  >
-                    <div>
+                  <CheckRow key={check.id}>
+                    <div className="mt-1">
                       <CheckStatusIcon check={check} />
                     </div>
 
                     <div className="flex-1">
-                      <div className="font-medium group-hover:text-accent-foreground transition-colors">
+                      <div className="font-medium">
                         {check.name}
                       </div>
                       {check.message && (
@@ -149,13 +146,21 @@ export function ChecksView({
                       )}
                     </div>
 
-                    <div className="text-muted-foreground text-xs">
+                    <div className="text-muted-foreground text-xs mt-0.5">
                       <CheckDuration check={check} />
                     </div>
 
-                    <div className="text-muted-foreground text-xs w-4">
+                    <div className="w-4 mt-0.5">
                       {check.detailsUrl && (
-                        <ExternalLinkIcon className="size-3 text-muted-foreground" />
+                        <button
+                          className="text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+                          onClick={() => {
+                            window.electron.openUrl(check.detailsUrl!)
+                          }}
+                          title="Open on GitHub"
+                        >
+                          <ExternalLinkIcon className="size-3" />
+                        </button>
                       )}
                     </div>
                   </CheckRow>
@@ -218,40 +223,22 @@ function calculateRunningCheckDuration(check: Check): number {
 }
 
 function CheckRow({
-  children,
-  url
+  children
 }: {
   children: ReactNode
-  url?: string | null
 }): ReactElement {
-  const classNames = cn(
-    'py-2 px-3',
-    'rounded-md',
-    'group',
-    'flex items-center gap-3',
-    'transition-colors hover:bg-muted/50'
+  return (
+    <div
+      className={cn(
+        'py-2 px-3',
+        'rounded-md',
+        'flex items-start gap-3',
+        'transition-colors hover:bg-muted/50'
+      )}
+    >
+      {children}
+    </div>
   )
-
-  if (url) {
-    const handleClick = (event: React.MouseEvent) => {
-      event.preventDefault()
-      window.electron.openUrl(url)
-    }
-
-    return (
-      <a
-        className={cn(classNames, 'cursor-pointer')}
-        href={url}
-        onClick={handleClick}
-        rel="noopener noreferrer"
-        target="_blank"
-      >
-        {children}
-      </a>
-    )
-  }
-
-  return <div className={classNames}>{children}</div>
 }
 
 function CheckStatusIcon({ check }: { check: Check }): ReactElement {

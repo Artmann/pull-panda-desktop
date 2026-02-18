@@ -17,7 +17,7 @@
   ],
   "license": "MIT",
   "bin": {
-    "pullpanda": "./bin/pullpanda.js"
+    "pull-panda": "./bin/pullpanda.js"
   },
   "files": [
     "bin/",
