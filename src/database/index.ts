@@ -7,7 +7,20 @@ import fs from 'node:fs'
 
 import * as schema from './schema'
 
+function isCliMode(): boolean {
+  return process.env.PULLPANDA_CLI === '1'
+}
+
+function getPackageRoot(): string {
+  // __dirname is .vite/build/ inside the package
+  return path.resolve(__dirname, '..', '..')
+}
+
 function getDatabasePath(): string {
+  if (isCliMode()) {
+    return path.join(app.getPath('userData'), 'pull-panda.db')
+  }
+
   const isDevelopment = !app?.isPackaged
 
   if (isDevelopment) {
@@ -18,6 +31,10 @@ function getDatabasePath(): string {
 }
 
 function getMigrationsPath(): string {
+  if (isCliMode()) {
+    return path.join(getPackageRoot(), 'drizzle')
+  }
+
   const isDevelopment = !app?.isPackaged
 
   if (isDevelopment) {
@@ -29,6 +46,10 @@ function getMigrationsPath(): string {
 }
 
 function getWasmPath(): string {
+  if (isCliMode()) {
+    return path.join(getPackageRoot(), 'node_modules', 'sql.js', 'dist', 'sql-wasm.wasm')
+  }
+
   const isDevelopment = !app?.isPackaged
 
   if (isDevelopment) {

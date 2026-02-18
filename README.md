@@ -18,9 +18,17 @@ code review should be a smooth, focused experience rather than a chore.
 - See all PRs that need your attention in one place
 - Review faster with a clean, modern interface
 
+## Quick Start
+
+Try Pull Panda instantly without installing:
+
+```bash
+npx pull-panda
+```
+
 ## Download
 
-Grab the latest release for your platform:
+Or grab the latest release for your platform:
 
 [**Download Pull Panda**](../../releases/latest)
 

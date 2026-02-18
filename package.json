@@ -1,5 +1,5 @@
 {
-  "name": "pull-panda-desktop",
+  "name": "pull-panda",
   "productName": "Pull Panda",
   "version": "1.0.0",
   "description": "A delightful code review tool for the AI era",
@@ -16,6 +16,14 @@
     "desktop"
   ],
   "license": "MIT",
+  "bin": {
+    "pullpanda": "./bin/pullpanda.js"
+  },
+  "files": [
+    "bin/",
+    ".vite/",
+    "drizzle/"
+  ],
   "scripts": {
     "format": "prettier --write .",
     "lint": "eslint --ext .ts,.tsx .",
@@ -25,9 +33,11 @@
     "start": "electron-forge start",
     "test": "vitest",
     "test:run": "vitest run",
+    "prepublishOnly": "electron-forge package",
     "typecheck": "tsc --noEmit --skipLibCheck"
   },
   "dependencies": {
+    "electron": "39.2.7",
     "@octokit/graphql": "^9.0.3",
     "@octokit/rest": "^22.0.1",
     "@radix-ui/react-accordion": "^1.2.12",
