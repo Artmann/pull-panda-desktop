@@ -1,12 +1,12 @@
-import { GitPullRequest } from 'lucide-react'
+import { ExternalLinkIcon, GitPullRequest } from 'lucide-react'
 import invariant from 'tiny-invariant'
 
 import { PullRequest } from '@/types/pull-request'
 import {
   Breadcrumb,
   BreadcrumbItem,
-  BreadcrumbLink,
   BreadcrumbList,
+  BreadcrumbPage,
   BreadcrumbSeparator
 } from '../components/ui/breadcrumb'
 import { PullRequestStatusBadge } from '../components/PullRequestStatusBadge'
@@ -132,38 +132,40 @@ function Breadcrumbs({
       <Breadcrumb>
         <BreadcrumbList>
           <BreadcrumbItem>
-            <BreadcrumbLink
-              href={`https://github.com/${pullRequest.repositoryOwner}`}
-              external
-            >
+            <BreadcrumbPage>
               <span className="text-xs">{pullRequest.repositoryOwner}</span>
-            </BreadcrumbLink>
+            </BreadcrumbPage>
           </BreadcrumbItem>
 
           <BreadcrumbSeparator />
 
           <BreadcrumbItem>
-            <BreadcrumbLink
-              href={`https://github.com/${pullRequest.repositoryOwner}/${pullRequest.repositoryName}`}
-              external
-            >
+            <BreadcrumbPage>
               <span className="text-xs">{pullRequest.repositoryName}</span>
-            </BreadcrumbLink>
+            </BreadcrumbPage>
           </BreadcrumbItem>
 
           <BreadcrumbSeparator />
 
           <BreadcrumbItem>
-            <BreadcrumbLink
-              className="text-muted-foreground"
-              external
-              href={`https://github.com/${pullRequest.repositoryOwner}/${pullRequest.repositoryName}/pull/${pullRequest.number}`}
-            >
-              <span className="text-xs">{pullRequest.number}</span>
-            </BreadcrumbLink>
+            <BreadcrumbPage>
+              <span className="text-xs text-muted-foreground">{pullRequest.number}</span>
+            </BreadcrumbPage>
           </BreadcrumbItem>
         </BreadcrumbList>
       </Breadcrumb>
+
+      <button
+        className="ml-3 p-1 rounded text-muted-foreground hover:text-foreground hover:bg-muted transition-colors cursor-pointer"
+        onClick={() => {
+          window.electron.openUrl(
+            `https://github.com/${pullRequest.repositoryOwner}/${pullRequest.repositoryName}/pull/${pullRequest.number}`
+          )
+        }}
+        title="Open on GitHub"
+      >
+        <ExternalLinkIcon className="size-3" />
+      </button>
     </div>
   )
 }
