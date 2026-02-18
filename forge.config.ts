@@ -33,7 +33,8 @@ const config: ForgeConfig = {
         optionsForFile: (filePath: string) => {
           // Only apply custom entitlements to the main app bundle.
           // Individual binaries and helper apps use just hardenedRuntime.
-          const isMainAppBundle = filePath.endsWith('.app') && !filePath.includes('Helper')
+          const isMainAppBundle =
+            filePath.endsWith('.app') && !filePath.includes('Helper')
 
           return {
             hardenedRuntime: true,

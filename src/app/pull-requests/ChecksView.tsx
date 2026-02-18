@@ -135,9 +135,7 @@ export function ChecksView({
                     </div>
 
                     <div className="flex-1">
-                      <div className="font-medium">
-                        {check.name}
-                      </div>
+                      <div className="font-medium">{check.name}</div>
                       {check.message && (
                         <MarkdownBlock
                           className="text-muted-foreground text-xs [&_a]:text-primary [&_a]:underline"
@@ -222,11 +220,7 @@ function calculateRunningCheckDuration(check: Check): number {
   return currentTime.diff(startTime, 'seconds')
 }
 
-function CheckRow({
-  children
-}: {
-  children: ReactNode
-}): ReactElement {
+function CheckRow({ children }: { children: ReactNode }): ReactElement {
   return (
     <div
       className={cn(

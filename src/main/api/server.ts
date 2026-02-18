@@ -66,45 +66,47 @@ export function startApiServer(getToken: () => string | null): Promise<number> {
     })
 
     try {
-      server = http.createServer(async (request: IncomingMessage, response: ServerResponse) => {
-        const url = `http://localhost${request.url}`
-        const headers = new Headers()
+      server = http.createServer(
+        async (request: IncomingMessage, response: ServerResponse) => {
+          const url = `http://localhost${request.url}`
+          const headers = new Headers()
 
-        for (const [key, value] of Object.entries(request.headers)) {
-          if (value) {
-            headers.set(key, Array.isArray(value) ? value.join(', ') : value)
+          for (const [key, value] of Object.entries(request.headers)) {
+            if (value) {
+              headers.set(key, Array.isArray(value) ? value.join(', ') : value)
+            }
           }
-        }
 
-        let body: BodyInit | undefined
+          let body: BodyInit | undefined
 
-        if (request.method !== 'GET' && request.method !== 'HEAD') {
-          const buffer = await new Promise<Buffer>((resolve) => {
-            const chunks: Buffer[] = []
-            request.on('data', (chunk) => chunks.push(chunk))
-            request.on('end', () => resolve(Buffer.concat(chunks)))
+          if (request.method !== 'GET' && request.method !== 'HEAD') {
+            const buffer = await new Promise<Buffer>((resolve) => {
+              const chunks: Buffer[] = []
+              request.on('data', (chunk) => chunks.push(chunk))
+              request.on('end', () => resolve(Buffer.concat(chunks)))
+            })
+
+            body = buffer.toString()
+          }
+
+          const fetchRequest = new Request(url, {
+            method: request.method,
+            headers,
+            body
           })
 
-          body = buffer.toString()
+          const fetchResponse = await app.fetch(fetchRequest)
+
+          response.statusCode = fetchResponse.status
+
+          fetchResponse.headers.forEach((value, key) => {
+            response.setHeader(key, value)
+          })
+
+          const responseBody = await fetchResponse.arrayBuffer()
+          response.end(Buffer.from(responseBody))
         }
-
-        const fetchRequest = new Request(url, {
-          method: request.method,
-          headers,
-          body
-        })
-
-        const fetchResponse = await app.fetch(fetchRequest)
-
-        response.statusCode = fetchResponse.status
-
-        fetchResponse.headers.forEach((value, key) => {
-          response.setHeader(key, value)
-        })
-
-        const responseBody = await fetchResponse.arrayBuffer()
-        response.end(Buffer.from(responseBody))
-      })
+      )
 
       server.listen(0, () => {
         if (!server) {
