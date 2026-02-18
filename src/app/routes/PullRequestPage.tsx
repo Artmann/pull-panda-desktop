@@ -206,7 +206,7 @@ export function PullRequestPage(): ReactElement {
               hidden={tab.id !== activeTab}
               value={tab.id}
             >
-              <div className="w-full">
+              <div className="w-full pb-12">
                 <tab.content pullRequest={pullRequest} />
               </div>
             </TabsContent>
