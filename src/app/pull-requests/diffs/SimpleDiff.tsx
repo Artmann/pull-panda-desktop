@@ -383,19 +383,7 @@ const DiffLine = memo(function DiffLine({
       className="flex gap-0 group relative"
       data-testid={`diff-line-${index}`}
     >
-      <div className={cn('text-right user-select-none relative')}>
-        {canComment && (
-          <Button
-            className="absolute left-2 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity size-5 flex items-center justify-center cursor-pointer bg-blue-500 hover:bg-blue-600 text-white border-0"
-            size="icon-sm"
-            type="button"
-            variant="outline"
-            onClick={onClick}
-          >
-            <Plus className="size-3" />
-          </Button>
-        )}
-
+      <div className={cn('text-right user-select-none')}>
         <div
           className={cn(
             'px-3',
@@ -435,6 +423,18 @@ const DiffLine = memo(function DiffLine({
           }}
         />
       </div>
+
+      {canComment && (
+        <Button
+          className="absolute right-2 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity size-5 flex items-center justify-center cursor-pointer bg-[#5265DE] hover:bg-[#4254C8] text-white border-0"
+          size="icon-sm"
+          type="button"
+          variant="outline"
+          onClick={onClick}
+        >
+          <Plus className="size-3" />
+        </Button>
+      )}
     </div>
   )
 })
