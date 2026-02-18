@@ -108,12 +108,8 @@ export const SimpleDiff = memo(function SimpleDiff({
   const [activeCommentLineIndex, setActiveCommentLineIndex] = useState<
     number | null
   >(null)
-  const {
-    darkBackground,
-    darkTheme,
-    lightBackground,
-    lightTheme
-  } = useCodeTheme()
+  const { darkBackground, darkTheme, lightBackground, lightTheme } =
+    useCodeTheme()
   const { resolvedTheme } = useTheme()
   const isDark = resolvedTheme === 'dark'
   const backgroundColor = isDark ? darkBackground : lightBackground
