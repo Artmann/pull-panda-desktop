@@ -100,8 +100,6 @@ export const MarkdownBlock = memo(function MarkdownBlock({
   const codeBackground =
     resolvedTheme === 'dark' ? darkBackground : lightBackground
 
-  console.log('Mardkown Block code bg:', codeBackground)
-
   // Parse markdown without syntax highlighting
   useEffect(() => {
     // Only re-parse if content actually changed

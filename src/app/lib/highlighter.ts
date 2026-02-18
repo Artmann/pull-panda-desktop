@@ -6,20 +6,24 @@ let sharedHighlighter: Highlighter | null = null
 let highlighterPromise: Promise<Highlighter> | null = null
 
 const supportedLanguages = [
-  'javascript',
-  'typescript',
-  'python',
-  'java',
+  'bash',
   'c',
-  'go',
-  'ruby',
-  'php',
-  'html',
   'css',
+  'go',
+  'graphql',
+  'html',
+  'java',
+  'javascript',
   'json',
   'markdown',
-  'bash',
-  'shell'
+  'php',
+  'python',
+  'ruby',
+  'rust',
+  'shell',
+  'sql',
+  'typescript',
+  'yaml'
 ]
 
 export async function getSharedHighlighter(): Promise<Highlighter> {
@@ -75,14 +79,24 @@ export function getLanguageFromPath(path?: string): string | undefined {
     case 'scss':
     case 'sass':
       return 'css'
+    case 'gql':
+    case 'graphql':
+      return 'graphql'
     case 'json':
       return 'json'
     case 'md':
       return 'markdown'
+    case 'rs':
+      return 'rust'
     case 'sh':
     case 'bash':
     case 'zsh':
       return 'bash'
+    case 'sql':
+      return 'sql'
+    case 'yaml':
+    case 'yml':
+      return 'yaml'
     default:
       return
   }

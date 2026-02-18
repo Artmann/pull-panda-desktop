@@ -65,9 +65,10 @@ async function highlightLines(
     const html = highlighter.codeToHtml(line.content, {
       lang: effectiveLang,
       themes: {
-        dark: darkTheme,
-        light: lightTheme
-      }
+        light: lightTheme,
+        dark: darkTheme
+      },
+      defaultColor: 'light'
     })
 
     // Extract content from <pre><code>...</code></pre>
@@ -284,7 +285,7 @@ export const SimpleDiff = memo(function SimpleDiff({
   return (
     <div
       ref={containerRef}
-      className="diff-table w-full font-mono font-normal antialiased text-xs leading-6 rounded-lg overflow-hidden"
+      className="diff-table w-full font-mono font-normal antialiased text-xs leading-6 overflow-hidden"
       style={{ background: backgroundColor }}
     >
       {filteredLines.map((line, index) => {
