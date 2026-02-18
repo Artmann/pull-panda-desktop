@@ -42,15 +42,15 @@ export function CommandPalette() {
   const hasQuery = query.trim().length > 0
   const isSearching = query.trim().length > 2
 
-  const filteredCommands = hasQuery
+  const filteredCommandsByGroup = new Map<string, Command[]>()
+
+  const matchingCommands = hasQuery
     ? availableCommands.filter((command) =>
         command.label.toLowerCase().includes(query.toLowerCase())
       )
     : availableCommands
 
-  const filteredCommandsByGroup = new Map<string, Command[]>()
-
-  for (const command of filteredCommands) {
+  for (const command of matchingCommands) {
     const group = command.group || 'other'
 
     if (!filteredCommandsByGroup.has(group)) {
@@ -59,6 +59,8 @@ export function CommandPalette() {
 
     filteredCommandsByGroup.get(group).push(command)
   }
+
+  const filteredCommands = Array.from(filteredCommandsByGroup.values()).flat()
 
   // Get options for parameterized command
   const paramOptions = useMemo(() => {
