@@ -15,6 +15,7 @@ import type {
   LightCodeTheme,
   ThemeDiffColors
 } from '@/app/lib/codeThemes'
+import { getDiffColors } from '@/app/lib/codeThemes'
 import {
   getLanguageFromPath,
   getSharedHighlighter
@@ -109,16 +110,17 @@ export const SimpleDiff = memo(function SimpleDiff({
   >(null)
   const {
     darkBackground,
-    darkDiffColors,
     darkTheme,
     lightBackground,
-    lightDiffColors,
     lightTheme
   } = useCodeTheme()
   const { resolvedTheme } = useTheme()
   const isDark = resolvedTheme === 'dark'
   const backgroundColor = isDark ? darkBackground : lightBackground
-  const diffColors = isDark ? darkDiffColors : lightDiffColors
+  const diffColors = useMemo(
+    () => getDiffColors(isDark ? darkTheme : lightTheme, isDark),
+    [isDark, darkTheme, lightTheme]
+  )
 
   const hunk = useMemo(() => parseDiffHunk(diffHunk), [diffHunk])
 
@@ -426,7 +428,7 @@ const DiffLine = memo(function DiffLine({
 
       {canComment && (
         <Button
-          className="absolute right-2 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity size-5 flex items-center justify-center cursor-pointer bg-[#5265DE] hover:bg-[#4254C8] text-white border-0"
+          className="absolute right-2 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity size-5 flex items-center justify-center cursor-pointer bg-cyan-500 hover:bg-cyan-600 text-white border-0"
           size="icon-sm"
           type="button"
           variant="outline"
