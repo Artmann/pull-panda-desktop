@@ -1,5 +1,19 @@
 export const darkCodeThemes = [
   {
+    background: '#303446',
+    diffAdd: 'rgb(66 86 78)',
+    diffRemove: 'rgb(121 71 71)',
+    label: 'Catppuccin Frappé',
+    value: 'catppuccin-frappe'
+  },
+  {
+    background: '#303446',
+    diffAdd: 'rgb(68 88 80)',
+    diffRemove: 'rgb(126 73 73)',
+    label: 'Catppuccin Macchiato',
+    value: 'catppuccin-macchiato'
+  },
+  {
     background: '#1e1e2e',
     diffAdd: 'rgb(71 91 83)',
     diffRemove: 'rgb(131 76 76)',
