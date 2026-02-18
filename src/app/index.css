@@ -230,10 +230,7 @@ body {
   content: none;
 }
 
-.prose
-  :where(code):not(
-    :where([class~='not-prose'], [class~='not-prose'] *)
-  ) {
+.prose :where(code):not(:where([class~='not-prose'], [class~='not-prose'] *)) {
   font-weight: normal;
 }
 

@@ -47,13 +47,25 @@ function getMigrationsPath(): string {
 
 function getWasmPath(): string {
   if (isCliMode()) {
-    return path.join(getPackageRoot(), 'node_modules', 'sql.js', 'dist', 'sql-wasm.wasm')
+    return path.join(
+      getPackageRoot(),
+      'node_modules',
+      'sql.js',
+      'dist',
+      'sql-wasm.wasm'
+    )
   }
 
   const isDevelopment = !app?.isPackaged
 
   if (isDevelopment) {
-    return path.join(process.cwd(), 'node_modules', 'sql.js', 'dist', 'sql-wasm.wasm')
+    return path.join(
+      process.cwd(),
+      'node_modules',
+      'sql.js',
+      'dist',
+      'sql-wasm.wasm'
+    )
   }
 
   return path.join(process.resourcesPath, 'sql-wasm.wasm')

@@ -36,9 +36,7 @@ import './app/index.css'
 
 async function main() {
   const bootstrapData = await window.electron.getBootstrapData()
-  const readyPullRequests = filterReadyPullRequests(
-    bootstrapData?.pullRequests
-  )
+  const readyPullRequests = filterReadyPullRequests(bootstrapData?.pullRequests)
 
   const store = createStore({
     pendingReviews: bootstrapData?.pendingReviews ?? {},

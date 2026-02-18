@@ -149,7 +149,9 @@ function Breadcrumbs({
 
           <BreadcrumbItem>
             <BreadcrumbPage>
-              <span className="text-xs text-muted-foreground">{pullRequest.number}</span>
+              <span className="text-xs text-muted-foreground">
+                {pullRequest.number}
+              </span>
             </BreadcrumbPage>
           </BreadcrumbItem>
         </BreadcrumbList>
