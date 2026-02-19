@@ -1,6 +1,7 @@
 const fs = require('fs')
 const path = require('path')
 
+const signature = '**🤖 Pull Panda**'
 const summaryMarker = '<!-- robot-code-review -->\n<!-- robot-code-review-summary -->'
 const commentMarker = '<!-- robot-code-review -->'
 
@@ -25,10 +26,10 @@ function issueMarker(slug) {
 }
 
 function buildSummaryBody(summary, issues) {
-  let body = `${summaryMarker}\n\n## Robot Code Review\n\n${summary}\n`
+  let body = `${summaryMarker}\n\n${signature}\n\n## Robot Code Review\n\n${summary}\n`
 
   if (issues.length === 0) {
-    return `${summaryMarker}\n\nLooks good to me! :rocket:`
+    return `${summaryMarker}\n\n${signature}\n\nLooks good to me! :rocket:`
   }
 
   body += '\n### Issues\n\n'
@@ -47,7 +48,7 @@ function buildIssueCommentBody(issue) {
   const emoji = severityEmoji[issue.severity] ?? ''
   const label = severityLabel[issue.severity] ?? issue.severity
 
-  return `${commentMarker}\n${issueMarker(slug)}\n\n### ${emoji} ${label}: ${issue.title}\n\n${issue.description}`
+  return `${commentMarker}\n${issueMarker(slug)}\n\n${signature}\n\n### ${emoji} ${label}: ${issue.title}\n\n${issue.description}`
 }
 
 async function fetchExistingReviewThreads(github, owner, repo, prNumber) {
@@ -148,7 +149,13 @@ module.exports = async ({ github, context, core }) => {
   let review
 
   try {
-    review = JSON.parse(fs.readFileSync(reviewPath, 'utf8'))
+    const raw = JSON.parse(fs.readFileSync(reviewPath, 'utf8'))
+
+    // opencode -f json wraps output in { "response": "..." }.
+    const content = typeof raw.response === 'string' ? raw.response : JSON.stringify(raw)
+    const jsonText = content.replace(/^```(?:json)?\s*\n?/, '').replace(/\n?```\s*$/, '')
+
+    review = JSON.parse(jsonText)
   } catch (error) {
     core.warning(`Failed to parse review.json: ${error.message}`)
 
