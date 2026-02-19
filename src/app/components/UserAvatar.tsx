@@ -12,7 +12,7 @@ export const UserAvatar = memo(function UserAvatar({
   const displayLogin = login ?? 'User'
 
   return (
-    <Avatar className="size-7 border-2 border-white shadow-sm">
+    <Avatar className="size-7 border-2 border-background shadow-sm">
       <AvatarImage
         alt={displayLogin}
         src={avatarUrl ?? undefined}

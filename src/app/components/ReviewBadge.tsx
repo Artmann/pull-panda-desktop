@@ -51,7 +51,7 @@ export function ReviewBadge({
           <img
             src={review.author.avatarUrl}
             alt={review.author.login}
-            className="size-4 rounded-full"
+            className="size-4 rounded-full ring-1 ring-foreground/10"
           />
           <Link
             className="hover:underline"
