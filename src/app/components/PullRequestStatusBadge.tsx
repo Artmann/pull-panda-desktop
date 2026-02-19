@@ -52,12 +52,13 @@ export function PullRequestStatusBadge({
 
   const statusColorClasses = useMemo((): string => {
     const colorMap: Record<PullRequestStatus, string> = {
-      Approved: 'bg-[#40a02b] text-white/70 border-transparent',
-      'Changes Requested': 'bg-[#e64553] text-white/70 border-transparent',
-      Closed: 'bg-[#e64553] text-white/70 border-transparent',
-      Draft: 'bg-[#7c7f93] text-white/70 border-transparent',
-      Merged: 'bg-[#8839ef] text-white/70 border-transparent',
-      Pending: 'bg-[#7287fd] text-white/70 border-transparent'
+      Approved: 'bg-[oklch(0.52_0.17_150)] text-white border-transparent',
+      'Changes Requested':
+        'bg-[oklch(0.52_0.19_25)] text-white border-transparent',
+      Closed: 'bg-[oklch(0.52_0.19_25)] text-white border-transparent',
+      Draft: 'bg-[oklch(0.55_0.02_270)] text-white border-transparent',
+      Merged: 'bg-[oklch(0.50_0.20_300)] text-white border-transparent',
+      Pending: 'bg-[oklch(0.55_0.16_260)] text-white border-transparent'
     }
 
     return colorMap[status]

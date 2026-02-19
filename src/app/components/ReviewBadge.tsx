@@ -25,10 +25,10 @@ export function ReviewBadge({
   const isChangesRequested = review.state === 'CHANGES_REQUESTED'
 
   const badgeColor = isApproved
-    ? 'bg-green-50 border-green-200 text-green-800 hover:bg-green-100'
+    ? 'bg-status-success border-status-success-border text-status-success-foreground'
     : isChangesRequested
-      ? 'bg-red-50 border-red-200 text-red-800 hover:bg-red-100'
-      : 'bg-gray-50 border-gray-200 text-gray-800 hover:bg-gray-100'
+      ? 'bg-status-danger border-status-danger-border text-status-danger-foreground'
+      : 'bg-status-neutral border-status-neutral-border text-status-neutral-foreground'
 
   const reviewText = isApproved
     ? 'Approved'

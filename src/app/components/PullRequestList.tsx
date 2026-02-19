@@ -68,26 +68,25 @@ function PullRequestCard({
   ])
 
   const statusColorClasses = useMemo((): string => {
-    if (status === 'Merged') {
-      return 'bg-purple-100 text-purple-800 border-purple-200'
-    }
-    if (status === 'Closed') {
-      return 'bg-red-100 text-red-800 border-red-200'
-    }
-    if (status === 'Pending') {
-      return 'bg-yellow-100 text-yellow-800 border-yellow-200'
-    }
-    if (status === 'Approved') {
-      return 'bg-green-100 text-green-800 border-green-200'
-    }
-    if (status === 'Draft') {
-      return 'bg-gray-100 text-gray-800 border-gray-200'
-    }
-    if (status === 'Changes Requested') {
-      return 'bg-red-100 text-red-800 border-red-200'
+    const colorMap: Record<string, string> = {
+      Approved:
+        'bg-status-success border-status-success-border text-status-success-foreground',
+      'Changes Requested':
+        'bg-status-danger border-status-danger-border text-status-danger-foreground',
+      Closed:
+        'bg-status-danger border-status-danger-border text-status-danger-foreground',
+      Draft:
+        'bg-status-neutral border-status-neutral-border text-status-neutral-foreground',
+      Merged:
+        'bg-status-merged border-status-merged-border text-status-merged-foreground',
+      Pending:
+        'bg-status-warning border-status-warning-border text-status-warning-foreground'
     }
 
-    return 'bg-gray-100 text-gray-800 border-gray-200'
+    return (
+      colorMap[status] ??
+      'bg-status-neutral border-status-neutral-border text-status-neutral-foreground'
+    )
   }, [status])
 
   const pullRequestPath = `/pull-requests/${pullRequest.id}`

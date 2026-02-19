@@ -44,6 +44,22 @@
   --sidebar-accent-foreground: oklch(0.42 0.03 280);
   --sidebar-border: oklch(0.8 0.01 265);
   --sidebar-ring: oklch(0.65 0.15 275);
+
+  --status-danger: oklch(0.95 0.02 25);
+  --status-danger-border: oklch(0.87 0.05 25);
+  --status-danger-foreground: oklch(0.40 0.12 25);
+  --status-merged: oklch(0.95 0.02 300);
+  --status-merged-border: oklch(0.87 0.05 300);
+  --status-merged-foreground: oklch(0.40 0.12 300);
+  --status-neutral: oklch(0.95 0.005 270);
+  --status-neutral-border: oklch(0.87 0.01 270);
+  --status-neutral-foreground: oklch(0.45 0.02 270);
+  --status-success: oklch(0.96 0.02 150);
+  --status-success-border: oklch(0.87 0.04 150);
+  --status-success-foreground: oklch(0.40 0.10 150);
+  --status-warning: oklch(0.96 0.03 80);
+  --status-warning-border: oklch(0.87 0.05 80);
+  --status-warning-foreground: oklch(0.40 0.10 80);
 }
 
 /* Catppuccin Mocha (Dark Theme) */
@@ -80,6 +96,22 @@
   --sidebar-accent-foreground: oklch(0.87 0.03 275);
   --sidebar-border: oklch(0.36 0.02 275);
   --sidebar-ring: oklch(0.8 0.1 275);
+
+  --status-danger: oklch(0.27 0.03 25);
+  --status-danger-border: oklch(0.38 0.05 25);
+  --status-danger-foreground: oklch(0.82 0.08 25);
+  --status-merged: oklch(0.27 0.03 300);
+  --status-merged-border: oklch(0.38 0.05 300);
+  --status-merged-foreground: oklch(0.82 0.08 300);
+  --status-neutral: oklch(0.27 0.005 270);
+  --status-neutral-border: oklch(0.38 0.01 270);
+  --status-neutral-foreground: oklch(0.82 0.02 270);
+  --status-success: oklch(0.27 0.03 150);
+  --status-success-border: oklch(0.38 0.04 150);
+  --status-success-foreground: oklch(0.82 0.08 150);
+  --status-warning: oklch(0.27 0.03 80);
+  --status-warning-border: oklch(0.38 0.05 80);
+  --status-warning-foreground: oklch(0.82 0.08 80);
 }
 
 @theme inline {
@@ -115,6 +147,21 @@
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-ring: var(--sidebar-ring);
+  --color-status-danger: var(--status-danger);
+  --color-status-danger-border: var(--status-danger-border);
+  --color-status-danger-foreground: var(--status-danger-foreground);
+  --color-status-merged: var(--status-merged);
+  --color-status-merged-border: var(--status-merged-border);
+  --color-status-merged-foreground: var(--status-merged-foreground);
+  --color-status-neutral: var(--status-neutral);
+  --color-status-neutral-border: var(--status-neutral-border);
+  --color-status-neutral-foreground: var(--status-neutral-foreground);
+  --color-status-success: var(--status-success);
+  --color-status-success-border: var(--status-success-border);
+  --color-status-success-foreground: var(--status-success-foreground);
+  --color-status-warning: var(--status-warning);
+  --color-status-warning-border: var(--status-warning-border);
+  --color-status-warning-foreground: var(--status-warning-foreground);
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);

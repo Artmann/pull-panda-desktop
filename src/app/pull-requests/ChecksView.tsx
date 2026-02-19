@@ -303,7 +303,7 @@ function StatusBadge({ status }: { status: string }): ReactElement {
   if (status === 'success') {
     return (
       <Badge
-        className="bg-green-50 text-green-700 border-green-200"
+        className="bg-status-success text-status-success-foreground border-status-success-border"
         variant="secondary"
       >
         Success
@@ -314,7 +314,7 @@ function StatusBadge({ status }: { status: string }): ReactElement {
   if (status === 'running') {
     return (
       <Badge
-        className="bg-yellow-50 text-yellow-700 border-yellow-200"
+        className="bg-status-warning text-status-warning-foreground border-status-warning-border"
         variant="secondary"
       >
         Running
@@ -329,7 +329,7 @@ function StatusBadge({ status }: { status: string }): ReactElement {
   if (status === 'pending') {
     return (
       <Badge
-        className="bg-yellow-50 text-yellow-700 border-yellow-200"
+        className="bg-status-warning text-status-warning-foreground border-status-warning-border"
         variant="secondary"
       >
         Pending
@@ -340,7 +340,7 @@ function StatusBadge({ status }: { status: string }): ReactElement {
   if (status === 'cancelled') {
     return (
       <Badge
-        className="bg-gray-50 text-gray-600 border-gray-200"
+        className="bg-status-neutral text-status-neutral-foreground border-status-neutral-border"
         variant="secondary"
       >
         Cancelled
