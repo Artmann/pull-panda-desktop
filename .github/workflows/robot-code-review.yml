@@ -44,7 +44,7 @@ jobs:
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
         run: |
-          $HOME/.opencode/bin/opencode -q -p "Run /review-changes and write the output to review.json"
+          $HOME/.opencode/bin/opencode -q -p "Use the review-changes skill to review the code changes on this branch. After the review is complete, write the result as JSON to a file called review.json in the project root. The JSON must have this schema: { \"summary\": \"string\", \"issues\": [{ \"file\": \"string\", \"line\": number, \"severity\": \"critical|major|minor\", \"title\": \"string\", \"description\": \"string\" }] }"
 
       - name: Post review comments
         if: always()
