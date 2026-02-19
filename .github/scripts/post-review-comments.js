@@ -5,13 +5,23 @@ const summaryMarker = '<!-- robot-code-review -->\n<!-- robot-code-review-summar
 const commentMarker = '<!-- robot-code-review -->'
 
 const severityEmoji = {
-  critical: '\u{1f6a8}',
-  major: '\u26a0\ufe0f',
-  minor: '\u{1f4dd}',
+  critical: '\u{1F534}',
+  major: '\u{1F7E0}',
+  minor: '\u{1F7E1}',
 }
 
-function fileMarker(filePath) {
-  return `<!-- file: ${filePath} -->`
+const severityLabel = {
+  critical: 'Critical',
+  major: 'Major',
+  minor: 'Minor',
+}
+
+function issueSlug(file, title) {
+  return `${file}-${title}`.toLowerCase().replace(/[^a-z0-9-]/g, '-').replace(/-+/g, '-')
+}
+
+function issueMarker(slug) {
+  return `<!-- robot-issue: ${slug} -->`
 }
 
 function buildSummaryBody(summary, issues) {
@@ -23,25 +33,23 @@ function buildSummaryBody(summary, issues) {
     return body
   }
 
-  body += '\n| File | Severity | Title |\n|------|----------|-------|\n'
+  body += '\n### Issues\n\n'
 
   for (const issue of issues) {
     const emoji = severityEmoji[issue.severity] ?? ''
-    body += `| \`${issue.file}\` | ${emoji} ${issue.severity} | ${issue.title} |\n`
+    const label = severityLabel[issue.severity] ?? issue.severity
+    body += `- ${emoji} **${label}:** ${issue.title} — \`${issue.file}:${issue.line}\`\n`
   }
 
   return body
 }
 
-function buildFileCommentBody(filePath, issues) {
-  let body = `${commentMarker}\n${fileMarker(filePath)}\n\n`
+function buildIssueCommentBody(issue) {
+  const slug = issueSlug(issue.file, issue.title)
+  const emoji = severityEmoji[issue.severity] ?? ''
+  const label = severityLabel[issue.severity] ?? issue.severity
 
-  for (const issue of issues) {
-    const emoji = severityEmoji[issue.severity] ?? ''
-    body += `### ${emoji} ${issue.severity}: ${issue.title}\n\n${issue.description}\n\n`
-  }
-
-  return body.trimEnd()
+  return `${commentMarker}\n${issueMarker(slug)}\n\n### ${emoji} ${label}: ${issue.title}\n\n${issue.description}`
 }
 
 async function fetchExistingReviewThreads(github, owner, repo, prNumber) {
@@ -107,13 +115,17 @@ function findRobotThreads(threads) {
       continue
     }
 
-    const fileMatch = firstComment.body.match(/<!-- file: (.+?) -->/)
+    // Skip resolved threads — the user resolved them intentionally.
+    if (thread.isResolved) {
+      continue
+    }
 
-    if (fileMatch) {
-      robotThreads.set(fileMatch[1], {
+    const slugMatch = firstComment.body.match(/<!-- robot-issue: (.+?) -->/)
+
+    if (slugMatch) {
+      robotThreads.set(slugMatch[1], {
         threadId: thread.id,
         commentId: firstComment.databaseId,
-        isResolved: thread.isResolved,
       })
     }
   }
@@ -178,27 +190,16 @@ module.exports = async ({ github, context, core }) => {
     })
   }
 
-  // Handle file comments.
-
-  const issuesByFile = new Map()
-
-  for (const issue of issues) {
-    if (!issuesByFile.has(issue.file)) {
-      issuesByFile.set(issue.file, [])
-    }
-
-    issuesByFile.get(issue.file).push(issue)
-  }
+  // Handle issue comments — one thread per issue.
 
   const threads = await fetchExistingReviewThreads(github, owner, repo, prNumber)
   const robotThreads = findRobotThreads(threads)
   const newComments = []
 
-  // Update existing threads or collect new comments.
-
-  for (const [filePath, fileIssues] of issuesByFile) {
-    const body = buildFileCommentBody(filePath, fileIssues)
-    const existing = robotThreads.get(filePath)
+  for (const issue of issues) {
+    const slug = issueSlug(issue.file, issue.title)
+    const body = buildIssueCommentBody(issue)
+    const existing = robotThreads.get(slug)
 
     if (existing) {
       await github.rest.pulls.updateReviewComment({
@@ -208,39 +209,29 @@ module.exports = async ({ github, context, core }) => {
         body,
       })
 
-      if (existing.isResolved) {
-        await github.graphql(`
-          mutation($threadId: ID!) {
-            unresolveReviewThread(input: { threadId: $threadId }) {
-              thread { id }
-            }
-          }
-        `, { threadId: existing.threadId })
-      }
-
-      robotThreads.delete(filePath)
+      robotThreads.delete(slug)
     } else {
-      const line = fileIssues[0].line ?? 1
-
-      newComments.push({ path: filePath, line, body })
+      newComments.push({
+        path: issue.file,
+        line: issue.line ?? 1,
+        body,
+      })
     }
   }
 
-  // Resolve threads for files that no longer have issues.
+  // Resolve unresolved robot threads whose issues are no longer present.
 
   for (const [, thread] of robotThreads) {
-    if (!thread.isResolved) {
-      await github.graphql(`
-        mutation($threadId: ID!) {
-          resolveReviewThread(input: { threadId: $threadId }) {
-            thread { id }
-          }
+    await github.graphql(`
+      mutation($threadId: ID!) {
+        resolveReviewThread(input: { threadId: $threadId }) {
+          thread { id }
         }
-      `, { threadId: thread.threadId })
-    }
+      }
+    `, { threadId: thread.threadId })
   }
 
-  // Post new file comments as a single review.
+  // Post new issue comments as a single review.
 
   if (newComments.length > 0) {
     await github.rest.pulls.createReview({
