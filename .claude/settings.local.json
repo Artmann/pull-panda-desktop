@@ -79,7 +79,10 @@
       "WebFetch(domain:unpkg.com)",
       "WebFetch(domain:app.unpkg.com)",
       "WebFetch(domain:www.wulongxin.com)",
-      "Bash(git rebase:*)"
+      "Bash(git rebase:*)",
+      "mcp__github__get_file_contents",
+      "mcp__github__search_code",
+      "Bash(yarn format:*)"
     ]
   }
 }
