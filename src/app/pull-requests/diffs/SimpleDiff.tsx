@@ -1,4 +1,5 @@
 import { Plus } from 'lucide-react'
+import { useTheme } from 'next-themes'
 import {
   memo,
   useCallback,
@@ -9,11 +10,17 @@ import {
   type ReactElement
 } from 'react'
 
+import type {
+  DarkCodeTheme,
+  LightCodeTheme,
+  ThemeDiffColors
+} from '@/app/lib/codeThemes'
+import { getDiffColors } from '@/app/lib/codeThemes'
 import {
   getLanguageFromPath,
-  getSharedHighlighter,
-  themes
+  getSharedHighlighter
 } from '@/app/lib/highlighter'
+import { useCodeTheme } from '@/app/lib/store/codeThemeContext'
 import { cn, escapeHtml } from '@/app/lib/utils'
 import type { PendingReviewComment } from '@/app/store/pending-review-comments-slice'
 import type { Comment } from '@/types/pull-request-details'
@@ -29,7 +36,9 @@ import { Button } from '@/app/components/ui/button'
 async function highlightLines(
   lines: DiffHunkLine[],
   language: string,
-  intraLineDiffMap: Map<number, string>
+  intraLineDiffMap: Map<number, string>,
+  lightTheme: LightCodeTheme,
+  darkTheme: DarkCodeTheme
 ): Promise<Map<number, string>> {
   const highlighter = await getSharedHighlighter()
   const loadedLangs = highlighter.getLoadedLanguages()
@@ -57,9 +66,10 @@ async function highlightLines(
     const html = highlighter.codeToHtml(line.content, {
       lang: effectiveLang,
       themes: {
-        light: themes.light,
-        dark: themes.dark
-      }
+        light: lightTheme,
+        dark: darkTheme
+      },
+      defaultColor: 'light'
     })
 
     // Extract content from <pre><code>...</code></pre>
@@ -98,6 +108,15 @@ export const SimpleDiff = memo(function SimpleDiff({
   const [activeCommentLineIndex, setActiveCommentLineIndex] = useState<
     number | null
   >(null)
+  const { darkBackground, darkTheme, lightBackground, lightTheme } =
+    useCodeTheme()
+  const { resolvedTheme } = useTheme()
+  const isDark = resolvedTheme === 'dark'
+  const backgroundColor = isDark ? darkBackground : lightBackground
+  const diffColors = useMemo(
+    () => getDiffColors(isDark ? darkTheme : lightTheme, isDark),
+    [isDark, darkTheme, lightTheme]
+  )
 
   const hunk = useMemo(() => parseDiffHunk(diffHunk), [diffHunk])
 
@@ -146,11 +165,15 @@ export const SimpleDiff = memo(function SimpleDiff({
     const observer = new IntersectionObserver(
       ([entry]) => {
         if (entry.isIntersecting) {
-          void highlightLines(filteredLines, language, intraLineDiffMap).then(
-            (highlighted) => {
-              setSyntaxHighlightedLines(highlighted)
-            }
-          )
+          void highlightLines(
+            filteredLines,
+            language,
+            intraLineDiffMap,
+            lightTheme,
+            darkTheme
+          ).then((highlighted) => {
+            setSyntaxHighlightedLines(highlighted)
+          })
           observer.disconnect()
         }
       },
@@ -160,7 +183,7 @@ export const SimpleDiff = memo(function SimpleDiff({
     observer.observe(container)
 
     return () => observer.disconnect()
-  }, [filePath, filteredLines, intraLineDiffMap])
+  }, [filePath, filteredLines, intraLineDiffMap, lightTheme, darkTheme])
 
   const highlightedLines = useMemo(() => {
     return filteredLines.map((line, index) => {
@@ -260,7 +283,8 @@ export const SimpleDiff = memo(function SimpleDiff({
   return (
     <div
       ref={containerRef}
-      className="diff-table w-full font-mono font-normal antialiased text-xs leading-6 dark:bg-muted rounded-lg overflow-hidden"
+      className="diff-table w-full font-mono font-normal antialiased text-xs leading-6 overflow-hidden"
+      style={{ background: backgroundColor }}
     >
       {filteredLines.map((line, index) => {
         const key = line.newLineNumber
@@ -279,7 +303,7 @@ export const SimpleDiff = memo(function SimpleDiff({
           <div key={key}>
             <DiffLine
               canComment={Boolean(canCommentOnLine)}
-              filteredLines={filteredLines}
+              diffColors={diffColors}
               highlightedLines={highlightedLines}
               index={index}
               line={line}
@@ -320,55 +344,44 @@ const blankSpace = '\u00A0'
 
 const DiffLine = memo(function DiffLine({
   canComment,
-  filteredLines,
+  diffColors,
   highlightedLines,
   index,
   line,
   onClick
 }: {
   canComment: boolean
-  filteredLines: ReturnType<typeof parseDiffHunk>['lines']
+  diffColors: ThemeDiffColors
   highlightedLines: string[]
   index: number
   line: ReturnType<typeof parseDiffHunk>['lines'][number]
   onClick: () => void
 }) {
-  const getLineColor = (lineIndex: number) => {
-    if (filteredLines.length === 0) {
-      return getLineColorByType('context')
+  const getLineBackgroundColor = (
+    lineType: 'add' | 'remove' | 'context' | 'truncated'
+  ): string | undefined => {
+    if (lineType === 'add') {
+      return diffColors.diffAdd
     }
 
-    const clampedIndex = Math.min(
-      Math.max(lineIndex, 0),
-      filteredLines.length - 1
-    )
+    if (lineType === 'remove') {
+      return diffColors.diffRemove
+    }
 
-    const currentLine = filteredLines[clampedIndex]
-
-    return getLineColorByType(currentLine.type)
+    // Context and truncated lines use transparent background.
+    return undefined
   }
 
   const wasAdded = line.type === 'add'
   const wasRemoved = line.type === 'remove'
+  const lineBackground = getLineBackgroundColor(line.type)
 
   return (
     <div
       className="flex gap-0 group relative"
       data-testid={`diff-line-${index}`}
     >
-      <div className={cn('text-right user-select-none relative')}>
-        {canComment && (
-          <Button
-            className="absolute left-2 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity size-5 flex items-center justify-center cursor-pointer"
-            size="icon-sm"
-            type="button"
-            variant="outline"
-            onClick={onClick}
-          >
-            <Plus className="size-3" />
-          </Button>
-        )}
-
+      <div className={cn('text-right user-select-none')}>
         <div
           className={cn(
             'px-3',
@@ -378,8 +391,9 @@ const DiffLine = memo(function DiffLine({
               : wasRemoved
                 ? 'border-l-[#D46060]'
                 : 'border-l-transparent',
-            getLineColor(index)
+            line.type === 'truncated' && 'bg-muted/50'
           )}
+          style={{ backgroundColor: lineBackground }}
         >
           {line.type === 'truncated'
             ? blankSpace
@@ -392,8 +406,9 @@ const DiffLine = memo(function DiffLine({
       <div
         className={cn(
           'flex-1 min-w-0 overflow-x-auto w-full pr-4',
-          getLineColor(index)
+          line.type === 'truncated' && 'bg-muted/50'
         )}
+        style={{ backgroundColor: lineBackground }}
       >
         <span
           className={cn(
@@ -406,24 +421,18 @@ const DiffLine = memo(function DiffLine({
           }}
         />
       </div>
+
+      {canComment && (
+        <Button
+          className="absolute right-2 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity size-5 flex items-center justify-center cursor-pointer bg-cyan-500 hover:bg-cyan-600 text-white border-0"
+          size="icon-sm"
+          type="button"
+          variant="outline"
+          onClick={onClick}
+        >
+          <Plus className="size-3" />
+        </Button>
+      )}
     </div>
   )
 })
-
-function getLineColorByType(
-  type: 'add' | 'remove' | 'context' | 'truncated'
-): string {
-  if (type === 'add') {
-    return cn('bg-[#E9FBED] dark:bg-[#1a3d2a]')
-  }
-
-  if (type === 'remove') {
-    return cn('bg-[#FFEBEA] dark:bg-[#3d1a1a]')
-  }
-
-  if (type === 'truncated') {
-    return cn('bg-muted/50')
-  }
-
-  return cn('bg-gray-50 dark:bg-transparent')
-}

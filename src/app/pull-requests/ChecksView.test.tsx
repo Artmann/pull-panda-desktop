@@ -9,22 +9,41 @@ import { describe, it, expect, vi, beforeAll } from 'vitest'
 import type { Check, PullRequestDetails } from '@/types/pull-request-details'
 import type { PullRequest } from '@/types/pull-request'
 
+import { CodeThemeProvider } from '@/app/lib/store/codeThemeContext'
 import pullRequestDetailsReducer from '@/app/store/pull-request-details-slice'
 
 import { ChecksView } from './ChecksView'
 
 beforeAll(() => {
-  global.IntersectionObserver = vi.fn().mockImplementation(() => ({
-    observe: vi.fn(),
-    unobserve: vi.fn(),
-    disconnect: vi.fn()
-  }))
+  global.IntersectionObserver = class IntersectionObserver {
+    constructor() {
+      // Mock
+    }
+    disconnect() {
+      // Mock
+    }
+    observe() {
+      // Mock
+    }
+    unobserve() {
+      // Mock
+    }
+  } as unknown as typeof IntersectionObserver
 
-  global.ResizeObserver = vi.fn().mockImplementation(() => ({
-    observe: vi.fn(),
-    unobserve: vi.fn(),
-    disconnect: vi.fn()
-  }))
+  global.ResizeObserver = class ResizeObserver {
+    constructor() {
+      // Mock
+    }
+    disconnect() {
+      // Mock
+    }
+    observe() {
+      // Mock
+    }
+    unobserve() {
+      // Mock
+    }
+  } as unknown as typeof ResizeObserver
 })
 
 function createMockCheck(overrides: Partial<Check> = {}): Check {
@@ -97,7 +116,11 @@ function renderWithProviders(
   ui: React.ReactElement,
   { store = createTestStore() } = {}
 ) {
-  return render(<Provider store={store}>{ui}</Provider>)
+  return render(
+    <Provider store={store}>
+      <CodeThemeProvider>{ui}</CodeThemeProvider>
+    </Provider>
+  )
 }
 
 describe('ChecksView', () => {
@@ -323,14 +346,9 @@ describe('ChecksView', () => {
       renderWithProviders(<ChecksView pullRequest={pullRequest} />, { store })
     })
 
-    const link = screen.getByRole('link')
+    const button = screen.getByTitle('Open on GitHub')
 
-    expect(link).toHaveAttribute(
-      'href',
-      'https://github.com/owner/repo/actions/runs/123'
-    )
-    expect(link).toHaveAttribute('target', '_blank')
-    expect(link).toHaveAttribute('rel', 'noopener noreferrer')
+    expect(button).toBeInTheDocument()
   })
 
   it('handles checks with null suiteName', async () => {

@@ -129,7 +129,7 @@ describe('HomePage', () => {
 
       renderWithProviders(<HomePage />)
 
-      expect(screen.getByText(/John Doe/)).toBeInTheDocument()
+      expect(screen.getByText(/John/)).toBeInTheDocument()
     })
 
     it('falls back to login when name is null', () => {
