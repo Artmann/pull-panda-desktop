@@ -44,7 +44,7 @@ jobs:
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
         run: |
-          ~/.local/bin/opencode -q "Run /review-changes and write the output to review.json"
+          $HOME/.opencode/bin/opencode -q "Run /review-changes and write the output to review.json"
 
       - name: Post review comments
         if: always()
