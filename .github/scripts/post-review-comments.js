@@ -28,9 +28,7 @@ function buildSummaryBody(summary, issues) {
   let body = `${summaryMarker}\n\n## Robot Code Review\n\n${summary}\n`
 
   if (issues.length === 0) {
-    body += '\n**No issues found.**\n'
-
-    return body
+    return `${summaryMarker}\n\nLooks good to me! :rocket:`
   }
 
   body += '\n### Issues\n\n'
