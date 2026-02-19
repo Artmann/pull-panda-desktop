@@ -26,7 +26,7 @@ jobs:
         run: curl -fsSL https://raw.githubusercontent.com/opencode-ai/opencode/refs/heads/main/install | bash
 
       - name: Install review skill
-        run: npx -y skills add artmann/review-changes/review-changes -a opencode -y
+        run: npx -y skills add artmann/review-changes --skill review-changes -a opencode -y
 
       - name: Write opencode config
         run: |
