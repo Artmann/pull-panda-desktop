@@ -170,7 +170,7 @@ const ActivityItemComponent = memo(function ActivityItemComponent({
   }, [item])
 
   return (
-    <div>
+    <div className="flex flex-col gap-2">
       <div className="flex justify-between items-center gap-4 text-xs">
         <div className="flex items-center gap-4">
           <UserAvatar
@@ -215,10 +215,7 @@ function ActivityItemBody({
     }
 
     return comment.diffHunk ? (
-      <div
-        className="py-4"
-        data-testid={`comment-${comment.id}`}
-      >
+      <div data-testid={`comment-${comment.id}`}>
         <FileCommentThreadCard
           allComments={allComments}
           comment={comment}
@@ -227,10 +224,7 @@ function ActivityItemBody({
         />
       </div>
     ) : (
-      <div
-        className="py-4"
-        data-testid={`comment-${comment.id}`}
-      >
+      <div data-testid={`comment-${comment.id}`}>
         <CommentThreadCard
           allComments={allComments}
           comment={comment}
@@ -247,10 +241,7 @@ function ActivityItemBody({
     }
 
     return (
-      <div
-        className="py-4"
-        data-testid={`review-${item.data.id}`}
-      >
+      <div data-testid={`review-${item.data.id}`}>
         <Card className="p-0 w-full gap-0">
           <CardContent className="w-full p-4 text-sm">
             <CommentBody content={item.data.body} />

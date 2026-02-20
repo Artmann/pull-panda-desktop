@@ -83,6 +83,7 @@ async function highlightLines(
 }
 
 interface SimpleDiffProps {
+  className?: string
   diffHunk: string
   filePath?: string
   lineEnd?: number
@@ -93,6 +94,7 @@ interface SimpleDiffProps {
 }
 
 export const SimpleDiff = memo(function SimpleDiff({
+  className,
   diffHunk,
   filePath,
   lineEnd,
@@ -283,7 +285,10 @@ export const SimpleDiff = memo(function SimpleDiff({
   return (
     <div
       ref={containerRef}
-      className="diff-table w-full font-mono font-normal antialiased text-xs leading-6 overflow-hidden"
+      className={cn(
+        'diff-table w-full font-mono font-normal antialiased text-xs leading-6 overflow-hidden',
+        className
+      )}
       style={{ background: backgroundColor }}
     >
       {filteredLines.map((line, index) => {

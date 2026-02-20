@@ -85,7 +85,7 @@ const CommentItem = memo(function CommentItem({
   hideAuthor = false
 }: CommentItemProps): ReactElement {
   return (
-    <div className="flex flex-col w-full p-4 gap-1.5">
+    <div className="flex flex-col w-full px-4 pt-4 pb-5 gap-1.5">
       {!hideAuthor && (
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
@@ -300,15 +300,16 @@ export const FileCommentThreadCard = memo(function FileCommentThreadCard({
 
   return (
     <Card className="p-0 w-full gap-0 shadow-none">
-      <CardHeader className="px-4 py-3 pb-4! bg-muted/50 border-b border-border flex items-center gap-3">
-        <Code2 className="w-4 h-4 text-muted-foreground" />
-        <CardTitle className="text-xs text-muted-foreground font-mono">
+      <CardHeader className="px-4 py-3 pb-4! bg-muted border-b border-border flex items-center gap-3">
+        <Code2 className="w-4 h-4 text-muted-foreground shrink-0" />
+        <CardTitle className="text-xs text-foreground/80 font-mono truncate">
           {comment.path}
         </CardTitle>
       </CardHeader>
       <CardContent className="p-0 w-full">
         {comment.diffHunk && (
           <SimpleDiff
+            className="text-sm leading-7"
             diffHunk={comment.diffHunk}
             filePath={comment.path ?? undefined}
             lineStart={lineStart}
