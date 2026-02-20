@@ -14,6 +14,7 @@ import remarkRehype, {
 import { type Plugin, unified } from 'unified'
 import { visit } from 'unist-util-visit'
 
+import { useOpenExternalLinks } from '@/app/lib/useOpenExternalLinks'
 import { Skeleton } from './ui/skeleton'
 
 import type { DarkCodeTheme, LightCodeTheme } from '@/app/lib/codeThemes'
@@ -91,6 +92,7 @@ export const MarkdownBlock = memo(function MarkdownBlock({
   path?: string
 }): ReactElement {
   const containerRef = useRef<HTMLDivElement>(null)
+  useOpenExternalLinks(containerRef)
   const [result, createMarkdownContent] = useRemark({ path })
   const [isHighlighted, setIsHighlighted] = useState(false)
   const lastContentRef = useRef<string | null>(null)
