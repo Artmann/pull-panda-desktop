@@ -35,6 +35,8 @@ const reviewThreadsQuery = `
 `
 
 export function parseReviewFile(path: string): Review | null {
+  console.log(`Parsing review file: ${path}`)
+
   if (!fs.existsSync(path)) {
     console.warn('review.json not found — skipping review comments.')
 
@@ -45,13 +47,20 @@ export function parseReviewFile(path: string): Review | null {
     const raw = JSON.parse(fs.readFileSync(path, 'utf8'))
 
     // opencode -f json wraps output in { "response": "..." }.
-    const content =
-      typeof raw.response === 'string' ? raw.response : JSON.stringify(raw)
+    const unwrapped = typeof raw.response === 'string'
+    const content = unwrapped ? raw.response : JSON.stringify(raw)
+
+    console.log(`Opencode JSON envelope: ${unwrapped ? 'unwrapped' : 'not present'}`)
+
     const jsonText = content
       .replace(/^```(?:json)?\s*\n?/, '')
       .replace(/\n?```\s*$/, '')
 
-    return JSON.parse(jsonText)
+    const review: Review = JSON.parse(jsonText)
+
+    console.log(`Parsed ${review.issues?.length ?? 0} issues from review file.`)
+
+    return review
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error)
     console.warn(`Failed to parse review.json: ${message}`)
@@ -97,6 +106,8 @@ export async function fetchExistingReviewThreads(
     cursor = reviewThreads.pageInfo.endCursor
   }
 
+  console.log(`Fetched ${threads.length} existing review threads.`)
+
   return threads
 }
 
@@ -123,6 +134,8 @@ export async function postReview(
   const summary = review.summary ?? 'No summary provided.'
   const issues: Issue[] = review.issues ?? []
 
+  console.log(`Review: ${issues.length} issues, summary length ${summary.length} chars.`)
+
   // Post or update summary comment.
 
   const summaryBody = buildSummaryBody(summary, issues)
@@ -136,6 +149,8 @@ export async function postReview(
   const existingSummary = existingComments.find((comment) =>
     comment.body?.includes('<!-- robot-code-review-summary -->')
   )
+
+  console.log(`Summary comment: ${existingSummary ? 'updating existing' : 'creating new'}.`)
 
   if (existingSummary) {
     await octokit.rest.issues.updateComment({
@@ -164,12 +179,16 @@ export async function postReview(
   const robotThreads = findRobotThreads(threads)
   const newComments: Array<{ body: string; line: number; path: string }> = []
 
+  console.log(`Found ${robotThreads.size} existing robot threads.`)
+
   for (const issue of issues) {
     const slug = issueSlug(issue.file, issue.title)
     const body = buildIssueCommentBody(issue)
     const existing = robotThreads.get(slug)
 
     if (existing) {
+      console.log(`Updating existing thread for: ${slug}`)
+
       await octokit.rest.pulls.updateReviewComment({
         owner,
         repo,
@@ -179,6 +198,8 @@ export async function postReview(
 
       robotThreads.delete(slug)
     } else {
+      console.log(`New thread for: ${slug}`)
+
       newComments.push({
         body,
         line: issue.line ?? 1,
@@ -188,6 +209,8 @@ export async function postReview(
   }
 
   // Resolve unresolved robot threads whose issues are no longer present.
+
+  console.log(`Resolving ${robotThreads.size} stale threads.`)
 
   for (const [, thread] of robotThreads) {
     await octokit.graphql(
@@ -203,6 +226,8 @@ export async function postReview(
   }
 
   // Post new issue comments as a single review.
+
+  console.log(`Posting ${newComments.length} new comments as a review.`)
 
   if (newComments.length > 0) {
     await octokit.rest.pulls.createReview({
