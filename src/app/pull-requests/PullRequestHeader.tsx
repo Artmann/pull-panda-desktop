@@ -1,7 +1,9 @@
 import { ExternalLinkIcon, GitPullRequest } from 'lucide-react'
+import { ReactElement, useMemo } from 'react'
 import invariant from 'tiny-invariant'
 
 import { PullRequest } from '@/types/pull-request'
+import { ReviewBadge } from '../components/ReviewBadge'
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -9,9 +11,9 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator
 } from '../components/ui/breadcrumb'
-import { PullRequestStatusBadge } from '../components/PullRequestStatusBadge'
-import { ReactElement } from 'react'
 import { cn } from '../lib/utils'
+import { useAppSelector } from '../store/hooks'
+import { getLatestReviews } from './get-latest-reviews'
 
 export function StickyPullRequestHeader({
   pullRequest,
@@ -61,6 +63,16 @@ export function PullRequestHeader({
 }): ReactElement {
   invariant(pullRequest, 'PullRequestHeader requires a pull request')
 
+  const reviews =
+    useAppSelector(
+      (state) => state.pullRequestDetails[pullRequest.id]?.reviews
+    ) ?? []
+
+  const latestReviews = useMemo(
+    () => getLatestReviews(reviews),
+    [reviews]
+  )
+
   return (
     <header className="flex flex-col gap-2 p-6">
       <Breadcrumbs pullRequest={pullRequest} />
@@ -69,34 +81,16 @@ export function PullRequestHeader({
         <Title>{pullRequest.title}</Title>
       </div>
 
-      <div className="flex flex-col gap-3 transition-all h-auto overflow-hidden">
-        <div className="flex items-center gap-2">
-          <div>
-            <PullRequestStatusBadge pullRequest={pullRequest} />
-          </div>
-          {/* 
-          <div className="text-xs text-gray-500 dark:text-gray-400">
-            <strong>{pullRequest.authorLogin || 'Unknown'}</strong> wants to
-            merge {commits.length} commits into{' '}
-            <strong>{pullRequest.baseRefName || 'main'}</strong> from{' '}
-            <strong>{pullRequest.headRefName || 'unknown'}</strong>
-          </div> */}
+      {latestReviews.length > 0 && (
+        <div className="flex gap-2 overflow-x-auto">
+          {latestReviews.map((review) => (
+            <ReviewBadge
+              key={review.authorLogin}
+              review={review}
+            />
+          ))}
         </div>
-
-        {/* {latestReviews.length > 0 && (
-          <div className="flex gap-2 overflow-x-auto">
-            {latestReviews.map((review) => (
-              <ReviewBadge
-                key={review.author.login}
-                review={review}
-                repositoryOwner={pullRequest.repositoryOwner}
-                repositoryName={pullRequest.repositoryName}
-                pullRequestNumber={pullRequest.number}
-              />
-            ))}
-          </div>
-        )} */}
-      </div>
+      )}
     </header>
   )
 }

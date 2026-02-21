@@ -1,26 +1,16 @@
-import { Link } from 'react-router'
-
-import type { Review } from '@/types/pull-request'
+import type { Review } from '@/types/pull-request-details'
 import { Badge } from '@/app/components/ui/badge'
 import {
   Tooltip,
-  TooltipTrigger,
-  TooltipContent
+  TooltipContent,
+  TooltipTrigger
 } from '@/app/components/ui/tooltip'
 
 interface ReviewBadgeProps {
   review: Review
-  repositoryOwner: string
-  repositoryName: string
-  pullRequestNumber: number
 }
 
-export function ReviewBadge({
-  review,
-  repositoryOwner,
-  repositoryName,
-  pullRequestNumber
-}: ReviewBadgeProps) {
+export function ReviewBadge({ review }: ReviewBadgeProps) {
   const isApproved = review.state === 'APPROVED'
   const isChangesRequested = review.state === 'CHANGES_REQUESTED'
 
@@ -37,28 +27,25 @@ export function ReviewBadge({
       : 'Commented'
 
   const tooltipText = isApproved
-    ? `${review.author.login} approved these changes`
+    ? `${review.authorLogin} approved these changes`
     : isChangesRequested
-      ? `${review.author.login} requested changes`
-      : `${review.author.login} left review comments`
+      ? `${review.authorLogin} requested changes`
+      : `${review.authorLogin} left review comments`
 
   return (
     <Tooltip>
       <TooltipTrigger asChild>
         <Badge
-          className={`text-[11px] px-3 py-1 flex items-center gap-1.5 ${badgeColor} cursor-pointer`}
+          className={`text-[11px] px-3 py-1 flex items-center gap-1.5 ${badgeColor}`}
         >
-          <img
-            src={review.author.avatarUrl}
-            alt={review.author.login}
-            className="size-4 rounded-full ring-1 ring-foreground/10"
-          />
-          <Link
-            className="hover:underline"
-            to={`${repositoryOwner}/${repositoryName}/${pullRequestNumber.toString()}#reviews`}
-          >
-            {reviewText}
-          </Link>
+          {review.authorAvatarUrl && (
+            <img
+              alt={review.authorLogin ?? ''}
+              className="size-4 rounded-full ring-1 ring-foreground/10"
+              src={review.authorAvatarUrl}
+            />
+          )}
+          {reviewText}
         </Badge>
       </TooltipTrigger>
       <TooltipContent>{tooltipText}</TooltipContent>

@@ -38,18 +38,3 @@ export interface PullRequest {
 }
 
 export type PullRequestRelation = 'author' | 'assignee' | 'reviewer'
-
-export interface Review {
-  author: {
-    avatarUrl: string
-    login: string
-  }
-  body: string
-  createdAt: string
-  githubId: string
-  id: string
-  pullRequestId: string
-  state: string
-  submittedAt: string
-  url: string
-}
