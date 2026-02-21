@@ -98,7 +98,8 @@
       "Bash(gh pr list:*)",
       "Bash(gh pr view:*)",
       "Bash(git rm:*)",
-      "Bash(bun test:*)"
+      "Bash(bun test:*)",
+      "Bash(export PATH=\"/c/Program Files/GitHub CLI:$PATH\")"
     ]
   }
 }
