@@ -112,7 +112,7 @@ function AppContent(): ReactElement {
   const postSignInRedirect = isNewSignIn ? '/onboarding' : '/'
 
   return (
-    <main className="w-screen h-screen flex flex-col overflow-hidden">
+    <main className="w-full h-screen flex flex-col overflow-hidden">
       <TitleBar />
 
       <div className="flex-1 min-h-0 overflow-auto ">
