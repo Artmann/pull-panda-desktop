@@ -13,7 +13,7 @@ import {
 } from './main/bootstrap'
 import { backgroundSyncer } from './main/background-syncer'
 import { taskManager } from './main/task-manager'
-import { syncPullRequests } from './sync/pull-requests'
+import { syncPullRequests, syncStalePullRequests } from './sync/pull-requests'
 import { syncPullRequestDetails } from './sync/sync-pull-request-details'
 import {
   clearToken,
@@ -361,6 +361,20 @@ app.on('ready', async () => {
 
         if (result.errors.length > 0) {
           console.warn('Sync warnings:', result.errors)
+        }
+
+        // Update stale PRs that were merged/closed on GitHub
+        try {
+          const staleUpdated = await syncStalePullRequests(
+            token,
+            result.syncedIds
+          )
+
+          if (staleUpdated > 0) {
+            console.log(`Updated ${staleUpdated} stale pull requests`)
+          }
+        } catch (error) {
+          console.error('Failed to sync stale pull requests:', error)
         }
 
         const currentUserLogin = await getUserLogin()

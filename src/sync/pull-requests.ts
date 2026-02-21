@@ -1,3 +1,4 @@
+import { eq } from 'drizzle-orm'
 import { log } from 'tiny-typescript-logger'
 
 import { getDatabase } from '../database'
@@ -6,6 +7,7 @@ import { createGraphQLClient } from './graphql-client'
 
 export interface SyncResult {
   synced: number
+  syncedIds: Set<string>
   errors: string[]
 }
 
@@ -404,6 +406,132 @@ export async function syncPullRequests(token: string): Promise<SyncResult> {
 
   return {
     synced: pullRequestsToSync.length,
+    syncedIds: new Set(pullRequestMap.keys()),
     errors
   }
+}
+
+const fetchPullRequestNodeQuery = `
+  query FetchPullRequestNode($id: ID!) {
+    node(id: $id) {
+      ... on PullRequest {
+        id
+        number
+        title
+        body
+        bodyHTML
+        state
+        isDraft
+        url
+        createdAt
+        updatedAt
+        closedAt
+        mergedAt
+        repository {
+          name
+          owner {
+            login
+          }
+        }
+        author {
+          login
+          avatarUrl
+        }
+        labels(first: 10) {
+          nodes {
+            name
+            color
+          }
+        }
+        assignees(first: 10) {
+          nodes {
+            login
+            avatarUrl
+          }
+        }
+      }
+    }
+    rateLimit {
+      limit
+      remaining
+      resetAt
+    }
+  }
+`
+
+interface FetchPullRequestNodeResponse {
+  node: GraphQLPullRequestNode | null
+  rateLimit: {
+    limit: number
+    remaining: number
+    resetAt: string
+  }
+}
+
+export async function syncStalePullRequests(
+  token: string,
+  syncedIds: Set<string>
+): Promise<number> {
+  const client = createGraphQLClient(token)
+  const database = getDatabase()
+
+  const localOpenPullRequests = database
+    .select({ id: pullRequests.id })
+    .from(pullRequests)
+    .where(eq(pullRequests.state, 'OPEN'))
+    .all()
+
+  const stalePullRequests = localOpenPullRequests.filter(
+    (pullRequest) => !syncedIds.has(pullRequest.id)
+  )
+
+  if (stalePullRequests.length === 0) {
+    return 0
+  }
+
+  log.info(
+    `Found ${stalePullRequests.length} stale PRs still marked OPEN locally`
+  )
+
+  let updated = 0
+
+  for (const stalePullRequest of stalePullRequests) {
+    try {
+      const response = await client.query<FetchPullRequestNodeResponse>(
+        fetchPullRequestNodeQuery,
+        { id: stalePullRequest.id }
+      )
+
+      if (!response.node) {
+        log.warn(
+          `Stale PR ${stalePullRequest.id} not found on GitHub, skipping`
+        )
+        continue
+      }
+
+      const now = new Date().toISOString()
+      const node = response.node
+
+      database
+        .update(pullRequests)
+        .set({
+          state: node.state,
+          closedAt: node.closedAt,
+          mergedAt: node.mergedAt,
+          updatedAt: node.updatedAt,
+          syncedAt: now
+        })
+        .where(eq(pullRequests.id, stalePullRequest.id))
+        .run()
+
+      log.info(`Updated stale PR ${stalePullRequest.id} to state ${node.state}`)
+
+      updated++
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Unknown error'
+      log.error(`Failed to fetch stale PR ${stalePullRequest.id}: ${message}`)
+    }
+  }
+
+  return updated
 }
