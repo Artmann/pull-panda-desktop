@@ -246,18 +246,25 @@ export async function postReview(
     return false
   })
 
-  // Post new issue comments as a single review.
+  // Post new issue comments one at a time. The API rejects the entire batch
+  // if any line number falls outside the diff, so posting individually lets
+  // valid comments go through even when some lines can't be resolved.
 
-  console.log(`Posting ${validComments.length} new comments as a review.`)
+  console.log(`Posting ${validComments.length} new comments as reviews.`)
 
-  if (validComments.length > 0) {
-    await octokit.rest.pulls.createReview({
-      owner,
-      repo,
-      pull_number: prNumber,
-      commit_id: commitSha,
-      event: 'COMMENT',
-      comments: validComments,
-    })
+  for (const comment of validComments) {
+    try {
+      await octokit.rest.pulls.createReview({
+        owner,
+        repo,
+        pull_number: prNumber,
+        commit_id: commitSha,
+        event: 'COMMENT',
+        comments: [comment],
+      })
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error)
+      console.warn(`Skipping comment on "${comment.path}:${comment.line}" — ${message}`)
+    }
   }
 }
