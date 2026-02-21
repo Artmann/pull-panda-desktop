@@ -6,7 +6,7 @@ import {
   commentMarker,
   issueSlug,
   signature,
-  summaryMarker,
+  summaryMarker
 } from './format'
 import type { Issue } from './types'
 
@@ -46,15 +46,15 @@ describe('buildSummaryBody', () => {
         file: 'src/app.ts',
         line: 10,
         severity: 'critical',
-        title: 'Missing null check',
+        title: 'Missing null check'
       },
       {
         description: 'Desc',
         file: 'src/utils.ts',
         line: 5,
         severity: 'minor',
-        title: 'Unused import',
-      },
+        title: 'Unused import'
+      }
     ]
 
     const body = buildSummaryBody('Found some issues.', issues)
@@ -64,9 +64,7 @@ describe('buildSummaryBody', () => {
     expect(body).toContain(
       '- 🔴 **Critical:** Missing null check — `src/app.ts:10`'
     )
-    expect(body).toContain(
-      '- 🟡 **Minor:** Unused import — `src/utils.ts:5`'
-    )
+    expect(body).toContain('- 🟡 **Minor:** Unused import — `src/utils.ts:5`')
   })
 
   it('uses correct emojis per severity', () => {
@@ -75,13 +73,13 @@ describe('buildSummaryBody', () => {
       file: 'f.ts',
       line: 1,
       severity,
-      title: 'T',
+      title: 'T'
     })
 
     const body = buildSummaryBody('Summary', [
       makeIssue('critical'),
       makeIssue('major'),
-      makeIssue('minor'),
+      makeIssue('minor')
     ])
 
     expect(body).toContain('🔴 **Critical:**')
@@ -96,7 +94,7 @@ describe('buildIssueCommentBody', () => {
     file: 'src/app.ts',
     line: 42,
     severity: 'major',
-    title: 'Unchecked return value',
+    title: 'Unchecked return value'
   }
 
   it('includes the comment marker', () => {
@@ -108,7 +106,9 @@ describe('buildIssueCommentBody', () => {
   it('includes the issue marker with slug', () => {
     const body = buildIssueCommentBody(issue)
 
-    expect(body).toContain('<!-- robot-issue: src-app-ts-unchecked-return-value -->')
+    expect(body).toContain(
+      '<!-- robot-issue: src-app-ts-unchecked-return-value -->'
+    )
   })
 
   it('includes the signature', () => {

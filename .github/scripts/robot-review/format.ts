@@ -1,19 +1,20 @@
 import type { Issue, Severity } from './types'
 
 export const signature = '**🤖 Pull Panda**'
-export const summaryMarker = '<!-- robot-code-review -->\n<!-- robot-code-review-summary -->'
+export const summaryMarker =
+  '<!-- robot-code-review -->\n<!-- robot-code-review-summary -->'
 export const commentMarker = '<!-- robot-code-review -->'
 
 export const severityEmoji: Record<Severity, string> = {
   critical: '🔴',
   major: '🟠',
-  minor: '🟡',
+  minor: '🟡'
 }
 
 export const severityLabel: Record<Severity, string> = {
   critical: 'Critical',
   major: 'Major',
-  minor: 'Minor',
+  minor: 'Minor'
 }
 
 export function issueSlug(file: string, title: string): string {

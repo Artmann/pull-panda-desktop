@@ -50,7 +50,9 @@ export function parseReviewFile(path: string): Review | null {
     const unwrapped = typeof raw.response === 'string'
     const content = unwrapped ? raw.response : JSON.stringify(raw)
 
-    console.log(`Opencode JSON envelope: ${unwrapped ? 'unwrapped' : 'not present'}`)
+    console.log(
+      `Opencode JSON envelope: ${unwrapped ? 'unwrapped' : 'not present'}`
+    )
 
     const jsonText = content
       .replace(/^```(?:json)?\s*\n?/, '')
@@ -134,7 +136,9 @@ export async function postReview(
   const summary = review.summary ?? 'No summary provided.'
   const allIssues: Issue[] = review.issues ?? []
 
-  console.log(`Review: ${allIssues.length} issues, summary length ${summary.length} chars.`)
+  console.log(
+    `Review: ${allIssues.length} issues, summary length ${summary.length} chars.`
+  )
 
   // Filter issues to only include files that are part of the PR diff.
   // The GitHub API returns 422 if a path doesn't match the diff.
@@ -143,7 +147,7 @@ export async function postReview(
     owner,
     repo,
     pull_number: prNumber,
-    per_page: 100,
+    per_page: 100
   })
 
   const validPaths = new Set(prFiles.map((file) => file.filename))
@@ -169,7 +173,12 @@ export async function postReview(
   )
   const robotThreads = findRobotThreads(threads)
   const postedIssues: Issue[] = []
-  const newComments: Array<{ body: string; issue: Issue; line: number; path: string }> = []
+  const newComments: Array<{
+    body: string
+    issue: Issue
+    line: number
+    path: string
+  }> = []
 
   console.log(`Found ${robotThreads.size} existing robot threads.`)
 
@@ -185,7 +194,7 @@ export async function postReview(
         owner,
         repo,
         comment_id: existing.commentId,
-        body,
+        body
       })
 
       robotThreads.delete(slug)
@@ -197,7 +206,7 @@ export async function postReview(
         body,
         issue,
         line: issue.line ?? 1,
-        path: issue.file,
+        path: issue.file
       })
     }
   }
@@ -237,12 +246,17 @@ export async function postReview(
         pull_number: prNumber,
         commit_id: commitSha,
         event: 'COMMENT',
-        comments: [{ body: comment.body, line: comment.line, path: comment.path }],
+        comments: [
+          { body: comment.body, line: comment.line, path: comment.path }
+        ]
       })
 
       postedIssues.push(comment.issue)
     } catch (error) {
-      console.warn(`Skipping comment on "${comment.path}:${comment.line}":`, error)
+      console.warn(
+        `Skipping comment on "${comment.path}:${comment.line}":`,
+        error
+      )
     }
   }
 
@@ -253,28 +267,30 @@ export async function postReview(
     owner,
     repo,
     issue_number: prNumber,
-    per_page: 100,
+    per_page: 100
   })
 
   const existingSummary = existingComments.find((comment) =>
     comment.body?.includes('<!-- robot-code-review-summary -->')
   )
 
-  console.log(`Summary comment: ${existingSummary ? 'updating existing' : 'creating new'} with ${postedIssues.length} issues.`)
+  console.log(
+    `Summary comment: ${existingSummary ? 'updating existing' : 'creating new'} with ${postedIssues.length} issues.`
+  )
 
   if (existingSummary) {
     await octokit.rest.issues.updateComment({
       owner,
       repo,
       comment_id: existingSummary.id,
-      body: summaryBody,
+      body: summaryBody
     })
   } else {
     await octokit.rest.issues.createComment({
       owner,
       repo,
       issue_number: prNumber,
-      body: summaryBody,
+      body: summaryBody
     })
   }
 }

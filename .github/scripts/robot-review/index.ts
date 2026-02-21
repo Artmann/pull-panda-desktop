@@ -34,7 +34,9 @@ const commitSha = event.pull_request?.head?.sha
 console.log(`PR context: ${owner}/${repo} #${prNumber}@${commitSha}`)
 
 if (!prNumber || !commitSha) {
-  console.error('Could not determine PR number or commit SHA from event payload.')
+  console.error(
+    'Could not determine PR number or commit SHA from event payload.'
+  )
   process.exit(1)
 }
 

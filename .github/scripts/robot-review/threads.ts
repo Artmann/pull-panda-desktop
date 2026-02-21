@@ -22,7 +22,7 @@ export function findRobotThreads(
     if (slugMatch) {
       robotThreads.set(slugMatch[1], {
         commentId: firstComment.databaseId,
-        threadId: thread.id,
+        threadId: thread.id
       })
     }
   }

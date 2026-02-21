@@ -24,13 +24,13 @@ function makeThread(
           databaseId,
           id: 'comment-node-id',
           line: 1,
-          path: 'src/app.ts',
-        },
-      ],
+          path: 'src/app.ts'
+        }
+      ]
     },
     id: 'thread-id',
     isResolved: false,
-    ...rest,
+    ...rest
   }
 }
 
@@ -42,7 +42,7 @@ describe('findRobotThreads', () => {
     expect(result.size).toEqual(1)
     expect(result.get('test-slug')).toEqual({
       commentId: 100,
-      threadId: 'thread-id',
+      threadId: 'thread-id'
     })
   })
 
@@ -65,8 +65,8 @@ describe('findRobotThreads', () => {
       {
         comments: { nodes: [] },
         id: 'empty-thread',
-        isResolved: false,
-      },
+        isResolved: false
+      }
     ]
     const result = findRobotThreads(threads)
 
@@ -84,13 +84,13 @@ describe('findRobotThreads', () => {
       makeThread({
         body: `${commentMarker}\n<!-- robot-issue: slug-one -->\n\nFirst`,
         databaseId: 1,
-        id: 'thread-1',
+        id: 'thread-1'
       }),
       makeThread({
         body: `${commentMarker}\n<!-- robot-issue: slug-two -->\n\nSecond`,
         databaseId: 2,
-        id: 'thread-2',
-      }),
+        id: 'thread-2'
+      })
     ]
 
     const result = findRobotThreads(threads)
@@ -98,11 +98,11 @@ describe('findRobotThreads', () => {
     expect(result.size).toEqual(2)
     expect(result.get('slug-one')).toEqual({
       commentId: 1,
-      threadId: 'thread-1',
+      threadId: 'thread-1'
     })
     expect(result.get('slug-two')).toEqual({
       commentId: 2,
-      threadId: 'thread-2',
+      threadId: 'thread-2'
     })
   })
 })

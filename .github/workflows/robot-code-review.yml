@@ -36,7 +36,9 @@ jobs:
         run: npm install -g opencode-ai
 
       - name: Install review skill
-        run: npx -y skills add artmann/review-changes --skill review-changes -a opencode -y
+        run:
+          npx -y skills add artmann/review-changes --skill review-changes -a
+          opencode -y
 
       - name: Write opencode config
         run: |
