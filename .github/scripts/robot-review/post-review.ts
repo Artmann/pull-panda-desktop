@@ -225,18 +225,39 @@ export async function postReview(
     )
   }
 
+  // Filter comments to only include files that are part of the PR diff.
+  // The GitHub API returns 422 if any path doesn't match the diff.
+
+  const { data: prFiles } = await octokit.rest.pulls.listFiles({
+    owner,
+    repo,
+    pull_number: prNumber,
+    per_page: 100,
+  })
+
+  const validPaths = new Set(prFiles.map((file) => file.filename))
+  const validComments = newComments.filter((comment) => {
+    if (validPaths.has(comment.path)) {
+      return true
+    }
+
+    console.warn(`Skipping comment on "${comment.path}" — not in PR diff.`)
+
+    return false
+  })
+
   // Post new issue comments as a single review.
 
-  console.log(`Posting ${newComments.length} new comments as a review.`)
+  console.log(`Posting ${validComments.length} new comments as a review.`)
 
-  if (newComments.length > 0) {
+  if (validComments.length > 0) {
     await octokit.rest.pulls.createReview({
       owner,
       repo,
       pull_number: prNumber,
       commit_id: commitSha,
       event: 'COMMENT',
-      comments: newComments,
+      comments: validComments,
     })
   }
 }

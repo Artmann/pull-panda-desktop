@@ -97,7 +97,8 @@
       "Bash(git checkout:*)",
       "Bash(gh pr list:*)",
       "Bash(gh pr view:*)",
-      "Bash(git rm:*)"
+      "Bash(git rm:*)",
+      "Bash(bun test:*)"
     ]
   }
 }
