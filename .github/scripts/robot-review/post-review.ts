@@ -219,8 +219,7 @@ export async function postReview(
         { threadId: thread.threadId }
       )
     } catch (error) {
-      const message = error instanceof Error ? error.message : String(error)
-      console.warn(`Could not resolve thread ${thread.threadId} — ${message}`)
+      console.warn(`Could not resolve thread ${thread.threadId}:`, error)
     }
   }
 
@@ -243,8 +242,7 @@ export async function postReview(
 
       postedIssues.push(comment.issue)
     } catch (error) {
-      const message = error instanceof Error ? error.message : String(error)
-      console.warn(`Skipping comment on "${comment.path}:${comment.line}" — ${message}`)
+      console.warn(`Skipping comment on "${comment.path}:${comment.line}":`, error)
     }
   }
 
