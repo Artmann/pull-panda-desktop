@@ -47,19 +47,19 @@
 
   --status-danger: oklch(0.95 0.02 25);
   --status-danger-border: oklch(0.87 0.05 25);
-  --status-danger-foreground: oklch(0.40 0.12 25);
+  --status-danger-foreground: oklch(0.4 0.12 25);
   --status-merged: oklch(0.95 0.02 300);
   --status-merged-border: oklch(0.87 0.05 300);
-  --status-merged-foreground: oklch(0.40 0.12 300);
+  --status-merged-foreground: oklch(0.4 0.12 300);
   --status-neutral: oklch(0.95 0.005 270);
   --status-neutral-border: oklch(0.87 0.01 270);
   --status-neutral-foreground: oklch(0.45 0.02 270);
   --status-success: oklch(0.96 0.02 150);
   --status-success-border: oklch(0.87 0.04 150);
-  --status-success-foreground: oklch(0.40 0.10 150);
+  --status-success-foreground: oklch(0.4 0.1 150);
   --status-warning: oklch(0.96 0.03 80);
   --status-warning-border: oklch(0.87 0.05 80);
-  --status-warning-foreground: oklch(0.40 0.10 80);
+  --status-warning-foreground: oklch(0.4 0.1 80);
 }
 
 /* Catppuccin Mocha (Dark Theme) */
