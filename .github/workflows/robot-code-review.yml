@@ -56,7 +56,7 @@ jobs:
         run: |
           opencode -q -f json \
             -p "Use the review-changes skill to review the code changes on this branch. Return ONLY valid JSON with no additional text, explanation, or markdown. Schema: { \"summary\": \"string\", \"issues\": [{ \"file\": \"string\", \"line\": number, \"severity\": \"critical|major|minor\", \"title\": \"string\", \"description\": \"string\" }] }" \
-            > review.json
+            | tee review.json
 
       - name: Post review comments
         if: always()
