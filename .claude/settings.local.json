@@ -93,7 +93,8 @@
       "Bash(gh:*)",
       "Bash(git fetch:*)",
       "Bash(git merge:*)",
-      "Bash(git ls-tree:*)"
+      "Bash(git ls-tree:*)",
+      "Bash(git checkout:*)"
     ]
   }
 }
