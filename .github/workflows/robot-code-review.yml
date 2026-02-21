@@ -26,6 +26,12 @@ jobs:
         with:
           node-version: 22
 
+      - name: Install bun
+        uses: oven-sh/setup-bun@v2
+
+      - name: Install review script dependencies
+        run: cd .github/scripts/robot-review && bun install --frozen-lockfile
+
       - name: Install opencode
         run: curl -fsSL https://raw.githubusercontent.com/opencode-ai/opencode/refs/heads/main/install | bash
 
@@ -37,8 +43,7 @@ jobs:
           cat > opencode.json << 'EOF'
           {
             "$schema": "https://opencode.ai/config.json",
-            "model": "openai/gpt-4.1-mini",
-            "default_agent": "build"
+            "model": "openai/gpt-4.1-mini"
           }
           EOF
 
@@ -52,12 +57,6 @@ jobs:
           $HOME/.opencode/bin/opencode -q -f json \
             -p "Use the review-changes skill to review the code changes on this branch. Return ONLY valid JSON with no additional text, explanation, or markdown. Schema: { \"summary\": \"string\", \"issues\": [{ \"file\": \"string\", \"line\": number, \"severity\": \"critical|major|minor\", \"title\": \"string\", \"description\": \"string\" }] }" \
             > review.json
-
-      - name: Install bun
-        uses: oven-sh/setup-bun@v2
-
-      - name: Install review script dependencies
-        run: cd .github/scripts/robot-review && bun install --frozen-lockfile
 
       - name: Post review comments
         if: always()
