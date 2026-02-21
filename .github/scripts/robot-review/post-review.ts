@@ -132,41 +132,32 @@ export async function postReview(
   }
 
   const summary = review.summary ?? 'No summary provided.'
-  const issues: Issue[] = review.issues ?? []
+  const allIssues: Issue[] = review.issues ?? []
 
-  console.log(`Review: ${issues.length} issues, summary length ${summary.length} chars.`)
+  console.log(`Review: ${allIssues.length} issues, summary length ${summary.length} chars.`)
 
-  // Post or update summary comment.
+  // Filter issues to only include files that are part of the PR diff.
+  // The GitHub API returns 422 if a path doesn't match the diff.
 
-  const summaryBody = buildSummaryBody(summary, issues)
-  const { data: existingComments } = await octokit.rest.issues.listComments({
+  const { data: prFiles } = await octokit.rest.pulls.listFiles({
     owner,
     repo,
-    issue_number: prNumber,
+    pull_number: prNumber,
     per_page: 100,
   })
 
-  const existingSummary = existingComments.find((comment) =>
-    comment.body?.includes('<!-- robot-code-review-summary -->')
-  )
+  const validPaths = new Set(prFiles.map((file) => file.filename))
+  const issues = allIssues.filter((issue) => {
+    if (validPaths.has(issue.file)) {
+      return true
+    }
 
-  console.log(`Summary comment: ${existingSummary ? 'updating existing' : 'creating new'}.`)
+    console.warn(`Skipping issue on "${issue.file}" — not in PR diff.`)
 
-  if (existingSummary) {
-    await octokit.rest.issues.updateComment({
-      owner,
-      repo,
-      comment_id: existingSummary.id,
-      body: summaryBody,
-    })
-  } else {
-    await octokit.rest.issues.createComment({
-      owner,
-      repo,
-      issue_number: prNumber,
-      body: summaryBody,
-    })
-  }
+    return false
+  })
+
+  console.log(`${issues.length} issues on files in the PR diff.`)
 
   // Handle issue comments — one thread per issue.
 
@@ -177,7 +168,8 @@ export async function postReview(
     prNumber
   )
   const robotThreads = findRobotThreads(threads)
-  const newComments: Array<{ body: string; line: number; path: string }> = []
+  const postedIssues: Issue[] = []
+  const newComments: Array<{ body: string; issue: Issue; line: number; path: string }> = []
 
   console.log(`Found ${robotThreads.size} existing robot threads.`)
 
@@ -197,11 +189,13 @@ export async function postReview(
       })
 
       robotThreads.delete(slug)
+      postedIssues.push(issue)
     } else {
       console.log(`New thread for: ${slug}`)
 
       newComments.push({
         body,
+        issue,
         line: issue.line ?? 1,
         path: issue.file,
       })
@@ -213,30 +207,74 @@ export async function postReview(
   console.log(`Resolving ${robotThreads.size} stale threads.`)
 
   for (const [, thread] of robotThreads) {
-    await octokit.graphql(
-      `
-      mutation($threadId: ID!) {
-        resolveReviewThread(input: { threadId: $threadId }) {
-          thread { id }
+    try {
+      await octokit.graphql(
+        `
+        mutation($threadId: ID!) {
+          resolveReviewThread(input: { threadId: $threadId }) {
+            thread { id }
+          }
         }
-      }
-    `,
-      { threadId: thread.threadId }
-    )
+      `,
+        { threadId: thread.threadId }
+      )
+    } catch (error) {
+      console.warn(`Could not resolve thread ${thread.threadId}:`, error)
+    }
   }
 
-  // Post new issue comments as a single review.
+  // Post new issue comments one at a time. The API rejects the entire batch
+  // if any line number falls outside the diff, so posting individually lets
+  // valid comments go through even when some lines can't be resolved.
 
-  console.log(`Posting ${newComments.length} new comments as a review.`)
+  console.log(`Posting ${newComments.length} new comments as reviews.`)
 
-  if (newComments.length > 0) {
-    await octokit.rest.pulls.createReview({
+  for (const comment of newComments) {
+    try {
+      await octokit.rest.pulls.createReview({
+        owner,
+        repo,
+        pull_number: prNumber,
+        commit_id: commitSha,
+        event: 'COMMENT',
+        comments: [{ body: comment.body, line: comment.line, path: comment.path }],
+      })
+
+      postedIssues.push(comment.issue)
+    } catch (error) {
+      console.warn(`Skipping comment on "${comment.path}:${comment.line}":`, error)
+    }
+  }
+
+  // Post or update the summary comment with only the issues that were posted.
+
+  const summaryBody = buildSummaryBody(summary, postedIssues)
+  const { data: existingComments } = await octokit.rest.issues.listComments({
+    owner,
+    repo,
+    issue_number: prNumber,
+    per_page: 100,
+  })
+
+  const existingSummary = existingComments.find((comment) =>
+    comment.body?.includes('<!-- robot-code-review-summary -->')
+  )
+
+  console.log(`Summary comment: ${existingSummary ? 'updating existing' : 'creating new'} with ${postedIssues.length} issues.`)
+
+  if (existingSummary) {
+    await octokit.rest.issues.updateComment({
       owner,
       repo,
-      pull_number: prNumber,
-      commit_id: commitSha,
-      event: 'COMMENT',
-      comments: newComments,
+      comment_id: existingSummary.id,
+      body: summaryBody,
+    })
+  } else {
+    await octokit.rest.issues.createComment({
+      owner,
+      repo,
+      issue_number: prNumber,
+      body: summaryBody,
     })
   }
 }

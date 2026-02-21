@@ -45,7 +45,7 @@ export function HomePage(): ReactElement {
             </div>
           </section>
         ) : (
-          <div className="space-y-8">
+          <div className="space-y-8 ">
             <section>
               <div className="flex items-center space-x-2 mb-4">
                 <h2 className="text-muted-foreground">Needs Your Attention</h2>

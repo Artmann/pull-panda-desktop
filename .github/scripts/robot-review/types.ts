@@ -3,7 +3,7 @@ export type Severity = 'critical' | 'major' | 'minor'
 export interface Issue {
   description: string
   file: string
-  line: number
+  line?: number
   severity: Severity
   title: string
 }

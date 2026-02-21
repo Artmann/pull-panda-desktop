@@ -90,8 +90,16 @@
       "Bash(git stash pop:*)",
       "WebFetch(domain:opencode.ai)",
       "Bash(gh run view:*)",
+      "Bash(gh:*)",
+      "Bash(git fetch:*)",
+      "Bash(git merge:*)",
+      "Bash(git ls-tree:*)",
+      "Bash(git checkout:*)",
       "Bash(gh pr list:*)",
-      "Bash(gh pr view:*)"
+      "Bash(gh pr view:*)",
+      "Bash(git rm:*)",
+      "Bash(bun test:*)",
+      "Bash(export PATH=\"/c/Program Files/GitHub CLI:$PATH\")"
     ]
   }
 }

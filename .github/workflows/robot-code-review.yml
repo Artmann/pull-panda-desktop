@@ -45,7 +45,7 @@ jobs:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
         run: |
           $HOME/.opencode/bin/opencode -q -f json \
-            -p "Use the review-changes skill to review the code changes on this branch. Return JSON with this schema: { \"summary\": \"string\", \"issues\": [{ \"file\": \"string\", \"line\": number, \"severity\": \"critical|major|minor\", \"title\": \"string\", \"description\": \"string\" }] }" \
+            -p "Use the review-changes skill to review the code changes on this branch. Return ONLY valid JSON with no additional text, explanation, or markdown. Schema: { \"summary\": \"string\", \"issues\": [{ \"file\": \"string\", \"line\": number, \"severity\": \"critical|major|minor\", \"title\": \"string\", \"description\": \"string\" }] }" \
             > review.json
 
       - name: Install bun

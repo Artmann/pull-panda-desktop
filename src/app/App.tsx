@@ -112,10 +112,10 @@ function AppContent(): ReactElement {
   const postSignInRedirect = isNewSignIn ? '/onboarding' : '/'
 
   return (
-    <div className="w-full h-screen flex flex-col overflow-hidden">
+    <main className="w-full h-screen flex flex-col overflow-hidden">
       <TitleBar />
 
-      <div className="flex-1 min-h-0 overflow-auto">
+      <div className="flex-1 min-h-0 overflow-auto ">
         <ErrorBoundary>
           {isAuthenticated && <RouteRestorer />}
 
@@ -177,7 +177,7 @@ function AppContent(): ReactElement {
       </div>
 
       {isAuthenticated && <AppFooter />}
-    </div>
+    </main>
   )
 }
 

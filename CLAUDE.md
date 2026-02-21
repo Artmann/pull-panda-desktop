@@ -4,6 +4,7 @@ Electron desktop app for GitHub PR management built with React, TypeScript, and
 Vite.
 
 - Refer to @CODE_STYLE.md for how to write code in this project.
+- Don't use the `sr-only` Tailwind class. It causes layout issues.
 - Before using `useEffect`, review
   https://react.dev/learn/you-might-not-need-an-effect.
 - When creating or updating resources:
