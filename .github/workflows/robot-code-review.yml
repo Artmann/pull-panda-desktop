@@ -33,7 +33,7 @@ jobs:
         run: cd .github/scripts/robot-review && bun install --frozen-lockfile
 
       - name: Install opencode
-        run: curl -fsSL https://raw.githubusercontent.com/opencode-ai/opencode/refs/heads/main/install | bash
+        run: npm install -g opencode-ai
 
       - name: Install review skill
         run: npx -y skills add artmann/review-changes --skill review-changes -a opencode -y
@@ -54,7 +54,7 @@ jobs:
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
         run: |
-          $HOME/.opencode/bin/opencode -q -f json \
+          opencode -q -f json \
             -p "Use the review-changes skill to review the code changes on this branch. Return ONLY valid JSON with no additional text, explanation, or markdown. Schema: { \"summary\": \"string\", \"issues\": [{ \"file\": \"string\", \"line\": number, \"severity\": \"critical|major|minor\", \"title\": \"string\", \"description\": \"string\" }] }" \
             > review.json
 
