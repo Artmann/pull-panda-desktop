@@ -1,0 +1,57 @@
+name: Robot Code Review
+
+on:
+  pull_request:
+    types: [opened, synchronize]
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  review:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install opencode
+        run: curl -fsSL https://raw.githubusercontent.com/opencode-ai/opencode/refs/heads/main/install | bash
+
+      - name: Install review skill
+        run: npx -y skills add artmann/review-changes --skill review-changes -a opencode -y
+
+      - name: Write opencode config
+        run: |
+          cat > opencode.json << 'EOF'
+          {
+            "provider": "anthropic",
+            "model": "claude-sonnet-4-20250514"
+          }
+          EOF
+
+      - name: Fetch base branch
+        run: git fetch origin ${{ github.base_ref }}
+
+      - name: Run review
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: |
+          $HOME/.opencode/bin/opencode -q -f json \
+            -p "Use the review-changes skill to review the code changes on this branch. Return JSON with this schema: { \"summary\": \"string\", \"issues\": [{ \"file\": \"string\", \"line\": number, \"severity\": \"critical|major|minor\", \"title\": \"string\", \"description\": \"string\" }] }" \
+            > review.json
+
+      - name: Post review comments
+        if: always()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const script = require('./.github/scripts/post-review-comments.js')
+            await script({ github, context, core })

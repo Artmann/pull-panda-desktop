@@ -82,7 +82,13 @@
       "Bash(git rebase:*)",
       "mcp__github__get_file_contents",
       "mcp__github__search_code",
-      "Bash(yarn format:*)"
+      "Bash(yarn format:*)",
+      "Bash(git push:*)",
+      "Bash(gh api:*)",
+      "Bash(git pull:*)",
+      "Bash(git stash:*)",
+      "Bash(git stash pop:*)",
+      "WebFetch(domain:opencode.ai)"
     ]
   }
 }
