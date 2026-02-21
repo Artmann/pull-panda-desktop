@@ -94,7 +94,10 @@
       "Bash(git fetch:*)",
       "Bash(git merge:*)",
       "Bash(git ls-tree:*)",
-      "Bash(git checkout:*)"
+      "Bash(git checkout:*)",
+      "Bash(gh pr list:*)",
+      "Bash(gh pr view:*)",
+      "Bash(git rm:*)"
     ]
   }
 }
