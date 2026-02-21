@@ -68,10 +68,7 @@ export function PullRequestHeader({
       (state) => state.pullRequestDetails[pullRequest.id]?.reviews
     ) ?? []
 
-  const latestReviews = useMemo(
-    () => getLatestReviews(reviews),
-    [reviews]
-  )
+  const latestReviews = useMemo(() => getLatestReviews(reviews), [reviews])
 
   return (
     <header className="flex flex-col gap-2 p-6">

@@ -23,6 +23,9 @@ Vite.
 - `yarn format` - Format code with Prettier
 - `yarn drizzle-kit generate` - Generate new migration from schema changes
 - `yarn drizzle-kit migrate` - Apply pending migrations
+- `bun run inspect-pr <number>` - Dump all local DB data for a PR (reviews,
+  comments, checks, commits, files). Use `--brief` for just the PR record,
+  `--repo owner/name` to disambiguate across repos.
 
 ## Architecture
 
