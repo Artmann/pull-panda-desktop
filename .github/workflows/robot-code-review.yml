@@ -52,7 +52,7 @@ jobs:
 
       - name: Run review
         env:
-          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          OPENAI_API_KEY: ${{ secrets.OPEN_AI_KEY }}
         run: |
           opencode -q -f json \
             -p "Use the review-changes skill to review the code changes on this branch. Return ONLY valid JSON with no additional text, explanation, or markdown. Schema: { \"summary\": \"string\", \"issues\": [{ \"file\": \"string\", \"line\": number, \"severity\": \"critical|major|minor\", \"title\": \"string\", \"description\": \"string\" }] }" \
