@@ -23,7 +23,7 @@ export function HomePage(): ReactElement {
     .sort((a, b) => dayjs(b.updatedAt).unix() - dayjs(a.updatedAt).unix())
 
   return (
-    <div className="bg-background w-full p-4 sm:p-6">
+    <div className="bg-background w-full min-h-full p-4 sm:p-6">
       <div className="w-full max-w-6xl mx-auto">
         <section className="mb-8">
           <div className="mb-2">
@@ -45,7 +45,7 @@ export function HomePage(): ReactElement {
             </div>
           </section>
         ) : (
-          <div className="space-y-8">
+          <div className="space-y-8 ">
             <section>
               <div className="flex items-center space-x-2 mb-4">
                 <h2 className="text-muted-foreground">Needs Your Attention</h2>

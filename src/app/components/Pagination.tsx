@@ -27,10 +27,10 @@ export function Pagination({
         disabled={!canGoBack}
         onClick={() => onPageChange(currentPage - 1)}
         size="icon-xs"
+        title="Previous page"
         variant="outline"
       >
         <ChevronLeft className="size-2" />
-        <span className="sr-only">Previous page</span>
       </Button>
 
       <span className="text-sm text-muted-foreground">
@@ -41,10 +41,10 @@ export function Pagination({
         disabled={!canGoForward}
         onClick={() => onPageChange(currentPage + 1)}
         size="icon-xs"
+        title="Next page"
         variant="outline"
       >
         <ChevronRight className="size-2" />
-        <span className="sr-only">Next page</span>
       </Button>
     </div>
   )
