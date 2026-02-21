@@ -207,16 +207,21 @@ export async function postReview(
   console.log(`Resolving ${robotThreads.size} stale threads.`)
 
   for (const [, thread] of robotThreads) {
-    await octokit.graphql(
-      `
-      mutation($threadId: ID!) {
-        resolveReviewThread(input: { threadId: $threadId }) {
-          thread { id }
+    try {
+      await octokit.graphql(
+        `
+        mutation($threadId: ID!) {
+          resolveReviewThread(input: { threadId: $threadId }) {
+            thread { id }
+          }
         }
-      }
-    `,
-      { threadId: thread.threadId }
-    )
+      `,
+        { threadId: thread.threadId }
+      )
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error)
+      console.warn(`Could not resolve thread ${thread.threadId} — ${message}`)
+    }
   }
 
   // Post new issue comments one at a time. The API rejects the entire batch
