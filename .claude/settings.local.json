@@ -88,7 +88,12 @@
       "Bash(git pull:*)",
       "Bash(git stash:*)",
       "Bash(git stash pop:*)",
-      "WebFetch(domain:opencode.ai)"
+      "WebFetch(domain:opencode.ai)",
+      "Bash(gh run view:*)",
+      "Bash(gh:*)",
+      "Bash(git fetch:*)",
+      "Bash(git merge:*)",
+      "Bash(git ls-tree:*)"
     ]
   }
 }
