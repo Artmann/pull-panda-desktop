@@ -7,7 +7,6 @@ import { ipcChannels } from './lib/ipc/channels'
 import { getApiPort, startApiServer } from './main/api'
 import {
   bootstrap,
-  BootstrapData,
   getPullRequest,
   getPullRequestDetails
 } from './main/bootstrap'
@@ -24,7 +23,7 @@ import {
   saveToken
 } from './auth'
 
-let bootstrapData: BootstrapData | null = null
+let cachedUserLogin: string | undefined
 let mainWindow: BrowserWindow | null = null
 
 // Handle creating/removing shortcuts on Windows when installing/uninstalling.
@@ -38,7 +37,7 @@ function setupIpcHandlers(): void {
   })
 
   ipcMain.handle(ipcChannels.GetBootstrapData, () => {
-    return bootstrapData
+    return bootstrap(cachedUserLogin)
   })
 
   ipcMain.handle(
@@ -241,11 +240,13 @@ function needsSync(pullRequest: {
 }
 
 async function syncAllPullRequestDetails(token: string): Promise<void> {
-  if (!bootstrapData) {
+  const data = await bootstrap(cachedUserLogin)
+
+  if (!data) {
     return
   }
 
-  const allPullRequests = bootstrapData.pullRequests
+  const allPullRequests = data.pullRequests
   const pullRequests = allPullRequests.filter(needsSync)
   const total = pullRequests.length
 
@@ -336,8 +337,7 @@ app.on('ready', async () => {
 
   await startApiServer(loadToken)
 
-  const userLogin = await getUserLogin()
-  bootstrapData = await bootstrap(userLogin)
+  cachedUserLogin = await getUserLogin()
 
   createWindow()
 
@@ -377,8 +377,7 @@ app.on('ready', async () => {
           console.error('Failed to sync stale pull requests:', error)
         }
 
-        const currentUserLogin = await getUserLogin()
-        bootstrapData = await bootstrap(currentUserLogin)
+        cachedUserLogin = await getUserLogin()
 
         mainWindow?.webContents.send(ipcChannels.SyncComplete, {
           type: 'pull-requests'

@@ -30,6 +30,7 @@ import { PullRequestPage } from '@/app/routes/PullRequestPage'
 import { SettingsPage } from '@/app/routes/SettingsPage'
 import { SignInPage } from '@/app/routes/SignInPage'
 import { getSavedRoute, saveRoute } from '@/app/lib/routePersistence'
+import { filterReadyPullRequests } from '@/app/lib/pull-requests'
 import { useAppDispatch } from '@/app/store/hooks'
 import { pullRequestDetailsActions } from '@/app/store/pull-request-details-slice'
 import { pullRequestsActions } from '@/app/store/pull-requests-slice'
@@ -90,6 +91,20 @@ function AppContent(): ReactElement {
         if (pullRequest?.detailsSyncedAt) {
           dispatch(pullRequestsActions.upsertItem(pullRequest))
         }
+      }
+    })
+
+    return unsubscribe
+  }, [dispatch])
+
+  // Refresh PR list when sync completes
+  useEffect(() => {
+    const unsubscribe = window.electron.onSyncComplete(async (event) => {
+      if (event.type === 'pull-requests') {
+        const data = await window.electron.getBootstrapData()
+        const readyPullRequests = filterReadyPullRequests(data?.pullRequests)
+
+        dispatch(pullRequestsActions.setItems(readyPullRequests))
       }
     })
 
