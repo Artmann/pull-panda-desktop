@@ -38,7 +38,6 @@
     "typecheck": "tsc --noEmit --skipLibCheck"
   },
   "dependencies": {
-    "electron": "39.2.7",
     "@octokit/graphql": "^9.0.3",
     "@octokit/rest": "^22.0.1",
     "@radix-ui/react-accordion": "^1.2.12",
@@ -59,6 +58,7 @@
     "dayjs": "^1.11.19",
     "diff": "^8.0.2",
     "drizzle-orm": "^0.45.1",
+    "electron": "39.2.7",
     "electron-squirrel-startup": "^1.0.1",
     "hast": "^1.0.0",
     "hono": "^4.11.3",
@@ -74,6 +74,7 @@
     "recharts": "^3.6.0",
     "rehype-raw": "^7.0.0",
     "rehype-react": "^8.0.0",
+    "remark-gemoji": "^8.0.0",
     "remark-gfm": "^4.0.1",
     "remark-parse": "^11.0.0",
     "remark-rehype": "^11.1.2",

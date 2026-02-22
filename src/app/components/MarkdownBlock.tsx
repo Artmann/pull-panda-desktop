@@ -5,6 +5,7 @@ import type { ReactElement } from 'react'
 import { memo, useCallback, useEffect, useRef, useState } from 'react'
 import * as jsxRuntime from 'react/jsx-runtime'
 import rehypeReact, { type Options as RehypeReactOptions } from 'rehype-react'
+import remarkGemoji from 'remark-gemoji'
 import remarkGfm from 'remark-gfm'
 import remarkParse, { type Options as RemarkParseOptions } from 'remark-parse'
 import rehypeRaw from 'rehype-raw'
@@ -228,7 +229,7 @@ function useRemark({
         try {
           const file = await unified()
             .use(remarkParse, remarkParseOptions)
-            .use([remarkGfm])
+            .use([remarkGemoji, remarkGfm])
             .use(remarkRehype, {
               ...remarkRehypeOptions,
               allowDangerousHtml: true
