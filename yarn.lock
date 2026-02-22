@@ -5761,6 +5761,11 @@ gar@^1.0.4:
   resolved "https://registry.yarnpkg.com/gar/-/gar-1.0.4.tgz#f777bc7db425c0572fdeb52676172ca1ae9888b8"
   integrity sha512-w4n9cPWyP7aHxKxYHFQMegj7WIAsL/YX/C4Bs5Rr8s1H9M1rNtRWRsw+ovYMkXDQ5S4ZbYHsHAPmevPjPgw44w==
 
+gemoji@^8.0.0:
+  version "8.1.0"
+  resolved "https://registry.yarnpkg.com/gemoji/-/gemoji-8.1.0.tgz#3d47a26e569c51efa95198822a6f483d7a7ae600"
+  integrity sha512-HA4Gx59dw2+tn+UAa7XEV4ufUKI4fH1KgcbenVA9YKSj1QJTT0xh5Mwv5HMFNN3l2OtUe3ZIfuRwSyZS5pLIWw==
+
 generate-function@^2.0.0:
   version "2.3.1"
   resolved "https://registry.yarnpkg.com/generate-function/-/generate-function-2.3.1.tgz#f069617690c10c868e73b8465746764f97c3479f"
@@ -8908,6 +8913,15 @@ rehype-react@^8.0.0:
     "@types/hast" "^3.0.0"
     hast-util-to-jsx-runtime "^2.0.0"
     unified "^11.0.0"
+
+remark-gemoji@^8.0.0:
+  version "8.0.0"
+  resolved "https://registry.yarnpkg.com/remark-gemoji/-/remark-gemoji-8.0.0.tgz#525380bdf603f94856ee2b2cbd7e6947b07ca72a"
+  integrity sha512-/fL9rc72FYwFGtOKcT+QeQdx9Q9t5v4N6KLXSDOTEgaedzK85I9judBqB2eqz+g4b0ERMejlwSOuPK+wket6aA==
+  dependencies:
+    "@types/mdast" "^4.0.0"
+    gemoji "^8.0.0"
+    mdast-util-find-and-replace "^3.0.0"
 
 remark-gfm@^4.0.1:
   version "4.0.1"
