@@ -4,6 +4,7 @@ import initSqlJs, { type Database as SqlJsDatabase } from 'sql.js'
 import { app } from 'electron'
 import path from 'node:path'
 import fs from 'node:fs'
+import { createRequire } from 'node:module'
 
 import * as schema from './schema'
 
@@ -47,13 +48,13 @@ function getMigrationsPath(): string {
 
 function getWasmPath(): string {
   if (isCliMode()) {
-    return path.join(
-      getPackageRoot(),
-      'node_modules',
-      'sql.js',
-      'dist',
-      'sql-wasm.wasm'
-    )
+    // Use Node.js module resolution to find sql.js regardless of npm
+    // hoisting. sql.js main entry resolves to dist/sql-wasm.js, so
+    // the WASM file is in the same directory.
+    const nodeRequire = createRequire(import.meta.url)
+    const sqlJsMain = nodeRequire.resolve('sql.js')
+
+    return path.join(path.dirname(sqlJsMain), 'sql-wasm.wasm')
   }
 
   const isDevelopment = !app?.isPackaged
