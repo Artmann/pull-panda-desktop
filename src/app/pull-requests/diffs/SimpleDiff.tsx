@@ -366,11 +366,11 @@ const DiffLine = memo(function DiffLine({
     lineType: 'add' | 'remove' | 'context' | 'truncated'
   ): string | undefined => {
     if (lineType === 'add') {
-      return diffColors.diffAdd
+      return undefined
     }
 
     if (lineType === 'remove') {
-      return diffColors.diffRemove
+      return undefined
     }
 
     // Context and truncated lines use transparent background.
