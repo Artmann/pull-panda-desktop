@@ -31,6 +31,7 @@ import { SettingsPage } from '@/app/routes/SettingsPage'
 import { SignInPage } from '@/app/routes/SignInPage'
 import { getSavedRoute, saveRoute } from '@/app/lib/routePersistence'
 import { useAppDispatch } from '@/app/store/hooks'
+import { pendingReviewsActions } from '@/app/store/pending-reviews-slice'
 import { pullRequestDetailsActions } from '@/app/store/pull-request-details-slice'
 import { pullRequestsActions } from '@/app/store/pull-requests-slice'
 import { AppFooter } from './AppFooter'
@@ -81,6 +82,21 @@ function AppContent(): ReactElement {
               details
             })
           )
+
+          if (details.pendingReview) {
+            dispatch(
+              pendingReviewsActions.setReview({
+                pullRequestId: event.pullRequestId,
+                review: details.pendingReview
+              })
+            )
+          } else {
+            dispatch(
+              pendingReviewsActions.clearReview({
+                pullRequestId: event.pullRequestId
+              })
+            )
+          }
         }
 
         const pullRequest = await window.electron.getPullRequest(
