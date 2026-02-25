@@ -2,7 +2,17 @@ import { eq } from 'drizzle-orm'
 import { log } from 'tiny-typescript-logger'
 
 import { getDatabase } from '../database'
-import { pullRequests, type NewPullRequest } from '../database/schema'
+import {
+  checks,
+  commentReactions,
+  comments,
+  commits,
+  etags,
+  modifiedFiles,
+  pullRequests,
+  reviews,
+  type NewPullRequest
+} from '../database/schema'
 import { createGraphQLClient } from './graphql-client'
 
 export interface SyncResult {
@@ -493,6 +503,7 @@ export async function syncStalePullRequests(
     `Found ${stalePullRequests.length} stale PRs still marked OPEN locally`
   )
 
+  let deleted = 0
   let updated = 0
 
   for (const stalePullRequest of stalePullRequests) {
@@ -503,9 +514,42 @@ export async function syncStalePullRequests(
       )
 
       if (!response.node) {
-        log.warn(
-          `Stale PR ${stalePullRequest.id} not found on GitHub, skipping`
-        )
+        database
+          .delete(commentReactions)
+          .where(eq(commentReactions.pullRequestId, stalePullRequest.id))
+          .run()
+        database
+          .delete(comments)
+          .where(eq(comments.pullRequestId, stalePullRequest.id))
+          .run()
+        database
+          .delete(reviews)
+          .where(eq(reviews.pullRequestId, stalePullRequest.id))
+          .run()
+        database
+          .delete(checks)
+          .where(eq(checks.pullRequestId, stalePullRequest.id))
+          .run()
+        database
+          .delete(commits)
+          .where(eq(commits.pullRequestId, stalePullRequest.id))
+          .run()
+        database
+          .delete(modifiedFiles)
+          .where(eq(modifiedFiles.pullRequestId, stalePullRequest.id))
+          .run()
+        database
+          .delete(etags)
+          .where(eq(etags.resourceId, stalePullRequest.id))
+          .run()
+        database
+          .delete(pullRequests)
+          .where(eq(pullRequests.id, stalePullRequest.id))
+          .run()
+
+        log.info(`Deleted inaccessible PR ${stalePullRequest.id}`)
+
+        deleted++
         continue
       }
 
@@ -533,5 +577,9 @@ export async function syncStalePullRequests(
     }
   }
 
-  return updated
+  if (deleted > 0) {
+    log.info(`Deleted ${deleted} inaccessible PRs`)
+  }
+
+  return updated + deleted
 }

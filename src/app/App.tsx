@@ -19,6 +19,7 @@ import {
 import { ErrorBoundary } from '@/app/components/ErrorBoundary'
 import { TitleBar } from '@/app/components/TitleBar'
 import { Toaster } from '@/app/components/ui/sonner'
+import { filterReadyPullRequests } from '@/app/lib/pull-requests'
 import { AuthProvider, useAuth } from '@/app/lib/store/authContext'
 import { CodeThemeProvider } from '@/app/lib/store/codeThemeContext'
 import { TasksProvider } from '@/app/lib/store/tasksContext'
@@ -106,6 +107,28 @@ function AppContent(): ReactElement {
         if (pullRequest?.detailsSyncedAt) {
           dispatch(pullRequestsActions.upsertItem(pullRequest))
         }
+      }
+    })
+
+    return unsubscribe
+  }, [dispatch])
+
+  // Refresh PR list when a full sync completes
+  useEffect(() => {
+    const unsubscribe = window.electron.onSyncComplete(async (event) => {
+      if (event.type !== 'pull-requests') {
+        return
+      }
+
+      const data = await window.electron.getBootstrapData()
+
+      if (data) {
+        dispatch(
+          pullRequestsActions.setItems(
+            filterReadyPullRequests(data.pullRequests)
+          )
+        )
+        dispatch(pendingReviewsActions.setAll(data.pendingReviews ?? {}))
       }
     })
 

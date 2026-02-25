@@ -40,6 +40,10 @@ export const pendingReviewsSlice = createSlice({
       delete state[action.payload.pullRequestId]
     },
 
+    setAll(_state, action: PayloadAction<PendingReviewsState>) {
+      return action.payload
+    },
+
     setReview(
       state,
       action: PayloadAction<{ pullRequestId: string; review: PendingReview }>
