@@ -6,10 +6,10 @@ import { Provider } from 'react-redux'
 import { configureStore } from '@reduxjs/toolkit'
 import { describe, it, expect, vi, beforeAll } from 'vitest'
 
-import type { Commit, PullRequestDetails } from '@/types/pull-request-details'
+import type { Commit } from '@/types/pull-request-details'
 import type { PullRequest } from '@/types/pull-request'
 
-import pullRequestDetailsReducer from '@/app/store/pull-request-details-slice'
+import commitsReducer from '@/app/store/commits-slice'
 
 import { CommitsView } from './CommitsView'
 
@@ -79,12 +79,10 @@ function createMockPullRequest(
   }
 }
 
-function createTestStore(preloadedState?: {
-  pullRequestDetails?: { [key: string]: PullRequestDetails }
-}) {
+function createTestStore(preloadedState?: { commits?: { items: Commit[] } }) {
   return configureStore({
     reducer: {
-      pullRequestDetails: pullRequestDetailsReducer
+      commits: commitsReducer
     },
     preloadedState
   })
@@ -101,16 +99,7 @@ describe('CommitsView', () => {
   it('renders empty state when no commits', async () => {
     const pullRequest = createMockPullRequest()
     const store = createTestStore({
-      pullRequestDetails: {
-        [pullRequest.id]: {
-          commits: [],
-          checks: [],
-          comments: [],
-          files: [],
-          reactions: [],
-          reviews: []
-        }
-      }
+      commits: { items: [] }
     })
 
     await act(async () => {
@@ -127,16 +116,7 @@ describe('CommitsView', () => {
       authorLogin: 'developer'
     })
     const store = createTestStore({
-      pullRequestDetails: {
-        [pullRequest.id]: {
-          commits: [commit],
-          checks: [],
-          comments: [],
-          files: [],
-          reactions: [],
-          reviews: []
-        }
-      }
+      commits: { items: [commit] }
     })
 
     await act(async () => {
@@ -153,16 +133,7 @@ describe('CommitsView', () => {
       message: 'Add new feature\n\nThis adds a new feature to the app.'
     })
     const store = createTestStore({
-      pullRequestDetails: {
-        [pullRequest.id]: {
-          commits: [commit],
-          checks: [],
-          comments: [],
-          files: [],
-          reactions: [],
-          reviews: []
-        }
-      }
+      commits: { items: [commit] }
     })
 
     await act(async () => {
@@ -181,16 +152,7 @@ describe('CommitsView', () => {
       hash: 'abc1234567890def'
     })
     const store = createTestStore({
-      pullRequestDetails: {
-        [pullRequest.id]: {
-          commits: [commit],
-          checks: [],
-          comments: [],
-          files: [],
-          reactions: [],
-          reviews: []
-        }
-      }
+      commits: { items: [commit] }
     })
 
     await act(async () => {
@@ -207,16 +169,7 @@ describe('CommitsView', () => {
       linesRemoved: 13
     })
     const store = createTestStore({
-      pullRequestDetails: {
-        [pullRequest.id]: {
-          commits: [commit],
-          checks: [],
-          comments: [],
-          files: [],
-          reactions: [],
-          reviews: []
-        }
-      }
+      commits: { items: [commit] }
     })
 
     await act(async () => {
@@ -233,16 +186,7 @@ describe('CommitsView', () => {
       gitHubCreatedAt: new Date().toISOString()
     })
     const store = createTestStore({
-      pullRequestDetails: {
-        [pullRequest.id]: {
-          commits: [commit],
-          checks: [],
-          comments: [],
-          files: [],
-          reactions: [],
-          reviews: []
-        }
-      }
+      commits: { items: [commit] }
     })
 
     await act(async () => {
@@ -260,16 +204,7 @@ describe('CommitsView', () => {
       gitHubCreatedAt: yesterday.toISOString()
     })
     const store = createTestStore({
-      pullRequestDetails: {
-        [pullRequest.id]: {
-          commits: [commit],
-          checks: [],
-          comments: [],
-          files: [],
-          reactions: [],
-          reviews: []
-        }
-      }
+      commits: { items: [commit] }
     })
 
     await act(async () => {
@@ -285,16 +220,7 @@ describe('CommitsView', () => {
       message: null
     })
     const store = createTestStore({
-      pullRequestDetails: {
-        [pullRequest.id]: {
-          commits: [commit],
-          checks: [],
-          comments: [],
-          files: [],
-          reactions: [],
-          reviews: []
-        }
-      }
+      commits: { items: [commit] }
     })
 
     await act(async () => {

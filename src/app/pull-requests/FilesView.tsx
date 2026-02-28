@@ -19,10 +19,9 @@ export const FilesView = memo(function FilesView({
 }: {
   pullRequest: PullRequest
 }): ReactElement {
-  const details = useAppSelector(
-    (state) => state.pullRequestDetails[pullRequest.id]
+  const files = useAppSelector((state) =>
+    state.modifiedFiles.items.filter((f) => f.pullRequestId === pullRequest.id)
   )
-  const files = details?.files ?? []
 
   const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(new Set())
 

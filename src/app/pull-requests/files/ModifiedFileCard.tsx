@@ -32,7 +32,7 @@ export const ModifiedFileCard = memo(function ModifiedFileCard({
 
   const allSubmittedComments = useAppSelector(
     (state) =>
-      state.pullRequestDetails[pullRequest.id]?.comments ??
+      state.comments.items.filter((c) => c.pullRequestId === pullRequest.id) ??
       emptySubmittedComments
   )
 

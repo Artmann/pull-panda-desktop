@@ -11,7 +11,11 @@ import { useLocation, useNavigate, type NavigateFunction } from 'react-router'
 
 import type { AppStore } from '@/app/store'
 import { useAppSelector } from '@/app/store/hooks'
-import type { Comment, ModifiedFile } from '@/types/pull-request-details'
+import type {
+  Comment,
+  ModifiedFile,
+  PullRequestDetails
+} from '@/types/pull-request-details'
 
 import { setStore } from './store-accessor'
 import type { CommandContext, CommandView } from './types'
@@ -71,9 +75,39 @@ export function CommandContextProvider({
       : undefined
   )
 
-  const pullRequestDetails = useAppSelector((state) =>
-    pullRequestId ? state.pullRequestDetails[pullRequestId] : undefined
-  )
+  const pullRequestDetails = useAppSelector((state) => {
+    if (!pullRequestId) {
+      return undefined
+    }
+
+    const checks = state.checks.items.filter(
+      (c) => c.pullRequestId === pullRequestId
+    )
+    const comments = state.comments.items.filter(
+      (c) => c.pullRequestId === pullRequestId
+    )
+    const commits = state.commits.items.filter(
+      (c) => c.pullRequestId === pullRequestId
+    )
+    const files = state.modifiedFiles.items.filter(
+      (f) => f.pullRequestId === pullRequestId
+    )
+    const reactions = state.reactions.items.filter(
+      (r) => r.pullRequestId === pullRequestId
+    )
+    const reviews = state.reviews.items.filter(
+      (r) => r.pullRequestId === pullRequestId
+    )
+
+    return {
+      checks,
+      comments,
+      commits,
+      files,
+      reactions,
+      reviews
+    } as PullRequestDetails
+  })
 
   // Derive view from current path
   const view: CommandView = useMemo(() => {

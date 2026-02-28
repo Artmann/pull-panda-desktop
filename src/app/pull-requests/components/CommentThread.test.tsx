@@ -12,8 +12,8 @@ import type { PullRequest } from '@/types/pull-request'
 import { createComment } from '@/app/lib/api'
 import { AuthProvider } from '@/app/lib/store/authContext'
 import { CodeThemeProvider } from '@/app/lib/store/codeThemeContext'
+import commentsReducer from '@/app/store/comments-slice'
 import draftsReducer, { getDraftKeyForReply } from '@/app/store/drafts-slice'
-import pullRequestDetailsReducer from '@/app/store/pull-request-details-slice'
 
 import { FileCommentThreadCard } from './CommentThread'
 
@@ -33,14 +33,13 @@ beforeAll(() => {
 })
 
 vi.mock('@/app/lib/api', () => ({
-  createComment: vi.fn()
+  createComment: vi.fn(),
+  syncPullRequestDetails: vi.fn()
 }))
 
 vi.mock('@/app/components/MarkdownBlock', () => ({
   MarkdownBlock: ({ children }: { children: string }) => <div>{children}</div>
 }))
-
-const mockSyncPullRequestDetails = vi.fn()
 
 const mockUser = {
   login: 'currentuser',
@@ -50,9 +49,7 @@ const mockUser = {
 }
 
 vi.stubGlobal('electron', {
-  syncPullRequestDetails: mockSyncPullRequestDetails,
-  getApiPort: vi.fn().mockResolvedValue(3000),
-  getPullRequest: vi.fn().mockResolvedValue(null)
+  getApiPort: vi.fn().mockResolvedValue(3000)
 })
 
 vi.stubGlobal('auth', {
@@ -128,10 +125,13 @@ function createMockPullRequest(
 function createTestStore(preloadedState?: { drafts?: Record<string, string> }) {
   return configureStore({
     reducer: {
-      drafts: draftsReducer,
-      pullRequestDetails: pullRequestDetailsReducer
+      comments: commentsReducer,
+      drafts: draftsReducer
     },
-    preloadedState
+    preloadedState: {
+      ...preloadedState,
+      comments: { items: [] }
+    }
   })
 }
 

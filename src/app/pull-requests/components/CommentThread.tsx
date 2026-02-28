@@ -23,14 +23,14 @@ import {
 } from '@/app/components/ui/card'
 import { Separator } from '@/app/components/ui/separator'
 import { Textarea } from '@/app/components/ui/textarea'
-import { createComment } from '@/app/lib/api'
+import { createComment, syncPullRequestDetails } from '@/app/lib/api'
 import { useAuth } from '@/app/lib/store/authContext'
+import {
+  commentsActions,
+  createOptimisticComment
+} from '@/app/store/comments-slice'
 import { getDraftKeyForReply } from '@/app/store/drafts-slice'
 import { useAppDispatch } from '@/app/store/hooks'
-import {
-  createOptimisticComment,
-  pullRequestDetailsActions
-} from '@/app/store/pull-request-details-slice'
 import { useDraft } from '@/app/store/use-draft'
 
 import { CommentBody } from './CommentBody'
@@ -161,7 +161,7 @@ const CommentReply = memo(function CommentReply({
       })
 
       dispatch(
-        pullRequestDetailsActions.addComment({
+        commentsActions.addComment({
           pullRequestId: pullRequest.id,
           comment: optimisticComment
         })
@@ -181,18 +181,13 @@ const CommentReply = memo(function CommentReply({
         })
 
         // Trigger sync to get the real comment from the server
-        window.electron.syncPullRequestDetails(
-          pullRequest.id,
-          pullRequest.repositoryOwner,
-          pullRequest.repositoryName,
-          pullRequest.number
-        )
+        syncPullRequestDetails(pullRequest.id)
       } catch (error) {
         console.error('Failed to post comment:', error)
 
         // Rollback optimistic comment on error
         dispatch(
-          pullRequestDetailsActions.removeComment({
+          commentsActions.removeComment({
             pullRequestId: pullRequest.id,
             commentId: optimisticComment.id
           })

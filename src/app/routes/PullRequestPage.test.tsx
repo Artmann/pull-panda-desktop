@@ -8,14 +8,19 @@ import { MemoryRouter, Route, Routes } from 'react-router'
 import { describe, it, expect, vi, beforeAll, beforeEach } from 'vitest'
 
 import type { PullRequest } from '@/types/pull-request'
-import type { PullRequestDetails } from '@/types/pull-request-details'
+import type { Check, Commit, ModifiedFile } from '@/types/pull-request-details'
 
+import checksReducer from '@/app/store/checks-slice'
+import commentsReducer from '@/app/store/comments-slice'
+import commitsReducer from '@/app/store/commits-slice'
 import draftsReducer from '@/app/store/drafts-slice'
+import modifiedFilesReducer from '@/app/store/modified-files-slice'
 import navigationReducer from '@/app/store/navigation-slice'
 import pendingReviewCommentsReducer from '@/app/store/pending-review-comments-slice'
 import pendingReviewsReducer from '@/app/store/pending-reviews-slice'
-import pullRequestDetailsReducer from '@/app/store/pull-request-details-slice'
 import pullRequestsReducer from '@/app/store/pull-requests-slice'
+import reactionsReducer from '@/app/store/reactions-slice'
+import reviewsReducer from '@/app/store/reviews-slice'
 import tasksReducer from '@/app/store/tasks-slice'
 
 import { AuthProvider } from '@/app/lib/store/authContext'
@@ -58,8 +63,6 @@ beforeAll(() => {
 beforeEach(() => {
   vi.stubGlobal('electron', {
     getApiPort: vi.fn().mockResolvedValue(3000),
-    getPullRequest: vi.fn().mockResolvedValue(null),
-    getPullRequestDetails: vi.fn().mockResolvedValue(null),
     onSyncComplete: vi.fn().mockReturnValue(() => {
       // Unsubscribe mock
     })
@@ -115,38 +118,35 @@ function createMockPullRequest(
   }
 }
 
-function createMockDetails(
-  overrides: Partial<PullRequestDetails> = {}
-): PullRequestDetails {
-  return {
-    checks: [],
-    comments: [],
-    commits: [],
-    files: [],
-    reactions: [],
-    reviews: [],
-    ...overrides
-  }
-}
-
 function createTestStore(
   options: {
+    checks?: Check[]
+    commits?: Commit[]
+    modifiedFiles?: ModifiedFile[]
     pullRequests?: PullRequest[]
-    pullRequestDetails?: Record<string, PullRequestDetails>
   } = {}
 ) {
   return configureStore({
     reducer: {
+      checks: checksReducer,
+      comments: commentsReducer,
+      commits: commitsReducer,
       drafts: draftsReducer,
+      modifiedFiles: modifiedFilesReducer,
       navigation: navigationReducer,
       pendingReviewComments: pendingReviewCommentsReducer,
       pendingReviews: pendingReviewsReducer,
-      pullRequestDetails: pullRequestDetailsReducer,
       pullRequests: pullRequestsReducer,
+      reactions: reactionsReducer,
+      reviews: reviewsReducer,
       tasks: tasksReducer
     },
     preloadedState: {
+      checks: { items: options.checks ?? [] },
+      comments: { items: [] },
+      commits: { items: options.commits ?? [] },
       drafts: {},
+      modifiedFiles: { items: options.modifiedFiles ?? [] },
       pendingReviewComments: {},
       pendingReviews: {},
       pullRequests: {
@@ -154,7 +154,8 @@ function createTestStore(
         lastSyncedAt: null,
         loading: false
       },
-      pullRequestDetails: options.pullRequestDetails ?? {},
+      reactions: { items: [] },
+      reviews: { items: [] },
       tasks: { items: [] }
     }
   })
@@ -186,7 +187,9 @@ describe('PullRequestPage', () => {
   describe('tab item counts', () => {
     it('displays item counts for commits, checks, and files tabs', async () => {
       const pullRequest = createMockPullRequest({ id: 'pr-1' })
-      const details = createMockDetails({
+
+      const store = createTestStore({
+        pullRequests: [pullRequest],
         checks: [
           {
             id: 'c1',
@@ -270,7 +273,7 @@ describe('PullRequestPage', () => {
             syncedAt: '2024-01-01T00:00:00Z'
           }
         ],
-        files: [
+        modifiedFiles: [
           {
             id: 'f1',
             pullRequestId: 'pr-1',
@@ -322,11 +325,6 @@ describe('PullRequestPage', () => {
         ]
       })
 
-      const store = createTestStore({
-        pullRequests: [pullRequest],
-        pullRequestDetails: { 'pr-1': details }
-      })
-
       await act(async () => {
         renderWithProviders('pr-1', { store })
       })
@@ -340,8 +338,7 @@ describe('PullRequestPage', () => {
       const pullRequest = createMockPullRequest({ id: 'pr-1' })
 
       const store = createTestStore({
-        pullRequests: [pullRequest],
-        pullRequestDetails: {}
+        pullRequests: [pullRequest]
       })
 
       await act(async () => {
@@ -357,8 +354,7 @@ describe('PullRequestPage', () => {
       const pullRequest = createMockPullRequest({ id: 'pr-1' })
 
       const store = createTestStore({
-        pullRequests: [pullRequest],
-        pullRequestDetails: { 'pr-1': createMockDetails() }
+        pullRequests: [pullRequest]
       })
 
       await act(async () => {

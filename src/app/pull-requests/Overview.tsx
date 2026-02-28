@@ -22,12 +22,13 @@ interface OverviewProps {
 export const Overview = memo(function Overview({
   pullRequest
 }: OverviewProps): ReactElement {
-  const details = useAppSelector(
-    (state) => state.pullRequestDetails[pullRequest.id]
+  const comments = useAppSelector((state) =>
+    state.comments.items.filter((c) => c.pullRequestId === pullRequest.id)
   )
 
-  const comments = details?.comments ?? []
-  const checks = details?.checks ?? []
+  const checks = useAppSelector((state) =>
+    state.checks.items.filter((c) => c.pullRequestId === pullRequest.id)
+  )
 
   const issues = useMemo(
     () =>

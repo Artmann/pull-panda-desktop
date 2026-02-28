@@ -63,10 +63,9 @@ export function PullRequestHeader({
 }): ReactElement {
   invariant(pullRequest, 'PullRequestHeader requires a pull request')
 
-  const reviews =
-    useAppSelector(
-      (state) => state.pullRequestDetails[pullRequest.id]?.reviews
-    ) ?? []
+  const reviews = useAppSelector((state) =>
+    state.reviews.items.filter((r) => r.pullRequestId === pullRequest.id)
+  )
 
   const latestReviews = useMemo(() => getLatestReviews(reviews), [reviews])
 

@@ -4,6 +4,7 @@ import { eq, and, isNull, inArray } from 'drizzle-orm'
 import { getDatabase } from '../database'
 import { checks, pullRequests } from '../database/schema'
 import { ipcChannels } from '../lib/ipc/channels'
+import { getPullRequest, getPullRequestDetails } from './bootstrap'
 import { syncChecks } from '../sync/sync-checks'
 import { rateLimitManager } from '../sync/rate-limit-manager'
 import type {
@@ -199,14 +200,27 @@ class BackgroundSyncer {
     this.scheduleNextSync(nextSyncDelay)
   }
 
-  private notifyRenderer(pullRequestId: string): void {
+  private async notifyRenderer(pullRequestId: string): Promise<void> {
+    const details = await getPullRequestDetails(pullRequestId)
+    const pullRequest = await getPullRequest(pullRequestId)
     const windows = BrowserWindow.getAllWindows()
 
     for (const window of windows) {
-      window.webContents.send(ipcChannels.SyncComplete, {
-        type: 'pull-request-details',
-        pullRequestId
-      })
+      if (details) {
+        window.webContents.send(ipcChannels.ResourceUpdated, {
+          type: 'checks',
+          pullRequestId,
+          data: details.checks
+        })
+      }
+
+      if (pullRequest) {
+        window.webContents.send(ipcChannels.ResourceUpdated, {
+          type: 'pull-request',
+          pullRequestId,
+          data: pullRequest
+        })
+      }
     }
   }
 

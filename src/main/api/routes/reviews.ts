@@ -5,7 +5,7 @@ import { and, eq } from 'drizzle-orm'
 
 import { getDatabase } from '../../../database'
 import { pullRequests } from '../../../database/schema'
-import { ipcChannels } from '../../../lib/ipc/channels'
+import { sendPullRequestResourceEvents } from '../../send-resource-events'
 import { syncPullRequestDetails } from '../../../sync/sync-pull-request-details'
 import { generateId } from '../../../sync/utils'
 
@@ -270,12 +270,9 @@ reviewsRoute.post('/:reviewId/submit', async (context) => {
         repositoryName: request.repo,
         pullNumber: request.pullNumber
       }).then(() => {
-        // Notify frontend that data has been updated
+        // Notify frontend with individual resource events
         for (const window of BrowserWindow.getAllWindows()) {
-          window.webContents.send(ipcChannels.ResourceUpdated, {
-            type: 'pull-request-details',
-            pullRequestId: pullRequest.id
-          })
+          sendPullRequestResourceEvents(window, pullRequest.id)
         }
       })
     }

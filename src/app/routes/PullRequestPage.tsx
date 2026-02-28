@@ -49,7 +49,17 @@ export function PullRequestPage(): ReactElement {
 
   const dispatch = useAppDispatch()
   const [searchParams, setSearchParams] = useSearchParams()
-  const details = useAppSelector((state) => state.pullRequestDetails[id ?? ''])
+
+  const checksCount = useAppSelector(
+    (state) => state.checks.items.filter((c) => c.pullRequestId === id).length
+  )
+  const commitsCount = useAppSelector(
+    (state) => state.commits.items.filter((c) => c.pullRequestId === id).length
+  )
+  const filesCount = useAppSelector(
+    (state) =>
+      state.modifiedFiles.items.filter((f) => f.pullRequestId === id).length
+  )
 
   const tabFromUrl = searchParams.get('tab')
   const validTabs = ['overview', 'commits', 'checks', 'files']
@@ -85,25 +95,25 @@ export function PullRequestPage(): ReactElement {
         content: CommitsView,
         icon: GitCommitIcon,
         id: 'commits',
-        itemCount: details?.commits?.length ?? 0,
+        itemCount: commitsCount,
         label: 'Commits'
       },
       {
         content: ChecksView,
         icon: ListCheckIcon,
         id: 'checks',
-        itemCount: details?.checks?.length ?? 0,
+        itemCount: checksCount,
         label: 'Checks'
       },
       {
         content: FilesView,
         icon: FileCodeIcon,
         id: 'files',
-        itemCount: details?.files?.length ?? 0,
+        itemCount: filesCount,
         label: 'Files'
       }
     ],
-    [details?.commits.length, details?.checks.length, details?.files.length]
+    [checksCount, commitsCount, filesCount]
   )
 
   useEffect(function trackScrollPosition() {
