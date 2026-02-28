@@ -1,3 +1,4 @@
+import { RequestError } from '@octokit/request-error'
 import { eq } from 'drizzle-orm'
 
 import { getDatabase } from '../database'
@@ -12,6 +13,10 @@ import { syncReviews } from './sync-reviews'
 // Delay between sync operations to avoid burst requests
 const delayBetweenSyncs = 200
 
+function isNotFoundError(error: unknown): boolean {
+  return error instanceof RequestError && error.status === 404
+}
+
 interface SyncPullRequestDetailsParams {
   token: string
   pullRequestId: string
@@ -21,8 +26,9 @@ interface SyncPullRequestDetailsParams {
 }
 
 export interface SyncPullRequestDetailsResult {
-  success: boolean
   errors: string[]
+  notFound: boolean
+  success: boolean
 }
 
 /**
@@ -42,82 +48,33 @@ export async function syncPullRequestDetails({
     `Starting detail sync for PR #${pullNumber} in ${owner}/${repositoryName}`
   )
 
-  // REST API: syncChecks
-  try {
-    await syncChecks({
-      token,
-      pullRequestId,
-      owner,
-      repositoryName,
-      pullNumber
-    })
-  } catch (error) {
-    const message = error instanceof Error ? error.message : String(error)
-    errors.push(`Checks sync failed: ${message}`)
-  }
+  const syncParams = { token, pullRequestId, owner, repositoryName, pullNumber }
 
-  await sleep(delayBetweenSyncs)
+  const syncOperations = [
+    { name: 'Checks', fn: syncChecks },
+    { name: 'Commits', fn: syncCommits },
+    { name: 'Files', fn: syncFiles },
+    { name: 'Reviews', fn: syncReviews },
+    { name: 'Comments', fn: syncComments }
+  ]
 
-  // REST API: syncCommits
-  try {
-    await syncCommits({
-      token,
-      pullRequestId,
-      owner,
-      repositoryName,
-      pullNumber
-    })
-  } catch (error) {
-    const message = error instanceof Error ? error.message : String(error)
-    errors.push(`Commits sync failed: ${message}`)
-  }
+  for (const operation of syncOperations) {
+    try {
+      await operation.fn(syncParams)
+    } catch (error) {
+      if (isNotFoundError(error)) {
+        console.log(
+          `PR #${pullNumber} in ${owner}/${repositoryName} returned 404 — repository is likely inaccessible`
+        )
 
-  await sleep(delayBetweenSyncs)
+        return { errors: [], notFound: true, success: false }
+      }
 
-  // REST API: syncFiles
-  try {
-    await syncFiles({
-      token,
-      pullRequestId,
-      owner,
-      repositoryName,
-      pullNumber
-    })
-  } catch (error) {
-    const message = error instanceof Error ? error.message : String(error)
-    errors.push(`Files sync failed: ${message}`)
-  }
+      const message = error instanceof Error ? error.message : String(error)
+      errors.push(`${operation.name} sync failed: ${message}`)
+    }
 
-  await sleep(delayBetweenSyncs)
-
-  // REST API: syncReviews
-  try {
-    await syncReviews({
-      token,
-      pullRequestId,
-      owner,
-      repositoryName,
-      pullNumber
-    })
-  } catch (error) {
-    const message = error instanceof Error ? error.message : String(error)
-    errors.push(`Reviews sync failed: ${message}`)
-  }
-
-  await sleep(delayBetweenSyncs)
-
-  // REST API: syncComments
-  try {
-    await syncComments({
-      token,
-      pullRequestId,
-      owner,
-      repositoryName,
-      pullNumber
-    })
-  } catch (error) {
-    const message = error instanceof Error ? error.message : String(error)
-    errors.push(`Comments sync failed: ${message}`)
+    await sleep(delayBetweenSyncs)
   }
 
   console.log(
@@ -136,7 +93,8 @@ export async function syncPullRequestDetails({
   }
 
   return {
-    success: errors.length === 0,
-    errors
+    errors,
+    notFound: false,
+    success: errors.length === 0
   }
 }

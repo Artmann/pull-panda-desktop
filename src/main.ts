@@ -9,6 +9,7 @@ import { bootstrap, BootstrapData } from './main/bootstrap'
 import { sendPullRequestResourceEvents } from './main/send-resource-events'
 import { backgroundSyncer } from './main/background-syncer'
 import { taskManager } from './main/task-manager'
+import { deletePullRequestData } from './sync/delete-pull-request'
 import { syncPullRequests, syncStalePullRequests } from './sync/pull-requests'
 import { syncPullRequestDetails } from './sync/sync-pull-request-details'
 import {
@@ -202,9 +203,11 @@ async function syncAllPullRequestDetails(token: string): Promise<void> {
 
   const currentUserLogin = await getUserLogin()
 
+  const deletedPullRequestIds: string[] = []
+
   for (const pullRequest of pullRequests) {
     try {
-      await syncPullRequestDetails({
+      const result = await syncPullRequestDetails({
         token,
         pullRequestId: pullRequest.id,
         owner: pullRequest.repositoryOwner,
@@ -212,7 +215,10 @@ async function syncAllPullRequestDetails(token: string): Promise<void> {
         pullNumber: pullRequest.number
       })
 
-      if (mainWindow) {
+      if (result.notFound) {
+        deletePullRequestData(pullRequest.id)
+        deletedPullRequestIds.push(pullRequest.id)
+      } else if (mainWindow) {
         await sendPullRequestResourceEvents(
           mainWindow,
           pullRequest.id,
@@ -235,6 +241,21 @@ async function syncAllPullRequestDetails(token: string): Promise<void> {
       total,
       message: `Syncing ${completed}/${total} pull requests`
     })
+  }
+
+  // If any PRs were deleted, send the updated list to the renderer
+  if (deletedPullRequestIds.length > 0 && mainWindow) {
+    const postDeleteUserLogin = await getUserLogin()
+    bootstrapData = await bootstrap(postDeleteUserLogin)
+
+    mainWindow.webContents.send(ipcChannels.ResourceUpdated, {
+      type: 'pull-requests',
+      data: bootstrapData.pullRequests
+    })
+
+    console.log(
+      `Removed ${deletedPullRequestIds.length} inaccessible PRs from the list`
+    )
   }
 
   if (errors.length > 0) {
