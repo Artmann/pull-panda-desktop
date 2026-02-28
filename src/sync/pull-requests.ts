@@ -2,17 +2,8 @@ import { eq } from 'drizzle-orm'
 import { log } from 'tiny-typescript-logger'
 
 import { getDatabase } from '../database'
-import {
-  checks,
-  commentReactions,
-  comments,
-  commits,
-  etags,
-  modifiedFiles,
-  pullRequests,
-  reviews,
-  type NewPullRequest
-} from '../database/schema'
+import { pullRequests, type NewPullRequest } from '../database/schema'
+import { deletePullRequestData } from './delete-pull-request'
 import { createGraphQLClient } from './graphql-client'
 
 export interface SyncResult {
@@ -514,41 +505,7 @@ export async function syncStalePullRequests(
       )
 
       if (!response.node) {
-        database
-          .delete(commentReactions)
-          .where(eq(commentReactions.pullRequestId, stalePullRequest.id))
-          .run()
-        database
-          .delete(comments)
-          .where(eq(comments.pullRequestId, stalePullRequest.id))
-          .run()
-        database
-          .delete(reviews)
-          .where(eq(reviews.pullRequestId, stalePullRequest.id))
-          .run()
-        database
-          .delete(checks)
-          .where(eq(checks.pullRequestId, stalePullRequest.id))
-          .run()
-        database
-          .delete(commits)
-          .where(eq(commits.pullRequestId, stalePullRequest.id))
-          .run()
-        database
-          .delete(modifiedFiles)
-          .where(eq(modifiedFiles.pullRequestId, stalePullRequest.id))
-          .run()
-        database
-          .delete(etags)
-          .where(eq(etags.resourceId, stalePullRequest.id))
-          .run()
-        database
-          .delete(pullRequests)
-          .where(eq(pullRequests.id, stalePullRequest.id))
-          .run()
-
-        log.info(`Deleted inaccessible PR ${stalePullRequest.id}`)
-
+        deletePullRequestData(stalePullRequest.id)
         deleted++
         continue
       }

@@ -21,7 +21,8 @@ import type {
   CommentReaction,
   Check,
   Commit,
-  ModifiedFile
+  ModifiedFile,
+  PullRequestDetails
 } from '../types/pull-request-details'
 
 export interface PendingReview {

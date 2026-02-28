@@ -15,10 +15,8 @@ export function OnboardingPage() {
     clearNewSignIn()
     triggerSync()
 
-    const unsubscribe = window.electron.onSyncComplete((event) => {
-      if (event.type === 'pull-requests') {
-        navigate('/')
-      }
+    const unsubscribe = window.electron.onSyncComplete(() => {
+      navigate('/')
     })
 
     const timeout = setTimeout(() => {

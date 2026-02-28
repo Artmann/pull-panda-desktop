@@ -140,8 +140,9 @@ describe('syncPullRequestDetails', () => {
     })
 
     expect(result).toEqual({
-      success: true,
-      errors: []
+      errors: [],
+      notFound: false,
+      success: true
     })
   })
 
