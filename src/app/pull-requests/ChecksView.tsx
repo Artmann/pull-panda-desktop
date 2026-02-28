@@ -8,6 +8,7 @@ import {
   XCircleIcon
 } from 'lucide-react'
 import { useEffect, useState, type ReactElement, type ReactNode } from 'react'
+import { shallowEqual } from 'react-redux'
 
 import { MarkdownBlock } from '@/app/components/MarkdownBlock'
 import { Badge } from '@/app/components/ui/badge'
@@ -23,8 +24,10 @@ export function ChecksView({
 }: {
   pullRequest: PullRequest
 }): ReactElement {
-  const allChecks = useAppSelector((state) =>
-    state.checks.items.filter((c) => c.pullRequestId === pullRequest.id)
+  const allChecks: Check[] = useAppSelector(
+    (state) =>
+      state.checks.items.filter((c) => c.pullRequestId === pullRequest.id),
+    shallowEqual
   )
 
   // Deduplicate checks by name, keeping the most recent one.

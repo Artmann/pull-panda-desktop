@@ -1,4 +1,5 @@
 import { memo, useMemo, type ReactElement } from 'react'
+import { shallowEqual } from 'react-redux'
 
 import type { PullRequest } from '@/types/pull-request'
 import type { Comment, Review } from '@/types/pull-request-details'
@@ -24,12 +25,16 @@ interface ActivityProps {
 }
 
 export function Activity({ pullRequest }: ActivityProps): ReactElement {
-  const comments = useAppSelector((state) =>
-    state.comments.items.filter((c) => c.pullRequestId === pullRequest.id)
+  const comments: Comment[] = useAppSelector(
+    (state) =>
+      state.comments.items.filter((c) => c.pullRequestId === pullRequest.id),
+    shallowEqual
   )
 
-  const reviews = useAppSelector((state) =>
-    state.reviews.items.filter((r) => r.pullRequestId === pullRequest.id)
+  const reviews: Review[] = useAppSelector(
+    (state) =>
+      state.reviews.items.filter((r) => r.pullRequestId === pullRequest.id),
+    shallowEqual
   )
   const sortedActivity = useMemo(() => {
     const topLevelComments = comments.filter(
