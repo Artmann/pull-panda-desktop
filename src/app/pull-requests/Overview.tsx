@@ -1,6 +1,8 @@
 import { memo, useMemo, type ReactElement } from 'react'
+import { shallowEqual } from 'react-redux'
 
 import type { PullRequest } from '@/types/pull-request'
+import type { Check, Comment } from '@/types/pull-request-details'
 
 import { MarkdownBlock } from '@/app/components/MarkdownBlock'
 import { SectionHeader } from '@/app/components/SectionHeader'
@@ -22,12 +24,16 @@ interface OverviewProps {
 export const Overview = memo(function Overview({
   pullRequest
 }: OverviewProps): ReactElement {
-  const comments = useAppSelector((state) =>
-    state.comments.items.filter((c) => c.pullRequestId === pullRequest.id)
+  const comments: Comment[] = useAppSelector(
+    (state) =>
+      state.comments.items.filter((c) => c.pullRequestId === pullRequest.id),
+    shallowEqual
   )
 
-  const checks = useAppSelector((state) =>
-    state.checks.items.filter((c) => c.pullRequestId === pullRequest.id)
+  const checks: Check[] = useAppSelector(
+    (state) =>
+      state.checks.items.filter((c) => c.pullRequestId === pullRequest.id),
+    shallowEqual
   )
 
   const issues = useMemo(

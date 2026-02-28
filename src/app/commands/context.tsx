@@ -6,7 +6,7 @@ import {
   useEffect,
   type ReactNode
 } from 'react'
-import { useStore } from 'react-redux'
+import { shallowEqual, useStore } from 'react-redux'
 import { useLocation, useNavigate, type NavigateFunction } from 'react-router'
 
 import type { AppStore } from '@/app/store'
@@ -75,39 +75,65 @@ export function CommandContextProvider({
       : undefined
   )
 
-  const pullRequestDetails = useAppSelector((state) => {
-    if (!pullRequestId) {
-      return undefined
-    }
+  const checks = useAppSelector(
+    (state) =>
+      pullRequestId
+        ? state.checks.items.filter((c) => c.pullRequestId === pullRequestId)
+        : [],
+    shallowEqual
+  )
 
-    const checks = state.checks.items.filter(
-      (c) => c.pullRequestId === pullRequestId
-    )
-    const comments = state.comments.items.filter(
-      (c) => c.pullRequestId === pullRequestId
-    )
-    const commits = state.commits.items.filter(
-      (c) => c.pullRequestId === pullRequestId
-    )
-    const files = state.modifiedFiles.items.filter(
-      (f) => f.pullRequestId === pullRequestId
-    )
-    const reactions = state.reactions.items.filter(
-      (r) => r.pullRequestId === pullRequestId
-    )
-    const reviews = state.reviews.items.filter(
-      (r) => r.pullRequestId === pullRequestId
-    )
+  const comments = useAppSelector(
+    (state) =>
+      pullRequestId
+        ? state.comments.items.filter((c) => c.pullRequestId === pullRequestId)
+        : [],
+    shallowEqual
+  )
 
-    return {
-      checks,
-      comments,
-      commits,
-      files,
-      reactions,
-      reviews
-    } as PullRequestDetails
-  })
+  const commits = useAppSelector(
+    (state) =>
+      pullRequestId
+        ? state.commits.items.filter((c) => c.pullRequestId === pullRequestId)
+        : [],
+    shallowEqual
+  )
+
+  const files = useAppSelector(
+    (state) =>
+      pullRequestId
+        ? state.modifiedFiles.items.filter(
+            (f) => f.pullRequestId === pullRequestId
+          )
+        : [],
+    shallowEqual
+  )
+
+  const reactions = useAppSelector(
+    (state) =>
+      pullRequestId
+        ? state.reactions.items.filter(
+            (r) => r.pullRequestId === pullRequestId
+          )
+        : [],
+    shallowEqual
+  )
+
+  const reviews = useAppSelector(
+    (state) =>
+      pullRequestId
+        ? state.reviews.items.filter((r) => r.pullRequestId === pullRequestId)
+        : [],
+    shallowEqual
+  )
+
+  const pullRequestDetails: PullRequestDetails | undefined = useMemo(
+    () =>
+      pullRequestId
+        ? { checks, comments, commits, files, reactions, reviews }
+        : undefined,
+    [pullRequestId, checks, comments, commits, files, reactions, reviews]
+  )
 
   // Derive view from current path
   const view: CommandView = useMemo(() => {

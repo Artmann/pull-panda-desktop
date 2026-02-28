@@ -1,5 +1,6 @@
 import { ExternalLinkIcon } from 'lucide-react'
 import { memo, useMemo, type ReactElement } from 'react'
+import { shallowEqual } from 'react-redux'
 
 import type { Comment, ModifiedFile } from '@/types/pull-request-details'
 import type { PullRequest } from '@/types/pull-request'
@@ -11,7 +12,6 @@ import { FileCard, FileCardBody, FileCardHeader } from '../components/FileCard'
 import { SimpleDiff } from '../diffs/SimpleDiff'
 
 const emptyPendingComments: PendingReviewComment[] = []
-const emptySubmittedComments: Comment[] = []
 
 interface ModifiedFileCardProps {
   file: ModifiedFile
@@ -30,10 +30,10 @@ export const ModifiedFileCard = memo(function ModifiedFileCard({
       state.pendingReviewComments[pullRequest.id] ?? emptyPendingComments
   )
 
-  const allSubmittedComments = useAppSelector(
+  const allSubmittedComments: Comment[] = useAppSelector(
     (state) =>
-      state.comments.items.filter((c) => c.pullRequestId === pullRequest.id) ??
-      emptySubmittedComments
+      state.comments.items.filter((c) => c.pullRequestId === pullRequest.id),
+    shallowEqual
   )
 
   const filePendingComments = useMemo(

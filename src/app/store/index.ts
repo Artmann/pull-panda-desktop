@@ -26,17 +26,17 @@ import reviewsReducer, { ReviewsState } from './reviews-slice'
 import tasksReducer, { TasksState } from './tasks-slice'
 
 export interface PreloadedState {
-  checks?: ChecksState
-  comments?: CommentsState
-  commits?: CommitsState
+  checks: ChecksState
+  comments: CommentsState
+  commits: CommitsState
   drafts?: DraftsState
-  modifiedFiles?: ModifiedFilesState
+  modifiedFiles: ModifiedFilesState
   navigation?: NavigationState
   pendingReviewComments?: PendingReviewCommentsState
   pendingReviews?: PendingReviewsState
   pullRequests?: PullRequestsState
-  reactions?: ReactionsState
-  reviews?: ReviewsState
+  reactions: ReactionsState
+  reviews: ReviewsState
   tasks?: TasksState
 }
 

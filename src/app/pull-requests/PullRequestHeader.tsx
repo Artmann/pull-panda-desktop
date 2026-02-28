@@ -1,8 +1,10 @@
 import { ExternalLinkIcon, GitPullRequest } from 'lucide-react'
 import { ReactElement, useMemo } from 'react'
+import { shallowEqual } from 'react-redux'
 import invariant from 'tiny-invariant'
 
 import { PullRequest } from '@/types/pull-request'
+import type { Review } from '@/types/pull-request-details'
 import { ReviewBadge } from '../components/ReviewBadge'
 import {
   Breadcrumb,
@@ -63,8 +65,10 @@ export function PullRequestHeader({
 }): ReactElement {
   invariant(pullRequest, 'PullRequestHeader requires a pull request')
 
-  const reviews = useAppSelector((state) =>
-    state.reviews.items.filter((r) => r.pullRequestId === pullRequest.id)
+  const reviews: Review[] = useAppSelector(
+    (state) =>
+      state.reviews.items.filter((r) => r.pullRequestId === pullRequest.id),
+    shallowEqual
   )
 
   const latestReviews = useMemo(() => getLatestReviews(reviews), [reviews])

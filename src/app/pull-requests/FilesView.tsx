@@ -5,8 +5,10 @@ import {
   FolderOpenIcon
 } from 'lucide-react'
 import { memo, useState, type ReactElement } from 'react'
+import { shallowEqual } from 'react-redux'
 
 import type { PullRequest } from '@/types/pull-request'
+import type { ModifiedFile } from '@/types/pull-request-details'
 
 import { Button } from '@/app/components/ui/button'
 import { useAppSelector } from '@/app/store/hooks'
@@ -19,8 +21,12 @@ export const FilesView = memo(function FilesView({
 }: {
   pullRequest: PullRequest
 }): ReactElement {
-  const files = useAppSelector((state) =>
-    state.modifiedFiles.items.filter((f) => f.pullRequestId === pullRequest.id)
+  const files: ModifiedFile[] = useAppSelector(
+    (state) =>
+      state.modifiedFiles.items.filter(
+        (f) => f.pullRequestId === pullRequest.id
+      ),
+    shallowEqual
   )
 
   const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(new Set())
