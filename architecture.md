@@ -105,7 +105,11 @@ type ResourceUpdatedEvent =
   | { type: 'comments'; pullRequestId: string; data: Comment[] }
   | { type: 'commits'; pullRequestId: string; data: Commit[] }
   | { type: 'modified-files'; pullRequestId: string; data: ModifiedFile[] }
-  | { type: 'pending-review'; pullRequestId: string; data: PendingReview | null }
+  | {
+      type: 'pending-review'
+      pullRequestId: string
+      data: PendingReview | null
+    }
   | { type: 'pull-request'; pullRequestId: string; data: PullRequest }
   | { type: 'pull-requests'; data: PullRequest[] }
   | { type: 'reactions'; pullRequestId: string; data: CommentReaction[] }
@@ -137,7 +141,8 @@ staleness threshold (1 minute for recently-active PRs, 1 hour for older ones).
 ### Sending resource events
 
 `src/main/send-resource-events.ts` provides a shared helper that reads fresh
-data from SQLite and sends individual `ResourceUpdated` events per resource type:
+data from SQLite and sends individual `ResourceUpdated` events per resource
+type:
 
 ```typescript
 async function sendPullRequestResourceEvents(
@@ -184,17 +189,17 @@ context.
 
 Routes:
 
-| Route                                    | Method | Purpose                                         |
-| ---------------------------------------- | ------ | ----------------------------------------------- |
-| `/api/reviews`                           | POST   | Create a pending review                         |
-| `/api/reviews/{id}`                      | DELETE | Delete a pending review                         |
-| `/api/reviews/{id}/submit`               | POST   | Submit review (approve/request changes/comment) |
-| `/api/comments`                          | POST   | Create issue comment or review comment reply    |
-| `/api/checks/{id}`                       | GET    | Fetch check runs for a PR                       |
-| `/api/pull-requests/{id}/activate`       | POST   | Mark PR as active for background polling        |
-| `/api/pull-requests/{id}/details`        | GET    | Read full PR details from SQLite                |
-| `/api/pull-requests/{id}/sync`           | POST   | Trigger sync for a single PR                    |
-| `/api/syncs`                             | POST   | Trigger a manual sync                           |
+| Route                              | Method | Purpose                                         |
+| ---------------------------------- | ------ | ----------------------------------------------- |
+| `/api/reviews`                     | POST   | Create a pending review                         |
+| `/api/reviews/{id}`                | DELETE | Delete a pending review                         |
+| `/api/reviews/{id}/submit`         | POST   | Submit review (approve/request changes/comment) |
+| `/api/comments`                    | POST   | Create issue comment or review comment reply    |
+| `/api/checks/{id}`                 | GET    | Fetch check runs for a PR                       |
+| `/api/pull-requests/{id}/activate` | POST   | Mark PR as active for background polling        |
+| `/api/pull-requests/{id}/details`  | GET    | Read full PR details from SQLite                |
+| `/api/pull-requests/{id}/sync`     | POST   | Trigger sync for a single PR                    |
+| `/api/syncs`                       | POST   | Trigger a manual sync                           |
 
 ### Frontend API client
 
@@ -282,46 +287,46 @@ timestamps.
 
 ### Redux slices
 
-| Slice                   | Shape                                    | Source                               |
-| ----------------------- | ---------------------------------------- | ------------------------------------ |
-| `checks`                | `{ items: Check[] }`                     | Bootstrap + ResourceUpdated events   |
-| `comments`              | `{ items: Comment[] }`                   | Bootstrap + ResourceUpdated events   |
-| `commits`               | `{ items: Commit[] }`                    | Bootstrap + ResourceUpdated events   |
-| `modifiedFiles`         | `{ items: ModifiedFile[] }`              | Bootstrap + ResourceUpdated events   |
-| `reactions`             | `{ items: CommentReaction[] }`           | Bootstrap + ResourceUpdated events   |
-| `reviews`               | `{ items: Review[] }`                    | Bootstrap + ResourceUpdated events   |
-| `pullRequests`          | `{ items: PullRequest[] }`               | Bootstrap + ResourceUpdated events   |
-| `pendingReviews`        | `Record<string, PendingReview>`          | Bootstrap + ResourceUpdated events   |
-| `drafts`                | `Record<string, string>`                 | localStorage                         |
-| `pendingReviewComments` | `Record<string, PendingReviewComment[]>` | localStorage                         |
-| `navigation`            | Route state                              | Local                                |
-| `tasks`                 | Background task tracking                 | IPC TaskUpdate events                |
+| Slice                   | Shape                                    | Source                             |
+| ----------------------- | ---------------------------------------- | ---------------------------------- |
+| `checks`                | `{ items: Check[] }`                     | Bootstrap + ResourceUpdated events |
+| `comments`              | `{ items: Comment[] }`                   | Bootstrap + ResourceUpdated events |
+| `commits`               | `{ items: Commit[] }`                    | Bootstrap + ResourceUpdated events |
+| `modifiedFiles`         | `{ items: ModifiedFile[] }`              | Bootstrap + ResourceUpdated events |
+| `reactions`             | `{ items: CommentReaction[] }`           | Bootstrap + ResourceUpdated events |
+| `reviews`               | `{ items: Review[] }`                    | Bootstrap + ResourceUpdated events |
+| `pullRequests`          | `{ items: PullRequest[] }`               | Bootstrap + ResourceUpdated events |
+| `pendingReviews`        | `Record<string, PendingReview>`          | Bootstrap + ResourceUpdated events |
+| `drafts`                | `Record<string, string>`                 | localStorage                       |
+| `pendingReviewComments` | `Record<string, PendingReviewComment[]>` | localStorage                       |
+| `navigation`            | Route state                              | Local                              |
+| `tasks`                 | Background task tracking                 | IPC TaskUpdate events              |
 
 Each flat resource slice stores items across all PRs in a single `items` array.
 Items are tagged with `pullRequestId` and filtered at the component level using
 `useAppSelector`. The `setForPullRequest` reducer replaces all items for a given
-PR while preserving items from other PRs (and any optimistic entries with `temp-`
-prefixed IDs in the comments slice).
+PR while preserving items from other PRs (and any optimistic entries with
+`temp-` prefixed IDs in the comments slice).
 
 ---
 
 ## Key files
 
-| File                                    | Role                                                                |
-| --------------------------------------- | ------------------------------------------------------------------- |
-| `src/main.ts`                           | App entry, IPC handlers, startup sync orchestration                 |
-| `src/preload.ts`                        | IPC bridge exposing `window.electron` and `window.auth`             |
-| `src/renderer.tsx`                      | Redux store creation with bootstrap data                            |
-| `src/app/App.tsx`                       | IPC event listeners that dispatch to flat Redux slices              |
-| `src/app/lib/api.ts`                    | Frontend HTTP client for mutations and data reads                   |
-| `src/main/api/server.ts`               | Hono HTTP server in main process                                    |
-| `src/main/api/routes/*.ts`             | Route handlers (reviews, comments, checks, pull-requests, syncs)    |
-| `src/main/bootstrap.ts`                | Reads SQLite, builds flat BootstrapData                             |
-| `src/main/background-syncer.ts`        | Background check polling                                            |
-| `src/main/send-resource-events.ts`     | Shared helper to send data-carrying ResourceUpdated events          |
-| `src/types/ipc-events.ts`              | ResourceUpdatedEvent discriminated union type                       |
-| `src/sync/pull-requests.ts`            | GraphQL PR list sync                                                |
-| `src/sync/sync-pull-request-details.ts`| Per-PR REST detail sync                                             |
-| `src/app/store/*-slice.ts`             | Redux slices (one per resource type)                                |
-| `src/lib/ipc/channels.ts`              | IPC channel constants                                               |
-| `src/database/schema.ts`               | SQLite schema (Drizzle)                                             |
+| File                                    | Role                                                             |
+| --------------------------------------- | ---------------------------------------------------------------- |
+| `src/main.ts`                           | App entry, IPC handlers, startup sync orchestration              |
+| `src/preload.ts`                        | IPC bridge exposing `window.electron` and `window.auth`          |
+| `src/renderer.tsx`                      | Redux store creation with bootstrap data                         |
+| `src/app/App.tsx`                       | IPC event listeners that dispatch to flat Redux slices           |
+| `src/app/lib/api.ts`                    | Frontend HTTP client for mutations and data reads                |
+| `src/main/api/server.ts`                | Hono HTTP server in main process                                 |
+| `src/main/api/routes/*.ts`              | Route handlers (reviews, comments, checks, pull-requests, syncs) |
+| `src/main/bootstrap.ts`                 | Reads SQLite, builds flat BootstrapData                          |
+| `src/main/background-syncer.ts`         | Background check polling                                         |
+| `src/main/send-resource-events.ts`      | Shared helper to send data-carrying ResourceUpdated events       |
+| `src/types/ipc-events.ts`               | ResourceUpdatedEvent discriminated union type                    |
+| `src/sync/pull-requests.ts`             | GraphQL PR list sync                                             |
+| `src/sync/sync-pull-request-details.ts` | Per-PR REST detail sync                                          |
+| `src/app/store/*-slice.ts`              | Redux slices (one per resource type)                             |
+| `src/lib/ipc/channels.ts`               | IPC channel constants                                            |
+| `src/database/schema.ts`                | SQLite schema (Drizzle)                                          |

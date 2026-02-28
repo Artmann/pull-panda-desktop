@@ -30,35 +30,20 @@ export function deletePullRequestData(pullRequestId: string): void {
     .where(eq(comments.pullRequestId, pullRequestId))
     .run()
 
-  database
-    .delete(reviews)
-    .where(eq(reviews.pullRequestId, pullRequestId))
-    .run()
+  database.delete(reviews).where(eq(reviews.pullRequestId, pullRequestId)).run()
 
-  database
-    .delete(checks)
-    .where(eq(checks.pullRequestId, pullRequestId))
-    .run()
+  database.delete(checks).where(eq(checks.pullRequestId, pullRequestId)).run()
 
-  database
-    .delete(commits)
-    .where(eq(commits.pullRequestId, pullRequestId))
-    .run()
+  database.delete(commits).where(eq(commits.pullRequestId, pullRequestId)).run()
 
   database
     .delete(modifiedFiles)
     .where(eq(modifiedFiles.pullRequestId, pullRequestId))
     .run()
 
-  database
-    .delete(etags)
-    .where(eq(etags.resourceId, pullRequestId))
-    .run()
+  database.delete(etags).where(eq(etags.resourceId, pullRequestId)).run()
 
-  database
-    .delete(pullRequests)
-    .where(eq(pullRequests.id, pullRequestId))
-    .run()
+  database.delete(pullRequests).where(eq(pullRequests.id, pullRequestId)).run()
 
   log.info(`Deleted inaccessible PR ${pullRequestId} and all related data`)
 }

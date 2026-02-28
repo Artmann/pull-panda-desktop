@@ -112,9 +112,7 @@ export function CommandContextProvider({
   const reactions = useAppSelector(
     (state) =>
       pullRequestId
-        ? state.reactions.items.filter(
-            (r) => r.pullRequestId === pullRequestId
-          )
+        ? state.reactions.items.filter((r) => r.pullRequestId === pullRequestId)
         : [],
     shallowEqual
   )
