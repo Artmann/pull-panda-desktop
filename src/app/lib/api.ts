@@ -268,6 +268,28 @@ export async function getChecks(
   }
 }
 
+export async function syncPullRequestDetails(
+  pullRequestId: string
+): Promise<void> {
+  const baseUrl = await getApiBaseUrl()
+
+  const response = await fetch(
+    `${baseUrl}/api/pull-requests/${pullRequestId}/sync`,
+    {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      }
+    }
+  )
+
+  if (!response.ok) {
+    const error = await response.json()
+
+    throw new Error(error.error ?? 'Failed to sync pull request details')
+  }
+}
+
 export async function triggerSync(): Promise<void> {
   const baseUrl = await getApiBaseUrl()
 

@@ -23,10 +23,9 @@ export function ChecksView({
 }: {
   pullRequest: PullRequest
 }): ReactElement {
-  const details = useAppSelector(
-    (state) => state.pullRequestDetails[pullRequest.id]
+  const allChecks = useAppSelector((state) =>
+    state.checks.items.filter((c) => c.pullRequestId === pullRequest.id)
   )
-  const allChecks = details?.checks ?? []
 
   // Deduplicate checks by name, keeping the most recent one.
   const checksByName = new Map<string, Check>()

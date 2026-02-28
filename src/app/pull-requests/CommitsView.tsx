@@ -13,10 +13,9 @@ export const CommitsView = memo(function CommitsView({
 }: {
   pullRequest: PullRequest
 }): ReactElement {
-  const details = useAppSelector(
-    (state) => state.pullRequestDetails[pullRequest.id]
+  const commits = useAppSelector((state) =>
+    state.commits.items.filter((c) => c.pullRequestId === pullRequest.id)
   )
-  const commits = details?.commits ?? []
   const groupedCommits = groupCommitsByDay(commits)
 
   if (commits.length === 0) {

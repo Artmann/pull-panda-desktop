@@ -31,10 +31,15 @@ import { PullRequestPage } from '@/app/routes/PullRequestPage'
 import { SettingsPage } from '@/app/routes/SettingsPage'
 import { SignInPage } from '@/app/routes/SignInPage'
 import { getSavedRoute, saveRoute } from '@/app/lib/routePersistence'
+import { checksActions } from '@/app/store/checks-slice'
+import { commentsActions } from '@/app/store/comments-slice'
+import { commitsActions } from '@/app/store/commits-slice'
 import { useAppDispatch } from '@/app/store/hooks'
+import { modifiedFilesActions } from '@/app/store/modified-files-slice'
 import { pendingReviewsActions } from '@/app/store/pending-reviews-slice'
-import { pullRequestDetailsActions } from '@/app/store/pull-request-details-slice'
 import { pullRequestsActions } from '@/app/store/pull-requests-slice'
+import { reactionsActions } from '@/app/store/reactions-slice'
+import { reviewsActions } from '@/app/store/reviews-slice'
 import { AppFooter } from './AppFooter'
 
 interface AppProps {
@@ -70,25 +75,50 @@ function AppContent(): ReactElement {
 
   // Listen for resource updates from the main process
   useEffect(() => {
-    const unsubscribe = window.electron.onResourceUpdated(async (event) => {
-      if (event.type === 'pull-request-details' && event.pullRequestId) {
-        const details = await window.electron.getPullRequestDetails(
-          event.pullRequestId
-        )
-
-        if (details) {
+    const unsubscribe = window.electron.onResourceUpdated((event) => {
+      switch (event.type) {
+        case 'checks':
           dispatch(
-            pullRequestDetailsActions.setDetails({
+            checksActions.setForPullRequest({
               pullRequestId: event.pullRequestId,
-              details
+              items: event.data
             })
           )
+          break
 
-          if (details.pendingReview) {
+        case 'comments':
+          dispatch(
+            commentsActions.setForPullRequest({
+              pullRequestId: event.pullRequestId,
+              items: event.data
+            })
+          )
+          break
+
+        case 'commits':
+          dispatch(
+            commitsActions.setForPullRequest({
+              pullRequestId: event.pullRequestId,
+              items: event.data
+            })
+          )
+          break
+
+        case 'modified-files':
+          dispatch(
+            modifiedFilesActions.setForPullRequest({
+              pullRequestId: event.pullRequestId,
+              items: event.data
+            })
+          )
+          break
+
+        case 'pending-review':
+          if (event.data) {
             dispatch(
               pendingReviewsActions.setReview({
                 pullRequestId: event.pullRequestId,
-                review: details.pendingReview
+                review: event.data
               })
             )
           } else {
@@ -98,42 +128,49 @@ function AppContent(): ReactElement {
               })
             )
           }
-        }
+          break
 
-        const pullRequest = await window.electron.getPullRequest(
-          event.pullRequestId
-        )
+        case 'pull-request':
+          dispatch(pullRequestsActions.upsertItem(event.data))
+          break
 
-        if (pullRequest?.detailsSyncedAt) {
-          dispatch(pullRequestsActions.upsertItem(pullRequest))
-        }
-      }
-    })
-
-    return unsubscribe
-  }, [dispatch])
-
-  // Refresh PR list when a full sync completes
-  useEffect(() => {
-    const unsubscribe = window.electron.onSyncComplete(async (event) => {
-      if (event.type !== 'pull-requests') {
-        return
-      }
-
-      const data = await window.electron.getBootstrapData()
-
-      if (data) {
-        dispatch(
-          pullRequestsActions.setItems(
-            filterReadyPullRequests(data.pullRequests)
+        case 'pull-requests':
+          dispatch(
+            pullRequestsActions.setItems(filterReadyPullRequests(event.data))
           )
-        )
-        dispatch(pendingReviewsActions.setAll(data.pendingReviews ?? {}))
+          break
+
+        case 'reactions':
+          dispatch(
+            reactionsActions.setForPullRequest({
+              pullRequestId: event.pullRequestId,
+              items: event.data
+            })
+          )
+          break
+
+        case 'reviews':
+          dispatch(
+            reviewsActions.setForPullRequest({
+              pullRequestId: event.pullRequestId,
+              items: event.data
+            })
+          )
+          break
       }
     })
 
     return unsubscribe
   }, [dispatch])
+
+  // SyncComplete just signals the sync is done (no data fetching needed).
+  useEffect(() => {
+    const unsubscribe = window.electron.onSyncComplete(() => {
+      // Sync status indicator could be updated here.
+    })
+
+    return unsubscribe
+  }, [])
 
   if (status === 'loading') {
     return (

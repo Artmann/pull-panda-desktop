@@ -39,11 +39,14 @@ async function main() {
   const readyPullRequests = filterReadyPullRequests(bootstrapData?.pullRequests)
 
   const store = createStore({
+    checks: { items: bootstrapData?.checks ?? [] },
+    comments: { items: bootstrapData?.comments ?? [] },
+    commits: { items: bootstrapData?.commits ?? [] },
+    modifiedFiles: { items: bootstrapData?.modifiedFiles ?? [] },
     pendingReviews: bootstrapData?.pendingReviews ?? {},
-    pullRequestDetails: bootstrapData?.pullRequestDetails ?? {},
-    pullRequests: {
-      items: readyPullRequests
-    }
+    pullRequests: { items: readyPullRequests },
+    reactions: { items: bootstrapData?.reactions ?? [] },
+    reviews: { items: bootstrapData?.reviews ?? [] }
   })
 
   const root = document.getElementById('root')

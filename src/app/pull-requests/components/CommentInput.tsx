@@ -3,14 +3,14 @@ import { memo, useState, type ReactElement } from 'react'
 
 import { Button } from '@/app/components/ui/button'
 import { Textarea } from '@/app/components/ui/textarea'
-import { createComment } from '@/app/lib/api'
+import { createComment, syncPullRequestDetails } from '@/app/lib/api'
 import { useAuth } from '@/app/lib/store/authContext'
+import {
+  commentsActions,
+  createOptimisticComment
+} from '@/app/store/comments-slice'
 import { getDraftKeyForComment } from '@/app/store/drafts-slice'
 import { useAppDispatch } from '@/app/store/hooks'
-import {
-  createOptimisticComment,
-  pullRequestDetailsActions
-} from '@/app/store/pull-request-details-slice'
 import { useDraft } from '@/app/store/use-draft'
 
 interface CommentInputProps {
@@ -60,7 +60,7 @@ export const CommentInput = memo(function CommentInput({
     })
 
     dispatch(
-      pullRequestDetailsActions.addComment({
+      commentsActions.addComment({
         pullRequestId,
         comment: optimisticComment
       })
@@ -81,12 +81,7 @@ export const CommentInput = memo(function CommentInput({
       })
 
       // Trigger sync to get the real comment from the server
-      window.electron.syncPullRequestDetails(
-        pullRequestId,
-        owner,
-        repo,
-        pullNumber
-      )
+      syncPullRequestDetails(pullRequestId)
       onSuccess?.()
     } catch (error) {
       setError(
@@ -95,7 +90,7 @@ export const CommentInput = memo(function CommentInput({
 
       // Rollback optimistic comment on error
       dispatch(
-        pullRequestDetailsActions.removeComment({
+        commentsActions.removeComment({
           pullRequestId,
           commentId: optimisticComment.id
         })
@@ -202,7 +197,7 @@ export const NewCommentForm = memo(function NewCommentForm({
     })
 
     dispatch(
-      pullRequestDetailsActions.addComment({
+      commentsActions.addComment({
         pullRequestId,
         comment: optimisticComment
       })
@@ -220,19 +215,14 @@ export const NewCommentForm = memo(function NewCommentForm({
         repo
       })
 
-      window.electron.syncPullRequestDetails(
-        pullRequestId,
-        owner,
-        repo,
-        pullNumber
-      )
+      syncPullRequestDetails(pullRequestId)
     } catch (error) {
       setError(
         error instanceof Error ? error.message : 'Failed to post comment'
       )
 
       dispatch(
-        pullRequestDetailsActions.removeComment({
+        commentsActions.removeComment({
           pullRequestId,
           commentId: optimisticComment.id
         })

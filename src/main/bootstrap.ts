@@ -16,7 +16,6 @@ import type {
   PullRequestAssignee
 } from '../types/pull-request'
 import type {
-  PullRequestDetails,
   Review,
   Comment,
   CommentReaction,
@@ -37,9 +36,14 @@ export interface PendingReview {
 }
 
 export interface BootstrapData {
+  checks: Check[]
+  comments: Comment[]
+  commits: Commit[]
+  modifiedFiles: ModifiedFile[]
   pendingReviews: Record<string, PendingReview>
-  pullRequestDetails: Record<string, PullRequestDetails>
   pullRequests: PullRequest[]
+  reactions: CommentReaction[]
+  reviews: Review[]
 }
 
 interface PullRequestCounts {
@@ -149,20 +153,35 @@ export async function bootstrap(userLogin?: string): Promise<BootstrapData> {
     })
   )
 
-  const pullRequestDetails: Record<string, PullRequestDetails> = {}
+  const allChecks: Check[] = []
+  const allComments: Comment[] = []
+  const allCommits: Commit[] = []
+  const allModifiedFiles: ModifiedFile[] = []
+  const allReactions: CommentReaction[] = []
+  const allReviews: Review[] = []
 
   for (const pullRequest of parsedPullRequests) {
     const details = await getPullRequestDetails(pullRequest.id, userLogin)
 
     if (details) {
-      pullRequestDetails[pullRequest.id] = details
+      allChecks.push(...details.checks)
+      allComments.push(...details.comments)
+      allCommits.push(...details.commits)
+      allModifiedFiles.push(...details.files)
+      allReactions.push(...details.reactions)
+      allReviews.push(...details.reviews)
     }
   }
 
   return {
+    checks: allChecks,
+    comments: allComments,
+    commits: allCommits,
+    modifiedFiles: allModifiedFiles,
     pendingReviews,
-    pullRequestDetails,
-    pullRequests: parsedPullRequests
+    pullRequests: parsedPullRequests,
+    reactions: allReactions,
+    reviews: allReviews
   }
 }
 

@@ -6,11 +6,11 @@ import { Provider } from 'react-redux'
 import { configureStore } from '@reduxjs/toolkit'
 import { describe, it, expect, vi, beforeAll } from 'vitest'
 
-import type { Check, PullRequestDetails } from '@/types/pull-request-details'
+import type { Check } from '@/types/pull-request-details'
 import type { PullRequest } from '@/types/pull-request'
 
 import { CodeThemeProvider } from '@/app/lib/store/codeThemeContext'
-import pullRequestDetailsReducer from '@/app/store/pull-request-details-slice'
+import checksReducer from '@/app/store/checks-slice'
 
 import { ChecksView } from './ChecksView'
 
@@ -101,12 +101,10 @@ function createMockPullRequest(
   }
 }
 
-function createTestStore(preloadedState?: {
-  pullRequestDetails?: { [key: string]: PullRequestDetails }
-}) {
+function createTestStore(preloadedState?: { checks?: { items: Check[] } }) {
   return configureStore({
     reducer: {
-      pullRequestDetails: pullRequestDetailsReducer
+      checks: checksReducer
     },
     preloadedState
   })
@@ -127,16 +125,7 @@ describe('ChecksView', () => {
   it('renders empty state when no checks', async () => {
     const pullRequest = createMockPullRequest()
     const store = createTestStore({
-      pullRequestDetails: {
-        [pullRequest.id]: {
-          checks: [],
-          commits: [],
-          comments: [],
-          files: [],
-          reactions: [],
-          reviews: []
-        }
-      }
+      checks: { items: [] }
     })
 
     await act(async () => {
@@ -164,16 +153,7 @@ describe('ChecksView', () => {
       suiteName: 'Vercel'
     })
     const store = createTestStore({
-      pullRequestDetails: {
-        [pullRequest.id]: {
-          checks: [check1, check2, check3],
-          commits: [],
-          comments: [],
-          files: [],
-          reactions: [],
-          reviews: []
-        }
-      }
+      checks: { items: [check1, check2, check3] }
     })
 
     await act(async () => {
@@ -193,16 +173,7 @@ describe('ChecksView', () => {
       conclusion: 'success'
     })
     const store = createTestStore({
-      pullRequestDetails: {
-        [pullRequest.id]: {
-          checks: [check],
-          commits: [],
-          comments: [],
-          files: [],
-          reactions: [],
-          reviews: []
-        }
-      }
+      checks: { items: [check] }
     })
 
     await act(async () => {
@@ -218,16 +189,7 @@ describe('ChecksView', () => {
       conclusion: 'failure'
     })
     const store = createTestStore({
-      pullRequestDetails: {
-        [pullRequest.id]: {
-          checks: [check],
-          commits: [],
-          comments: [],
-          files: [],
-          reactions: [],
-          reviews: []
-        }
-      }
+      checks: { items: [check] }
     })
 
     await act(async () => {
@@ -244,16 +206,7 @@ describe('ChecksView', () => {
       conclusion: null
     })
     const store = createTestStore({
-      pullRequestDetails: {
-        [pullRequest.id]: {
-          checks: [check],
-          commits: [],
-          comments: [],
-          files: [],
-          reactions: [],
-          reviews: []
-        }
-      }
+      checks: { items: [check] }
     })
 
     await act(async () => {
@@ -269,16 +222,7 @@ describe('ChecksView', () => {
       conclusion: 'cancelled'
     })
     const store = createTestStore({
-      pullRequestDetails: {
-        [pullRequest.id]: {
-          checks: [check],
-          commits: [],
-          comments: [],
-          files: [],
-          reactions: [],
-          reviews: []
-        }
-      }
+      checks: { items: [check] }
     })
 
     await act(async () => {
@@ -303,16 +247,7 @@ describe('ChecksView', () => {
       syncedAt: '2024-01-02T00:00:00Z'
     })
     const store = createTestStore({
-      pullRequestDetails: {
-        [pullRequest.id]: {
-          checks: [oldCheck, newCheck],
-          commits: [],
-          comments: [],
-          files: [],
-          reactions: [],
-          reviews: []
-        }
-      }
+      checks: { items: [oldCheck, newCheck] }
     })
 
     await act(async () => {
@@ -330,16 +265,7 @@ describe('ChecksView', () => {
       detailsUrl: 'https://github.com/owner/repo/actions/runs/123'
     })
     const store = createTestStore({
-      pullRequestDetails: {
-        [pullRequest.id]: {
-          checks: [check],
-          commits: [],
-          comments: [],
-          files: [],
-          reactions: [],
-          reviews: []
-        }
-      }
+      checks: { items: [check] }
     })
 
     await act(async () => {
@@ -357,16 +283,7 @@ describe('ChecksView', () => {
       suiteName: null
     })
     const store = createTestStore({
-      pullRequestDetails: {
-        [pullRequest.id]: {
-          checks: [check],
-          commits: [],
-          comments: [],
-          files: [],
-          reactions: [],
-          reviews: []
-        }
-      }
+      checks: { items: [check] }
     })
 
     await act(async () => {

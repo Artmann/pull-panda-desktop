@@ -6,15 +6,13 @@ import { Provider } from 'react-redux'
 import { configureStore } from '@reduxjs/toolkit'
 import { describe, it, expect, beforeAll } from 'vitest'
 
-import type {
-  ModifiedFile,
-  PullRequestDetails
-} from '@/types/pull-request-details'
+import type { ModifiedFile } from '@/types/pull-request-details'
 import type { PullRequest } from '@/types/pull-request'
 
 import { CodeThemeProvider } from '@/app/lib/store/codeThemeContext'
+import commentsReducer from '@/app/store/comments-slice'
+import modifiedFilesReducer from '@/app/store/modified-files-slice'
 import pendingReviewCommentsReducer from '@/app/store/pending-review-comments-slice'
-import pullRequestDetailsReducer from '@/app/store/pull-request-details-slice'
 
 import { FilesView } from './FilesView'
 
@@ -100,33 +98,21 @@ function createMockPullRequest(
   }
 }
 
-function createMockDetails(
-  overrides: Partial<PullRequestDetails> = {}
-): PullRequestDetails {
-  return {
-    checks: [],
-    comments: [],
-    commits: [],
-    files: [],
-    reactions: [],
-    reviews: [],
-    ...overrides
-  }
-}
-
 function createTestStore(
   options: {
-    pullRequestDetails?: Record<string, PullRequestDetails>
+    modifiedFiles?: ModifiedFile[]
   } = {}
 ) {
   return configureStore({
     reducer: {
-      pendingReviewComments: pendingReviewCommentsReducer,
-      pullRequestDetails: pullRequestDetailsReducer
+      comments: commentsReducer,
+      modifiedFiles: modifiedFilesReducer,
+      pendingReviewComments: pendingReviewCommentsReducer
     },
     preloadedState: {
-      pendingReviewComments: {},
-      pullRequestDetails: options.pullRequestDetails ?? {}
+      comments: { items: [] },
+      modifiedFiles: { items: options.modifiedFiles ?? [] },
+      pendingReviewComments: {}
     }
   })
 }
@@ -146,9 +132,7 @@ describe('FilesView', () => {
   it('renders empty state when no files', async () => {
     const pullRequest = createMockPullRequest()
     const store = createTestStore({
-      pullRequestDetails: {
-        [pullRequest.id]: createMockDetails({ files: [] })
-      }
+      modifiedFiles: []
     })
 
     await act(async () => {
@@ -178,9 +162,7 @@ describe('FilesView', () => {
       })
     ]
     const store = createTestStore({
-      pullRequestDetails: {
-        [pullRequest.id]: createMockDetails({ files })
-      }
+      modifiedFiles: files
     })
 
     await act(async () => {
@@ -204,9 +186,7 @@ describe('FilesView', () => {
       })
     ]
     const store = createTestStore({
-      pullRequestDetails: {
-        [pullRequest.id]: createMockDetails({ files })
-      }
+      modifiedFiles: files
     })
 
     await act(async () => {
@@ -241,9 +221,7 @@ describe('FilesView', () => {
       })
     ]
     const store = createTestStore({
-      pullRequestDetails: {
-        [pullRequest.id]: createMockDetails({ files })
-      }
+      modifiedFiles: files
     })
 
     await act(async () => {
@@ -266,9 +244,7 @@ describe('FilesView', () => {
       })
     ]
     const store = createTestStore({
-      pullRequestDetails: {
-        [pullRequest.id]: createMockDetails({ files })
-      }
+      modifiedFiles: files
     })
 
     await act(async () => {
@@ -291,9 +267,7 @@ describe('FilesView', () => {
       })
     ]
     const store = createTestStore({
-      pullRequestDetails: {
-        [pullRequest.id]: createMockDetails({ files })
-      }
+      modifiedFiles: files
     })
 
     await act(async () => {

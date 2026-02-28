@@ -3,20 +3,9 @@ import { contextBridge, ipcRenderer } from 'electron'
 import { ipcChannels } from './lib/ipc/channels'
 import type { BootstrapData } from './main/bootstrap'
 import type { DeviceCodeResponse, GitHubUser } from './types/auth'
-import type { PullRequest } from './types/pull-request'
-import type { PullRequestDetails } from './types/pull-request-details'
+import type { ResourceUpdatedEvent } from './types/ipc-events'
 import type { MonitoringData } from './types/syncer-monitoring'
 import type { Task, TaskUpdateEvent } from './types/task'
-
-interface SyncCompleteEvent {
-  type: 'pull-requests' | 'pull-request-details'
-  pullRequestId?: string
-}
-
-interface ResourceUpdatedEvent {
-  type: 'pull-request-details'
-  pullRequestId: string
-}
 
 const electronApi = {
   getApiPort: (): Promise<number | null> =>
@@ -25,32 +14,8 @@ const electronApi = {
   getBootstrapData: (): Promise<BootstrapData | null> =>
     ipcRenderer.invoke(ipcChannels.GetBootstrapData),
 
-  getPullRequest: (pullRequestId: string): Promise<PullRequest | null> =>
-    ipcRenderer.invoke(ipcChannels.GetPullRequest, pullRequestId),
-
-  getPullRequestDetails: (
-    pullRequestId: string
-  ): Promise<PullRequestDetails | null> =>
-    ipcRenderer.invoke(ipcChannels.GetPullRequestDetails, pullRequestId),
-
-  syncPullRequestDetails: (
-    pullRequestId: string,
-    owner: string,
-    repositoryName: string,
-    pullNumber: number
-  ): Promise<{ success: boolean; errors: string[] }> =>
-    ipcRenderer.invoke(
-      ipcChannels.SyncPullRequestDetails,
-      pullRequestId,
-      owner,
-      repositoryName,
-      pullNumber
-    ),
-
-  onSyncComplete: (
-    callback: (event: SyncCompleteEvent) => void
-  ): (() => void) => {
-    const handler = (_event: unknown, data: SyncCompleteEvent) => callback(data)
+  onSyncComplete: (callback: () => void): (() => void) => {
+    const handler = () => callback()
 
     ipcRenderer.on(ipcChannels.SyncComplete, handler)
 

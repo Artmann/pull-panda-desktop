@@ -1,10 +1,16 @@
 import { configureStore } from '@reduxjs/toolkit'
 
+import checksReducer, { ChecksState } from './checks-slice'
+import commentsReducer, { CommentsState } from './comments-slice'
+import commitsReducer, { CommitsState } from './commits-slice'
 import draftsReducer, {
   DraftsState,
   loadDraftsFromStorage,
   saveDraftsToStorage
 } from './drafts-slice'
+import modifiedFilesReducer, {
+  ModifiedFilesState
+} from './modified-files-slice'
 import navigationReducer, { NavigationState } from './navigation-slice'
 import pendingReviewCommentsReducer, {
   loadPendingReviewCommentsFromStorage,
@@ -14,19 +20,23 @@ import pendingReviewCommentsReducer, {
 import pendingReviewsReducer, {
   PendingReviewsState
 } from './pending-reviews-slice'
-import pullRequestDetailsReducer, {
-  PullRequestDetailsState
-} from './pull-request-details-slice'
 import pullRequestsReducer, { PullRequestsState } from './pull-requests-slice'
+import reactionsReducer, { ReactionsState } from './reactions-slice'
+import reviewsReducer, { ReviewsState } from './reviews-slice'
 import tasksReducer, { TasksState } from './tasks-slice'
 
 export interface PreloadedState {
+  checks?: ChecksState
+  comments?: CommentsState
+  commits?: CommitsState
   drafts?: DraftsState
+  modifiedFiles?: ModifiedFilesState
   navigation?: NavigationState
   pendingReviewComments?: PendingReviewCommentsState
   pendingReviews?: PendingReviewsState
-  pullRequestDetails?: PullRequestDetailsState
   pullRequests?: PullRequestsState
+  reactions?: ReactionsState
+  reviews?: ReviewsState
   tasks?: TasksState
 }
 
@@ -38,12 +48,17 @@ export function createStore(preloadedState?: PreloadedState) {
       pendingReviewComments: loadPendingReviewCommentsFromStorage()
     },
     reducer: {
+      checks: checksReducer,
+      comments: commentsReducer,
+      commits: commitsReducer,
       drafts: draftsReducer,
+      modifiedFiles: modifiedFilesReducer,
       navigation: navigationReducer,
       pendingReviewComments: pendingReviewCommentsReducer,
       pendingReviews: pendingReviewsReducer,
-      pullRequestDetails: pullRequestDetailsReducer,
       pullRequests: pullRequestsReducer,
+      reactions: reactionsReducer,
+      reviews: reviewsReducer,
       tasks: tasksReducer
     }
   })

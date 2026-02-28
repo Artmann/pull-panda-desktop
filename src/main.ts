@@ -5,12 +5,8 @@ import path from 'node:path'
 import { initializeDatabase, closeDatabase, saveDatabase } from './database'
 import { ipcChannels } from './lib/ipc/channels'
 import { getApiPort, startApiServer } from './main/api'
-import {
-  bootstrap,
-  BootstrapData,
-  getPullRequest,
-  getPullRequestDetails
-} from './main/bootstrap'
+import { bootstrap, BootstrapData } from './main/bootstrap'
+import { sendPullRequestResourceEvents } from './main/send-resource-events'
 import { backgroundSyncer } from './main/background-syncer'
 import { taskManager } from './main/task-manager'
 import { syncPullRequests, syncStalePullRequests } from './sync/pull-requests'
@@ -40,13 +36,6 @@ function setupIpcHandlers(): void {
   ipcMain.handle(ipcChannels.GetBootstrapData, () => {
     return bootstrapData
   })
-
-  ipcMain.handle(
-    ipcChannels.GetPullRequest,
-    async (_event, pullRequestId: string) => {
-      return getPullRequest(pullRequestId)
-    }
-  )
 
   ipcMain.handle(ipcChannels.GetTasks, () => {
     return taskManager.getTasks()
@@ -119,63 +108,9 @@ function setupIpcHandlers(): void {
     mainWindow?.minimize()
   })
 
-  ipcMain.handle(
-    ipcChannels.GetPullRequestDetails,
-    async (_event, pullRequestId: string) => {
-      const token = loadToken()
-      let userLogin: string | undefined
-
-      if (token) {
-        try {
-          const user = await getGitHubUser(token)
-          userLogin = user?.login
-        } catch {
-          // Ignore error, userLogin will be undefined
-        }
-      }
-
-      return getPullRequestDetails(pullRequestId, userLogin)
-    }
-  )
-
   ipcMain.handle(ipcChannels.GetSyncerStats, () => {
     return backgroundSyncer.getMonitoringData()
   })
-
-  ipcMain.handle(
-    ipcChannels.SyncPullRequestDetails,
-    async (
-      _event,
-      pullRequestId: string,
-      owner: string,
-      repositoryName: string,
-      pullNumber: number
-    ) => {
-      const token = loadToken()
-
-      if (!token) {
-        return { success: false, errors: ['No token available'] }
-      }
-
-      const result = await syncPullRequestDetails({
-        token,
-        pullRequestId,
-        owner,
-        repositoryName,
-        pullNumber
-      })
-
-      // Save database after sync
-      saveDatabase()
-
-      mainWindow?.webContents.send(ipcChannels.ResourceUpdated, {
-        type: 'pull-request-details',
-        pullRequestId
-      })
-
-      return result
-    }
-  )
 }
 
 const createWindow = () => {
@@ -202,9 +137,6 @@ const createWindow = () => {
       path.join(__dirname, `../renderer/${MAIN_WINDOW_VITE_NAME}/index.html`)
     )
   }
-
-  // Open the DevTools.
-  mainWindow.webContents.openDevTools()
 }
 
 // This method will be called when Electron has finished
@@ -268,6 +200,8 @@ async function syncAllPullRequestDetails(token: string): Promise<void> {
   let completed = 0
   const errors: string[] = []
 
+  const currentUserLogin = await getUserLogin()
+
   for (const pullRequest of pullRequests) {
     try {
       await syncPullRequestDetails({
@@ -278,10 +212,13 @@ async function syncAllPullRequestDetails(token: string): Promise<void> {
         pullNumber: pullRequest.number
       })
 
-      mainWindow?.webContents.send(ipcChannels.ResourceUpdated, {
-        type: 'pull-request-details',
-        pullRequestId: pullRequest.id
-      })
+      if (mainWindow) {
+        await sendPullRequestResourceEvents(
+          mainWindow,
+          pullRequest.id,
+          currentUserLogin
+        )
+      }
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Unknown error'
       errors.push(`PR #${pullRequest.number}: ${message}`)
@@ -377,12 +314,16 @@ app.on('ready', async () => {
           console.error('Failed to sync stale pull requests:', error)
         }
 
-        const currentUserLogin = await getUserLogin()
-        bootstrapData = await bootstrap(currentUserLogin)
+        // Rebuild bootstrap data for future IPC GetBootstrapData calls
+        const postSyncUserLogin = await getUserLogin()
+        bootstrapData = await bootstrap(postSyncUserLogin)
 
-        mainWindow?.webContents.send(ipcChannels.SyncComplete, {
-          type: 'pull-requests'
+        // Send the fresh PR list to the renderer
+        mainWindow?.webContents.send(ipcChannels.ResourceUpdated, {
+          type: 'pull-requests',
+          data: bootstrapData.pullRequests
         })
+        mainWindow?.webContents.send(ipcChannels.SyncComplete)
 
         syncAllPullRequestDetails(token).catch((error) => {
           console.error('Failed to sync PR details:', error)
