@@ -1,5 +1,5 @@
 import { ChevronDown, ChevronUp } from 'lucide-react'
-import { ReactElement } from 'react'
+import { memo, ReactElement } from 'react'
 import { toast } from 'sonner'
 
 import { Button } from '@/app/components/ui/button'
@@ -16,7 +16,7 @@ interface PullRequestToolbarProps {
   pullRequest: PullRequest
 }
 
-export function PullRequestToolbar({
+export const PullRequestToolbar = memo(function PullRequestToolbar({
   pullRequest
 }: PullRequestToolbarProps): ReactElement {
   const dispatch = useAppDispatch()
@@ -121,4 +121,4 @@ export function PullRequestToolbar({
       )}
     </div>
   )
-}
+})

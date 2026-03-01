@@ -4,7 +4,7 @@ import {
   FolderIcon,
   FolderOpenIcon
 } from 'lucide-react'
-import { memo, useState, type ReactElement } from 'react'
+import { memo, useMemo, useState, type ReactElement } from 'react'
 import { shallowEqual } from 'react-redux'
 
 import type { PullRequest } from '@/types/pull-request'
@@ -31,12 +31,14 @@ export const FilesView = memo(function FilesView({
 
   const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(new Set())
 
-  const sortedFiles = [...files].sort((a, b) => {
-    return a.filePath.localeCompare(b.filePath)
-  })
+  const groupedFiles = useMemo(() => {
+    const sorted = [...files].sort((a, b) =>
+      a.filePath.localeCompare(b.filePath)
+    )
+    const tree = createFileTree(sorted.map((file) => file.filePath))
 
-  const fileTree = createFileTree(sortedFiles.map((file) => file.filePath))
-  const groupedFiles = extractGroupedFilesFromTree(fileTree)
+    return extractGroupedFilesFromTree(tree)
+  }, [files])
 
   const toggleGroupCollapse = (groupName: string) => {
     setCollapsedGroups((previous) => {
