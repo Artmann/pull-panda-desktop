@@ -87,7 +87,7 @@ export function PullRequestActionsMenu({
       pullRequestsActions.upsertItem({ ...pullRequest, isDraft: newIsDraft })
     )
 
-    void updatePullRequest({
+    updatePullRequest({
       isDraft: newIsDraft,
       owner: pullRequest.repositoryOwner,
       pullNumber: pullRequest.number,

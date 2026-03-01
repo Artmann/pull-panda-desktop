@@ -199,6 +199,7 @@ function InlineEditableTitle({
   if (isEditing) {
     return (
       <input
+        aria-label="Pull request title"
         autoFocus
         className="w-full text-2xl font-semibold leading-tight text-gray-900 dark:text-gray-100 bg-transparent border-0 border-b-2 border-primary outline-none focus:ring-0 py-0.5"
         value={draft}

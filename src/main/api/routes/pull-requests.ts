@@ -63,6 +63,10 @@ pullRequestsRoute.patch('/:pullRequestId', async (context) => {
 
   const request = await context.req.json<UpdatePullRequestBody>()
 
+  if (request.title !== undefined && request.title.trim() === '') {
+    return context.json({ error: 'Title cannot be empty' }, 400)
+  }
+
   const database = getDatabase()
 
   const pullRequest = database
