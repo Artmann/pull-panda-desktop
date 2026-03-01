@@ -27,7 +27,7 @@ export function startApiServer(getToken: () => string | null): Promise<number> {
       '*',
       cors({
         origin: '*',
-        allowMethods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+        allowMethods: ['DELETE', 'GET', 'OPTIONS', 'PATCH', 'POST', 'PUT'],
         allowHeaders: ['Content-Type']
       })
     )

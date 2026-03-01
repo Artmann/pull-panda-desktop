@@ -42,6 +42,11 @@ export interface PreloadedState {
 
 export function createStore(preloadedState?: PreloadedState) {
   const store = configureStore({
+    middleware: (getDefaultMiddleware) =>
+      getDefaultMiddleware({
+        immutableCheck: false,
+        serializableCheck: false
+      }),
     preloadedState: {
       ...preloadedState,
       drafts: loadDraftsFromStorage(),

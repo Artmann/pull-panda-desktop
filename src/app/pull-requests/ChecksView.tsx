@@ -7,7 +7,14 @@ import {
   Loader2Icon,
   XCircleIcon
 } from 'lucide-react'
-import { useEffect, useState, type ReactElement, type ReactNode } from 'react'
+import {
+  memo,
+  useEffect,
+  useMemo,
+  useState,
+  type ReactElement,
+  type ReactNode
+} from 'react'
 import { shallowEqual } from 'react-redux'
 
 import { MarkdownBlock } from '@/app/components/MarkdownBlock'
@@ -19,7 +26,7 @@ import type { PullRequest } from '@/types/pull-request'
 
 import { Duration } from './components/Duration'
 
-export function ChecksView({
+export const ChecksView = memo(function ChecksView({
   pullRequest
 }: {
   pullRequest: PullRequest
@@ -30,34 +37,36 @@ export function ChecksView({
     shallowEqual
   )
 
-  // Deduplicate checks by name, keeping the most recent one.
-  const checksByName = new Map<string, Check>()
+  const { checks, checksGroupedBySuiteName, sortedSuiteNames } = useMemo(() => {
+    // Deduplicate checks by name, keeping the most recent one.
+    const checksByName = new Map<string, Check>()
 
-  for (const check of allChecks) {
-    const existing = checksByName.get(check.name)
+    for (const check of allChecks) {
+      const existing = checksByName.get(check.name)
 
-    if (!existing || new Date(check.syncedAt) > new Date(existing.syncedAt)) {
-      checksByName.set(check.name, check)
-    }
-  }
-  const checks = Array.from(checksByName.values())
-
-  const checksGroupedBySuiteName = checks.reduce<Record<string, typeof checks>>(
-    (accumulator, check) => {
-      const suiteName = check.suiteName ?? 'Unknown'
-
-      if (!accumulator[suiteName]) {
-        accumulator[suiteName] = []
+      if (!existing || new Date(check.syncedAt) > new Date(existing.syncedAt)) {
+        checksByName.set(check.name, check)
       }
+    }
 
-      accumulator[suiteName].push(check)
+    const deduped = Array.from(checksByName.values())
 
-      return accumulator
-    },
-    {}
-  )
+    const grouped = deduped.reduce<Record<string, Check[]>>(
+      (accumulator, check) => {
+        const suiteName = check.suiteName ?? 'Unknown'
+        ;(accumulator[suiteName] ??= []).push(check)
 
-  const sortedSuiteNames = Object.keys(checksGroupedBySuiteName).sort()
+        return accumulator
+      },
+      {}
+    )
+
+    return {
+      checks: deduped,
+      checksGroupedBySuiteName: grouped,
+      sortedSuiteNames: Object.keys(grouped).sort()
+    }
+  }, [allChecks])
 
   if (checks.length === 0) {
     return (
@@ -172,7 +181,7 @@ export function ChecksView({
       </div>
     </div>
   )
-}
+})
 
 function CheckDuration({ check }: { check: Check }): ReactElement {
   const [durationInSeconds, setDurationInSeconds] = useState(

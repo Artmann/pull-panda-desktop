@@ -1,5 +1,6 @@
-import { memo, useMemo, type ReactElement } from 'react'
+import { memo, useMemo, useState, type ReactElement } from 'react'
 import { shallowEqual } from 'react-redux'
+import { toast } from 'sonner'
 
 import type { PullRequest } from '@/types/pull-request'
 import type { Check, Comment } from '@/types/pull-request-details'
@@ -7,7 +8,9 @@ import type { Check, Comment } from '@/types/pull-request-details'
 import { MarkdownBlock } from '@/app/components/MarkdownBlock'
 import { SectionHeader } from '@/app/components/SectionHeader'
 import { Separator } from '@/app/components/ui/separator'
-import { useAppSelector } from '@/app/store/hooks'
+import { updatePullRequest } from '@/app/lib/api'
+import { useAppDispatch, useAppSelector } from '@/app/store/hooks'
+import { pullRequestsActions } from '@/app/store/pull-requests-slice'
 
 import { Activity } from './components/Activity'
 import { CheckList } from './components/CheckList'
@@ -55,16 +58,7 @@ export const Overview = memo(function Overview({
   return (
     <article className="flex flex-col gap-8 text-sm pt-6">
       <section>
-        {pullRequest.body ? (
-          <MarkdownBlock
-            className="pull-request-description prose-sm *:first:mt-0!"
-            content={pullRequest.body}
-          />
-        ) : (
-          <div className="text-muted-foreground text-sm">
-            No description provided.
-          </div>
-        )}
+        <InlineEditableBody pullRequest={pullRequest} />
       </section>
 
       {issues.length > 0 && <Separator />}
@@ -93,6 +87,106 @@ export const Overview = memo(function Overview({
     </article>
   )
 })
+
+function InlineEditableBody({
+  pullRequest
+}: {
+  pullRequest: PullRequest
+}): ReactElement {
+  const [isEditing, setIsEditing] = useState(false)
+  const [draft, setDraft] = useState('')
+  const dispatch = useAppDispatch()
+  const isMerged = pullRequest.state === 'MERGED'
+
+  const handleStartEdit = () => {
+    if (isMerged) return
+    setDraft(pullRequest.body ?? '')
+    setIsEditing(true)
+  }
+
+  const handleSave = async () => {
+    if (draft === (pullRequest.body ?? '')) {
+      setIsEditing(false)
+      return
+    }
+
+    setIsEditing(false)
+
+    const originalPr = pullRequest
+    const newBody = draft
+
+    dispatch(pullRequestsActions.upsertItem({ ...pullRequest, body: newBody }))
+
+    try {
+      const updated = await updatePullRequest({
+        body: newBody,
+        owner: pullRequest.repositoryOwner,
+        pullNumber: pullRequest.number,
+        pullRequestId: pullRequest.id,
+        repo: pullRequest.repositoryName
+      })
+
+      dispatch(pullRequestsActions.upsertItem(updated))
+    } catch (error) {
+      dispatch(pullRequestsActions.upsertItem(originalPr))
+
+      const message =
+        error instanceof Error ? error.message : 'Failed to update description'
+
+      toast.error(message)
+    }
+  }
+
+  const handleCancel = () => {
+    setIsEditing(false)
+    setDraft('')
+  }
+
+  if (isEditing) {
+    return (
+      <textarea
+        autoFocus
+        className="w-full resize-y bg-muted/40 border border-border rounded-md p-3 text-sm font-inherit outline-none focus:ring-2 focus:ring-primary/50 min-h-32"
+        rows={8}
+        value={draft}
+        onBlur={handleSave}
+        onChange={(event) => setDraft(event.target.value)}
+        onKeyDown={(event) => {
+          if (event.key === 'Escape') {
+            handleCancel()
+          }
+        }}
+      />
+    )
+  }
+
+  if (pullRequest.body) {
+    return (
+      <div
+        className={!isMerged ? 'cursor-text' : undefined}
+        onClick={handleStartEdit}
+      >
+        <MarkdownBlock
+          className="pull-request-description prose-sm *:first:mt-0!"
+          content={pullRequest.body}
+        />
+      </div>
+    )
+  }
+
+  return (
+    <div
+      className={
+        !isMerged
+          ? 'cursor-text text-muted-foreground text-sm'
+          : 'text-muted-foreground text-sm'
+      }
+      onClick={!isMerged ? handleStartEdit : undefined}
+    >
+      No description provided.
+    </div>
+  )
+}
 
 function LinkedIssues({
   issues

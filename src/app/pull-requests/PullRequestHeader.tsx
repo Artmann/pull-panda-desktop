@@ -1,8 +1,12 @@
 import { ExternalLinkIcon, GitPullRequest } from 'lucide-react'
-import { ReactElement, useMemo } from 'react'
+import { memo, ReactElement, useMemo, useState } from 'react'
 import { shallowEqual } from 'react-redux'
+import { toast } from 'sonner'
 import invariant from 'tiny-invariant'
 
+import { updatePullRequest } from '@/app/lib/api'
+import { useAppDispatch, useAppSelector } from '@/app/store/hooks'
+import { pullRequestsActions } from '@/app/store/pull-requests-slice'
 import { PullRequest } from '@/types/pull-request'
 import type { Review } from '@/types/pull-request-details'
 import { ReviewBadge } from '../components/ReviewBadge'
@@ -13,11 +17,12 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator
 } from '../components/ui/breadcrumb'
+import { Badge } from '../components/ui/badge'
 import { cn } from '../lib/utils'
-import { useAppSelector } from '../store/hooks'
 import { getLatestReviews } from './get-latest-reviews'
+import { PullRequestActionsMenu } from './PullRequestActionsMenu'
 
-export function StickyPullRequestHeader({
+export const StickyPullRequestHeader = memo(function StickyPullRequestHeader({
   pullRequest,
   transitionProgress
 }: {
@@ -56,9 +61,9 @@ export function StickyPullRequestHeader({
       </div>
     </header>
   )
-}
+})
 
-export function PullRequestHeader({
+export const PullRequestHeader = memo(function PullRequestHeader({
   pullRequest
 }: {
   pullRequest: PullRequest
@@ -78,8 +83,30 @@ export function PullRequestHeader({
       <Breadcrumbs pullRequest={pullRequest} />
 
       <div>
-        <Title>{pullRequest.title}</Title>
+        <InlineEditableTitle pullRequest={pullRequest} />
       </div>
+
+      {pullRequest.state === 'OPEN' && (
+        <div>
+          {pullRequest.isDraft ? (
+            <Badge className="bg-[oklch(0.55_0.02_270)] text-white border-transparent text-[10px]">
+              Draft
+            </Badge>
+          ) : (
+            <Badge className="bg-[oklch(0.52_0.17_150)] text-white border-transparent text-[10px]">
+              Ready for review
+            </Badge>
+          )}
+        </div>
+      )}
+
+      {pullRequest.state === 'CLOSED' && (
+        <div>
+          <Badge className="bg-[oklch(0.45_0.15_25)] text-white border-transparent text-[10px]">
+            Closed
+          </Badge>
+        </div>
+      )}
 
       {latestReviews.length > 0 && (
         <div className="flex gap-2 overflow-x-auto">
@@ -93,7 +120,7 @@ export function PullRequestHeader({
       )}
     </header>
   )
-}
+})
 
 function Title({
   children,
@@ -110,6 +137,95 @@ function Title({
       )}
     >
       {children}
+    </h1>
+  )
+}
+
+function InlineEditableTitle({
+  pullRequest
+}: {
+  pullRequest: PullRequest
+}): ReactElement {
+  const [isEditing, setIsEditing] = useState(false)
+  const [draft, setDraft] = useState('')
+  const dispatch = useAppDispatch()
+  const isMerged = pullRequest.state === 'MERGED'
+
+  const handleStartEdit = () => {
+    if (isMerged) return
+    setDraft(pullRequest.title)
+    setIsEditing(true)
+  }
+
+  const handleSave = async () => {
+    const trimmed = draft.trim()
+
+    if (!trimmed || trimmed === pullRequest.title) {
+      setIsEditing(false)
+      return
+    }
+
+    setIsEditing(false)
+
+    const originalPr = pullRequest
+
+    dispatch(pullRequestsActions.upsertItem({ ...pullRequest, title: trimmed }))
+
+    try {
+      const updated = await updatePullRequest({
+        owner: pullRequest.repositoryOwner,
+        pullNumber: pullRequest.number,
+        pullRequestId: pullRequest.id,
+        repo: pullRequest.repositoryName,
+        title: trimmed
+      })
+
+      dispatch(pullRequestsActions.upsertItem(updated))
+    } catch (error) {
+      dispatch(pullRequestsActions.upsertItem(originalPr))
+
+      const message =
+        error instanceof Error ? error.message : 'Failed to update title'
+
+      toast.error(message)
+    }
+  }
+
+  const handleCancel = () => {
+    setIsEditing(false)
+    setDraft('')
+  }
+
+  if (isEditing) {
+    return (
+      <input
+        aria-label="Pull request title"
+        autoFocus
+        className="w-full text-2xl font-semibold leading-tight text-gray-900 dark:text-gray-100 bg-transparent border-0 border-b-2 border-primary outline-none focus:ring-0 py-0.5"
+        value={draft}
+        onBlur={handleSave}
+        onChange={(event) => setDraft(event.target.value)}
+        onKeyDown={(event) => {
+          if (event.key === 'Enter') {
+            event.preventDefault()
+            handleSave()
+          } else if (event.key === 'Escape') {
+            handleCancel()
+          }
+        }}
+      />
+    )
+  }
+
+  return (
+    <h1
+      className={cn(
+        'font-semibold leading-tight text-gray-900 dark:text-gray-100 transition-all duration-200 ease-out text-2xl',
+        !isMerged && 'cursor-text hover:opacity-80'
+      )}
+      onClick={handleStartEdit}
+    >
+      {pullRequest.title}
     </h1>
   )
 }
@@ -152,7 +268,8 @@ function Breadcrumbs({
       </Breadcrumb>
 
       <button
-        className="ml-3 p-1 rounded text-muted-foreground hover:text-foreground hover:bg-muted transition-colors cursor-pointer"
+        aria-label="Open on GitHub"
+        className="p-1 rounded text-muted-foreground hover:text-foreground hover:bg-muted transition-colors cursor-pointer"
         onClick={() => {
           window.electron.openUrl(
             `https://github.com/${pullRequest.repositoryOwner}/${pullRequest.repositoryName}/pull/${pullRequest.number}`
@@ -162,6 +279,12 @@ function Breadcrumbs({
       >
         <ExternalLinkIcon className="size-3" />
       </button>
+
+      {pullRequest.state !== 'MERGED' && (
+        <div className="ml-auto">
+          <PullRequestActionsMenu pullRequest={pullRequest} />
+        </div>
+      )}
     </div>
   )
 }

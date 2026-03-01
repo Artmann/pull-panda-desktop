@@ -8,12 +8,14 @@ Vite.
 - Before using `useEffect`, review
   https://react.dev/learn/you-might-not-need-an-effect.
 - When creating or updating resources:
-  1. Create or Update the resource in the Redux state.
-  2. Make an API request to apply the change.
-  3. If the API request is successful: 3.1 Update the Redux store with the data
-     from the API response.
-  4. If the API request fails: 4.1 Rollback the Redux changes. 4.2 Show a error
-     toast with a descriptive, helpful error message.
+  1. Update the Redux state optimistically (synchronously, before any API call).
+  2. Fire the API request — do NOT use `async/await` in event handlers (e.g.
+     `onClick`, `onSelect`). Use `.then().catch()` so the handler returns
+     synchronously. This prevents UI frameworks (e.g. Radix UI) from delaying
+     their own close/dismiss behaviour while waiting for a Promise to resolve.
+  3. On success: update the Redux store with the data from the API response.
+  4. On error: rollback the Redux changes and show an error toast with a
+     descriptive, helpful error message.
 
 ## Commands
 

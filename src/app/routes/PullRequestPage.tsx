@@ -123,13 +123,20 @@ export function PullRequestPage(): ReactElement {
       return
     }
 
-    const onScroll = () => {
-      const threshold = 110
-      const progress = clamp01(
-        Math.min(scrollContainer.scrollTop, threshold) / threshold
-      )
+    let rafId: number | null = null
 
-      setStickyHeaderProgress(progress)
+    const onScroll = () => {
+      if (rafId !== null) return
+
+      rafId = requestAnimationFrame(() => {
+        rafId = null
+        const threshold = 110
+        const progress = clamp01(
+          Math.min(scrollContainer.scrollTop, threshold) / threshold
+        )
+
+        setStickyHeaderProgress(progress)
+      })
     }
 
     scrollContainer.addEventListener('scroll', onScroll)
@@ -138,6 +145,7 @@ export function PullRequestPage(): ReactElement {
 
     return () => {
       scrollContainer.removeEventListener('scroll', onScroll)
+      if (rafId !== null) cancelAnimationFrame(rafId)
     }
   }, [])
 
@@ -211,6 +219,7 @@ export function PullRequestPage(): ReactElement {
           {tabs.map((tab) => (
             <TabsContent
               key={tab.id}
+              aria-hidden={tab.id !== activeTab}
               className="h-full px-6 py-0"
               forceMount
               hidden={tab.id !== activeTab}

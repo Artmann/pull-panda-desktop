@@ -1,3 +1,5 @@
+import type { PullRequest } from '@/types/pull-request'
+
 let apiBaseUrl: string | null = null
 
 async function getApiBaseUrl(): Promise<string> {
@@ -288,6 +290,50 @@ export async function syncPullRequestDetails(
 
     throw new Error(error.error ?? 'Failed to sync pull request details')
   }
+}
+
+export interface UpdatePullRequestRequest {
+  body?: string
+  isDraft?: boolean
+  owner: string
+  pullNumber: number
+  pullRequestId: string
+  repo: string
+  state?: 'open' | 'closed'
+  title?: string
+}
+
+export async function updatePullRequest(
+  request: UpdatePullRequestRequest
+): Promise<PullRequest> {
+  const baseUrl = await getApiBaseUrl()
+
+  const response = await fetch(
+    `${baseUrl}/api/pull-requests/${request.pullRequestId}`,
+    {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        body: request.body,
+        isDraft: request.isDraft,
+        owner: request.owner,
+        pullNumber: request.pullNumber,
+        repo: request.repo,
+        state: request.state,
+        title: request.title
+      })
+    }
+  )
+
+  if (!response.ok) {
+    const error = await response.json()
+
+    throw new Error(error.error ?? 'Failed to update pull request')
+  }
+
+  return response.json()
 }
 
 export async function triggerSync(): Promise<void> {

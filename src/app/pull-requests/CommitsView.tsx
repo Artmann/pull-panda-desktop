@@ -1,4 +1,4 @@
-import { memo, type ReactElement } from 'react'
+import { memo, useMemo, type ReactElement } from 'react'
 import { shallowEqual } from 'react-redux'
 
 import { CopyToClipboardButton } from '@/app/components/CopyToClipboardButton'
@@ -19,7 +19,8 @@ export const CommitsView = memo(function CommitsView({
       state.commits.items.filter((c) => c.pullRequestId === pullRequest.id),
     shallowEqual
   )
-  const groupedCommits = groupCommitsByDay(commits)
+
+  const groupedCommits = useMemo(() => groupCommitsByDay(commits), [commits])
 
   if (commits.length === 0) {
     return (

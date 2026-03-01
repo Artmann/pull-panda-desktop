@@ -1,5 +1,6 @@
 import { ChevronLeftIcon, ChevronRightIcon, Trash2 } from 'lucide-react'
-import { ReactElement, useState } from 'react'
+import { memo, ReactElement, useState } from 'react'
+import { shallowEqual } from 'react-redux'
 import { toast } from 'sonner'
 
 import { Button } from '@/app/components/ui/button'
@@ -28,18 +29,22 @@ interface ReviewDrawerProps {
   pullRequest: PullRequest
 }
 
-export function ReviewDrawer({ pullRequest }: ReviewDrawerProps): ReactElement {
+export const ReviewDrawer = memo(function ReviewDrawer({
+  pullRequest
+}: ReviewDrawerProps): ReactElement {
   const [isCollapsed, setIsCollapsed] = useState(false)
 
   const dispatch = useAppDispatch()
 
   const pendingReview = useAppSelector(
-    (state) => state.pendingReviews[pullRequest.id]
+    (state) => state.pendingReviews[pullRequest.id],
+    shallowEqual
   )
 
-  const pendingComments = useAppSelector(
+  const pendingComments: PendingReviewComment[] = useAppSelector(
     (state) =>
-      state.pendingReviewComments[pullRequest.id] ?? emptyPendingComments
+      state.pendingReviewComments[pullRequest.id] ?? emptyPendingComments,
+    shallowEqual
   )
 
   const draftKey = getDraftKeyForReviewBody(pullRequest.id)
@@ -310,7 +315,7 @@ export function ReviewDrawer({ pullRequest }: ReviewDrawerProps): ReactElement {
       )}
     </SidePanel>
   )
-}
+})
 
 interface PendingCommentItemProps {
   comment: PendingReviewComment
