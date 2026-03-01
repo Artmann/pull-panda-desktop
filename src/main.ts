@@ -232,7 +232,8 @@ async function syncAllPullRequestDetails(token: string): Promise<void> {
             )
           }
         } catch (error) {
-          const message = error instanceof Error ? error.message : 'Unknown error'
+          const message =
+            error instanceof Error ? error.message : 'Unknown error'
           errors.push(`PR #${pullRequest.number}: ${message}`)
           console.error(
             `Failed to sync details for PR #${pullRequest.number}:`,

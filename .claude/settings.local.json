@@ -100,7 +100,9 @@
       "Bash(git rm:*)",
       "Bash(bun test:*)",
       "Bash(export PATH=\"/c/Program Files/GitHub CLI:$PATH\")",
-      "Bash(cd \"C:/Users/Artga/Code/pull-panda-desktop\" && bun run inspect-pr 310 --repo deepnote/vscode-deepnote 2>&1)"
+      "Bash(cd \"C:/Users/Artga/Code/pull-panda-desktop\" && bun run inspect-pr 310 --repo deepnote/vscode-deepnote 2>&1)",
+      "Bash(\"/c/Program Files/GitHub CLI/gh.exe\" pr:*)",
+      "Bash(\"/c/Program Files/GitHub CLI/gh.exe\" run:*)"
     ]
   }
 }
