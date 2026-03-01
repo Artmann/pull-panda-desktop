@@ -233,3 +233,16 @@ export const etags = sqliteTable(
 
 export type ETag = typeof etags.$inferSelect
 export type NewETag = typeof etags.$inferInsert
+
+export const inaccessibleRepositories = sqliteTable(
+  'inaccessible_repositories',
+  {
+    id: text('id').primaryKey(), // "owner/name"
+    owner: text('owner').notNull(),
+    name: text('name').notNull(),
+    detectedAt: text('detected_at').notNull()
+  }
+)
+
+export type InaccessibleRepository =
+  typeof inaccessibleRepositories.$inferSelect
