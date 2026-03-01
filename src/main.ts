@@ -205,42 +205,50 @@ async function syncAllPullRequestDetails(token: string): Promise<void> {
 
   const deletedPullRequestIds: string[] = []
 
-  for (const pullRequest of pullRequests) {
-    try {
-      const result = await syncPullRequestDetails({
-        token,
-        pullRequestId: pullRequest.id,
-        owner: pullRequest.repositoryOwner,
-        repositoryName: pullRequest.repositoryName,
-        pullNumber: pullRequest.number
+  const batchSize = 5
+
+  for (let i = 0; i < pullRequests.length; i += batchSize) {
+    const batch = pullRequests.slice(i, i + batchSize)
+
+    await Promise.allSettled(
+      batch.map(async (pullRequest) => {
+        try {
+          const result = await syncPullRequestDetails({
+            token,
+            pullRequestId: pullRequest.id,
+            owner: pullRequest.repositoryOwner,
+            repositoryName: pullRequest.repositoryName,
+            pullNumber: pullRequest.number
+          })
+
+          if (result.notFound) {
+            deletePullRequestData(pullRequest.id)
+            deletedPullRequestIds.push(pullRequest.id)
+          } else if (mainWindow) {
+            await sendPullRequestResourceEvents(
+              mainWindow,
+              pullRequest.id,
+              currentUserLogin
+            )
+          }
+        } catch (error) {
+          const message = error instanceof Error ? error.message : 'Unknown error'
+          errors.push(`PR #${pullRequest.number}: ${message}`)
+          console.error(
+            `Failed to sync details for PR #${pullRequest.number}:`,
+            error
+          )
+        } finally {
+          completed++
+
+          taskManager.updateTaskProgress(task.id, {
+            current: completed,
+            total,
+            message: `Syncing ${completed}/${total} pull requests`
+          })
+        }
       })
-
-      if (result.notFound) {
-        deletePullRequestData(pullRequest.id)
-        deletedPullRequestIds.push(pullRequest.id)
-      } else if (mainWindow) {
-        await sendPullRequestResourceEvents(
-          mainWindow,
-          pullRequest.id,
-          currentUserLogin
-        )
-      }
-    } catch (error) {
-      const message = error instanceof Error ? error.message : 'Unknown error'
-      errors.push(`PR #${pullRequest.number}: ${message}`)
-      console.error(
-        `Failed to sync details for PR #${pullRequest.number}:`,
-        error
-      )
-    }
-
-    completed++
-
-    taskManager.updateTaskProgress(task.id, {
-      current: completed,
-      total,
-      message: `Syncing ${completed}/${total} pull requests`
-    })
+    )
   }
 
   // If any PRs were deleted, send the updated list to the renderer
