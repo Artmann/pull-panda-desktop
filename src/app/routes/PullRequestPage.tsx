@@ -1,7 +1,6 @@
 import {
   ArrowLeft,
   FileCodeIcon,
-  GitCommitIcon,
   ListCheckIcon,
   MessageSquareIcon
 } from 'lucide-react'
@@ -27,7 +26,6 @@ import { navigationActions } from '@/app/store/navigation-slice'
 import { clamp01 } from '@/math'
 
 import { ChecksView } from '../pull-requests/ChecksView'
-import { CommitsView } from '../pull-requests/CommitsView'
 import { FilesView } from '../pull-requests/FilesView'
 import { Overview } from '../pull-requests/Overview'
 import {
@@ -53,16 +51,13 @@ export function PullRequestPage(): ReactElement {
   const checksCount = useAppSelector(
     (state) => state.checks.items.filter((c) => c.pullRequestId === id).length
   )
-  const commitsCount = useAppSelector(
-    (state) => state.commits.items.filter((c) => c.pullRequestId === id).length
-  )
   const filesCount = useAppSelector(
     (state) =>
       state.modifiedFiles.items.filter((f) => f.pullRequestId === id).length
   )
 
   const tabFromUrl = searchParams.get('tab')
-  const validTabs = ['overview', 'commits', 'checks', 'files']
+  const validTabs = ['overview', 'checks', 'files']
   const activeTab =
     tabFromUrl && validTabs.includes(tabFromUrl) ? tabFromUrl : 'overview'
 
@@ -92,13 +87,6 @@ export function PullRequestPage(): ReactElement {
         label: 'Overview'
       },
       {
-        content: CommitsView,
-        icon: GitCommitIcon,
-        id: 'commits',
-        itemCount: commitsCount,
-        label: 'Commits'
-      },
-      {
         content: ChecksView,
         icon: ListCheckIcon,
         id: 'checks',
@@ -113,7 +101,7 @@ export function PullRequestPage(): ReactElement {
         label: 'Files'
       }
     ],
-    [checksCount, commitsCount, filesCount]
+    [checksCount, filesCount]
   )
 
   useEffect(function trackScrollPosition() {

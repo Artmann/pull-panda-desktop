@@ -1,4 +1,4 @@
-import { ExternalLinkIcon, GitPullRequest } from 'lucide-react'
+import { ExternalLinkIcon, GitCommitIcon, GitPullRequest } from 'lucide-react'
 import { memo, ReactElement, useMemo, useState } from 'react'
 import { shallowEqual } from 'react-redux'
 import { toast } from 'sonner'
@@ -8,7 +8,7 @@ import { updatePullRequest } from '@/app/lib/api'
 import { useAppDispatch, useAppSelector } from '@/app/store/hooks'
 import { pullRequestsActions } from '@/app/store/pull-requests-slice'
 import { PullRequest } from '@/types/pull-request'
-import type { Review } from '@/types/pull-request-details'
+import type { Commit, Review } from '@/types/pull-request-details'
 import { ReviewBadge } from '../components/ReviewBadge'
 import {
   Breadcrumb,
@@ -70,11 +70,30 @@ export const PullRequestHeader = memo(function PullRequestHeader({
 }): ReactElement {
   invariant(pullRequest, 'PullRequestHeader requires a pull request')
 
+  const commits: Commit[] = useAppSelector(
+    (state) =>
+      state.commits.items.filter((c) => c.pullRequestId === pullRequest.id),
+    shallowEqual
+  )
+
   const reviews: Review[] = useAppSelector(
     (state) =>
       state.reviews.items.filter((r) => r.pullRequestId === pullRequest.id),
     shallowEqual
   )
+
+  const latestCommit = useMemo(() => {
+    if (commits.length === 0) {
+      return null
+    }
+
+    return [...commits].sort((a, b) => {
+      const dateA = a.gitHubCreatedAt ?? ''
+      const dateB = b.gitHubCreatedAt ?? ''
+
+      return dateB.localeCompare(dateA)
+    })[0]
+  }, [commits])
 
   const latestReviews = useMemo(() => getLatestReviews(reviews), [reviews])
 
@@ -116,6 +135,26 @@ export const PullRequestHeader = memo(function PullRequestHeader({
               review={review}
             />
           ))}
+        </div>
+      )}
+
+      {commits.length > 0 && (
+        <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+          <GitCommitIcon className="size-3 shrink-0" />
+
+          <span>{commits.length} {commits.length === 1 ? 'commit' : 'commits'}</span>
+
+          {latestCommit?.message && (
+            <>
+              <span className="text-border">·</span>
+
+              <span className="truncate">
+                {latestCommit.message.length > 80
+                  ? latestCommit.message.slice(0, 80) + '…'
+                  : latestCommit.message}
+              </span>
+            </>
+          )}
         </div>
       )}
     </header>

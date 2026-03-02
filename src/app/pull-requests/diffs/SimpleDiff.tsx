@@ -12,10 +12,8 @@ import {
 
 import type {
   DarkCodeTheme,
-  LightCodeTheme,
-  ThemeDiffColors
+  LightCodeTheme
 } from '@/app/lib/codeThemes'
-import { getDiffColors } from '@/app/lib/codeThemes'
 import {
   getLanguageFromPath,
   getSharedHighlighter
@@ -115,11 +113,6 @@ export const SimpleDiff = memo(function SimpleDiff({
   const { resolvedTheme } = useTheme()
   const isDark = resolvedTheme === 'dark'
   const backgroundColor = isDark ? darkBackground : lightBackground
-  const diffColors = useMemo(
-    () => getDiffColors(isDark ? darkTheme : lightTheme, isDark),
-    [isDark, darkTheme, lightTheme]
-  )
-
   const hunk = useMemo(() => parseDiffHunk(diffHunk), [diffHunk])
 
   const filteredLines = useMemo(() => {
@@ -308,7 +301,6 @@ export const SimpleDiff = memo(function SimpleDiff({
           <div key={key}>
             <DiffLine
               canComment={Boolean(canCommentOnLine)}
-              diffColors={diffColors}
               highlightedLines={highlightedLines}
               index={index}
               line={line}
@@ -349,14 +341,12 @@ const blankSpace = '\u00A0'
 
 const DiffLine = memo(function DiffLine({
   canComment,
-  diffColors,
   highlightedLines,
   index,
   line,
   onClick
 }: {
   canComment: boolean
-  diffColors: ThemeDiffColors
   highlightedLines: string[]
   index: number
   line: ReturnType<typeof parseDiffHunk>['lines'][number]

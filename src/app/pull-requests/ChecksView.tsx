@@ -164,7 +164,7 @@ export const ChecksView = memo(function ChecksView({
                         <button
                           className="text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
                           onClick={() => {
-                            window.electron.openUrl(check.detailsUrl!)
+                            window.electron.openUrl(check.detailsUrl ?? '')
                           }}
                           title="Open on GitHub"
                         >
