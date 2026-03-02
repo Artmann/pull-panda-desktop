@@ -148,7 +148,7 @@ export const PullRequestHeader = memo(function PullRequestHeader({
             <>
               <span className="text-border">·</span>
 
-              <span className="truncate">
+              <span className="truncate font-mono">
                 {latestCommit.message.length > 80
                   ? latestCommit.message.slice(0, 80) + '…'
                   : latestCommit.message}
