@@ -185,7 +185,7 @@ function renderWithProviders(
 
 describe('PullRequestPage', () => {
   describe('tab item counts', () => {
-    it('displays item counts for commits, checks, and files tabs', async () => {
+    it('displays item counts for checks and files tabs', async () => {
       const pullRequest = createMockPullRequest({ id: 'pr-1' })
 
       const store = createTestStore({
@@ -243,36 +243,6 @@ describe('PullRequestPage', () => {
             syncedAt: '2024-01-01T00:00:00Z'
           }
         ],
-        commits: [
-          {
-            id: 'commit-1',
-            gitHubId: 'sha1',
-            pullRequestId: 'pr-1',
-            hash: 'abc1234567890',
-            message: 'First commit',
-            url: null,
-            authorLogin: 'user',
-            authorAvatarUrl: null,
-            linesAdded: null,
-            linesRemoved: null,
-            gitHubCreatedAt: '2024-01-01T00:00:00Z',
-            syncedAt: '2024-01-01T00:00:00Z'
-          },
-          {
-            id: 'commit-2',
-            gitHubId: 'sha2',
-            pullRequestId: 'pr-1',
-            hash: 'def4567890123',
-            message: 'Second commit',
-            url: null,
-            authorLogin: 'user',
-            authorAvatarUrl: null,
-            linesAdded: null,
-            linesRemoved: null,
-            gitHubCreatedAt: '2024-01-01T00:00:00Z',
-            syncedAt: '2024-01-01T00:00:00Z'
-          }
-        ],
         modifiedFiles: [
           {
             id: 'f1',
@@ -297,30 +267,6 @@ describe('PullRequestPage', () => {
             changes: 20,
             diffHunk: null,
             syncedAt: '2024-01-01T00:00:00Z'
-          },
-          {
-            id: 'f3',
-            pullRequestId: 'pr-1',
-            filename: 'old.ts',
-            filePath: 'src/old.ts',
-            status: 'removed',
-            additions: 0,
-            deletions: 15,
-            changes: 15,
-            diffHunk: null,
-            syncedAt: '2024-01-01T00:00:00Z'
-          },
-          {
-            id: 'f4',
-            pullRequestId: 'pr-1',
-            filename: 'README.md',
-            filePath: 'README.md',
-            status: 'modified',
-            additions: 5,
-            deletions: 2,
-            changes: 7,
-            diffHunk: null,
-            syncedAt: '2024-01-01T00:00:00Z'
           }
         ]
       })
@@ -329,9 +275,8 @@ describe('PullRequestPage', () => {
         renderWithProviders('pr-1', { store })
       })
 
-      expect(screen.getByText('2')).toBeInTheDocument()
       expect(screen.getByText('3')).toBeInTheDocument()
-      expect(screen.getByText('4')).toBeInTheDocument()
+      expect(screen.getByText('2')).toBeInTheDocument()
     })
 
     it('displays zero counts when no details are loaded', async () => {
@@ -347,7 +292,7 @@ describe('PullRequestPage', () => {
 
       const zeroCounts = screen.getAllByText('0')
 
-      expect(zeroCounts).toHaveLength(3)
+      expect(zeroCounts).toHaveLength(2)
     })
 
     it('does not display count badge for Overview tab', async () => {
