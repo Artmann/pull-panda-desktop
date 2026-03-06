@@ -11,7 +11,7 @@ import type { PullRequest } from '@/types/pull-request'
 
 import { createComment } from '@/app/lib/api'
 import { AuthProvider } from '@/app/lib/store/authContext'
-import { CodeThemeProvider } from '@/app/lib/store/codeThemeContext'
+import { ThemeProvider } from '@/app/lib/store/themeContext'
 import commentsReducer from '@/app/store/comments-slice'
 import draftsReducer, { getDraftKeyForReply } from '@/app/store/drafts-slice'
 
@@ -141,9 +141,9 @@ function renderWithProviders(
 ) {
   return render(
     <Provider store={store}>
-      <CodeThemeProvider>
+      <ThemeProvider>
         <AuthProvider>{ui}</AuthProvider>
-      </CodeThemeProvider>
+      </ThemeProvider>
     </Provider>
   )
 }

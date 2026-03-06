@@ -1,6 +1,6 @@
 import { type BundledTheme, createHighlighter, type Highlighter } from 'shiki'
 
-import { allCodeThemeValues } from './codeThemes'
+import { allShikiThemeValues } from './themes'
 
 let sharedHighlighter: Highlighter | null = null
 let highlighterPromise: Promise<Highlighter> | null = null
@@ -33,7 +33,7 @@ export async function getSharedHighlighter(): Promise<Highlighter> {
 
   if (!highlighterPromise) {
     highlighterPromise = createHighlighter({
-      themes: allCodeThemeValues as unknown as BundledTheme[],
+      themes: allShikiThemeValues as unknown as BundledTheme[],
       langs: supportedLanguages
     })
 

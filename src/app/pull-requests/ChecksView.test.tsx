@@ -9,7 +9,7 @@ import { describe, it, expect, beforeAll } from 'vitest'
 import type { Check } from '@/types/pull-request-details'
 import type { PullRequest } from '@/types/pull-request'
 
-import { CodeThemeProvider } from '@/app/lib/store/codeThemeContext'
+import { ThemeProvider } from '@/app/lib/store/themeContext'
 import checksReducer from '@/app/store/checks-slice'
 
 import { ChecksView } from './ChecksView'
@@ -116,7 +116,7 @@ function renderWithProviders(
 ) {
   return render(
     <Provider store={store}>
-      <CodeThemeProvider>{ui}</CodeThemeProvider>
+      <ThemeProvider>{ui}</ThemeProvider>
     </Provider>
   )
 }

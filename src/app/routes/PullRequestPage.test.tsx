@@ -24,7 +24,7 @@ import reviewsReducer from '@/app/store/reviews-slice'
 import tasksReducer from '@/app/store/tasks-slice'
 
 import { AuthProvider } from '@/app/lib/store/authContext'
-import { CodeThemeProvider } from '@/app/lib/store/codeThemeContext'
+import { ThemeProvider } from '@/app/lib/store/themeContext'
 
 import { PullRequestPage } from './PullRequestPage'
 
@@ -167,7 +167,7 @@ function renderWithProviders(
 ) {
   return render(
     <Provider store={store}>
-      <CodeThemeProvider>
+      <ThemeProvider>
         <AuthProvider>
           <MemoryRouter initialEntries={[`/pr/${pullRequestId}`]}>
             <Routes>
@@ -178,7 +178,7 @@ function renderWithProviders(
             </Routes>
           </MemoryRouter>
         </AuthProvider>
-      </CodeThemeProvider>
+      </ThemeProvider>
     </Provider>
   )
 }

@@ -9,7 +9,7 @@ import { describe, it, expect, beforeAll } from 'vitest'
 import type { ModifiedFile } from '@/types/pull-request-details'
 import type { PullRequest } from '@/types/pull-request'
 
-import { CodeThemeProvider } from '@/app/lib/store/codeThemeContext'
+import { ThemeProvider } from '@/app/lib/store/themeContext'
 import commentsReducer from '@/app/store/comments-slice'
 import modifiedFilesReducer from '@/app/store/modified-files-slice'
 import pendingReviewCommentsReducer from '@/app/store/pending-review-comments-slice'
@@ -123,7 +123,7 @@ function renderWithProviders(
 ) {
   return render(
     <Provider store={store}>
-      <CodeThemeProvider>{ui}</CodeThemeProvider>
+      <ThemeProvider>{ui}</ThemeProvider>
     </Provider>
   )
 }

@@ -21,7 +21,6 @@ import { TitleBar } from '@/app/components/TitleBar'
 import { Toaster } from '@/app/components/ui/sonner'
 import { filterReadyPullRequests } from '@/app/lib/pull-requests'
 import { AuthProvider, useAuth } from '@/app/lib/store/authContext'
-import { CodeThemeProvider } from '@/app/lib/store/codeThemeContext'
 import { TasksProvider } from '@/app/lib/store/tasksContext'
 import { ThemeProvider } from '@/app/lib/store/themeContext'
 import { BackgroundSyncerPage } from '@/app/routes/BackgroundSyncerPage'
@@ -51,17 +50,15 @@ export function App({ store }: AppProps): ReactElement {
     <Provider store={store}>
       <HashRouter>
         <ThemeProvider>
-          <CodeThemeProvider>
-            <TasksProvider>
-              <AuthProvider>
-                <CommandContextProvider>
-                  <ShortcutListener />
-                  <CommandPalette />
-                  <AppContent />
-                </CommandContextProvider>
-              </AuthProvider>
-            </TasksProvider>
-          </CodeThemeProvider>
+          <TasksProvider>
+            <AuthProvider>
+              <CommandContextProvider>
+                <ShortcutListener />
+                <CommandPalette />
+                <AppContent />
+              </CommandContextProvider>
+            </AuthProvider>
+          </TasksProvider>
           <Toaster />
         </ThemeProvider>
       </HashRouter>

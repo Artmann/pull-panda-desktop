@@ -6,7 +6,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { commandRegistry } from '../registry'
 
 vi.mock('../theme-accessor', () => ({
-  getThemeSetter: () => vi.fn()
+  getModeSetter: () => vi.fn()
 }))
 
 describe('appearance commands', () => {

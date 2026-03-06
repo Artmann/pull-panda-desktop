@@ -18,19 +18,18 @@ import { visit } from 'unist-util-visit'
 import { useOpenExternalLinks } from '@/app/lib/useOpenExternalLinks'
 import { Skeleton } from './ui/skeleton'
 
-import type { DarkCodeTheme, LightCodeTheme } from '@/app/lib/codeThemes'
 import {
   getLanguageFromPath,
   getSharedHighlighter
 } from '@/app/lib/highlighter'
-import { useCodeTheme } from '@/app/lib/store/codeThemeContext'
+import { useAppTheme } from '@/app/lib/store/themeContext'
 import { cn } from '@/app/lib/utils'
 
 // Highlight code blocks in the DOM when they come into view
 async function highlightCodeBlocks(
   container: HTMLElement,
-  lightTheme: LightCodeTheme,
-  darkTheme: DarkCodeTheme
+  lightTheme: string,
+  darkTheme: string
 ): Promise<void> {
   const codeBlocks = container.querySelectorAll('pre > code')
 
@@ -97,11 +96,14 @@ export const MarkdownBlock = memo(function MarkdownBlock({
   const [result, createMarkdownContent] = useRemark({ path })
   const [isHighlighted, setIsHighlighted] = useState(false)
   const lastContentRef = useRef<string | null>(null)
-  const { darkBackground, darkTheme, lightBackground, lightTheme } =
-    useCodeTheme()
+  const { appTheme } = useAppTheme()
   const { resolvedTheme } = useTheme()
-  const codeBackground =
-    resolvedTheme === 'dark' ? darkBackground : lightBackground
+  const isDark = resolvedTheme === 'dark'
+  const darkTheme = appTheme.darkShikiTheme
+  const lightTheme = appTheme.lightShikiTheme
+  const codeBackground = isDark
+    ? appTheme.dark.background
+    : appTheme.light.background
 
   // Parse markdown without syntax highlighting
   useEffect(() => {

@@ -1,12 +1,28 @@
-type ThemeSetter = (theme: string) => void
+type Setter = (value: string) => void
 
-let themeSetter: ThemeSetter | null = null
+let modeSetter: Setter | null = null
+let themeSetter: Setter | null = null
 
-export function setThemeSetter(setter: ThemeSetter): void {
-  themeSetter = setter
+export function setAppThemeSetter(
+  kind: 'mode' | 'theme',
+  setter: Setter
+): void {
+  if (kind === 'mode') {
+    modeSetter = setter
+  } else {
+    themeSetter = setter
+  }
 }
 
-export function getThemeSetter(): ThemeSetter {
+export function getModeSetter(): Setter {
+  if (!modeSetter) {
+    throw new Error('Mode setter not initialized')
+  }
+
+  return modeSetter
+}
+
+export function getThemeSetter(): Setter {
   if (!themeSetter) {
     throw new Error('Theme setter not initialized')
   }

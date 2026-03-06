@@ -10,13 +10,12 @@ import {
   type ReactElement
 } from 'react'
 
-import type { DarkCodeTheme, LightCodeTheme } from '@/app/lib/codeThemes'
-import { getDiffColors } from '@/app/lib/codeThemes'
 import {
   getLanguageFromPath,
   getSharedHighlighter
 } from '@/app/lib/highlighter'
-import { useCodeTheme } from '@/app/lib/store/codeThemeContext'
+import { useAppTheme } from '@/app/lib/store/themeContext'
+import { getDiffColors } from '@/app/lib/themes'
 import { cn, escapeHtml } from '@/app/lib/utils'
 import type { PendingReviewComment } from '@/app/store/pending-review-comments-slice'
 import type { Comment } from '@/types/pull-request-details'
@@ -33,8 +32,8 @@ async function highlightLines(
   lines: DiffHunkLine[],
   language: string,
   intraLineDiffMap: Map<number, string>,
-  lightTheme: LightCodeTheme,
-  darkTheme: DarkCodeTheme
+  lightTheme: string,
+  darkTheme: string
 ): Promise<Map<number, string>> {
   const highlighter = await getSharedHighlighter()
   const loadedLangs = highlighter.getLoadedLanguages()
@@ -106,15 +105,17 @@ export const SimpleDiff = memo(function SimpleDiff({
   const [activeCommentLineIndex, setActiveCommentLineIndex] = useState<
     number | null
   >(null)
-  const { darkBackground, darkTheme, lightBackground, lightTheme } =
-    useCodeTheme()
+  const { appTheme } = useAppTheme()
   const { resolvedTheme } = useTheme()
   const isDark = resolvedTheme === 'dark'
-  const backgroundColor = isDark ? darkBackground : lightBackground
-  const activeTheme = isDark ? darkTheme : lightTheme
+  const darkTheme = appTheme.darkShikiTheme
+  const lightTheme = appTheme.lightShikiTheme
+  const backgroundColor = isDark
+    ? appTheme.dark.background
+    : appTheme.light.background
   const diffColors = useMemo(
-    () => getDiffColors(activeTheme, isDark),
-    [activeTheme, isDark]
+    () => getDiffColors(backgroundColor, isDark),
+    [backgroundColor, isDark]
   )
   const hunk = useMemo(() => parseDiffHunk(diffHunk), [diffHunk])
 

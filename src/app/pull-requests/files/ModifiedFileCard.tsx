@@ -7,7 +7,7 @@ import type { Comment, ModifiedFile } from '@/types/pull-request-details'
 import type { PullRequest } from '@/types/pull-request'
 
 import { CopyToClipboardButton } from '@/app/components/CopyToClipboardButton'
-import { useCodeTheme } from '@/app/lib/store/codeThemeContext'
+import { useAppTheme } from '@/app/lib/store/themeContext'
 import { useAppSelector } from '@/app/store/hooks'
 import { type PendingReviewComment } from '@/app/store/pending-review-comments-slice'
 import { FileCard, FileCardBody, FileCardHeader } from '../components/FileCard'
@@ -24,10 +24,12 @@ export const ModifiedFileCard = memo(function ModifiedFileCard({
   file,
   pullRequest
 }: ModifiedFileCardProps): ReactElement {
-  const { darkBackground, lightBackground } = useCodeTheme()
+  const { appTheme } = useAppTheme()
   const { resolvedTheme } = useTheme()
   const isDark = resolvedTheme === 'dark'
-  const backgroundColor = isDark ? darkBackground : lightBackground
+  const backgroundColor = isDark
+    ? appTheme.dark.background
+    : appTheme.light.background
 
   const filePath = file.filePath
   const viewFileUrl = `https://github.com/${pullRequest.repositoryOwner}/${pullRequest.repositoryName}/blob/HEAD/${encodeURI(filePath)}`
