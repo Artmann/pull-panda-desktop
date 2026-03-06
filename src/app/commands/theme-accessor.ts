@@ -1,7 +1,16 @@
 type Setter = (value: string) => void
 
+let currentResolvedMode: 'dark' | 'light' = 'dark'
 let modeSetter: Setter | null = null
 let themeSetter: Setter | null = null
+
+export function getResolvedMode(): 'dark' | 'light' {
+  return currentResolvedMode
+}
+
+export function setResolvedMode(mode: 'dark' | 'light'): void {
+  currentResolvedMode = mode
+}
 
 export function setAppThemeSetter(
   kind: 'mode' | 'theme',

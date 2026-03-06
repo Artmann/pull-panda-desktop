@@ -12,7 +12,7 @@ import {
 
 import { getSharedHighlighter } from '@/app/lib/highlighter'
 import { useAppTheme } from '@/app/lib/store/themeContext'
-import { appThemes, type AppTheme } from '@/app/lib/themes'
+import { getThemesForMode, type AppTheme } from '@/app/lib/themes'
 
 const sampleCode = `function greet(name: string): string {
   const message = \`Hello, \${name}!\`
@@ -23,8 +23,10 @@ const sampleCode = `function greet(name: string): string {
 }`
 
 export function AppearanceSettings(): ReactElement {
-  const { theme, setTheme } = useTheme()
+  const { resolvedTheme, theme, setTheme } = useTheme()
   const { appTheme, setAppTheme } = useAppTheme()
+  const mode = resolvedTheme === 'dark' ? 'dark' : 'light'
+  const availableThemes = getThemesForMode(mode)
 
   return (
     <div>
@@ -44,7 +46,7 @@ export function AppearanceSettings(): ReactElement {
                 <SelectValue placeholder="Theme" />
               </SelectTrigger>
               <SelectContent>
-                {appThemes.map((t) => (
+                {availableThemes.map((t) => (
                   <SelectItem
                     key={t.value}
                     value={t.value}
@@ -85,11 +87,7 @@ export function AppearanceSettings(): ReactElement {
   )
 }
 
-function CodePreview({
-  appTheme
-}: {
-  appTheme: AppTheme
-}): ReactElement {
+function CodePreview({ appTheme }: { appTheme: AppTheme }): ReactElement {
   const [highlightedHtml, setHighlightedHtml] = useState<string>('')
 
   useEffect(() => {

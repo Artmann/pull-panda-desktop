@@ -58,6 +58,7 @@ export type AppTheme = {
   label: string
   light: ThemePalette
   lightShikiTheme: string
+  modes: 'both' | 'dark' | 'light'
   value: string
 }
 
@@ -178,6 +179,7 @@ export const appThemes: AppTheme[] = [
     label: 'Catppuccin',
     light: catppuccinLattePalette,
     lightShikiTheme: 'catppuccin-latte',
+    modes: 'both',
     value: 'catppuccin'
   },
 
@@ -215,6 +217,7 @@ export const appThemes: AppTheme[] = [
     label: 'Catppuccin Frappé',
     light: catppuccinLattePalette,
     lightShikiTheme: 'catppuccin-latte',
+    modes: 'dark',
     value: 'catppuccin-frappe'
   },
 
@@ -252,6 +255,7 @@ export const appThemes: AppTheme[] = [
     label: 'Catppuccin Macchiato',
     light: catppuccinLattePalette,
     lightShikiTheme: 'catppuccin-latte',
+    modes: 'dark',
     value: 'catppuccin-macchiato'
   },
 
@@ -310,6 +314,7 @@ export const appThemes: AppTheme[] = [
     label: 'Dracula',
     light: catppuccinLattePalette,
     lightShikiTheme: 'catppuccin-latte',
+    modes: 'dark',
     value: 'dracula'
   },
 
@@ -416,6 +421,7 @@ export const appThemes: AppTheme[] = [
       statusWarningForeground: 'oklch(0.4 0.1 80)'
     },
     lightShikiTheme: 'github-light',
+    modes: 'both',
     value: 'github'
   },
 
@@ -474,6 +480,7 @@ export const appThemes: AppTheme[] = [
       statusWarningForeground: 'oklch(0.4 0.1 80)'
     },
     lightShikiTheme: 'light-plus',
+    modes: 'light',
     value: 'light-plus'
   },
 
@@ -532,6 +539,7 @@ export const appThemes: AppTheme[] = [
       statusWarningForeground: 'oklch(0.4 0.1 80)'
     },
     lightShikiTheme: 'min-light',
+    modes: 'light',
     value: 'min-light'
   },
 
@@ -590,6 +598,7 @@ export const appThemes: AppTheme[] = [
     label: 'Monokai',
     light: catppuccinLattePalette,
     lightShikiTheme: 'catppuccin-latte',
+    modes: 'dark',
     value: 'monokai'
   },
 
@@ -648,6 +657,7 @@ export const appThemes: AppTheme[] = [
     label: 'Nord',
     light: catppuccinLattePalette,
     lightShikiTheme: 'catppuccin-latte',
+    modes: 'dark',
     value: 'nord'
   },
 
@@ -706,6 +716,7 @@ export const appThemes: AppTheme[] = [
     label: 'One Dark Pro',
     light: catppuccinLattePalette,
     lightShikiTheme: 'catppuccin-latte',
+    modes: 'dark',
     value: 'one-dark-pro'
   },
 
@@ -812,6 +823,7 @@ export const appThemes: AppTheme[] = [
       statusWarningForeground: 'oklch(0.42 0.1 80)'
     },
     lightShikiTheme: 'solarized-light',
+    modes: 'both',
     value: 'solarized'
   },
 
@@ -870,11 +882,18 @@ export const appThemes: AppTheme[] = [
       statusWarningForeground: 'oklch(0.4 0.1 80)'
     },
     lightShikiTheme: 'vitesse-light',
+    modes: 'light',
     value: 'vitesse-light'
   }
 ]
 
+export const defaultDarkThemeValue = 'catppuccin'
+export const defaultLightThemeValue = 'catppuccin'
 export const defaultThemeValue = 'catppuccin'
+
+export function getThemesForMode(mode: 'dark' | 'light'): AppTheme[] {
+  return appThemes.filter((t) => t.modes === 'both' || t.modes === mode)
+}
 
 export function getThemeByValue(value: string): AppTheme {
   return appThemes.find((t) => t.value === value) ?? appThemes[0]

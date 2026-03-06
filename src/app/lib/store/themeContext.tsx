@@ -7,11 +7,15 @@ import {
   type ReactNode
 } from 'react'
 
-import { setAppThemeSetter } from '@/app/commands/theme-accessor'
+import {
+  setAppThemeSetter,
+  setResolvedMode
+} from '@/app/commands/theme-accessor'
 import { applyThemePalette } from '@/app/lib/applyThemePalette'
 import {
   appThemes,
-  defaultThemeValue,
+  defaultDarkThemeValue,
+  defaultLightThemeValue,
   getThemeByValue,
   type AppTheme
 } from '@/app/lib/themes'
@@ -23,74 +27,114 @@ type AppThemeContextType = {
 
 const AppThemeContext = createContext<AppThemeContextType | null>(null)
 
-const storageKey = 'app-theme'
+const darkStorageKey = 'app-theme-dark'
+const lightStorageKey = 'app-theme-light'
 
-function migrateFromCodeTheme(): string | null {
+function migrateFromLegacyKeys(): void {
+  // Migrate from the old single `app-theme` key.
+  const oldSingle = localStorage.getItem('app-theme')
+
+  if (oldSingle) {
+    const theme = appThemes.find((t) => t.value === oldSingle)
+    const modes = theme?.modes ?? 'both'
+
+    if (modes === 'both' || modes === 'dark') {
+      localStorage.setItem(darkStorageKey, oldSingle)
+    }
+
+    if (modes === 'both' || modes === 'light') {
+      localStorage.setItem(lightStorageKey, oldSingle)
+    }
+
+    localStorage.removeItem('app-theme')
+  }
+
+  // Migrate from even older per-mode code-theme keys.
   const oldDark = localStorage.getItem('code-theme-dark')
   const oldLight = localStorage.getItem('code-theme-light')
 
-  if (!oldDark && !oldLight) {
-    return null
-  }
+  if (oldDark || oldLight) {
+    const candidate = oldDark ?? oldLight
+    const match = appThemes.find(
+      (t) =>
+        t.darkShikiTheme === candidate ||
+        t.lightShikiTheme === candidate ||
+        t.value === candidate
+    )
 
-  // Try to find an app theme that matches the old code theme selection.
-  const candidate = oldDark ?? oldLight
-  const match = appThemes.find(
-    (t) =>
-      t.darkShikiTheme === candidate ||
-      t.lightShikiTheme === candidate ||
-      t.value === candidate
+    if (match && !localStorage.getItem(darkStorageKey)) {
+      localStorage.setItem(darkStorageKey, match.value)
+    }
+
+    if (match && !localStorage.getItem(lightStorageKey)) {
+      localStorage.setItem(lightStorageKey, match.value)
+    }
+
+    localStorage.removeItem('code-theme-dark')
+    localStorage.removeItem('code-theme-light')
+  }
+}
+
+function readStoredTheme(key: string, fallback: string): string {
+  return localStorage.getItem(key) ?? fallback
+}
+
+function ThemeProviderInner({ children }: { children: ReactNode }) {
+  const { resolvedTheme, setTheme } = useTheme()
+  const mode = resolvedTheme === 'dark' ? 'dark' : 'light'
+
+  const [darkThemeValue, setDarkThemeValue] = useState(() =>
+    readStoredTheme(darkStorageKey, defaultDarkThemeValue)
   )
 
-  localStorage.removeItem('code-theme-dark')
-  localStorage.removeItem('code-theme-light')
+  const [lightThemeValue, setLightThemeValue] = useState(() =>
+    readStoredTheme(lightStorageKey, defaultLightThemeValue)
+  )
 
-  return match?.value ?? null
-}
+  const activeValue = mode === 'dark' ? darkThemeValue : lightThemeValue
+  const appTheme = getThemeByValue(activeValue)
 
-function AppThemeApplicator({ appTheme }: { appTheme: AppTheme }): null {
-  const { resolvedTheme } = useTheme()
+  const setAppTheme = (value: string) => {
+    const theme = getThemeByValue(value)
 
+    if (mode === 'dark') {
+      setDarkThemeValue(theme.value)
+      localStorage.setItem(darkStorageKey, theme.value)
+    } else {
+      setLightThemeValue(theme.value)
+      localStorage.setItem(lightStorageKey, theme.value)
+    }
+  }
+
+  // Apply the palette to CSS variables whenever the theme or mode changes.
   useEffect(() => {
-    const palette =
-      resolvedTheme === 'dark' ? appTheme.dark : appTheme.light
-
+    const palette = mode === 'dark' ? appTheme.dark : appTheme.light
     applyThemePalette(palette)
-  }, [resolvedTheme, appTheme])
+  }, [mode, appTheme])
 
-  return null
-}
+  // Keep the resolved mode accessor in sync.
+  useEffect(() => {
+    setResolvedMode(mode)
+  }, [mode])
 
-function ThemeSetterRegistrar(): null {
-  const { setTheme } = useTheme()
-
+  // Register setters for the command palette.
   useEffect(() => {
     setAppThemeSetter('mode', setTheme)
   }, [setTheme])
 
-  return null
+  useEffect(() => {
+    setAppThemeSetter('theme', setAppTheme)
+  }, [mode])
+
+  return (
+    <AppThemeContext.Provider value={{ appTheme, setAppTheme }}>
+      {children}
+    </AppThemeContext.Provider>
+  )
 }
 
 export function ThemeProvider({ children }: { children: ReactNode }) {
-  const [appTheme, setAppThemeState] = useState<AppTheme>(() => {
-    let stored = localStorage.getItem(storageKey)
-
-    if (!stored) {
-      stored = migrateFromCodeTheme()
-    }
-
-    return getThemeByValue(stored ?? defaultThemeValue)
-  })
-
-  const setAppTheme = (value: string) => {
-    const theme = getThemeByValue(value)
-    setAppThemeState(theme)
-    localStorage.setItem(storageKey, theme.value)
-  }
-
-  useEffect(() => {
-    setAppThemeSetter('theme', setAppTheme)
-  }, [])
+  useState(() => migrateFromLegacyKeys())
 
   return (
     <NextThemesProvider
@@ -99,11 +143,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
       disableTransitionOnChange
       enableSystem
     >
-      <ThemeSetterRegistrar />
-      <AppThemeApplicator appTheme={appTheme} />
-      <AppThemeContext.Provider value={{ appTheme, setAppTheme }}>
-        {children}
-      </AppThemeContext.Provider>
+      <ThemeProviderInner>{children}</ThemeProviderInner>
     </NextThemesProvider>
   )
 }
