@@ -62,15 +62,15 @@ export const ModifiedFileCard = memo(function ModifiedFileCard({
           <CopyToClipboardButton value={file.filePath} />
         </div>
 
-        <a
-          className="text-muted-foreground hover:text-foreground transition-colors"
-          href={viewFileUrl}
-          rel="noopener noreferrer"
-          target="_blank"
+        <button
+          className="text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+          onClick={() => {
+            window.electron.openUrl(viewFileUrl)
+          }}
           title="View file on GitHub"
         >
           <ExternalLinkIcon className="size-3" />
-        </a>
+        </button>
       </FileCardHeader>
 
       <FileCardBody>
