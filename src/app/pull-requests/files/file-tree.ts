@@ -101,9 +101,9 @@ export function extractGroupedFilesFromTree(
     }
   })
 
-  // Add root files as a group at the beginning
+  // Add root files as a group at the end
   if (rootFiles.length > 0) {
-    groups.unshift({
+    groups.push({
       groupName: '.',
       files: rootFiles
     })

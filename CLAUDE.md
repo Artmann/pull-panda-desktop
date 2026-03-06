@@ -3,6 +3,7 @@
 Electron desktop app for GitHub PR management built with React, TypeScript, and
 Vite.
 
+- Don't include Claude as the author or co-author in commit messages.
 - Refer to @CODE_STYLE.md for how to write code in this project.
 - Don't use the `sr-only` Tailwind class. It causes layout issues.
 - Before using `useEffect`, review

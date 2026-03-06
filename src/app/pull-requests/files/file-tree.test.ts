@@ -103,7 +103,7 @@ describe('extractGroupedFilesFromTree', () => {
     ])
   })
 
-  it('places root-level files group at the beginning', () => {
+  it('places root-level files group at the end', () => {
     const tree: FileTree = {
       src: {
         name: 'src',
@@ -127,13 +127,13 @@ describe('extractGroupedFilesFromTree', () => {
     const groups = extractGroupedFilesFromTree(tree)
 
     expect(groups[0]).toEqual({
-      groupName: '.',
-      files: [{ filePath: 'README.md' }]
+      groupName: 'src',
+      files: [{ filePath: 'src/index.ts' }]
     })
 
     expect(groups[1]).toEqual({
-      groupName: 'src',
-      files: [{ filePath: 'src/index.ts' }]
+      groupName: '.',
+      files: [{ filePath: 'README.md' }]
     })
   })
 

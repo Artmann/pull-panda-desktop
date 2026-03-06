@@ -97,7 +97,7 @@ export const FilesView = memo(function FilesView({
               </Button>
 
               {!isCollapsed && (
-                <div className="flex flex-col gap-4">
+                <div className="flex flex-col gap-6">
                   {group.files.map((groupFile) => {
                     const modifiedFile = files.find(
                       (f) => f.filePath === groupFile.filePath
