@@ -1,4 +1,4 @@
-import { ChevronDown, ChevronUp, GitMergeIcon } from 'lucide-react'
+import { ChevronDown, ChevronUp, GitMergeIcon, Loader2 } from 'lucide-react'
 import { memo, ReactElement, useEffect, useState } from 'react'
 import { toast } from 'sonner'
 
@@ -230,7 +230,11 @@ export const PullRequestToolbar = memo(function PullRequestToolbar({
                     onClick={() => handleMerge(selectedMethod)}
                     size="xs"
                   >
-                    <GitMergeIcon className="size-3" />
+                    {mergeOptions?.mergeable === null ? (
+                      <Loader2 className="size-3 animate-spin" />
+                    ) : (
+                      <GitMergeIcon className="size-3" />
+                    )}
                     {mergeDisabledReason ?? mergeMethodLabels[selectedMethod]}
                   </Button>
                 </span>
@@ -280,7 +284,7 @@ function getMergeDisabledReason(options: MergeOptions): string | null {
   }
 
   if (options.mergeable === null) {
-    return 'Checking mergeability\u2026'
+    return 'Checking mergeability'
   }
 
   switch (options.mergeableState) {
