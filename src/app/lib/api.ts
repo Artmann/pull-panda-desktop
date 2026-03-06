@@ -292,6 +292,76 @@ export async function syncPullRequestDetails(
   }
 }
 
+export interface MergeOptions {
+  allowMergeCommit: boolean
+  allowRebaseMerge: boolean
+  allowSquashMerge: boolean
+  mergeable: boolean | null
+  mergeableState: string
+}
+
+export async function getMergeOptions(
+  pullRequestId: string
+): Promise<MergeOptions> {
+  const baseUrl = await getApiBaseUrl()
+
+  const response = await fetch(
+    `${baseUrl}/api/pull-requests/${pullRequestId}/merge-options`,
+    {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json'
+      }
+    }
+  )
+
+  if (!response.ok) {
+    const error = await response.json()
+
+    throw new Error(error.error ?? 'Failed to fetch merge options')
+  }
+
+  return response.json()
+}
+
+export interface MergePullRequestRequest {
+  mergeMethod: 'merge' | 'squash' | 'rebase'
+  owner: string
+  pullNumber: number
+  pullRequestId: string
+  repo: string
+}
+
+export async function mergePullRequest(
+  request: MergePullRequestRequest
+): Promise<PullRequest> {
+  const baseUrl = await getApiBaseUrl()
+
+  const response = await fetch(
+    `${baseUrl}/api/pull-requests/${request.pullRequestId}/merge`,
+    {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        mergeMethod: request.mergeMethod,
+        owner: request.owner,
+        pullNumber: request.pullNumber,
+        repo: request.repo
+      })
+    }
+  )
+
+  if (!response.ok) {
+    const error = await response.json()
+
+    throw new Error(error.error ?? 'Failed to merge pull request')
+  }
+
+  return response.json()
+}
+
 export interface UpdatePullRequestRequest {
   body?: string
   isDraft?: boolean

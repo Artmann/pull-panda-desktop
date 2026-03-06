@@ -59,16 +59,19 @@ export function FileCardHeader({
       )}
       onClick={(event) => {
         const target = event.target as HTMLElement
-        if (target.closest('button') && !target.closest('.chevron-toggle'))
+
+        if (target.closest('button') && !target.closest('[data-chevron]')) {
           return
+        }
 
         setIsCollapsed(!isCollapsed)
       }}
     >
       <Button
+        data-chevron
         size="icon"
         variant="ghost"
-        className="size-6 chevron-toggle"
+        className="size-6"
       >
         <ChevronIcon className="size-3 mt-0.5" />
       </Button>

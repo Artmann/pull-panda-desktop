@@ -10,14 +10,9 @@ import {
   SelectValue
 } from '../components/ui/select'
 
-import {
-  darkCodeThemes,
-  lightCodeThemes,
-  type DarkCodeTheme,
-  type LightCodeTheme
-} from '@/app/lib/codeThemes'
 import { getSharedHighlighter } from '@/app/lib/highlighter'
-import { useCodeTheme } from '@/app/lib/store/codeThemeContext'
+import { useAppTheme } from '@/app/lib/store/themeContext'
+import { getThemesForMode, type AppTheme } from '@/app/lib/themes'
 
 const sampleCode = `function greet(name: string): string {
   const message = \`Hello, \${name}!\`
@@ -28,8 +23,10 @@ const sampleCode = `function greet(name: string): string {
 }`
 
 export function AppearanceSettings(): ReactElement {
-  const { theme, setTheme } = useTheme()
-  const { darkTheme, lightTheme, setDarkTheme, setLightTheme } = useCodeTheme()
+  const { resolvedTheme, theme, setTheme } = useTheme()
+  const { appTheme, setAppTheme } = useAppTheme()
+  const mode = resolvedTheme === 'dark' ? 'dark' : 'light'
+  const availableThemes = getThemesForMode(mode)
 
   return (
     <div>
@@ -38,15 +35,39 @@ export function AppearanceSettings(): ReactElement {
       <Card className="pt-0">
         <CardContent>
           <SettingItem
-            description="Select or customize your interface color scheme"
-            label="Interface theme"
+            description="Choose the color theme for the entire application"
+            label="Theme"
+          >
+            <Select
+              value={appTheme.value}
+              onValueChange={setAppTheme}
+            >
+              <SelectTrigger className="w-52">
+                <SelectValue placeholder="Theme" />
+              </SelectTrigger>
+              <SelectContent>
+                {availableThemes.map((t) => (
+                  <SelectItem
+                    key={t.value}
+                    value={t.value}
+                  >
+                    {t.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </SettingItem>
+
+          <SettingItem
+            description="Select light, dark, or follow your system preference"
+            label="Appearance"
           >
             <Select
               value={theme}
               onValueChange={setTheme}
             >
-              <SelectTrigger className="w-45">
-                <SelectValue placeholder="Theme" />
+              <SelectTrigger className="w-52">
+                <SelectValue placeholder="Appearance" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="dark">Dark</SelectItem>
@@ -56,60 +77,9 @@ export function AppearanceSettings(): ReactElement {
             </Select>
           </SettingItem>
 
-          <SettingItem
-            description="Select the syntax highlighting style for code blocks and diffs in light mode"
-            label="Code theme (light)"
-          >
-            <Select
-              value={lightTheme}
-              onValueChange={setLightTheme}
-            >
-              <SelectTrigger className="w-45">
-                <SelectValue placeholder="Theme" />
-              </SelectTrigger>
-              <SelectContent>
-                {lightCodeThemes.map((codeTheme) => (
-                  <SelectItem
-                    key={codeTheme.value}
-                    value={codeTheme.value}
-                  >
-                    {codeTheme.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </SettingItem>
-
-          <SettingItem
-            description="Select the syntax highlighting style for code blocks and diffs in dark mode"
-            label="Code theme (dark)"
-          >
-            <Select
-              value={darkTheme}
-              onValueChange={setDarkTheme}
-            >
-              <SelectTrigger className="w-45">
-                <SelectValue placeholder="Theme" />
-              </SelectTrigger>
-              <SelectContent>
-                {darkCodeThemes.map((codeTheme) => (
-                  <SelectItem
-                    key={codeTheme.value}
-                    value={codeTheme.value}
-                  >
-                    {codeTheme.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </SettingItem>
-
           <div className="pt-6">
             <div className="font-medium mb-2">Preview</div>
-            <CodePreview
-              darkTheme={darkTheme}
-              lightTheme={lightTheme}
-            />
+            <CodePreview appTheme={appTheme} />
           </div>
         </CardContent>
       </Card>
@@ -117,13 +87,7 @@ export function AppearanceSettings(): ReactElement {
   )
 }
 
-function CodePreview({
-  darkTheme,
-  lightTheme
-}: {
-  darkTheme: DarkCodeTheme
-  lightTheme: LightCodeTheme
-}): ReactElement {
+function CodePreview({ appTheme }: { appTheme: AppTheme }): ReactElement {
   const [highlightedHtml, setHighlightedHtml] = useState<string>('')
 
   useEffect(() => {
@@ -133,8 +97,8 @@ function CodePreview({
       const html = highlighter.codeToHtml(sampleCode, {
         lang: 'typescript',
         themes: {
-          dark: darkTheme,
-          light: lightTheme
+          dark: appTheme.darkShikiTheme,
+          light: appTheme.lightShikiTheme
         }
       })
 
@@ -142,7 +106,7 @@ function CodePreview({
     }
 
     void highlight()
-  }, [darkTheme, lightTheme])
+  }, [appTheme.darkShikiTheme, appTheme.lightShikiTheme])
 
   if (!highlightedHtml) {
     return (

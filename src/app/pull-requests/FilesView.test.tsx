@@ -4,12 +4,12 @@
 import { render, screen, fireEvent, act } from '@testing-library/react'
 import { Provider } from 'react-redux'
 import { configureStore } from '@reduxjs/toolkit'
-import { describe, it, expect, beforeAll } from 'vitest'
+import { describe, it, expect, beforeAll, vi } from 'vitest'
 
 import type { ModifiedFile } from '@/types/pull-request-details'
 import type { PullRequest } from '@/types/pull-request'
 
-import { CodeThemeProvider } from '@/app/lib/store/codeThemeContext'
+import { ThemeProvider } from '@/app/lib/store/themeContext'
 import commentsReducer from '@/app/store/comments-slice'
 import modifiedFilesReducer from '@/app/store/modified-files-slice'
 import pendingReviewCommentsReducer from '@/app/store/pending-review-comments-slice'
@@ -123,7 +123,7 @@ function renderWithProviders(
 ) {
   return render(
     <Provider store={store}>
-      <CodeThemeProvider>{ui}</CodeThemeProvider>
+      <ThemeProvider>{ui}</ThemeProvider>
     </Provider>
   )
 }
@@ -254,7 +254,10 @@ describe('FilesView', () => {
     expect(screen.getByText('No changes to display.')).toBeInTheDocument()
   })
 
-  it('renders external link to view file on GitHub', async () => {
+  it('opens file on GitHub when clicking the external link button', async () => {
+    const openUrl = vi.fn()
+    window.electron = { openUrl } as unknown as typeof window.electron
+
     const pullRequest = createMockPullRequest({
       repositoryOwner: 'testowner',
       repositoryName: 'testrepo'
@@ -274,12 +277,11 @@ describe('FilesView', () => {
       renderWithProviders(<FilesView pullRequest={pullRequest} />, { store })
     })
 
-    const link = screen.getByTitle('View file on GitHub')
+    const button = screen.getByTitle('View file on GitHub')
+    fireEvent.click(button)
 
-    expect(link).toHaveAttribute(
-      'href',
+    expect(openUrl).toHaveBeenCalledWith(
       'https://github.com/testowner/testrepo/blob/HEAD/src/index.ts'
     )
-    expect(link).toHaveAttribute('target', '_blank')
   })
 })

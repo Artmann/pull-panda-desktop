@@ -1,16 +1,37 @@
-import { ChevronDown, ChevronUp } from 'lucide-react'
-import { memo, ReactElement } from 'react'
+import { ChevronDown, ChevronUp, GitMergeIcon } from 'lucide-react'
+import { memo, ReactElement, useEffect, useState } from 'react'
 import { toast } from 'sonner'
 
 import { Button } from '@/app/components/ui/button'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger
+} from '@/app/components/ui/dropdown-menu'
 import { Separator } from '@/app/components/ui/separator'
-import { createReview } from '@/app/lib/api'
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger
+} from '@/app/components/ui/tooltip'
+import { createReview, getMergeOptions, mergePullRequest } from '@/app/lib/api'
+import type { MergeOptions } from '@/app/lib/api'
 import { useAppDispatch, useAppSelector } from '@/app/store/hooks'
 import {
   createOptimisticReview,
   pendingReviewsActions
 } from '@/app/store/pending-reviews-slice'
+import { pullRequestsActions } from '@/app/store/pull-requests-slice'
 import { PullRequest } from '@/types/pull-request'
+
+type MergeMethod = 'merge' | 'squash' | 'rebase'
+
+const mergeMethodLabels: Record<MergeMethod, string> = {
+  merge: 'Merge commit',
+  rebase: 'Rebase and merge',
+  squash: 'Squash and merge'
+}
 
 interface PullRequestToolbarProps {
   pullRequest: PullRequest
@@ -26,6 +47,72 @@ export const PullRequestToolbar = memo(function PullRequestToolbar({
   )
 
   const hasPendingReview = Boolean(pendingReview)
+
+  const [mergeOptions, setMergeOptions] = useState<MergeOptions | null>(null)
+  const [selectedMethod, setSelectedMethod] = useState<MergeMethod | null>(null)
+
+  useEffect(() => {
+    if (pullRequest.state !== 'OPEN') {
+      return
+    }
+
+    getMergeOptions(pullRequest.id)
+      .then((options) => {
+        setMergeOptions(options)
+
+        const first =
+          (options.allowSquashMerge && 'squash') ||
+          (options.allowMergeCommit && 'merge') ||
+          (options.allowRebaseMerge && 'rebase') ||
+          null
+
+        setSelectedMethod(first as MergeMethod | null)
+      })
+      .catch(() => {
+        // Silently fail — merge button just won't appear.
+      })
+  }, [pullRequest.id, pullRequest.state])
+
+  const allowedMethods: MergeMethod[] = mergeOptions
+    ? ([
+        mergeOptions.allowMergeCommit && 'merge',
+        mergeOptions.allowSquashMerge && 'squash',
+        mergeOptions.allowRebaseMerge && 'rebase'
+      ].filter(Boolean) as MergeMethod[])
+    : []
+
+  const handleMerge = (mergeMethod: MergeMethod) => {
+    const originalPr = pullRequest
+
+    dispatch(
+      pullRequestsActions.upsertItem({
+        ...pullRequest,
+        mergedAt: new Date().toISOString(),
+        state: 'MERGED'
+      })
+    )
+
+    mergePullRequest({
+      mergeMethod,
+      owner: pullRequest.repositoryOwner,
+      pullNumber: pullRequest.number,
+      pullRequestId: pullRequest.id,
+      repo: pullRequest.repositoryName
+    })
+      .then((updated) => {
+        dispatch(pullRequestsActions.upsertItem(updated))
+      })
+      .catch((error) => {
+        dispatch(pullRequestsActions.upsertItem(originalPr))
+
+        const message =
+          error instanceof Error
+            ? error.message
+            : 'Failed to merge pull request'
+
+        toast.error(message)
+      })
+  }
 
   const handleStartReview = async () => {
     if (hasPendingReview) {
@@ -70,6 +157,15 @@ export const PullRequestToolbar = memo(function PullRequestToolbar({
       toast.error(message)
     }
   }
+
+  const mergeDisabled = mergeOptions ? mergeOptions.mergeable !== true : false
+
+  const mergeDisabledReason = mergeOptions
+    ? getMergeDisabledReason(mergeOptions)
+    : null
+
+  const showMerge =
+    pullRequest.state === 'OPEN' && selectedMethod && allowedMethods.length > 0
 
   return (
     <div
@@ -119,6 +215,82 @@ export const PullRequestToolbar = memo(function PullRequestToolbar({
           </div>
         </>
       )}
+
+      {showMerge && (
+        <>
+          <Separator orientation="vertical" />
+
+          <div className="flex items-center">
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <span>
+                  <Button
+                    className="rounded-r-none"
+                    disabled={mergeDisabled}
+                    onClick={() => handleMerge(selectedMethod)}
+                    size="xs"
+                  >
+                    <GitMergeIcon className="size-3" />
+                    {mergeDisabledReason ?? mergeMethodLabels[selectedMethod]}
+                  </Button>
+                </span>
+              </TooltipTrigger>
+
+              {mergeDisabledReason && (
+                <TooltipContent side="top">
+                  {mergeDisabledReason}
+                </TooltipContent>
+              )}
+            </Tooltip>
+
+            {allowedMethods.length > 1 && (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    className="rounded-l-none border-l border-l-primary-foreground/20 px-1.5"
+                    disabled={mergeDisabled}
+                    size="xs"
+                  >
+                    <ChevronDown className="size-3" />
+                  </Button>
+                </DropdownMenuTrigger>
+
+                <DropdownMenuContent align="end">
+                  {allowedMethods.map((method) => (
+                    <DropdownMenuItem
+                      key={method}
+                      onSelect={() => setSelectedMethod(method)}
+                    >
+                      {mergeMethodLabels[method]}
+                    </DropdownMenuItem>
+                  ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            )}
+          </div>
+        </>
+      )}
     </div>
   )
 })
+
+function getMergeDisabledReason(options: MergeOptions): string | null {
+  if (options.mergeable === true) {
+    return null
+  }
+
+  if (options.mergeable === null) {
+    return 'Checking mergeability\u2026'
+  }
+
+  switch (options.mergeableState) {
+    case 'blocked':
+      return 'Merge blocked'
+    case 'dirty':
+      return 'Has merge conflicts'
+    case 'unstable':
+      return 'Checks are failing'
+    default:
+      return 'Cannot merge'
+  }
+}

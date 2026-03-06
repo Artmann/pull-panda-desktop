@@ -132,6 +132,127 @@ pullRequestsRoute.patch('/:pullRequestId', async (context) => {
   return context.json(updated)
 })
 
+pullRequestsRoute.get('/:pullRequestId/merge-options', async (context) => {
+  const token = context.get('token')
+  const pullRequestId = context.req.param('pullRequestId')
+
+  if (!pullRequestId) {
+    return context.json({ error: 'Missing pull request ID' }, 400)
+  }
+
+  const database = getDatabase()
+
+  const pullRequest = database
+    .select()
+    .from(pullRequests)
+    .where(eq(pullRequests.id, pullRequestId))
+    .get()
+
+  if (!pullRequest) {
+    return context.json({ error: 'Pull request not found' }, 404)
+  }
+
+  const octokit = new Octokit({ auth: token })
+
+  try {
+    const [{ data: repo }, { data: pull }] = await Promise.all([
+      octokit.rest.repos.get({
+        owner: pullRequest.repositoryOwner,
+        repo: pullRequest.repositoryName
+      }),
+      octokit.rest.pulls.get({
+        owner: pullRequest.repositoryOwner,
+        pull_number: pullRequest.number,
+        repo: pullRequest.repositoryName
+      })
+    ])
+
+    return context.json({
+      allowMergeCommit: repo.allow_merge_commit ?? true,
+      allowRebaseMerge: repo.allow_rebase_merge ?? true,
+      allowSquashMerge: repo.allow_squash_merge ?? true,
+      mergeable: pull.mergeable,
+      mergeableState: pull.mergeable_state
+    })
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Unknown error'
+
+    console.error('Failed to fetch merge options:', error)
+
+    return context.json({ error: message }, 500)
+  }
+})
+
+interface MergePullRequestBody {
+  mergeMethod: 'merge' | 'squash' | 'rebase'
+  owner: string
+  pullNumber: number
+  repo: string
+}
+
+pullRequestsRoute.post('/:pullRequestId/merge', async (context) => {
+  const token = context.get('token')
+  const pullRequestId = context.req.param('pullRequestId')
+
+  if (!pullRequestId) {
+    return context.json({ error: 'Missing pull request ID' }, 400)
+  }
+
+  const request = await context.req.json<MergePullRequestBody>()
+  const database = getDatabase()
+
+  const pullRequest = database
+    .select()
+    .from(pullRequests)
+    .where(eq(pullRequests.id, pullRequestId))
+    .get()
+
+  if (!pullRequest) {
+    return context.json({ error: 'Pull request not found' }, 404)
+  }
+
+  const octokit = new Octokit({ auth: token })
+
+  try {
+    await octokit.rest.pulls.merge({
+      owner: request.owner,
+      repo: request.repo,
+      pull_number: request.pullNumber,
+      merge_method: request.mergeMethod
+    })
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Unknown error'
+
+    console.error('Failed to merge pull request:', error)
+
+    return context.json({ error: message }, 500)
+  }
+
+  const now = new Date().toISOString()
+
+  database
+    .update(pullRequests)
+    .set({
+      state: 'MERGED',
+      mergedAt: now,
+      updatedAt: now
+    })
+    .where(eq(pullRequests.id, pullRequestId))
+    .run()
+
+  const updated = await getPullRequest(pullRequestId)
+
+  for (const window of BrowserWindow.getAllWindows()) {
+    window.webContents.send(ipcChannels.ResourceUpdated, {
+      data: updated,
+      pullRequestId,
+      type: 'pull-request'
+    })
+  }
+
+  return context.json(updated)
+})
+
 pullRequestsRoute.post('/:pullRequestId/sync', async (context) => {
   const token = context.get('token')
   const pullRequestId = context.req.param('pullRequestId')

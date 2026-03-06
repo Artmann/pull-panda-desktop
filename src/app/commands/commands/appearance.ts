@@ -1,7 +1,7 @@
 import { Monitor, Moon, Sun } from 'lucide-react'
 
 import { commandRegistry } from '../registry'
-import { getThemeSetter } from '../theme-accessor'
+import { getModeSetter } from '../theme-accessor'
 
 commandRegistry.register({
   id: 'appearance.light-mode',
@@ -10,9 +10,9 @@ commandRegistry.register({
   group: 'appearance',
   isAvailable: () => true,
   execute: () => {
-    const setTheme = getThemeSetter()
+    const setMode = getModeSetter()
 
-    setTheme('light')
+    setMode('light')
   }
 })
 
@@ -23,9 +23,9 @@ commandRegistry.register({
   group: 'appearance',
   isAvailable: () => true,
   execute: () => {
-    const setTheme = getThemeSetter()
+    const setMode = getModeSetter()
 
-    setTheme('dark')
+    setMode('dark')
   }
 })
 
@@ -36,8 +36,8 @@ commandRegistry.register({
   group: 'appearance',
   isAvailable: () => true,
   execute: () => {
-    const setTheme = getThemeSetter()
+    const setMode = getModeSetter()
 
-    setTheme('system')
+    setMode('system')
   }
 })
