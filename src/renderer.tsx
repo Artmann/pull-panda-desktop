@@ -30,7 +30,6 @@ import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 
 import { App } from './app/App'
-import { filterReadyPullRequests } from './app/lib/pull-requests'
 import { createQueryClient } from './app/lib/query-client'
 import { setQueryClient } from './app/lib/query-client-accessor'
 import { seedQueryCache } from './app/lib/seed-query-cache'
@@ -39,7 +38,6 @@ import './app/index.css'
 
 async function main() {
   const bootstrapData = await window.electron.getBootstrapData()
-  const readyPullRequests = filterReadyPullRequests(bootstrapData?.pullRequests)
 
   const queryClient = createQueryClient()
   setQueryClient(queryClient)
@@ -50,7 +48,7 @@ async function main() {
     commits: bootstrapData?.commits ?? [],
     modifiedFiles: bootstrapData?.modifiedFiles ?? [],
     pendingReviews: bootstrapData?.pendingReviews ?? {},
-    pullRequests: readyPullRequests,
+    pullRequests: bootstrapData?.pullRequests ?? [],
     reactions: bootstrapData?.reactions ?? [],
     reviews: bootstrapData?.reviews ?? []
   })

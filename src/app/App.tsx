@@ -20,7 +20,6 @@ import {
 import { ErrorBoundary } from '@/app/components/ErrorBoundary'
 import { TitleBar } from '@/app/components/TitleBar'
 import { Toaster } from '@/app/components/ui/sonner'
-import { filterReadyPullRequests } from '@/app/lib/pull-requests'
 import { queryKeys } from '@/app/lib/query-keys'
 import { isPullRequestInFlight } from '@/app/lib/queries/use-pull-requests'
 import { AuthProvider, useAuth } from '@/app/lib/store/authContext'
@@ -150,7 +149,7 @@ function AppContent(): ReactElement {
         case 'pull-requests':
           queryClient.setQueryData(
             queryKeys.pullRequests.all,
-            filterReadyPullRequests(event.data)
+            event.data
           )
           break
 
