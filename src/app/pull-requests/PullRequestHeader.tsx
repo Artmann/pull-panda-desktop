@@ -150,7 +150,9 @@ export const PullRequestHeader = memo(function PullRequestHeader({
         <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
           <GitCommitIcon className="size-3 shrink-0" />
 
-          <span>{commits.length} {commits.length === 1 ? 'commit' : 'commits'}</span>
+          <span>
+            {commits.length} {commits.length === 1 ? 'commit' : 'commits'}
+          </span>
 
           {latestCommit?.message && (
             <>

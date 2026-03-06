@@ -10,10 +10,7 @@ import {
   type ReactElement
 } from 'react'
 
-import type {
-  DarkCodeTheme,
-  LightCodeTheme
-} from '@/app/lib/codeThemes'
+import type { DarkCodeTheme, LightCodeTheme } from '@/app/lib/codeThemes'
 import {
   getLanguageFromPath,
   getSharedHighlighter
