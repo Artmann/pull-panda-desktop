@@ -6,6 +6,7 @@ import { shallowEqual } from 'react-redux'
 import type { Comment, ModifiedFile } from '@/types/pull-request-details'
 import type { PullRequest } from '@/types/pull-request'
 
+import { Badge } from '@/app/components/ui/badge'
 import { CopyToClipboardButton } from '@/app/components/CopyToClipboardButton'
 import { useAppTheme } from '@/app/lib/store/themeContext'
 import { useAppSelector } from '@/app/store/hooks'
@@ -62,6 +63,18 @@ export const ModifiedFileCard = memo(function ModifiedFileCard({
           <span className="truncate">{file.filePath}</span>
 
           <CopyToClipboardButton value={file.filePath} />
+
+          {file.status === 'added' && (
+            <Badge className="bg-status-success text-status-success-foreground border-status-success-border uppercase text-[0.6rem]">
+              New
+            </Badge>
+          )}
+
+          {file.status === 'removed' && (
+            <Badge className="bg-status-danger text-status-danger-foreground border-status-danger-border uppercase text-[0.6rem]">
+              Deleted
+            </Badge>
+          )}
         </div>
 
         <button
