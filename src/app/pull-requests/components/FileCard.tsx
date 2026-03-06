@@ -57,11 +57,18 @@ export function FileCardHeader({
         'flex items-center gap-2 pl-3 pr-4 py-1 border-border cursor-pointer',
         isCollapsed ? 'border-0' : 'border-b'
       )}
-      onClick={() => {
+      onClick={(event) => {
+        const target = event.target as HTMLElement
+
+        if (target.closest('button') && !target.closest('[data-chevron]')) {
+          return
+        }
+
         setIsCollapsed(!isCollapsed)
       }}
     >
       <Button
+        data-chevron
         size="icon"
         variant="ghost"
         className="size-6"
