@@ -6,9 +6,9 @@ import { getStore } from '../store-accessor'
 import type { PullRequest } from '@/types/pull-request'
 
 // Tab names as used in the app
-const tabs = ['overview', 'commits', 'checks', 'files'] as const
+const tabs = ['overview', 'checks', 'files'] as const
 
-// Tab navigation commands (1-4 keys on PR detail view)
+// Tab navigation commands (1-3 keys on PR detail view)
 tabs.forEach((tab, index) => {
   commandRegistry.register({
     id: `navigation.tab-${tab}`,
