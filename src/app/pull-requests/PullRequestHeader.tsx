@@ -1,12 +1,16 @@
 import { ExternalLinkIcon, GitCommitIcon, GitPullRequest } from 'lucide-react'
 import { memo, ReactElement, useMemo, useState } from 'react'
-import { shallowEqual } from 'react-redux'
 import { toast } from 'sonner'
 import invariant from 'tiny-invariant'
 
 import { updatePullRequest } from '@/app/lib/api'
-import { useAppDispatch, useAppSelector } from '@/app/store/hooks'
-import { pullRequestsActions } from '@/app/store/pull-requests-slice'
+import { useCommits } from '@/app/lib/queries/use-commits'
+import {
+  clearPullRequestInFlight,
+  markPullRequestInFlight,
+  useUpsertPullRequest
+} from '@/app/lib/queries/use-pull-requests'
+import { useReviews } from '@/app/lib/queries/use-reviews'
 import { PullRequest } from '@/types/pull-request'
 import type { Commit, Review } from '@/types/pull-request-details'
 import { ReviewBadge } from '../components/ReviewBadge'
@@ -70,17 +74,8 @@ export const PullRequestHeader = memo(function PullRequestHeader({
 }): ReactElement {
   invariant(pullRequest, 'PullRequestHeader requires a pull request')
 
-  const commits: Commit[] = useAppSelector(
-    (state) =>
-      state.commits.items.filter((c) => c.pullRequestId === pullRequest.id),
-    shallowEqual
-  )
-
-  const reviews: Review[] = useAppSelector(
-    (state) =>
-      state.reviews.items.filter((r) => r.pullRequestId === pullRequest.id),
-    shallowEqual
-  )
+  const commits: Commit[] = useCommits(pullRequest.id)
+  const reviews: Review[] = useReviews(pullRequest.id)
 
   const latestCommit = useMemo(() => {
     if (commits.length === 0) {
@@ -197,8 +192,16 @@ function InlineEditableTitle({
 }): ReactElement {
   const [isEditing, setIsEditing] = useState(false)
   const [draft, setDraft] = useState('')
-  const dispatch = useAppDispatch()
+  const [optimisticTitle, setOptimisticTitle] = useState<string | null>(null)
+  const upsertPullRequest = useUpsertPullRequest()
   const isMerged = pullRequest.state === 'MERGED'
+
+  // Clear local optimistic title once the prop catches up
+  if (optimisticTitle !== null && pullRequest.title === optimisticTitle) {
+    setOptimisticTitle(null)
+  }
+
+  const displayTitle = optimisticTitle ?? pullRequest.title
 
   const handleStartEdit = () => {
     if (isMerged) return
@@ -206,7 +209,7 @@ function InlineEditableTitle({
     setIsEditing(true)
   }
 
-  const handleSave = async () => {
+  const handleSave = () => {
     const trimmed = draft.trim()
 
     if (!trimmed || trimmed === pullRequest.title) {
@@ -215,29 +218,34 @@ function InlineEditableTitle({
     }
 
     setIsEditing(false)
+    setOptimisticTitle(trimmed)
 
     const originalPr = pullRequest
 
-    dispatch(pullRequestsActions.upsertItem({ ...pullRequest, title: trimmed }))
+    markPullRequestInFlight(pullRequest.id)
+    upsertPullRequest({ ...pullRequest, title: trimmed })
 
-    try {
-      const updated = await updatePullRequest({
-        owner: pullRequest.repositoryOwner,
-        pullNumber: pullRequest.number,
-        pullRequestId: pullRequest.id,
-        repo: pullRequest.repositoryName,
-        title: trimmed
+    updatePullRequest({
+      owner: pullRequest.repositoryOwner,
+      pullNumber: pullRequest.number,
+      pullRequestId: pullRequest.id,
+      repo: pullRequest.repositoryName,
+      title: trimmed
+    })
+      .then((updated) => {
+        clearPullRequestInFlight(pullRequest.id)
+        upsertPullRequest(updated)
       })
+      .catch((error) => {
+        clearPullRequestInFlight(pullRequest.id)
+        setOptimisticTitle(null)
+        upsertPullRequest(originalPr)
 
-      dispatch(pullRequestsActions.upsertItem(updated))
-    } catch (error) {
-      dispatch(pullRequestsActions.upsertItem(originalPr))
+        const message =
+          error instanceof Error ? error.message : 'Failed to update title'
 
-      const message =
-        error instanceof Error ? error.message : 'Failed to update title'
-
-      toast.error(message)
-    }
+        toast.error(message)
+      })
   }
 
   const handleCancel = () => {
@@ -274,7 +282,7 @@ function InlineEditableTitle({
       )}
       onClick={handleStartEdit}
     >
-      {pullRequest.title}
+      {displayTitle}
     </h1>
   )
 }

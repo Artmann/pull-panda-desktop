@@ -6,13 +6,15 @@ import { Button } from '@/app/components/ui/button'
 import { Textarea } from '@/app/components/ui/textarea'
 import { createReview } from '@/app/lib/api'
 import { useAuth } from '@/app/lib/store/authContext'
-import { getDraftKeyForInlineComment } from '@/app/store/drafts-slice'
-import { useAppDispatch, useAppSelector } from '@/app/store/hooks'
-import { pendingReviewCommentsActions } from '@/app/store/pending-review-comments-slice'
 import {
   createOptimisticReview,
-  pendingReviewsActions
-} from '@/app/store/pending-reviews-slice'
+  useClearPendingReview,
+  usePendingReview,
+  useSetPendingReview
+} from '@/app/lib/queries/use-pending-review'
+import { getDraftKeyForInlineComment } from '@/app/store/drafts-slice'
+import { useAppDispatch } from '@/app/store/hooks'
+import { pendingReviewCommentsActions } from '@/app/store/pending-review-comments-slice'
 import { useDraft } from '@/app/store/use-draft'
 import type { PullRequest } from '@/types/pull-request'
 
@@ -35,9 +37,9 @@ export const InlineCommentInput = memo(function InlineCommentInput({
   const dispatch = useAppDispatch()
   const { user } = useAuth()
 
-  const pendingReview = useAppSelector(
-    (state) => state.pendingReviews[pullRequest.id]
-  )
+  const pendingReview = usePendingReview(pullRequest.id)
+  const setPendingReview = useSetPendingReview()
+  const clearPendingReview = useClearPendingReview()
 
   const linePosition = getLinePosition(line)
 
@@ -75,55 +77,43 @@ export const InlineCommentInput = memo(function InlineCommentInput({
     onCancel()
   }
 
-  const ensurePendingReview = async () => {
+  const ensurePendingReview = () => {
     if (pendingReview) {
-      return true
+      return Promise.resolve(true)
     }
 
     const optimisticReview = createOptimisticReview(pullRequest.id)
 
-    dispatch(
-      pendingReviewsActions.setReview({
-        pullRequestId: pullRequest.id,
-        review: optimisticReview
-      })
-    )
+    setPendingReview(pullRequest.id, optimisticReview)
 
-    try {
-      const review = await createReview({
-        owner: pullRequest.repositoryOwner,
-        pullNumber: pullRequest.number,
-        repo: pullRequest.repositoryName
-      })
-
-      dispatch(
-        pendingReviewsActions.setReview({
-          pullRequestId: pullRequest.id,
-          review: {
-            ...review,
-            pullRequestId: pullRequest.id
-          }
+    return createReview({
+      owner: pullRequest.repositoryOwner,
+      pullNumber: pullRequest.number,
+      repo: pullRequest.repositoryName
+    })
+      .then((review) => {
+        setPendingReview(pullRequest.id, {
+          ...review,
+          pullRequestId: pullRequest.id
         })
-      )
 
-      return true
-    } catch (error) {
-      console.error('Failed to start review:', error)
+        return true
+      })
+      .catch((error) => {
+        console.error('Failed to start review:', error)
 
-      dispatch(
-        pendingReviewsActions.clearReview({ pullRequestId: pullRequest.id })
-      )
+        clearPendingReview(pullRequest.id)
 
-      const message =
-        error instanceof Error ? error.message : 'Failed to start review'
+        const message =
+          error instanceof Error ? error.message : 'Failed to start review'
 
-      toast.error(message)
+        toast.error(message)
 
-      return false
-    }
+        return false
+      })
   }
 
-  const handleSubmit = async () => {
+  const handleSubmit = () => {
     const trimmedBody = localBody.trim()
 
     if (!trimmedBody) {
@@ -132,32 +122,32 @@ export const InlineCommentInput = memo(function InlineCommentInput({
 
     setIsSubmitting(true)
 
-    const reviewStarted = await ensurePendingReview()
+    ensurePendingReview().then((reviewStarted) => {
+      if (!reviewStarted) {
+        setIsSubmitting(false)
 
-    if (!reviewStarted) {
+        return
+      }
+
+      const commentId = `temp-${crypto.randomUUID()}`
+
+      dispatch(
+        pendingReviewCommentsActions.addComment({
+          pullRequestId: pullRequest.id,
+          comment: {
+            body: trimmedBody,
+            id: commentId,
+            line: linePosition.line,
+            path: filePath,
+            side: linePosition.side
+          }
+        })
+      )
+
+      clearDraft()
       setIsSubmitting(false)
-
-      return
-    }
-
-    const commentId = `temp-${crypto.randomUUID()}`
-
-    dispatch(
-      pendingReviewCommentsActions.addComment({
-        pullRequestId: pullRequest.id,
-        comment: {
-          body: trimmedBody,
-          id: commentId,
-          line: linePosition.line,
-          path: filePath,
-          side: linePosition.side
-        }
-      })
-    )
-
-    clearDraft()
-    setIsSubmitting(false)
-    onCancel()
+      onCancel()
+    })
   }
 
   const handleKeyDown = (event: React.KeyboardEvent<HTMLTextAreaElement>) => {

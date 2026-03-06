@@ -15,12 +15,11 @@ import {
   type ReactElement,
   type ReactNode
 } from 'react'
-import { shallowEqual } from 'react-redux'
 
 import { MarkdownBlock } from '@/app/components/MarkdownBlock'
 import { Badge } from '@/app/components/ui/badge'
 import { cn } from '@/app/lib/utils'
-import { useAppSelector } from '@/app/store/hooks'
+import { useChecks } from '@/app/lib/queries/use-checks'
 import type { Check } from '@/types/pull-request-details'
 import type { PullRequest } from '@/types/pull-request'
 
@@ -31,11 +30,7 @@ export const ChecksView = memo(function ChecksView({
 }: {
   pullRequest: PullRequest
 }): ReactElement {
-  const allChecks: Check[] = useAppSelector(
-    (state) =>
-      state.checks.items.filter((c) => c.pullRequestId === pullRequest.id),
-    shallowEqual
-  )
+  const allChecks: Check[] = useChecks(pullRequest.id)
 
   const { checks, checksGroupedBySuiteName, sortedSuiteNames } = useMemo(() => {
     // Deduplicate checks by name, keeping the most recent one.

@@ -2,13 +2,14 @@ import { MessageSquarePlus } from 'lucide-react'
 import { toast } from 'sonner'
 
 import { createReview } from '@/app/lib/api'
+import { getQueryClient } from '@/app/lib/query-client-accessor'
+import { queryKeys } from '@/app/lib/query-keys'
 import {
   createOptimisticReview,
-  pendingReviewsActions
-} from '@/app/store/pending-reviews-slice'
+  type PendingReview
+} from '@/app/lib/queries/use-pending-review'
 
 import { commandRegistry } from '../registry'
-import { getStore } from '../store-accessor'
 
 // Start review command
 commandRegistry.register({
@@ -18,58 +19,54 @@ commandRegistry.register({
   group: 'pull request',
   shortcut: { key: 'r' },
   isAvailable: (ctx) => {
-    const store = getStore()
+    if (ctx.view !== 'pr-detail' || !ctx.pullRequest) return false
 
-    if (ctx.view !== 'pr-detail' || !ctx.pullRequest || !store) return false
+    const queryClient = getQueryClient()
+    const pendingReview = queryClient.getQueryData<PendingReview | null>(
+      queryKeys.pendingReviews.byPullRequest(ctx.pullRequest.id)
+    )
 
-    // Check if there's already a pending review
-    const state = store.getState()
-
-    return !state.pendingReviews[ctx.pullRequest.id]
+    return !pendingReview
   },
-  execute: async (ctx) => {
-    const store = getStore()
+  execute: (ctx) => {
+    if (!ctx.pullRequest) return
 
-    if (!ctx.pullRequest || !store) return
-
+    const queryClient = getQueryClient()
     const pullRequest = ctx.pullRequest
     const optimisticReview = createOptimisticReview(pullRequest.id)
 
     // Optimistic update
-    store.dispatch(
-      pendingReviewsActions.setReview({
-        pullRequestId: pullRequest.id,
-        review: optimisticReview
-      })
+    queryClient.setQueryData(
+      queryKeys.pendingReviews.byPullRequest(pullRequest.id),
+      optimisticReview
     )
 
-    try {
-      const review = await createReview({
-        owner: pullRequest.repositoryOwner,
-        pullNumber: pullRequest.number,
-        repo: pullRequest.repositoryName
-      })
-
-      store.dispatch(
-        pendingReviewsActions.setReview({
-          pullRequestId: pullRequest.id,
-          review: {
+    createReview({
+      owner: pullRequest.repositoryOwner,
+      pullNumber: pullRequest.number,
+      repo: pullRequest.repositoryName
+    })
+      .then((review) => {
+        queryClient.setQueryData(
+          queryKeys.pendingReviews.byPullRequest(pullRequest.id),
+          {
             ...review,
             pullRequestId: pullRequest.id
           }
-        })
-      )
-    } catch (error) {
-      console.error('Failed to start review:', error)
+        )
+      })
+      .catch((error) => {
+        console.error('Failed to start review:', error)
 
-      store.dispatch(
-        pendingReviewsActions.clearReview({ pullRequestId: pullRequest.id })
-      )
+        queryClient.setQueryData(
+          queryKeys.pendingReviews.byPullRequest(pullRequest.id),
+          null
+        )
 
-      const message =
-        error instanceof Error ? error.message : 'Failed to start review'
+        const message =
+          error instanceof Error ? error.message : 'Failed to start review'
 
-      toast.error(message)
-    }
+        toast.error(message)
+      })
   }
 })

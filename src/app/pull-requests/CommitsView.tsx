@@ -1,11 +1,10 @@
 import { memo, useMemo, type ReactElement } from 'react'
-import { shallowEqual } from 'react-redux'
 
 import { CopyToClipboardButton } from '@/app/components/CopyToClipboardButton'
 import { TimeAgo } from '@/app/components/TimeAgo'
 import { UserAvatar } from '@/app/components/UserAvatar'
 import { formatNumber } from '@/app/lib/numbers'
-import { useAppSelector } from '@/app/store/hooks'
+import { useCommits } from '@/app/lib/queries/use-commits'
 import type { Commit } from '@/types/pull-request-details'
 import type { PullRequest } from '@/types/pull-request'
 
@@ -14,11 +13,7 @@ export const CommitsView = memo(function CommitsView({
 }: {
   pullRequest: PullRequest
 }): ReactElement {
-  const commits: Commit[] = useAppSelector(
-    (state) =>
-      state.commits.items.filter((c) => c.pullRequestId === pullRequest.id),
-    shallowEqual
-  )
+  const commits: Commit[] = useCommits(pullRequest.id)
 
   const groupedCommits = useMemo(() => groupCommitsByDay(commits), [commits])
 

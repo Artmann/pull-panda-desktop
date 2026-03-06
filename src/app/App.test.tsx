@@ -8,18 +8,13 @@ import { describe, it, expect, vi, beforeAll, beforeEach } from 'vitest'
 import type { PullRequest } from '@/types/pull-request'
 import type { ResourceUpdatedEvent } from '@/types/ipc-events'
 
-import checksReducer from '@/app/store/checks-slice'
-import commentsReducer from '@/app/store/comments-slice'
-import commitsReducer from '@/app/store/commits-slice'
 import draftsReducer from '@/app/store/drafts-slice'
-import modifiedFilesReducer from '@/app/store/modified-files-slice'
 import navigationReducer from '@/app/store/navigation-slice'
 import pendingReviewCommentsReducer from '@/app/store/pending-review-comments-slice'
-import pendingReviewsReducer from '@/app/store/pending-reviews-slice'
-import pullRequestsReducer from '@/app/store/pull-requests-slice'
-import reactionsReducer from '@/app/store/reactions-slice'
-import reviewsReducer from '@/app/store/reviews-slice'
 import tasksReducer from '@/app/store/tasks-slice'
+import { createQueryClient } from '@/app/lib/query-client'
+import { queryKeys } from '@/app/lib/query-keys'
+import type { Check, Commit, ModifiedFile } from '@/types/pull-request-details'
 
 import { App } from './App'
 
@@ -72,35 +67,15 @@ beforeAll(() => {
 function createTestStore() {
   return configureStore({
     reducer: {
-      checks: checksReducer,
-      comments: commentsReducer,
-      commits: commitsReducer,
       drafts: draftsReducer,
-      modifiedFiles: modifiedFilesReducer,
       navigation: navigationReducer,
       pendingReviewComments: pendingReviewCommentsReducer,
-      pendingReviews: pendingReviewsReducer,
-      pullRequests: pullRequestsReducer,
-      reactions: reactionsReducer,
-      reviews: reviewsReducer,
       tasks: tasksReducer
     },
     preloadedState: {
-      checks: { items: [] },
-      comments: { items: [] },
-      commits: { items: [] },
       drafts: {},
-      modifiedFiles: { items: [] },
       navigation: { activeTab: {} },
       pendingReviewComments: {},
-      pendingReviews: {},
-      pullRequests: {
-        items: [],
-        lastSyncedAt: null,
-        loading: false
-      },
-      reactions: { items: [] },
-      reviews: { items: [] },
       tasks: { items: [] }
     }
   })
@@ -177,11 +152,17 @@ describe('App', () => {
       })
     })
 
-    it('updates Redux store when ResourceUpdated events are received for individual slices', async () => {
+    it('updates query cache when ResourceUpdated events are received for individual slices', async () => {
       const store = createTestStore()
+      const queryClient = createQueryClient()
 
       await act(async () => {
-        render(<App store={store} />)
+        render(
+          <App
+            queryClient={queryClient}
+            store={store}
+          />
+        )
       })
 
       // Verify the callback was registered
@@ -254,19 +235,21 @@ describe('App', () => {
         })
       })
 
-      // Verify Redux was updated
+      // Verify query cache was updated
       await waitFor(() => {
-        const state = store.getState()
+        const checks = queryClient.getQueryData<Check[]>(
+          queryKeys.checks.byPullRequest('pr-123')
+        )
+        const commits = queryClient.getQueryData<Commit[]>(
+          queryKeys.commits.byPullRequest('pr-123')
+        )
+        const files = queryClient.getQueryData<ModifiedFile[]>(
+          queryKeys.modifiedFiles.byPullRequest('pr-123')
+        )
 
-        expect(
-          state.checks.items.filter((c) => c.pullRequestId === 'pr-123')
-        ).toHaveLength(1)
-        expect(
-          state.commits.items.filter((c) => c.pullRequestId === 'pr-123')
-        ).toHaveLength(1)
-        expect(
-          state.modifiedFiles.items.filter((f) => f.pullRequestId === 'pr-123')
-        ).toHaveLength(1)
+        expect(checks).toHaveLength(1)
+        expect(commits).toHaveLength(1)
+        expect(files).toHaveLength(1)
       })
     })
 
@@ -279,9 +262,15 @@ describe('App', () => {
       })
 
       const store = createTestStore()
+      const queryClient = createQueryClient()
 
       await act(async () => {
-        render(<App store={store} />)
+        render(
+          <App
+            queryClient={queryClient}
+            store={store}
+          />
+        )
       })
 
       await act(async () => {
@@ -293,16 +282,25 @@ describe('App', () => {
       })
 
       await waitFor(() => {
-        const state = store.getState()
-        expect(state.pullRequests.items).toContainEqual(mockPullRequest)
+        const pullRequests = queryClient.getQueryData<PullRequest[]>(
+          queryKeys.pullRequests.all
+        )
+
+        expect(pullRequests).toContainEqual(mockPullRequest)
       })
     })
 
     it('does not upsert the pull request when no pull-request event is sent', async () => {
       const store = createTestStore()
+      const queryClient = createQueryClient()
 
       await act(async () => {
-        render(<App store={store} />)
+        render(
+          <App
+            queryClient={queryClient}
+            store={store}
+          />
+        )
       })
 
       // Only send a checks event, not a pull-request event
@@ -315,35 +313,49 @@ describe('App', () => {
       })
 
       await waitFor(() => {
-        const state = store.getState()
-        expect(state.pullRequests.items).toHaveLength(0)
+        const pullRequests =
+          queryClient.getQueryData<PullRequest[]>(queryKeys.pullRequests.all) ??
+          []
+
+        expect(pullRequests).toHaveLength(0)
       })
     })
 
-    it('keeps slices empty when no events are received', async () => {
+    it('keeps cache empty when no events are received', async () => {
       const store = createTestStore()
+      const queryClient = createQueryClient()
 
       await act(async () => {
-        render(<App store={store} />)
+        render(
+          <App
+            queryClient={queryClient}
+            store={store}
+          />
+        )
       })
 
       // Wait a bit to ensure any async updates would have happened
       await new Promise((resolve) => setTimeout(resolve, 50))
 
-      // Verify Redux was not updated
-      const state = store.getState()
+      // Verify query cache has no data for unknown PR
+      const checks = queryClient.getQueryData<Check[]>(
+        queryKeys.checks.byPullRequest('pr-unknown')
+      )
 
-      expect(state.checks.items).toHaveLength(0)
-      expect(state.comments.items).toHaveLength(0)
-      expect(state.commits.items).toHaveLength(0)
-      expect(state.modifiedFiles.items).toHaveLength(0)
+      expect(checks).toBeUndefined()
     })
 
     it('handles events with empty data arrays gracefully', async () => {
       const store = createTestStore()
+      const queryClient = createQueryClient()
 
       await act(async () => {
-        render(<App store={store} />)
+        render(
+          <App
+            queryClient={queryClient}
+            store={store}
+          />
+        )
       })
 
       // Simulate receiving events with empty data
@@ -355,9 +367,11 @@ describe('App', () => {
         })
       })
 
-      const state = store.getState()
+      const checks = queryClient.getQueryData<Check[]>(
+        queryKeys.checks.byPullRequest('pr-123')
+      )
 
-      expect(state.checks.items).toHaveLength(0)
+      expect(checks).toHaveLength(0)
     })
   })
 })

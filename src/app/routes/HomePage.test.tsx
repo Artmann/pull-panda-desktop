@@ -2,14 +2,15 @@
  * @vitest-environment jsdom
  */
 import { render, screen } from '@testing-library/react'
-import { configureStore } from '@reduxjs/toolkit'
-import { Provider } from 'react-redux'
 import { MemoryRouter } from 'react-router'
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 
 import type { PullRequest } from '@/types/pull-request'
 
-import pullRequestsReducer from '@/app/store/pull-requests-slice'
+import {
+  createTestQueryClient,
+  QueryWrapper
+} from '@/app/lib/test-query-wrapper'
 
 import { HomePage } from './HomePage'
 
@@ -55,27 +56,16 @@ function createMockPullRequest(
   }
 }
 
-function createTestStore(pullRequests: PullRequest[] = []) {
-  return configureStore({
-    reducer: {
-      pullRequests: pullRequestsReducer
-    },
-    preloadedState: {
-      pullRequests: {
-        items: pullRequests
-      }
-    }
-  })
-}
-
 function renderWithProviders(
   ui: React.ReactElement,
-  { store = createTestStore() } = {}
+  { pullRequests = [] as PullRequest[] } = {}
 ) {
+  const queryClient = createTestQueryClient({ pullRequests })
+
   return render(
-    <Provider store={store}>
+    <QueryWrapper client={queryClient}>
       <MemoryRouter>{ui}</MemoryRouter>
-    </Provider>
+    </QueryWrapper>
   )
 }
 
@@ -244,9 +234,8 @@ describe('HomePage', () => {
           title: 'Review me'
         })
       ]
-      const store = createTestStore(pullRequests)
 
-      renderWithProviders(<HomePage />, { store })
+      renderWithProviders(<HomePage />, { pullRequests })
 
       expect(screen.getByText('Needs Your Attention')).toBeInTheDocument()
       expect(screen.getByText('Review me')).toBeInTheDocument()
@@ -258,9 +247,8 @@ describe('HomePage', () => {
       const pullRequests = [
         createMockPullRequest({ id: 'pr-1', isAuthor: true, title: 'My PR' })
       ]
-      const store = createTestStore(pullRequests)
 
-      renderWithProviders(<HomePage />, { store })
+      renderWithProviders(<HomePage />, { pullRequests })
 
       expect(screen.getByText('Your Pull Requests')).toBeInTheDocument()
       expect(screen.getByText('My PR')).toBeInTheDocument()
@@ -274,9 +262,8 @@ describe('HomePage', () => {
         createMockPullRequest({ id: 'pr-2', isAuthor: false }),
         createMockPullRequest({ id: 'pr-3', isAuthor: true })
       ]
-      const store = createTestStore(pullRequests)
 
-      renderWithProviders(<HomePage />, { store })
+      renderWithProviders(<HomePage />, { pullRequests })
 
       const badges = screen.getAllByText(/^[0-9]+$/)
       const badgeValues = badges.map((badge) => badge.textContent)
@@ -301,9 +288,8 @@ describe('HomePage', () => {
           title: 'Merged PR'
         })
       ]
-      const store = createTestStore(pullRequests)
 
-      renderWithProviders(<HomePage />, { store })
+      renderWithProviders(<HomePage />, { pullRequests })
 
       expect(screen.getByText('Open PR')).toBeInTheDocument()
       expect(screen.queryByText('Closed PR')).not.toBeInTheDocument()
@@ -341,9 +327,8 @@ describe('HomePage', () => {
           updatedAt: '2024-01-12T00:00:00Z'
         })
       ]
-      const store = createTestStore(pullRequests)
 
-      renderWithProviders(<HomePage />, { store })
+      renderWithProviders(<HomePage />, { pullRequests })
 
       const rows = screen.getAllByRole('row')
       const titles = rows

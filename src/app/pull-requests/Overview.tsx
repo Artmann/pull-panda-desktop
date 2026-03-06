@@ -1,5 +1,4 @@
 import { memo, useMemo, useState, type ReactElement } from 'react'
-import { shallowEqual } from 'react-redux'
 import { toast } from 'sonner'
 
 import type { PullRequest } from '@/types/pull-request'
@@ -9,8 +8,13 @@ import { MarkdownBlock } from '@/app/components/MarkdownBlock'
 import { SectionHeader } from '@/app/components/SectionHeader'
 import { Separator } from '@/app/components/ui/separator'
 import { updatePullRequest } from '@/app/lib/api'
-import { useAppDispatch, useAppSelector } from '@/app/store/hooks'
-import { pullRequestsActions } from '@/app/store/pull-requests-slice'
+import { useChecks } from '@/app/lib/queries/use-checks'
+import { useComments } from '@/app/lib/queries/use-comments'
+import {
+  clearPullRequestInFlight,
+  markPullRequestInFlight,
+  useUpsertPullRequest
+} from '@/app/lib/queries/use-pull-requests'
 
 import { Activity } from './components/Activity'
 import { CheckList } from './components/CheckList'
@@ -27,17 +31,8 @@ interface OverviewProps {
 export const Overview = memo(function Overview({
   pullRequest
 }: OverviewProps): ReactElement {
-  const comments: Comment[] = useAppSelector(
-    (state) =>
-      state.comments.items.filter((c) => c.pullRequestId === pullRequest.id),
-    shallowEqual
-  )
-
-  const checks: Check[] = useAppSelector(
-    (state) =>
-      state.checks.items.filter((c) => c.pullRequestId === pullRequest.id),
-    shallowEqual
-  )
+  const comments: Comment[] = useComments(pullRequest.id)
+  const checks: Check[] = useChecks(pullRequest.id)
 
   const issues = useMemo(
     () =>
@@ -95,8 +90,16 @@ function InlineEditableBody({
 }): ReactElement {
   const [isEditing, setIsEditing] = useState(false)
   const [draft, setDraft] = useState('')
-  const dispatch = useAppDispatch()
+  const [optimisticBody, setOptimisticBody] = useState<string | null>(null)
+  const upsertPullRequest = useUpsertPullRequest()
   const isMerged = pullRequest.state === 'MERGED'
+
+  // Clear local optimistic body once the prop catches up
+  if (optimisticBody !== null && pullRequest.body === optimisticBody) {
+    setOptimisticBody(null)
+  }
+
+  const displayBody = optimisticBody ?? pullRequest.body
 
   const handleStartEdit = () => {
     if (isMerged) return
@@ -104,7 +107,7 @@ function InlineEditableBody({
     setIsEditing(true)
   }
 
-  const handleSave = async () => {
+  const handleSave = () => {
     if (draft === (pullRequest.body ?? '')) {
       setIsEditing(false)
       return
@@ -115,26 +118,33 @@ function InlineEditableBody({
     const originalPr = pullRequest
     const newBody = draft
 
-    dispatch(pullRequestsActions.upsertItem({ ...pullRequest, body: newBody }))
+    setOptimisticBody(newBody)
+    markPullRequestInFlight(pullRequest.id)
+    upsertPullRequest({ ...pullRequest, body: newBody })
 
-    try {
-      const updated = await updatePullRequest({
-        body: newBody,
-        owner: pullRequest.repositoryOwner,
-        pullNumber: pullRequest.number,
-        pullRequestId: pullRequest.id,
-        repo: pullRequest.repositoryName
+    updatePullRequest({
+      body: newBody,
+      owner: pullRequest.repositoryOwner,
+      pullNumber: pullRequest.number,
+      pullRequestId: pullRequest.id,
+      repo: pullRequest.repositoryName
+    })
+      .then((updated) => {
+        clearPullRequestInFlight(pullRequest.id)
+        upsertPullRequest(updated)
       })
+      .catch((error) => {
+        clearPullRequestInFlight(pullRequest.id)
+        setOptimisticBody(null)
+        upsertPullRequest(originalPr)
 
-      dispatch(pullRequestsActions.upsertItem(updated))
-    } catch (error) {
-      dispatch(pullRequestsActions.upsertItem(originalPr))
+        const message =
+          error instanceof Error
+            ? error.message
+            : 'Failed to update description'
 
-      const message =
-        error instanceof Error ? error.message : 'Failed to update description'
-
-      toast.error(message)
-    }
+        toast.error(message)
+      })
   }
 
   const handleCancel = () => {
@@ -160,7 +170,7 @@ function InlineEditableBody({
     )
   }
 
-  if (pullRequest.body) {
+  if (displayBody) {
     return (
       <div
         className={!isMerged ? 'cursor-text' : undefined}
@@ -168,7 +178,7 @@ function InlineEditableBody({
       >
         <MarkdownBlock
           className="pull-request-description prose-sm *:first:mt-0!"
-          content={pullRequest.body}
+          content={displayBody}
         />
       </div>
     )

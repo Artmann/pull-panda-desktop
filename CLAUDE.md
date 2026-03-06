@@ -9,13 +9,14 @@ Vite.
 - Before using `useEffect`, review
   https://react.dev/learn/you-might-not-need-an-effect.
 - When creating or updating resources:
-  1. Update the Redux state optimistically (synchronously, before any API call).
+  1. Update the React Query cache optimistically (synchronously, before any API
+     call).
   2. Fire the API request — do NOT use `async/await` in event handlers (e.g.
      `onClick`, `onSelect`). Use `.then().catch()` so the handler returns
      synchronously. This prevents UI frameworks (e.g. Radix UI) from delaying
      their own close/dismiss behaviour while waiting for a Promise to resolve.
-  3. On success: update the Redux store with the data from the API response.
-  4. On error: rollback the Redux changes and show an error toast with a
+  3. On success: the cache is updated via IPC `ResourceUpdated` events.
+  4. On error: rollback the cache changes and show an error toast with a
      descriptive, helpful error message.
 
 ## Commands

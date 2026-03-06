@@ -8,23 +8,19 @@ import { MemoryRouter, Route, Routes } from 'react-router'
 import { describe, it, expect, vi, beforeAll, beforeEach } from 'vitest'
 
 import type { PullRequest } from '@/types/pull-request'
-import type { Check, Commit, ModifiedFile } from '@/types/pull-request-details'
+import type { Check, ModifiedFile } from '@/types/pull-request-details'
 
-import checksReducer from '@/app/store/checks-slice'
-import commentsReducer from '@/app/store/comments-slice'
-import commitsReducer from '@/app/store/commits-slice'
 import draftsReducer from '@/app/store/drafts-slice'
-import modifiedFilesReducer from '@/app/store/modified-files-slice'
 import navigationReducer from '@/app/store/navigation-slice'
 import pendingReviewCommentsReducer from '@/app/store/pending-review-comments-slice'
-import pendingReviewsReducer from '@/app/store/pending-reviews-slice'
-import pullRequestsReducer from '@/app/store/pull-requests-slice'
-import reactionsReducer from '@/app/store/reactions-slice'
-import reviewsReducer from '@/app/store/reviews-slice'
 import tasksReducer from '@/app/store/tasks-slice'
 
 import { AuthProvider } from '@/app/lib/store/authContext'
 import { CodeThemeProvider } from '@/app/lib/store/codeThemeContext'
+import {
+  createTestQueryClient,
+  QueryWrapper
+} from '@/app/lib/test-query-wrapper'
 
 import { PullRequestPage } from './PullRequestPage'
 
@@ -118,44 +114,17 @@ function createMockPullRequest(
   }
 }
 
-function createTestStore(
-  options: {
-    checks?: Check[]
-    commits?: Commit[]
-    modifiedFiles?: ModifiedFile[]
-    pullRequests?: PullRequest[]
-  } = {}
-) {
+function createClientStore() {
   return configureStore({
     reducer: {
-      checks: checksReducer,
-      comments: commentsReducer,
-      commits: commitsReducer,
       drafts: draftsReducer,
-      modifiedFiles: modifiedFilesReducer,
       navigation: navigationReducer,
       pendingReviewComments: pendingReviewCommentsReducer,
-      pendingReviews: pendingReviewsReducer,
-      pullRequests: pullRequestsReducer,
-      reactions: reactionsReducer,
-      reviews: reviewsReducer,
       tasks: tasksReducer
     },
     preloadedState: {
-      checks: { items: options.checks ?? [] },
-      comments: { items: [] },
-      commits: { items: options.commits ?? [] },
       drafts: {},
-      modifiedFiles: { items: options.modifiedFiles ?? [] },
       pendingReviewComments: {},
-      pendingReviews: {},
-      pullRequests: {
-        items: options.pullRequests ?? [],
-        lastSyncedAt: null,
-        loading: false
-      },
-      reactions: { items: [] },
-      reviews: { items: [] },
       tasks: { items: [] }
     }
   })
@@ -163,173 +132,153 @@ function createTestStore(
 
 function renderWithProviders(
   pullRequestId: string,
-  { store = createTestStore() } = {}
+  options: {
+    checks?: Check[]
+    modifiedFiles?: ModifiedFile[]
+    pullRequests?: PullRequest[]
+  } = {}
 ) {
+  const queryClient = createTestQueryClient({
+    checks: options.checks,
+    modifiedFiles: options.modifiedFiles,
+    pullRequests: options.pullRequests
+  })
+  const store = createClientStore()
+
   return render(
-    <Provider store={store}>
-      <CodeThemeProvider>
-        <AuthProvider>
-          <MemoryRouter initialEntries={[`/pr/${pullRequestId}`]}>
-            <Routes>
-              <Route
-                element={<PullRequestPage />}
-                path="/pr/:id"
-              />
-            </Routes>
-          </MemoryRouter>
-        </AuthProvider>
-      </CodeThemeProvider>
-    </Provider>
+    <QueryWrapper client={queryClient}>
+      <Provider store={store}>
+        <CodeThemeProvider>
+          <AuthProvider>
+            <MemoryRouter initialEntries={[`/pr/${pullRequestId}`]}>
+              <Routes>
+                <Route
+                  element={<PullRequestPage />}
+                  path="/pr/:id"
+                />
+              </Routes>
+            </MemoryRouter>
+          </AuthProvider>
+        </CodeThemeProvider>
+      </Provider>
+    </QueryWrapper>
   )
 }
 
 describe('PullRequestPage', () => {
   describe('tab item counts', () => {
-    it('displays item counts for commits, checks, and files tabs', async () => {
+    it('displays item counts for checks and files tabs', async () => {
       const pullRequest = createMockPullRequest({ id: 'pr-1' })
 
-      const store = createTestStore({
-        pullRequests: [pullRequest],
-        checks: [
-          {
-            id: 'c1',
-            gitHubId: 'c1',
-            pullRequestId: 'pr-1',
-            name: 'build',
-            state: 'completed',
-            conclusion: 'success',
-            commitSha: 'abc',
-            suiteName: 'CI',
-            durationInSeconds: 60,
-            detailsUrl: null,
-            message: null,
-            url: null,
-            gitHubCreatedAt: null,
-            gitHubUpdatedAt: null,
-            syncedAt: '2024-01-01T00:00:00Z'
-          },
-          {
-            id: 'c2',
-            gitHubId: 'c2',
-            pullRequestId: 'pr-1',
-            name: 'test',
-            state: 'completed',
-            conclusion: 'success',
-            commitSha: 'abc',
-            suiteName: 'CI',
-            durationInSeconds: 120,
-            detailsUrl: null,
-            message: null,
-            url: null,
-            gitHubCreatedAt: null,
-            gitHubUpdatedAt: null,
-            syncedAt: '2024-01-01T00:00:00Z'
-          },
-          {
-            id: 'c3',
-            gitHubId: 'c3',
-            pullRequestId: 'pr-1',
-            name: 'lint',
-            state: 'completed',
-            conclusion: 'success',
-            commitSha: 'abc',
-            suiteName: 'CI',
-            durationInSeconds: 30,
-            detailsUrl: null,
-            message: null,
-            url: null,
-            gitHubCreatedAt: null,
-            gitHubUpdatedAt: null,
-            syncedAt: '2024-01-01T00:00:00Z'
-          }
-        ],
-        commits: [
-          {
-            id: 'commit-1',
-            gitHubId: 'sha1',
-            pullRequestId: 'pr-1',
-            hash: 'abc1234567890',
-            message: 'First commit',
-            url: null,
-            authorLogin: 'user',
-            authorAvatarUrl: null,
-            linesAdded: null,
-            linesRemoved: null,
-            gitHubCreatedAt: '2024-01-01T00:00:00Z',
-            syncedAt: '2024-01-01T00:00:00Z'
-          },
-          {
-            id: 'commit-2',
-            gitHubId: 'sha2',
-            pullRequestId: 'pr-1',
-            hash: 'def4567890123',
-            message: 'Second commit',
-            url: null,
-            authorLogin: 'user',
-            authorAvatarUrl: null,
-            linesAdded: null,
-            linesRemoved: null,
-            gitHubCreatedAt: '2024-01-01T00:00:00Z',
-            syncedAt: '2024-01-01T00:00:00Z'
-          }
-        ],
-        modifiedFiles: [
-          {
-            id: 'f1',
-            pullRequestId: 'pr-1',
-            filename: 'index.ts',
-            filePath: 'src/index.ts',
-            status: 'modified',
-            additions: 10,
-            deletions: 5,
-            changes: 15,
-            diffHunk: null,
-            syncedAt: '2024-01-01T00:00:00Z'
-          },
-          {
-            id: 'f2',
-            pullRequestId: 'pr-1',
-            filename: 'utils.ts',
-            filePath: 'src/utils.ts',
-            status: 'added',
-            additions: 20,
-            deletions: 0,
-            changes: 20,
-            diffHunk: null,
-            syncedAt: '2024-01-01T00:00:00Z'
-          },
-          {
-            id: 'f3',
-            pullRequestId: 'pr-1',
-            filename: 'old.ts',
-            filePath: 'src/old.ts',
-            status: 'removed',
-            additions: 0,
-            deletions: 15,
-            changes: 15,
-            diffHunk: null,
-            syncedAt: '2024-01-01T00:00:00Z'
-          },
-          {
-            id: 'f4',
-            pullRequestId: 'pr-1',
-            filename: 'README.md',
-            filePath: 'README.md',
-            status: 'modified',
-            additions: 5,
-            deletions: 2,
-            changes: 7,
-            diffHunk: null,
-            syncedAt: '2024-01-01T00:00:00Z'
-          }
-        ]
-      })
-
       await act(async () => {
-        renderWithProviders('pr-1', { store })
+        renderWithProviders('pr-1', {
+          pullRequests: [pullRequest],
+          checks: [
+            {
+              id: 'c1',
+              gitHubId: 'c1',
+              pullRequestId: 'pr-1',
+              name: 'build',
+              state: 'completed',
+              conclusion: 'success',
+              commitSha: 'abc',
+              suiteName: 'CI',
+              durationInSeconds: 60,
+              detailsUrl: null,
+              message: null,
+              url: null,
+              gitHubCreatedAt: null,
+              gitHubUpdatedAt: null,
+              syncedAt: '2024-01-01T00:00:00Z'
+            },
+            {
+              id: 'c2',
+              gitHubId: 'c2',
+              pullRequestId: 'pr-1',
+              name: 'test',
+              state: 'completed',
+              conclusion: 'success',
+              commitSha: 'abc',
+              suiteName: 'CI',
+              durationInSeconds: 120,
+              detailsUrl: null,
+              message: null,
+              url: null,
+              gitHubCreatedAt: null,
+              gitHubUpdatedAt: null,
+              syncedAt: '2024-01-01T00:00:00Z'
+            },
+            {
+              id: 'c3',
+              gitHubId: 'c3',
+              pullRequestId: 'pr-1',
+              name: 'lint',
+              state: 'completed',
+              conclusion: 'success',
+              commitSha: 'abc',
+              suiteName: 'CI',
+              durationInSeconds: 30,
+              detailsUrl: null,
+              message: null,
+              url: null,
+              gitHubCreatedAt: null,
+              gitHubUpdatedAt: null,
+              syncedAt: '2024-01-01T00:00:00Z'
+            }
+          ],
+          modifiedFiles: [
+            {
+              id: 'f1',
+              pullRequestId: 'pr-1',
+              filename: 'index.ts',
+              filePath: 'src/index.ts',
+              status: 'modified',
+              additions: 10,
+              deletions: 5,
+              changes: 15,
+              diffHunk: null,
+              syncedAt: '2024-01-01T00:00:00Z'
+            },
+            {
+              id: 'f2',
+              pullRequestId: 'pr-1',
+              filename: 'utils.ts',
+              filePath: 'src/utils.ts',
+              status: 'added',
+              additions: 20,
+              deletions: 0,
+              changes: 20,
+              diffHunk: null,
+              syncedAt: '2024-01-01T00:00:00Z'
+            },
+            {
+              id: 'f3',
+              pullRequestId: 'pr-1',
+              filename: 'old.ts',
+              filePath: 'src/old.ts',
+              status: 'removed',
+              additions: 0,
+              deletions: 15,
+              changes: 15,
+              diffHunk: null,
+              syncedAt: '2024-01-01T00:00:00Z'
+            },
+            {
+              id: 'f4',
+              pullRequestId: 'pr-1',
+              filename: 'README.md',
+              filePath: 'README.md',
+              status: 'modified',
+              additions: 5,
+              deletions: 2,
+              changes: 7,
+              diffHunk: null,
+              syncedAt: '2024-01-01T00:00:00Z'
+            }
+          ]
+        })
       })
 
-      expect(screen.getByText('2')).toBeInTheDocument()
       expect(screen.getByText('3')).toBeInTheDocument()
       expect(screen.getByText('4')).toBeInTheDocument()
     })
@@ -337,28 +286,24 @@ describe('PullRequestPage', () => {
     it('displays zero counts when no details are loaded', async () => {
       const pullRequest = createMockPullRequest({ id: 'pr-1' })
 
-      const store = createTestStore({
-        pullRequests: [pullRequest]
-      })
-
       await act(async () => {
-        renderWithProviders('pr-1', { store })
+        renderWithProviders('pr-1', {
+          pullRequests: [pullRequest]
+        })
       })
 
       const zeroCounts = screen.getAllByText('0')
 
-      expect(zeroCounts).toHaveLength(3)
+      expect(zeroCounts).toHaveLength(2)
     })
 
     it('does not display count badge for Overview tab', async () => {
       const pullRequest = createMockPullRequest({ id: 'pr-1' })
 
-      const store = createTestStore({
-        pullRequests: [pullRequest]
-      })
-
       await act(async () => {
-        renderWithProviders('pr-1', { store })
+        renderWithProviders('pr-1', {
+          pullRequests: [pullRequest]
+        })
       })
 
       const overviewTab = screen.getByRole('tab', { name: /overview/i })

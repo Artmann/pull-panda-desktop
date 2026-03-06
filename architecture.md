@@ -9,7 +9,10 @@ The app uses a three-layer architecture:
 
 1. **Main process** (Node.js) — database, syncing, GitHub API calls.
 2. **Preload bridge** — secure IPC gateway via Electron's `contextBridge`.
-3. **Renderer process** (React + Redux) — UI and local state management.
+3. **Renderer process** (React + TanStack Query + Redux) — UI and state
+   management. Server state (PRs, comments, checks, etc.) lives in TanStack
+   Query's cache. Client-only state (drafts, pending review comments) lives in
+   Redux.
 
 Two communication channels connect the renderer to the main process:
 
@@ -22,7 +25,7 @@ Two communication channels connect the renderer to the main process:
 
 ---
 
-## 1. Reads: GitHub → Syncer → Database → Redux → UI
+## 1. Reads: GitHub → Syncer → Database → Query Cache → UI
 
 ### Startup sequence
 
@@ -72,8 +75,11 @@ arrays contain all items across all PRs, each tagged with a `pullRequestId`.
 
 1. Calls `window.electron.getBootstrapData()` via IPC.
 2. Filters PRs to only "ready" ones (those with `detailsSyncedAt` set).
-3. Creates the Redux store with preloaded state, initializing each flat slice
-   from the corresponding bootstrap array.
+3. Creates a TanStack Query `QueryClient` and seeds the cache from the bootstrap
+   data using `seedQueryCache()`. Each resource is stored under
+   per-pullRequestId query keys (e.g., `['checks', pullRequestId]`).
+4. Creates the Redux store for client-only state (drafts, pending review
+   comments).
 
 ### Background syncer
 
@@ -116,9 +122,11 @@ type ResourceUpdatedEvent =
   | { type: 'reviews'; pullRequestId: string; data: Review[] }
 ```
 
-The handler switches on `event.type` and dispatches directly to the matching
-Redux slice action (e.g., `checksActions.setForPullRequest`). No follow-up IPC
-fetches are needed — the data arrives in the event payload.
+The handler switches on `event.type` and calls `queryClient.setQueryData()` to
+update the corresponding query cache entry (e.g.,
+`queryKeys.checks.byPullRequest(pullRequestId)`). For comments, optimistic
+entries with `temp-` prefixed IDs are preserved during the merge. No follow-up
+IPC fetches are needed — the data arrives in the event payload.
 
 **`onSyncComplete`** — fired after a full sync of all PRs. This is a simple
 signal with no data payload. Used only for UI indicators (e.g., "last synced at"
@@ -211,18 +219,20 @@ and caches it. All mutations and data reads go through this client as standard
 
 All mutations follow the pattern from CLAUDE.md:
 
-1. **Optimistic update**: Dispatch a Redux action with a temporary entity
-   (prefixed `temp-`).
-2. **API request**: HTTP call to the local API server.
+1. **Optimistic update**: Update the React Query cache with a temporary entity
+   (prefixed `temp-`) via `queryClient.setQueryData()`.
+2. **API request**: HTTP call to the local API server (using `.then().catch()`,
+   not `async/await`).
 3. **On success**: The `ResourceUpdated` IPC events arrive with real data from
-   SQLite, replacing optimistic entries in the flat slices.
-4. **On error**: Rollback the Redux change and show an error toast.
+   SQLite, replacing optimistic entries in the cache.
+4. **On error**: Rollback the cache change and show an error toast.
 
 ### Example: posting a comment
 
 ```
 1. createOptimisticComment({ body, pullRequestId, userLogin, ... })
-   → dispatch(commentsActions.addComment)  # temp-UUID appears in UI instantly
+   → addComment(pullRequestId, comment)    # temp-UUID appears in UI instantly
+     (updates query cache via queryClient.setQueryData)
 
 2. fetch('/api/comments', { method: 'POST', body: { ... } })
    → Hono handler → octokit.rest.issues.createComment()
@@ -231,17 +241,18 @@ All mutations follow the pattern from CLAUDE.md:
 
 3a. Success:
    → ResourceUpdated events arrive with data payloads
-   → commentsActions.setForPullRequest replaces temp- comments with real ones
+   → queryClient.setQueryData merges real comments, preserving temp- entries
 
 3b. Error:
-   → dispatch(commentsActions.removeComment({ commentId: tempId }))
+   → removeComment(pullRequestId, tempId)  # reverts cache
    → toast.error('Failed to post comment')
 ```
 
 ### Example: submitting a review
 
 ```
-1. dispatch(pendingReviewsActions.setReview({ pullRequestId, review: optimistic }))
+1. setPendingReview(pullRequestId, optimisticReview)
+   (updates query cache via queryClient.setQueryData)
 
 2. POST /api/reviews/{id}/submit { event: 'APPROVE', body, comments }
    → If comments: delete old review, create new with inline comments
@@ -254,7 +265,7 @@ All mutations follow the pattern from CLAUDE.md:
    → Review appears as APPROVED, pending review cleared
 
 3b. Error:
-   → dispatch(pendingReviewsActions.clearReview({ pullRequestId }))
+   → clearPendingReview(pullRequestId)  # reverts cache
    → toast.error(message)
 ```
 
@@ -262,12 +273,13 @@ All mutations follow the pattern from CLAUDE.md:
 
 ## 3. Storage layers
 
-| Layer                             | What it stores                                                | Lifetime                 |
-| --------------------------------- | ------------------------------------------------------------- | ------------------------ |
-| SQLite (`src/database/schema.ts`) | All PR data, reviews, comments, checks, commits, files        | Persistent (disk)        |
-| Redux store                       | Active session state derived from SQLite + optimistic updates | App session              |
-| localStorage                      | Draft comments, pending review comment edits                  | Persistent (browser)     |
-| Electron safeStorage              | GitHub OAuth token (encrypted)                                | Persistent (OS keychain) |
+| Layer                             | What it stores                                                  | Lifetime                 |
+| --------------------------------- | --------------------------------------------------------------- | ------------------------ |
+| SQLite (`src/database/schema.ts`) | All PR data, reviews, comments, checks, commits, files          | Persistent (disk)        |
+| TanStack Query cache              | Server state derived from SQLite + optimistic updates           | App session              |
+| Redux store                       | Client-only state (drafts, pending review comments, nav, tasks) | App session              |
+| localStorage                      | Draft comments, pending review comment edits                    | Persistent (browser)     |
+| Electron safeStorage              | GitHub OAuth token (encrypted)                                  | Persistent (OS keychain) |
 
 ### Database tables
 
@@ -285,28 +297,36 @@ All mutations follow the pattern from CLAUDE.md:
 All tables use soft deletes (`deletedAt` column) and track `syncedAt`
 timestamps.
 
-### Redux slices
+### TanStack Query cache
 
-| Slice                   | Shape                                    | Source                             |
-| ----------------------- | ---------------------------------------- | ---------------------------------- |
-| `checks`                | `{ items: Check[] }`                     | Bootstrap + ResourceUpdated events |
-| `comments`              | `{ items: Comment[] }`                   | Bootstrap + ResourceUpdated events |
-| `commits`               | `{ items: Commit[] }`                    | Bootstrap + ResourceUpdated events |
-| `modifiedFiles`         | `{ items: ModifiedFile[] }`              | Bootstrap + ResourceUpdated events |
-| `reactions`             | `{ items: CommentReaction[] }`           | Bootstrap + ResourceUpdated events |
-| `reviews`               | `{ items: Review[] }`                    | Bootstrap + ResourceUpdated events |
-| `pullRequests`          | `{ items: PullRequest[] }`               | Bootstrap + ResourceUpdated events |
-| `pendingReviews`        | `Record<string, PendingReview>`          | Bootstrap + ResourceUpdated events |
-| `drafts`                | `Record<string, string>`                 | localStorage                       |
-| `pendingReviewComments` | `Record<string, PendingReviewComment[]>` | localStorage                       |
-| `navigation`            | Route state                              | Local                              |
-| `tasks`                 | Background task tracking                 | IPC TaskUpdate events              |
+Server state is stored in TanStack Query's cache, seeded at startup from
+bootstrap data and updated via IPC `ResourceUpdated` events. Query keys are
+defined in `src/app/lib/query-keys.ts`.
 
-Each flat resource slice stores items across all PRs in a single `items` array.
-Items are tagged with `pullRequestId` and filtered at the component level using
-`useAppSelector`. The `setForPullRequest` reducer replaces all items for a given
-PR while preserving items from other PRs (and any optimistic entries with
-`temp-` prefixed IDs in the comments slice).
+| Query key                           | Data type               | Hooks                                     |
+| ----------------------------------- | ----------------------- | ----------------------------------------- |
+| `['pull-requests']`                 | `PullRequest[]`         | `usePullRequests()`, `usePullRequest(id)` |
+| `['checks', pullRequestId]`         | `Check[]`               | `useChecks(pullRequestId)`                |
+| `['comments', pullRequestId]`       | `Comment[]`             | `useComments(pullRequestId)`              |
+| `['commits', pullRequestId]`        | `Commit[]`              | `useCommits(pullRequestId)`               |
+| `['modified-files', pullRequestId]` | `ModifiedFile[]`        | `useModifiedFiles(pullRequestId)`         |
+| `['reactions', pullRequestId]`      | `CommentReaction[]`     | `useReactions(pullRequestId)`             |
+| `['reviews', pullRequestId]`        | `Review[]`              | `useReviews(pullRequestId)`               |
+| `['pending-review', pullRequestId]` | `PendingReview \| null` | `usePendingReview(pullRequestId)`         |
+
+All queries use `staleTime: Infinity` and no automatic refetching since data is
+push-based (IPC events call `queryClient.setQueryData()`). For imperative access
+outside React (e.g., commands), use `getQueryClient()` from
+`src/app/lib/query-client-accessor.ts`.
+
+### Redux slices (client-only state)
+
+| Slice                   | Shape                                    | Source                |
+| ----------------------- | ---------------------------------------- | --------------------- |
+| `drafts`                | `Record<string, string>`                 | localStorage          |
+| `pendingReviewComments` | `Record<string, PendingReviewComment[]>` | localStorage          |
+| `navigation`            | Route state                              | Local                 |
+| `tasks`                 | Background task tracking                 | IPC TaskUpdate events |
 
 ---
 
@@ -316,8 +336,8 @@ PR while preserving items from other PRs (and any optimistic entries with
 | --------------------------------------- | ---------------------------------------------------------------- |
 | `src/main.ts`                           | App entry, IPC handlers, startup sync orchestration              |
 | `src/preload.ts`                        | IPC bridge exposing `window.electron` and `window.auth`          |
-| `src/renderer.tsx`                      | Redux store creation with bootstrap data                         |
-| `src/app/App.tsx`                       | IPC event listeners that dispatch to flat Redux slices           |
+| `src/renderer.tsx`                      | Query cache seeding + Redux store creation from bootstrap data   |
+| `src/app/App.tsx`                       | IPC event listeners that update TanStack Query cache             |
 | `src/app/lib/api.ts`                    | Frontend HTTP client for mutations and data reads                |
 | `src/main/api/server.ts`                | Hono HTTP server in main process                                 |
 | `src/main/api/routes/*.ts`              | Route handlers (reviews, comments, checks, pull-requests, syncs) |
@@ -327,6 +347,9 @@ PR while preserving items from other PRs (and any optimistic entries with
 | `src/types/ipc-events.ts`               | ResourceUpdatedEvent discriminated union type                    |
 | `src/sync/pull-requests.ts`             | GraphQL PR list sync                                             |
 | `src/sync/sync-pull-request-details.ts` | Per-PR REST detail sync                                          |
-| `src/app/store/*-slice.ts`              | Redux slices (one per resource type)                             |
+| `src/app/lib/query-keys.ts`             | Query key factory for TanStack Query cache                       |
+| `src/app/lib/queries/use-*.ts`          | React Query hooks for server state                               |
+| `src/app/lib/query-client-accessor.ts`  | Imperative QueryClient access for commands                       |
+| `src/app/store/*-slice.ts`              | Redux slices (client-only: drafts, pending review comments)      |
 | `src/lib/ipc/channels.ts`               | IPC channel constants                                            |
 | `src/database/schema.ts`                | SQLite schema (Drizzle)                                          |

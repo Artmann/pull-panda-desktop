@@ -5,11 +5,12 @@ import { toast } from 'sonner'
 import { Button } from '@/app/components/ui/button'
 import { Separator } from '@/app/components/ui/separator'
 import { createReview } from '@/app/lib/api'
-import { useAppDispatch, useAppSelector } from '@/app/store/hooks'
 import {
   createOptimisticReview,
-  pendingReviewsActions
-} from '@/app/store/pending-reviews-slice'
+  useClearPendingReview,
+  usePendingReview,
+  useSetPendingReview
+} from '@/app/lib/queries/use-pending-review'
 import { PullRequest } from '@/types/pull-request'
 
 interface PullRequestToolbarProps {
@@ -19,56 +20,42 @@ interface PullRequestToolbarProps {
 export const PullRequestToolbar = memo(function PullRequestToolbar({
   pullRequest
 }: PullRequestToolbarProps): ReactElement {
-  const dispatch = useAppDispatch()
-
-  const pendingReview = useAppSelector(
-    (state) => state.pendingReviews[pullRequest.id]
-  )
+  const pendingReview = usePendingReview(pullRequest.id)
+  const setPendingReview = useSetPendingReview()
+  const clearPendingReview = useClearPendingReview()
 
   const hasPendingReview = Boolean(pendingReview)
 
-  const handleStartReview = async () => {
+  const handleStartReview = () => {
     if (hasPendingReview) {
       return
     }
 
     const optimisticReview = createOptimisticReview(pullRequest.id)
 
-    dispatch(
-      pendingReviewsActions.setReview({
-        pullRequestId: pullRequest.id,
-        review: optimisticReview
-      })
-    )
+    setPendingReview(pullRequest.id, optimisticReview)
 
-    try {
-      const review = await createReview({
-        owner: pullRequest.repositoryOwner,
-        pullNumber: pullRequest.number,
-        repo: pullRequest.repositoryName
-      })
-
-      dispatch(
-        pendingReviewsActions.setReview({
-          pullRequestId: pullRequest.id,
-          review: {
-            ...review,
-            pullRequestId: pullRequest.id
-          }
+    createReview({
+      owner: pullRequest.repositoryOwner,
+      pullNumber: pullRequest.number,
+      repo: pullRequest.repositoryName
+    })
+      .then((review) => {
+        setPendingReview(pullRequest.id, {
+          ...review,
+          pullRequestId: pullRequest.id
         })
-      )
-    } catch (error) {
-      console.error('Failed to start review:', error)
+      })
+      .catch((error) => {
+        console.error('Failed to start review:', error)
 
-      dispatch(
-        pendingReviewsActions.clearReview({ pullRequestId: pullRequest.id })
-      )
+        clearPendingReview(pullRequest.id)
 
-      const message =
-        error instanceof Error ? error.message : 'Failed to start review'
+        const message =
+          error instanceof Error ? error.message : 'Failed to start review'
 
-      toast.error(message)
-    }
+        toast.error(message)
+      })
   }
 
   return (

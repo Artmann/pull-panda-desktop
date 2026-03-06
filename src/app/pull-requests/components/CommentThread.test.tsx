@@ -12,7 +12,10 @@ import type { PullRequest } from '@/types/pull-request'
 import { createComment } from '@/app/lib/api'
 import { AuthProvider } from '@/app/lib/store/authContext'
 import { CodeThemeProvider } from '@/app/lib/store/codeThemeContext'
-import commentsReducer from '@/app/store/comments-slice'
+import {
+  createTestQueryClient,
+  QueryWrapper
+} from '@/app/lib/test-query-wrapper'
 import draftsReducer, { getDraftKeyForReply } from '@/app/store/drafts-slice'
 
 import { FileCommentThreadCard } from './CommentThread'
@@ -122,29 +125,32 @@ function createMockPullRequest(
   }
 }
 
-function createTestStore(preloadedState?: { drafts?: Record<string, string> }) {
+function createDraftsStore(preloadedState?: {
+  drafts?: Record<string, string>
+}) {
   return configureStore({
     reducer: {
-      comments: commentsReducer,
       drafts: draftsReducer
     },
-    preloadedState: {
-      ...preloadedState,
-      comments: { items: [] }
-    }
+    preloadedState
   })
 }
 
 function renderWithProviders(
   ui: React.ReactElement,
-  { store = createTestStore() } = {}
+  { drafts = {} as Record<string, string> } = {}
 ) {
+  const queryClient = createTestQueryClient()
+  const store = createDraftsStore({ drafts })
+
   return render(
-    <Provider store={store}>
-      <CodeThemeProvider>
-        <AuthProvider>{ui}</AuthProvider>
-      </CodeThemeProvider>
-    </Provider>
+    <QueryWrapper client={queryClient}>
+      <Provider store={store}>
+        <CodeThemeProvider>
+          <AuthProvider>{ui}</AuthProvider>
+        </CodeThemeProvider>
+      </Provider>
+    </QueryWrapper>
   )
 }
 
@@ -162,11 +168,6 @@ describe('CommentReply', () => {
     const pullRequest = createMockPullRequest()
     const draftKey = getDraftKeyForReply(pullRequest.id, comment.gitHubId)
 
-    // Pre-populate the draft in Redux store
-    const store = createTestStore({
-      drafts: { [draftKey]: 'Test reply' }
-    })
-
     await act(async () => {
       renderWithProviders(
         <FileCommentThreadCard
@@ -174,7 +175,7 @@ describe('CommentReply', () => {
           allComments={[comment]}
           pullRequest={pullRequest}
         />,
-        { store }
+        { drafts: { [draftKey]: 'Test reply' } }
       )
     })
 
@@ -210,11 +211,6 @@ describe('CommentReply', () => {
     const pullRequest = createMockPullRequest()
     const draftKey = getDraftKeyForReply(pullRequest.id, comment.gitHubId)
 
-    // Pre-populate the draft in Redux store
-    const store = createTestStore({
-      drafts: { [draftKey]: 'Test reply' }
-    })
-
     await act(async () => {
       renderWithProviders(
         <FileCommentThreadCard
@@ -222,7 +218,7 @@ describe('CommentReply', () => {
           allComments={[comment]}
           pullRequest={pullRequest}
         />,
-        { store }
+        { drafts: { [draftKey]: 'Test reply' } }
       )
     })
 
@@ -258,11 +254,6 @@ describe('CommentReply', () => {
     const pullRequest = createMockPullRequest()
     const draftKey = getDraftKeyForReply(pullRequest.id, comment.gitHubId)
 
-    // Pre-populate the draft in Redux store
-    const store = createTestStore({
-      drafts: { [draftKey]: 'Test reply' }
-    })
-
     await act(async () => {
       renderWithProviders(
         <FileCommentThreadCard
@@ -270,7 +261,7 @@ describe('CommentReply', () => {
           allComments={[comment]}
           pullRequest={pullRequest}
         />,
-        { store }
+        { drafts: { [draftKey]: 'Test reply' } }
       )
     })
 

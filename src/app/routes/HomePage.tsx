@@ -3,12 +3,12 @@ import { type ReactElement } from 'react'
 
 import { Badge } from '@/app/components/ui/badge'
 import { useAuth } from '@/app/lib/store/authContext'
-import { useAppSelector } from '@/app/store/hooks'
+import { usePullRequests } from '@/app/lib/queries/use-pull-requests'
 import { PullRequestTable } from '../components/PullRequestTable'
 
 export function HomePage(): ReactElement {
   const { user } = useAuth()
-  const pullRequests = useAppSelector((state) => state.pullRequests.items)
+  const pullRequests = usePullRequests()
   const fullName = user?.name ?? user?.login ?? 'User'
   const displayName = fullName.split(' ')[0]
 

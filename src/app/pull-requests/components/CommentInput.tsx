@@ -6,11 +6,11 @@ import { Textarea } from '@/app/components/ui/textarea'
 import { createComment, syncPullRequestDetails } from '@/app/lib/api'
 import { useAuth } from '@/app/lib/store/authContext'
 import {
-  commentsActions,
-  createOptimisticComment
-} from '@/app/store/comments-slice'
+  createOptimisticComment,
+  useAddComment,
+  useRemoveComment
+} from '@/app/lib/queries/use-comments'
 import { getDraftKeyForComment } from '@/app/store/drafts-slice'
-import { useAppDispatch } from '@/app/store/hooks'
 import { useDraft } from '@/app/store/use-draft'
 
 interface CommentInputProps {
@@ -41,17 +41,18 @@ export const CommentInput = memo(function CommentInput({
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  const dispatch = useAppDispatch()
+  const addComment = useAddComment()
+  const removeComment = useRemoveComment()
   const { user } = useAuth()
 
-  const handleSubmit = async () => {
+  const handleSubmit = () => {
     if (!body.trim() || !user) {
       return
     }
 
     const trimmedBody = body.trim()
 
-    // Create optimistic comment and add to store immediately
+    // Create optimistic comment and add to cache immediately
     const optimisticComment = createOptimisticComment({
       body: trimmedBody,
       pullRequestId,
@@ -59,45 +60,36 @@ export const CommentInput = memo(function CommentInput({
       userAvatarUrl: user.avatar_url
     })
 
-    dispatch(
-      commentsActions.addComment({
-        pullRequestId,
-        comment: optimisticComment
-      })
-    )
+    addComment(pullRequestId, optimisticComment)
 
     // Clear draft immediately for better UX
     clearDraft()
     setIsSubmitting(true)
     setError(null)
 
-    try {
-      await createComment({
-        body: trimmedBody,
-        owner,
-        pullNumber,
-        repo,
-        reviewCommentId
+    createComment({
+      body: trimmedBody,
+      owner,
+      pullNumber,
+      repo,
+      reviewCommentId
+    })
+      .then(() => {
+        // Trigger sync to get the real comment from the server
+        syncPullRequestDetails(pullRequestId)
+        onSuccess?.()
       })
+      .catch((error) => {
+        setError(
+          error instanceof Error ? error.message : 'Failed to post comment'
+        )
 
-      // Trigger sync to get the real comment from the server
-      syncPullRequestDetails(pullRequestId)
-      onSuccess?.()
-    } catch (error) {
-      setError(
-        error instanceof Error ? error.message : 'Failed to post comment'
-      )
-
-      // Rollback optimistic comment on error
-      dispatch(
-        commentsActions.removeComment({
-          pullRequestId,
-          commentId: optimisticComment.id
-        })
-      )
-    } finally {
-      setIsSubmitting(false)
-    }
+        // Rollback optimistic comment on error
+        removeComment(pullRequestId, optimisticComment.id)
+      })
+      .finally(() => {
+        setIsSubmitting(false)
+      })
   }
 
   const handleKeyDown = (event: React.KeyboardEvent<HTMLTextAreaElement>) => {
@@ -179,10 +171,11 @@ export const NewCommentForm = memo(function NewCommentForm({
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  const dispatch = useAppDispatch()
+  const addComment = useAddComment()
+  const removeComment = useRemoveComment()
   const { user } = useAuth()
 
-  const handleSubmit = async () => {
+  const handleSubmit = () => {
     if (!body.trim() || !user) {
       return
     }
@@ -196,40 +189,31 @@ export const NewCommentForm = memo(function NewCommentForm({
       userAvatarUrl: user.avatar_url
     })
 
-    dispatch(
-      commentsActions.addComment({
-        pullRequestId,
-        comment: optimisticComment
-      })
-    )
+    addComment(pullRequestId, optimisticComment)
 
     clearDraft()
     setIsSubmitting(true)
     setError(null)
 
-    try {
-      await createComment({
-        body: trimmedBody,
-        owner,
-        pullNumber,
-        repo
+    createComment({
+      body: trimmedBody,
+      owner,
+      pullNumber,
+      repo
+    })
+      .then(() => {
+        syncPullRequestDetails(pullRequestId)
       })
+      .catch((error) => {
+        setError(
+          error instanceof Error ? error.message : 'Failed to post comment'
+        )
 
-      syncPullRequestDetails(pullRequestId)
-    } catch (error) {
-      setError(
-        error instanceof Error ? error.message : 'Failed to post comment'
-      )
-
-      dispatch(
-        commentsActions.removeComment({
-          pullRequestId,
-          commentId: optimisticComment.id
-        })
-      )
-    } finally {
-      setIsSubmitting(false)
-    }
+        removeComment(pullRequestId, optimisticComment.id)
+      })
+      .finally(() => {
+        setIsSubmitting(false)
+      })
   }
 
   const handleKeyDown = (event: React.KeyboardEvent<HTMLTextAreaElement>) => {

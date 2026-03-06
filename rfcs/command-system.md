@@ -337,14 +337,15 @@ function PrCard({ pr }: { pr: PullRequest }) {
 }
 ```
 
-### Redux Integration
+### Query Cache Integration
 
-Commands often need to check or modify Redux state. Since commands are defined
-outside of React components, they access the store directly:
+Commands often need to check or modify server state. Since commands are defined
+outside of React components, they access the query client directly via
+`getQueryClient()` from `src/app/lib/query-client-accessor.ts`:
 
 ```typescript
-import { store } from '@/app/store'
-import { pendingReviewsActions } from '@/app/store/pending-reviews-slice'
+import { getQueryClient } from '@/app/lib/query-client-accessor'
+import { queryKeys } from '@/app/lib/query-keys'
 
 commandRegistry.register({
   id: 'review.start',
@@ -353,14 +354,17 @@ commandRegistry.register({
   shortcut: { key: 'r' },
   isAvailable: (ctx) => {
     if (ctx.view !== 'pr-detail' || !ctx.selectedPr) return false
-    const state = store.getState()
-    return !state.pendingReviews[ctx.selectedPr.id]
+    const queryClient = getQueryClient()
+    const pendingReview = queryClient.getQueryData(
+      queryKeys.pendingReviews.byPullRequest(ctx.selectedPr.id)
+    )
+    return !pendingReview
   },
   execute: (ctx) => {
-    store.dispatch(
-      pendingReviewsActions.set({
-        pullRequestId: ctx.selectedPr!.id
-      })
+    const queryClient = getQueryClient()
+    queryClient.setQueryData(
+      queryKeys.pendingReviews.byPullRequest(ctx.selectedPr!.id),
+      createOptimisticReview(ctx.selectedPr!.id)
     )
   }
 })

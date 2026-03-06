@@ -3,13 +3,16 @@
  */
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { configureStore } from '@reduxjs/toolkit'
-import { Provider } from 'react-redux'
+import { type QueryClient } from '@tanstack/react-query'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import type { PullRequest } from '@/types/pull-request'
 import { updatePullRequest } from '@/app/lib/api'
-import pullRequestsReducer from '@/app/store/pull-requests-slice'
+import { queryKeys } from '@/app/lib/query-keys'
+import {
+  createTestQueryClient,
+  QueryWrapper
+} from '@/app/lib/test-query-wrapper'
 
 import { PullRequestActionsMenu } from './PullRequestActionsMenu'
 
@@ -51,26 +54,29 @@ function createMockPullRequest(
   }
 }
 
-function createTestStore(pullRequest: PullRequest) {
-  return configureStore({
-    middleware: (getDefaultMiddleware) =>
-      getDefaultMiddleware({ immutableCheck: false, serializableCheck: false }),
-    reducer: { pullRequests: pullRequestsReducer },
-    preloadedState: { pullRequests: { items: [pullRequest] } }
-  })
-}
-
 function renderMenu(pullRequest: PullRequest) {
-  const store = createTestStore(pullRequest)
+  const queryClient = createTestQueryClient({
+    pullRequests: [pullRequest]
+  })
   const user = userEvent.setup()
 
   render(
-    <Provider store={store}>
+    <QueryWrapper client={queryClient}>
       <PullRequestActionsMenu pullRequest={pullRequest} />
-    </Provider>
+    </QueryWrapper>
   )
 
-  return { store, user }
+  return { queryClient, user }
+}
+
+function getPullRequestFromCache(
+  queryClient: QueryClient,
+  id: string
+): PullRequest | undefined {
+  const items =
+    queryClient.getQueryData<PullRequest[]>(queryKeys.pullRequests.all) ?? []
+
+  return items.find((pr) => pr.id === id)
 }
 
 describe('PullRequestActionsMenu', () => {
@@ -100,7 +106,7 @@ describe('PullRequestActionsMenu', () => {
       vi.mocked(updatePullRequest).mockResolvedValue(
         createMockPullRequest({ isDraft: true })
       )
-      const { store, user } = renderMenu(pullRequest)
+      const { queryClient, user } = renderMenu(pullRequest)
 
       await user.click(screen.getByTitle('More actions'))
 
@@ -110,10 +116,9 @@ describe('PullRequestActionsMenu', () => {
         `[perf] "Mark as draft" click + optimistic: ${(performance.now() - t0).toFixed(2)}ms`
       )
 
-      const state = store
-        .getState()
-        .pullRequests.items.find((pr) => pr.id === pullRequest.id)
-      expect(state).toEqual(expect.objectContaining({ isDraft: true }))
+      const cached = getPullRequestFromCache(queryClient, pullRequest.id)
+
+      expect(cached).toEqual(expect.objectContaining({ isDraft: true }))
       expect(updatePullRequest).toHaveBeenCalledWith(
         expect.objectContaining({ isDraft: true })
       )
@@ -124,7 +129,7 @@ describe('PullRequestActionsMenu', () => {
       vi.mocked(updatePullRequest).mockResolvedValue(
         createMockPullRequest({ state: 'CLOSED' })
       )
-      const { store, user } = renderMenu(pullRequest)
+      const { queryClient, user } = renderMenu(pullRequest)
 
       await user.click(screen.getByTitle('More actions'))
 
@@ -134,10 +139,9 @@ describe('PullRequestActionsMenu', () => {
         `[perf] "Close pull request" click + optimistic: ${(performance.now() - t0).toFixed(2)}ms`
       )
 
-      const state = store
-        .getState()
-        .pullRequests.items.find((pr) => pr.id === pullRequest.id)
-      expect(state).toEqual(expect.objectContaining({ state: 'CLOSED' }))
+      const cached = getPullRequestFromCache(queryClient, pullRequest.id)
+
+      expect(cached).toEqual(expect.objectContaining({ state: 'CLOSED' }))
       expect(updatePullRequest).toHaveBeenCalledWith(
         expect.objectContaining({ state: 'closed' })
       )
@@ -147,18 +151,16 @@ describe('PullRequestActionsMenu', () => {
       vi.mocked(updatePullRequest).mockRejectedValue(new Error('Network error'))
 
       const pullRequest = createMockPullRequest({ isDraft: false })
-      const { store, user } = renderMenu(pullRequest)
+      const { queryClient, user } = renderMenu(pullRequest)
 
       await user.click(screen.getByTitle('More actions'))
       await user.click(screen.getByText('Mark as draft'))
 
-      // After act() flushes the rejection, the rollback should have fired
+      // After act() flushes the rejection, the rollback should have fired.
       await waitFor(() => {
-        expect(
-          store
-            .getState()
-            .pullRequests.items.find((pr) => pr.id === pullRequest.id)
-        ).toEqual(expect.objectContaining({ isDraft: false }))
+        const cached = getPullRequestFromCache(queryClient, pullRequest.id)
+
+        expect(cached).toEqual(expect.objectContaining({ isDraft: false }))
       })
     })
   })
@@ -174,16 +176,14 @@ describe('PullRequestActionsMenu', () => {
 
     it('clicking "Mark as ready for review" dispatches optimistic update immediately', async () => {
       const pullRequest = createMockPullRequest({ isDraft: true })
-      const { store, user } = renderMenu(pullRequest)
+      const { queryClient, user } = renderMenu(pullRequest)
 
       await user.click(screen.getByTitle('More actions'))
       await user.click(screen.getByText('Mark as ready for review'))
 
-      expect(
-        store
-          .getState()
-          .pullRequests.items.find((pr) => pr.id === pullRequest.id)
-      ).toEqual(expect.objectContaining({ isDraft: false }))
+      const cached = getPullRequestFromCache(queryClient, pullRequest.id)
+
+      expect(cached).toEqual(expect.objectContaining({ isDraft: false }))
     })
   })
 
@@ -200,16 +200,14 @@ describe('PullRequestActionsMenu', () => {
 
     it('clicking "Reopen pull request" dispatches optimistic update immediately', async () => {
       const pullRequest = createMockPullRequest({ state: 'CLOSED' })
-      const { store, user } = renderMenu(pullRequest)
+      const { queryClient, user } = renderMenu(pullRequest)
 
       await user.click(screen.getByTitle('More actions'))
       await user.click(screen.getByText('Reopen pull request'))
 
-      expect(
-        store
-          .getState()
-          .pullRequests.items.find((pr) => pr.id === pullRequest.id)
-      ).toEqual(expect.objectContaining({ state: 'OPEN' }))
+      const cached = getPullRequestFromCache(queryClient, pullRequest.id)
+
+      expect(cached).toEqual(expect.objectContaining({ state: 'OPEN' }))
     })
   })
 

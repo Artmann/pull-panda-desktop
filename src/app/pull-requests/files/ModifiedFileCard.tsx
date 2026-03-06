@@ -1,13 +1,13 @@
 import { ExternalLinkIcon } from 'lucide-react'
 import { useTheme } from 'next-themes'
 import { memo, useMemo, type ReactElement } from 'react'
-import { shallowEqual } from 'react-redux'
 
 import type { Comment, ModifiedFile } from '@/types/pull-request-details'
 import type { PullRequest } from '@/types/pull-request'
 
 import { CopyToClipboardButton } from '@/app/components/CopyToClipboardButton'
 import { useCodeTheme } from '@/app/lib/store/codeThemeContext'
+import { useComments } from '@/app/lib/queries/use-comments'
 import { useAppSelector } from '@/app/store/hooks'
 import { type PendingReviewComment } from '@/app/store/pending-review-comments-slice'
 import { FileCard, FileCardBody, FileCardHeader } from '../components/FileCard'
@@ -37,11 +37,7 @@ export const ModifiedFileCard = memo(function ModifiedFileCard({
       state.pendingReviewComments[pullRequest.id] ?? emptyPendingComments
   )
 
-  const allSubmittedComments: Comment[] = useAppSelector(
-    (state) =>
-      state.comments.items.filter((c) => c.pullRequestId === pullRequest.id),
-    shallowEqual
-  )
+  const allSubmittedComments: Comment[] = useComments(pullRequest.id)
 
   const filePendingComments = useMemo(
     () => allPendingComments.filter((comment) => comment.path === filePath),

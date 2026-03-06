@@ -21,7 +21,10 @@ import {
   TabsTrigger
 } from '@/app/components/ui/tabs'
 import { markPullRequestActive } from '@/app/lib/api'
-import { useAppDispatch, useAppSelector } from '@/app/store/hooks'
+import { useChecks } from '@/app/lib/queries/use-checks'
+import { useModifiedFiles } from '@/app/lib/queries/use-modified-files'
+import { usePullRequest } from '@/app/lib/queries/use-pull-requests'
+import { useAppDispatch } from '@/app/store/hooks'
 import { navigationActions } from '@/app/store/navigation-slice'
 import { clamp01 } from '@/math'
 
@@ -41,20 +44,13 @@ export function PullRequestPage(): ReactElement {
 
   const { id } = useParams<{ id: string }>()
 
-  const pullRequest = useAppSelector((state) =>
-    state.pullRequests.items.find((pr) => pr.id === id)
-  )
+  const pullRequest = usePullRequest(id)
 
   const dispatch = useAppDispatch()
   const [searchParams, setSearchParams] = useSearchParams()
 
-  const checksCount = useAppSelector(
-    (state) => state.checks.items.filter((c) => c.pullRequestId === id).length
-  )
-  const filesCount = useAppSelector(
-    (state) =>
-      state.modifiedFiles.items.filter((f) => f.pullRequestId === id).length
-  )
+  const checks = useChecks(id ?? '')
+  const files = useModifiedFiles(id ?? '')
 
   const tabFromUrl = searchParams.get('tab')
   const validTabs = ['overview', 'checks', 'files']
@@ -90,18 +86,18 @@ export function PullRequestPage(): ReactElement {
         content: ChecksView,
         icon: ListCheckIcon,
         id: 'checks',
-        itemCount: checksCount,
+        itemCount: checks.length,
         label: 'Checks'
       },
       {
         content: FilesView,
         icon: FileCodeIcon,
         id: 'files',
-        itemCount: filesCount,
+        itemCount: files.length,
         label: 'Files'
       }
     ],
-    [checksCount, filesCount]
+    [checks.length, files.length]
   )
 
   useEffect(function trackScrollPosition() {

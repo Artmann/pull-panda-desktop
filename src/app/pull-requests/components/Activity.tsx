@@ -1,5 +1,4 @@
 import { memo, useMemo, type ReactElement } from 'react'
-import { shallowEqual } from 'react-redux'
 
 import type { PullRequest } from '@/types/pull-request'
 import type { Comment, Review } from '@/types/pull-request-details'
@@ -7,7 +6,8 @@ import type { Comment, Review } from '@/types/pull-request-details'
 import { TimeAgo } from '@/app/components/TimeAgo'
 import { UserAvatar } from '@/app/components/UserAvatar'
 import { Card, CardContent } from '@/app/components/ui/card'
-import { useAppSelector } from '@/app/store/hooks'
+import { useComments } from '@/app/lib/queries/use-comments'
+import { useReviews } from '@/app/lib/queries/use-reviews'
 
 import { CommentBody } from './CommentBody'
 import { NewCommentForm } from './CommentInput'
@@ -25,17 +25,9 @@ interface ActivityProps {
 }
 
 export function Activity({ pullRequest }: ActivityProps): ReactElement {
-  const comments: Comment[] = useAppSelector(
-    (state) =>
-      state.comments.items.filter((c) => c.pullRequestId === pullRequest.id),
-    shallowEqual
-  )
+  const comments: Comment[] = useComments(pullRequest.id)
+  const reviews: Review[] = useReviews(pullRequest.id)
 
-  const reviews: Review[] = useAppSelector(
-    (state) =>
-      state.reviews.items.filter((r) => r.pullRequestId === pullRequest.id),
-    shallowEqual
-  )
   const sortedActivity = useMemo(() => {
     const topLevelComments = comments.filter(
       (comment) => !comment.parentCommentGitHubId

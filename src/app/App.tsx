@@ -1,3 +1,4 @@
+import { QueryClientProvider, type QueryClient } from '@tanstack/react-query'
 import { useEffect, useLayoutEffect, useRef, type ReactElement } from 'react'
 import { Provider } from 'react-redux'
 import {
@@ -20,6 +21,8 @@ import { ErrorBoundary } from '@/app/components/ErrorBoundary'
 import { TitleBar } from '@/app/components/TitleBar'
 import { Toaster } from '@/app/components/ui/sonner'
 import { filterReadyPullRequests } from '@/app/lib/pull-requests'
+import { queryKeys } from '@/app/lib/query-keys'
+import { isPullRequestInFlight } from '@/app/lib/queries/use-pull-requests'
 import { AuthProvider, useAuth } from '@/app/lib/store/authContext'
 import { CodeThemeProvider } from '@/app/lib/store/codeThemeContext'
 import { TasksProvider } from '@/app/lib/store/tasksContext'
@@ -31,137 +34,144 @@ import { PullRequestPage } from '@/app/routes/PullRequestPage'
 import { SettingsPage } from '@/app/routes/SettingsPage'
 import { SignInPage } from '@/app/routes/SignInPage'
 import { getSavedRoute, saveRoute } from '@/app/lib/routePersistence'
-import { checksActions } from '@/app/store/checks-slice'
-import { commentsActions } from '@/app/store/comments-slice'
-import { commitsActions } from '@/app/store/commits-slice'
-import { useAppDispatch } from '@/app/store/hooks'
-import { modifiedFilesActions } from '@/app/store/modified-files-slice'
-import { pendingReviewsActions } from '@/app/store/pending-reviews-slice'
-import { pullRequestsActions } from '@/app/store/pull-requests-slice'
-import { reactionsActions } from '@/app/store/reactions-slice'
-import { reviewsActions } from '@/app/store/reviews-slice'
+import { useQueryClient } from '@tanstack/react-query'
+import type { PullRequest } from '@/types/pull-request'
+import type { Comment } from '@/types/pull-request-details'
 import { AppFooter } from './AppFooter'
 
 interface AppProps {
+  queryClient: QueryClient
   store: AppStore
 }
 
-export function App({ store }: AppProps): ReactElement {
+export function App({ queryClient, store }: AppProps): ReactElement {
   return (
-    <Provider store={store}>
-      <HashRouter>
-        <ThemeProvider>
-          <CodeThemeProvider>
-            <TasksProvider>
-              <AuthProvider>
-                <CommandContextProvider>
-                  <ShortcutListener />
-                  <CommandPalette />
-                  <AppContent />
-                </CommandContextProvider>
-              </AuthProvider>
-            </TasksProvider>
-          </CodeThemeProvider>
-          <Toaster />
-        </ThemeProvider>
-      </HashRouter>
-    </Provider>
+    <QueryClientProvider client={queryClient}>
+      <Provider store={store}>
+        <HashRouter>
+          <ThemeProvider>
+            <CodeThemeProvider>
+              <TasksProvider>
+                <AuthProvider>
+                  <CommandContextProvider>
+                    <ShortcutListener />
+                    <CommandPalette />
+                    <AppContent />
+                  </CommandContextProvider>
+                </AuthProvider>
+              </TasksProvider>
+            </CodeThemeProvider>
+            <Toaster />
+          </ThemeProvider>
+        </HashRouter>
+      </Provider>
+    </QueryClientProvider>
   )
 }
 
 function AppContent(): ReactElement {
   const { status, isNewSignIn } = useAuth()
-  const dispatch = useAppDispatch()
+  const queryClient = useQueryClient()
 
   // Listen for resource updates from the main process
   useEffect(() => {
     const unsubscribe = window.electron.onResourceUpdated((event) => {
       switch (event.type) {
         case 'checks':
-          dispatch(
-            checksActions.setForPullRequest({
-              pullRequestId: event.pullRequestId,
-              items: event.data
-            })
+          queryClient.setQueryData(
+            queryKeys.checks.byPullRequest(event.pullRequestId),
+            event.data
           )
           break
 
-        case 'comments':
-          dispatch(
-            commentsActions.setForPullRequest({
-              pullRequestId: event.pullRequestId,
-              items: event.data
-            })
+        case 'comments': {
+          // Preserve optimistic comments (temp- prefixed IDs)
+          const previousComments =
+            queryClient.getQueryData<Comment[]>(
+              queryKeys.comments.byPullRequest(event.pullRequestId)
+            ) ?? []
+
+          const optimisticComments = previousComments.filter((c) =>
+            c.id.startsWith('temp-')
+          )
+
+          queryClient.setQueryData(
+            queryKeys.comments.byPullRequest(event.pullRequestId),
+            [...event.data, ...optimisticComments]
           )
           break
+        }
 
         case 'commits':
-          dispatch(
-            commitsActions.setForPullRequest({
-              pullRequestId: event.pullRequestId,
-              items: event.data
-            })
+          queryClient.setQueryData(
+            queryKeys.commits.byPullRequest(event.pullRequestId),
+            event.data
           )
           break
 
         case 'modified-files':
-          dispatch(
-            modifiedFilesActions.setForPullRequest({
-              pullRequestId: event.pullRequestId,
-              items: event.data
-            })
+          queryClient.setQueryData(
+            queryKeys.modifiedFiles.byPullRequest(event.pullRequestId),
+            event.data
           )
           break
 
         case 'pending-review':
-          if (event.data) {
-            dispatch(
-              pendingReviewsActions.setReview({
-                pullRequestId: event.pullRequestId,
-                review: event.data
-              })
-            )
-          } else {
-            dispatch(
-              pendingReviewsActions.clearReview({
-                pullRequestId: event.pullRequestId
-              })
-            )
-          }
+          queryClient.setQueryData(
+            queryKeys.pendingReviews.byPullRequest(event.pullRequestId),
+            event.data ?? null
+          )
           break
 
         case 'pull-request':
-          dispatch(pullRequestsActions.upsertItem(event.data))
+          // Skip IPC updates for PRs with in-flight optimistic mutations to
+          // avoid overwriting optimistic data with stale DB values.
+          if (isPullRequestInFlight(event.data.id)) {
+            break
+          }
+
+          queryClient.setQueryData<PullRequest[]>(
+            queryKeys.pullRequests.all,
+            (previous = []) => {
+              const index = previous.findIndex((pr) => pr.id === event.data.id)
+
+              if (index >= 0) {
+                const next = [...previous]
+                next[index] = event.data
+
+                return next
+              }
+
+              return [...previous, event.data]
+            }
+          )
           break
 
         case 'pull-requests':
-          dispatch(
-            pullRequestsActions.setItems(filterReadyPullRequests(event.data))
+          queryClient.setQueryData(
+            queryKeys.pullRequests.all,
+            filterReadyPullRequests(event.data)
           )
           break
 
         case 'reactions':
-          dispatch(
-            reactionsActions.setForPullRequest({
-              pullRequestId: event.pullRequestId,
-              items: event.data
-            })
+          queryClient.setQueryData(
+            queryKeys.reactions.byPullRequest(event.pullRequestId),
+            event.data
           )
           break
 
         case 'reviews':
-          dispatch(
-            reviewsActions.setForPullRequest({
-              pullRequestId: event.pullRequestId,
-              items: event.data
-            })
+          queryClient.setQueryData(
+            queryKeys.reviews.byPullRequest(event.pullRequestId),
+            event.data
           )
           break
       }
     })
 
     return unsubscribe
-  }, [dispatch])
+  }, [queryClient])
 
   // SyncComplete just signals the sync is done (no data fetching needed).
   useEffect(() => {

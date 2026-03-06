@@ -10,8 +10,11 @@ import {
   DropdownMenuTrigger
 } from '@/app/components/ui/dropdown-menu'
 import { updatePullRequest } from '@/app/lib/api'
-import { useAppDispatch } from '@/app/store/hooks'
-import { pullRequestsActions } from '@/app/store/pull-requests-slice'
+import {
+  clearPullRequestInFlight,
+  markPullRequestInFlight,
+  useUpsertPullRequest
+} from '@/app/lib/queries/use-pull-requests'
 import type { PullRequest } from '@/types/pull-request'
 
 interface PullRequestActionsMenuProps {
@@ -21,14 +24,13 @@ interface PullRequestActionsMenuProps {
 export function PullRequestActionsMenu({
   pullRequest
 }: PullRequestActionsMenuProps): ReactElement {
-  const dispatch = useAppDispatch()
+  const upsertPullRequest = useUpsertPullRequest()
 
   const handleClose = () => {
     const originalPr = pullRequest
 
-    dispatch(
-      pullRequestsActions.upsertItem({ ...pullRequest, state: 'CLOSED' })
-    )
+    markPullRequestInFlight(pullRequest.id)
+    upsertPullRequest({ ...pullRequest, state: 'CLOSED' })
 
     updatePullRequest({
       owner: pullRequest.repositoryOwner,
@@ -38,10 +40,12 @@ export function PullRequestActionsMenu({
       state: 'closed'
     })
       .then((updated) => {
-        dispatch(pullRequestsActions.upsertItem(updated))
+        clearPullRequestInFlight(pullRequest.id)
+        upsertPullRequest(updated)
       })
       .catch((error) => {
-        dispatch(pullRequestsActions.upsertItem(originalPr))
+        clearPullRequestInFlight(pullRequest.id)
+        upsertPullRequest(originalPr)
 
         const message =
           error instanceof Error
@@ -55,7 +59,8 @@ export function PullRequestActionsMenu({
   const handleReopen = () => {
     const originalPr = pullRequest
 
-    dispatch(pullRequestsActions.upsertItem({ ...pullRequest, state: 'OPEN' }))
+    markPullRequestInFlight(pullRequest.id)
+    upsertPullRequest({ ...pullRequest, state: 'OPEN' })
 
     updatePullRequest({
       owner: pullRequest.repositoryOwner,
@@ -65,10 +70,12 @@ export function PullRequestActionsMenu({
       state: 'open'
     })
       .then((updated) => {
-        dispatch(pullRequestsActions.upsertItem(updated))
+        clearPullRequestInFlight(pullRequest.id)
+        upsertPullRequest(updated)
       })
       .catch((error) => {
-        dispatch(pullRequestsActions.upsertItem(originalPr))
+        clearPullRequestInFlight(pullRequest.id)
+        upsertPullRequest(originalPr)
 
         const message =
           error instanceof Error
@@ -83,9 +90,8 @@ export function PullRequestActionsMenu({
     const originalPr = pullRequest
     const newIsDraft = !pullRequest.isDraft
 
-    dispatch(
-      pullRequestsActions.upsertItem({ ...pullRequest, isDraft: newIsDraft })
-    )
+    markPullRequestInFlight(pullRequest.id)
+    upsertPullRequest({ ...pullRequest, isDraft: newIsDraft })
 
     updatePullRequest({
       isDraft: newIsDraft,
@@ -95,10 +101,12 @@ export function PullRequestActionsMenu({
       repo: pullRequest.repositoryName
     })
       .then((updated) => {
-        dispatch(pullRequestsActions.upsertItem(updated))
+        clearPullRequestInFlight(pullRequest.id)
+        upsertPullRequest(updated)
       })
       .catch((error) => {
-        dispatch(pullRequestsActions.upsertItem(originalPr))
+        clearPullRequestInFlight(pullRequest.id)
+        upsertPullRequest(originalPr)
 
         const message =
           error instanceof Error

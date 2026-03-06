@@ -50,7 +50,8 @@ src/
 ├── app/              # React app (renderer process)
 │   ├── pages/        # Route pages
 │   ├── pull-requests/# PR-related views and components
-│   └── store/        # Redux state management
+│   ├── lib/queries/  # TanStack Query hooks (server state)
+│   └── store/        # Redux state (client-only: drafts, pending review comments)
 ├── auth/             # GitHub OAuth handling
 ├── database/         # Drizzle ORM schema and setup
 ├── sync/             # GitHub data synchronization

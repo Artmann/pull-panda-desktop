@@ -10,8 +10,10 @@ import type { ModifiedFile } from '@/types/pull-request-details'
 import type { PullRequest } from '@/types/pull-request'
 
 import { CodeThemeProvider } from '@/app/lib/store/codeThemeContext'
-import commentsReducer from '@/app/store/comments-slice'
-import modifiedFilesReducer from '@/app/store/modified-files-slice'
+import {
+  createTestQueryClient,
+  QueryWrapper
+} from '@/app/lib/test-query-wrapper'
 import pendingReviewCommentsReducer from '@/app/store/pending-review-comments-slice'
 
 import { FilesView } from './FilesView'
@@ -98,20 +100,12 @@ function createMockPullRequest(
   }
 }
 
-function createTestStore(
-  options: {
-    modifiedFiles?: ModifiedFile[]
-  } = {}
-) {
+function createReduxStore() {
   return configureStore({
     reducer: {
-      comments: commentsReducer,
-      modifiedFiles: modifiedFilesReducer,
       pendingReviewComments: pendingReviewCommentsReducer
     },
     preloadedState: {
-      comments: { items: [] },
-      modifiedFiles: { items: options.modifiedFiles ?? [] },
       pendingReviewComments: {}
     }
   })
@@ -119,24 +113,26 @@ function createTestStore(
 
 function renderWithProviders(
   ui: React.ReactElement,
-  { store = createTestStore() } = {}
+  { modifiedFiles = [] as ModifiedFile[] } = {}
 ) {
+  const queryClient = createTestQueryClient({ modifiedFiles })
+  const store = createReduxStore()
+
   return render(
-    <Provider store={store}>
-      <CodeThemeProvider>{ui}</CodeThemeProvider>
-    </Provider>
+    <QueryWrapper client={queryClient}>
+      <Provider store={store}>
+        <CodeThemeProvider>{ui}</CodeThemeProvider>
+      </Provider>
+    </QueryWrapper>
   )
 }
 
 describe('FilesView', () => {
   it('renders empty state when no files', async () => {
     const pullRequest = createMockPullRequest()
-    const store = createTestStore({
-      modifiedFiles: []
-    })
 
     await act(async () => {
-      renderWithProviders(<FilesView pullRequest={pullRequest} />, { store })
+      renderWithProviders(<FilesView pullRequest={pullRequest} />)
     })
 
     expect(screen.getByText('No files found.')).toBeInTheDocument()
@@ -161,12 +157,11 @@ describe('FilesView', () => {
         filePath: 'docs/README.md'
       })
     ]
-    const store = createTestStore({
-      modifiedFiles: files
-    })
 
     await act(async () => {
-      renderWithProviders(<FilesView pullRequest={pullRequest} />, { store })
+      renderWithProviders(<FilesView pullRequest={pullRequest} />, {
+        modifiedFiles: files
+      })
     })
 
     expect(screen.getByText('src')).toBeInTheDocument()
@@ -185,12 +180,11 @@ describe('FilesView', () => {
         filePath: 'src/index.ts'
       })
     ]
-    const store = createTestStore({
-      modifiedFiles: files
-    })
 
     await act(async () => {
-      renderWithProviders(<FilesView pullRequest={pullRequest} />, { store })
+      renderWithProviders(<FilesView pullRequest={pullRequest} />, {
+        modifiedFiles: files
+      })
     })
 
     expect(screen.getByText('src/index.ts')).toBeInTheDocument()
@@ -220,12 +214,11 @@ describe('FilesView', () => {
         diffHunk: '@@ -1,3 +1,3 @@\n context\n-removed\n+added'
       })
     ]
-    const store = createTestStore({
-      modifiedFiles: files
-    })
 
     await act(async () => {
-      renderWithProviders(<FilesView pullRequest={pullRequest} />, { store })
+      renderWithProviders(<FilesView pullRequest={pullRequest} />, {
+        modifiedFiles: files
+      })
     })
 
     expect(screen.getByText('context')).toBeInTheDocument()
@@ -243,12 +236,11 @@ describe('FilesView', () => {
         diffHunk: null
       })
     ]
-    const store = createTestStore({
-      modifiedFiles: files
-    })
 
     await act(async () => {
-      renderWithProviders(<FilesView pullRequest={pullRequest} />, { store })
+      renderWithProviders(<FilesView pullRequest={pullRequest} />, {
+        modifiedFiles: files
+      })
     })
 
     expect(screen.getByText('No changes to display.')).toBeInTheDocument()
@@ -266,12 +258,11 @@ describe('FilesView', () => {
         filePath: 'src/index.ts'
       })
     ]
-    const store = createTestStore({
-      modifiedFiles: files
-    })
 
     await act(async () => {
-      renderWithProviders(<FilesView pullRequest={pullRequest} />, { store })
+      renderWithProviders(<FilesView pullRequest={pullRequest} />, {
+        modifiedFiles: files
+      })
     })
 
     const link = screen.getByTitle('View file on GitHub')

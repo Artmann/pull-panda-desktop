@@ -13,13 +13,17 @@ import {
 } from '@/app/components/ui/side-panel'
 import { Textarea } from '@/app/components/ui/textarea'
 import { deleteReview, submitReview } from '@/app/lib/api'
+import {
+  useClearPendingReview,
+  usePendingReview,
+  useSetPendingReview
+} from '@/app/lib/queries/use-pending-review'
 import { getDraftKeyForReviewBody } from '@/app/store/drafts-slice'
 import { useAppDispatch, useAppSelector } from '@/app/store/hooks'
 import {
   pendingReviewCommentsActions,
   type PendingReviewComment
 } from '@/app/store/pending-review-comments-slice'
-import { pendingReviewsActions } from '@/app/store/pending-reviews-slice'
 import { useDraft } from '@/app/store/use-draft'
 import { PullRequest } from '@/types/pull-request'
 
@@ -36,10 +40,9 @@ export const ReviewDrawer = memo(function ReviewDrawer({
 
   const dispatch = useAppDispatch()
 
-  const pendingReview = useAppSelector(
-    (state) => state.pendingReviews[pullRequest.id],
-    shallowEqual
-  )
+  const pendingReview = usePendingReview(pullRequest.id)
+  const setPendingReview = useSetPendingReview()
+  const clearPendingReview = useClearPendingReview()
 
   const pendingComments: PendingReviewComment[] = useAppSelector(
     (state) =>
@@ -55,7 +58,7 @@ export const ReviewDrawer = memo(function ReviewDrawer({
   } = useDraft(draftKey)
   const [isSubmitting, setIsSubmitting] = useState(false)
 
-  const handleSubmitReview = async (
+  const handleSubmitReview = (
     event: 'APPROVE' | 'REQUEST_CHANGES' | 'COMMENT'
   ) => {
     if (!pendingReview) {
@@ -78,71 +81,65 @@ export const ReviewDrawer = memo(function ReviewDrawer({
     // Optimistically update UI
     setIsSubmitting(true)
     clearDraft()
-    dispatch(
-      pendingReviewsActions.clearReview({ pullRequestId: pullRequest.id })
-    )
+    clearPendingReview(pullRequest.id)
     dispatch(
       pendingReviewCommentsActions.clearComments({
         pullRequestId: pullRequest.id
       })
     )
 
-    try {
-      await submitReview({
-        body: reviewBody || undefined,
-        comments:
-          pendingComments.length > 0
-            ? pendingComments.map((comment) => ({
-                body: comment.body,
-                line: comment.line,
-                path: comment.path,
-                side: comment.side
-              }))
-            : undefined,
-        event,
-        owner: pullRequest.repositoryOwner,
-        pullNumber: pullRequest.number,
-        repo: pullRequest.repositoryName,
-        reviewId
+    submitReview({
+      body: reviewBody || undefined,
+      comments:
+        pendingComments.length > 0
+          ? pendingComments.map((comment) => ({
+              body: comment.body,
+              line: comment.line,
+              path: comment.path,
+              side: comment.side
+            }))
+          : undefined,
+      event,
+      owner: pullRequest.repositoryOwner,
+      pullNumber: pullRequest.number,
+      repo: pullRequest.repositoryName,
+      reviewId
+    })
+      .then(() => {
+        const eventLabels = {
+          APPROVE: 'approved',
+          COMMENT: 'submitted',
+          REQUEST_CHANGES: 'requested changes on'
+        }
+
+        toast.success(`Successfully ${eventLabels[event]} the pull request`)
       })
+      .catch((error) => {
+        // Rollback on error
+        setPendingReview(pullRequest.id, previousReview)
+        setReviewBody(previousBody)
 
-      const eventLabels = {
-        APPROVE: 'approved',
-        COMMENT: 'submitted',
-        REQUEST_CHANGES: 'requested changes on'
-      }
+        // Restore pending comments
+        for (const comment of previousComments) {
+          dispatch(
+            pendingReviewCommentsActions.addComment({
+              pullRequestId: pullRequest.id,
+              comment
+            })
+          )
+        }
 
-      toast.success(`Successfully ${eventLabels[event]} the pull request`)
-    } catch (error) {
-      // Rollback on error
-      dispatch(
-        pendingReviewsActions.setReview({
-          pullRequestId: pullRequest.id,
-          review: previousReview
-        })
-      )
-      setReviewBody(previousBody)
+        const message =
+          error instanceof Error ? error.message : 'Failed to submit review'
 
-      // Restore pending comments
-      for (const comment of previousComments) {
-        dispatch(
-          pendingReviewCommentsActions.addComment({
-            pullRequestId: pullRequest.id,
-            comment
-          })
-        )
-      }
-
-      const message =
-        error instanceof Error ? error.message : 'Failed to submit review'
-
-      toast.error(message)
-    } finally {
-      setIsSubmitting(false)
-    }
+        toast.error(message)
+      })
+      .finally(() => {
+        setIsSubmitting(false)
+      })
   }
 
-  const handleCancelReview = async () => {
+  const handleCancelReview = () => {
     if (!pendingReview) {
       return
     }
@@ -151,9 +148,7 @@ export const ReviewDrawer = memo(function ReviewDrawer({
 
     if (typeof reviewId !== 'number' || reviewId <= 0) {
       // No review on GitHub yet, just clear locally
-      dispatch(
-        pendingReviewsActions.clearReview({ pullRequestId: pullRequest.id })
-      )
+      clearPendingReview(pullRequest.id)
 
       return
     }
@@ -165,34 +160,27 @@ export const ReviewDrawer = memo(function ReviewDrawer({
     // Optimistically update UI
     setIsSubmitting(true)
     clearDraft()
-    dispatch(
-      pendingReviewsActions.clearReview({ pullRequestId: pullRequest.id })
-    )
+    clearPendingReview(pullRequest.id)
 
-    try {
-      await deleteReview({
-        owner: pullRequest.repositoryOwner,
-        pullNumber: pullRequest.number,
-        repo: pullRequest.repositoryName,
-        reviewId
+    deleteReview({
+      owner: pullRequest.repositoryOwner,
+      pullNumber: pullRequest.number,
+      repo: pullRequest.repositoryName,
+      reviewId
+    })
+      .catch((error) => {
+        // Rollback on error
+        setPendingReview(pullRequest.id, previousReview)
+        setReviewBody(previousBody)
+
+        const message =
+          error instanceof Error ? error.message : 'Failed to cancel review'
+
+        toast.error(message)
       })
-    } catch (error) {
-      // Rollback on error
-      dispatch(
-        pendingReviewsActions.setReview({
-          pullRequestId: pullRequest.id,
-          review: previousReview
-        })
-      )
-      setReviewBody(previousBody)
-
-      const message =
-        error instanceof Error ? error.message : 'Failed to cancel review'
-
-      toast.error(message)
-    } finally {
-      setIsSubmitting(false)
-    }
+      .finally(() => {
+        setIsSubmitting(false)
+      })
   }
 
   return (

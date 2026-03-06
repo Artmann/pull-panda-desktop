@@ -2,14 +2,15 @@
  * @vitest-environment jsdom
  */
 import { render, screen, act } from '@testing-library/react'
-import { Provider } from 'react-redux'
-import { configureStore } from '@reduxjs/toolkit'
 import { describe, it, expect, vi, beforeAll } from 'vitest'
 
 import type { Commit } from '@/types/pull-request-details'
 import type { PullRequest } from '@/types/pull-request'
 
-import commitsReducer from '@/app/store/commits-slice'
+import {
+  createTestQueryClient,
+  QueryWrapper
+} from '@/app/lib/test-query-wrapper'
 
 import { CommitsView } from './CommitsView'
 
@@ -79,31 +80,21 @@ function createMockPullRequest(
   }
 }
 
-function createTestStore(preloadedState?: { commits?: { items: Commit[] } }) {
-  return configureStore({
-    reducer: {
-      commits: commitsReducer
-    },
-    preloadedState
-  })
-}
-
 function renderWithProviders(
   ui: React.ReactElement,
-  { store = createTestStore() } = {}
+  { commits = [] as Commit[] } = {}
 ) {
-  return render(<Provider store={store}>{ui}</Provider>)
+  const queryClient = createTestQueryClient({ commits })
+
+  return render(<QueryWrapper client={queryClient}>{ui}</QueryWrapper>)
 }
 
 describe('CommitsView', () => {
   it('renders empty state when no commits', async () => {
     const pullRequest = createMockPullRequest()
-    const store = createTestStore({
-      commits: { items: [] }
-    })
 
     await act(async () => {
-      renderWithProviders(<CommitsView pullRequest={pullRequest} />, { store })
+      renderWithProviders(<CommitsView pullRequest={pullRequest} />)
     })
 
     expect(screen.getByText('No commits found.')).toBeInTheDocument()
@@ -115,12 +106,11 @@ describe('CommitsView', () => {
       message: 'Fix authentication bug',
       authorLogin: 'developer'
     })
-    const store = createTestStore({
-      commits: { items: [commit] }
-    })
 
     await act(async () => {
-      renderWithProviders(<CommitsView pullRequest={pullRequest} />, { store })
+      renderWithProviders(<CommitsView pullRequest={pullRequest} />, {
+        commits: [commit]
+      })
     })
 
     expect(screen.getByText('Fix authentication bug')).toBeInTheDocument()
@@ -132,12 +122,11 @@ describe('CommitsView', () => {
     const commit = createMockCommit({
       message: 'Add new feature\n\nThis adds a new feature to the app.'
     })
-    const store = createTestStore({
-      commits: { items: [commit] }
-    })
 
     await act(async () => {
-      renderWithProviders(<CommitsView pullRequest={pullRequest} />, { store })
+      renderWithProviders(<CommitsView pullRequest={pullRequest} />, {
+        commits: [commit]
+      })
     })
 
     expect(screen.getByText('Add new feature')).toBeInTheDocument()
@@ -151,12 +140,11 @@ describe('CommitsView', () => {
     const commit = createMockCommit({
       hash: 'abc1234567890def'
     })
-    const store = createTestStore({
-      commits: { items: [commit] }
-    })
 
     await act(async () => {
-      renderWithProviders(<CommitsView pullRequest={pullRequest} />, { store })
+      renderWithProviders(<CommitsView pullRequest={pullRequest} />, {
+        commits: [commit]
+      })
     })
 
     expect(screen.getByText('abc1234')).toBeInTheDocument()
@@ -168,12 +156,11 @@ describe('CommitsView', () => {
       linesAdded: 42,
       linesRemoved: 13
     })
-    const store = createTestStore({
-      commits: { items: [commit] }
-    })
 
     await act(async () => {
-      renderWithProviders(<CommitsView pullRequest={pullRequest} />, { store })
+      renderWithProviders(<CommitsView pullRequest={pullRequest} />, {
+        commits: [commit]
+      })
     })
 
     expect(screen.getByText('+42')).toBeInTheDocument()
@@ -185,12 +172,11 @@ describe('CommitsView', () => {
     const commit = createMockCommit({
       gitHubCreatedAt: new Date().toISOString()
     })
-    const store = createTestStore({
-      commits: { items: [commit] }
-    })
 
     await act(async () => {
-      renderWithProviders(<CommitsView pullRequest={pullRequest} />, { store })
+      renderWithProviders(<CommitsView pullRequest={pullRequest} />, {
+        commits: [commit]
+      })
     })
 
     expect(screen.getByText('Today')).toBeInTheDocument()
@@ -203,12 +189,11 @@ describe('CommitsView', () => {
     const commit = createMockCommit({
       gitHubCreatedAt: yesterday.toISOString()
     })
-    const store = createTestStore({
-      commits: { items: [commit] }
-    })
 
     await act(async () => {
-      renderWithProviders(<CommitsView pullRequest={pullRequest} />, { store })
+      renderWithProviders(<CommitsView pullRequest={pullRequest} />, {
+        commits: [commit]
+      })
     })
 
     expect(screen.getByText('Yesterday')).toBeInTheDocument()
@@ -219,12 +204,11 @@ describe('CommitsView', () => {
     const commit = createMockCommit({
       message: null
     })
-    const store = createTestStore({
-      commits: { items: [commit] }
-    })
 
     await act(async () => {
-      renderWithProviders(<CommitsView pullRequest={pullRequest} />, { store })
+      renderWithProviders(<CommitsView pullRequest={pullRequest} />, {
+        commits: [commit]
+      })
     })
 
     expect(screen.getByText('No message')).toBeInTheDocument()

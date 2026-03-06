@@ -31,6 +31,9 @@ import { createRoot } from 'react-dom/client'
 
 import { App } from './app/App'
 import { filterReadyPullRequests } from './app/lib/pull-requests'
+import { createQueryClient } from './app/lib/query-client'
+import { setQueryClient } from './app/lib/query-client-accessor'
+import { seedQueryCache } from './app/lib/seed-query-cache'
 import { createStore } from './app/store'
 import './app/index.css'
 
@@ -38,16 +41,21 @@ async function main() {
   const bootstrapData = await window.electron.getBootstrapData()
   const readyPullRequests = filterReadyPullRequests(bootstrapData?.pullRequests)
 
-  const store = createStore({
-    checks: { items: bootstrapData?.checks ?? [] },
-    comments: { items: bootstrapData?.comments ?? [] },
-    commits: { items: bootstrapData?.commits ?? [] },
-    modifiedFiles: { items: bootstrapData?.modifiedFiles ?? [] },
+  const queryClient = createQueryClient()
+  setQueryClient(queryClient)
+
+  seedQueryCache(queryClient, {
+    checks: bootstrapData?.checks ?? [],
+    comments: bootstrapData?.comments ?? [],
+    commits: bootstrapData?.commits ?? [],
+    modifiedFiles: bootstrapData?.modifiedFiles ?? [],
     pendingReviews: bootstrapData?.pendingReviews ?? {},
-    pullRequests: { items: readyPullRequests },
-    reactions: { items: bootstrapData?.reactions ?? [] },
-    reviews: { items: bootstrapData?.reviews ?? [] }
+    pullRequests: readyPullRequests,
+    reactions: bootstrapData?.reactions ?? [],
+    reviews: bootstrapData?.reviews ?? []
   })
+
+  const store = createStore()
 
   const root = document.getElementById('root')
 
@@ -57,7 +65,10 @@ async function main() {
 
   createRoot(root).render(
     <StrictMode>
-      <App store={store} />
+      <App
+        queryClient={queryClient}
+        store={store}
+      />
     </StrictMode>
   )
 }

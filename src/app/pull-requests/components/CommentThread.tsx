@@ -26,11 +26,11 @@ import { Textarea } from '@/app/components/ui/textarea'
 import { createComment, syncPullRequestDetails } from '@/app/lib/api'
 import { useAuth } from '@/app/lib/store/authContext'
 import {
-  commentsActions,
-  createOptimisticComment
-} from '@/app/store/comments-slice'
+  createOptimisticComment,
+  useAddComment,
+  useRemoveComment
+} from '@/app/lib/queries/use-comments'
 import { getDraftKeyForReply } from '@/app/store/drafts-slice'
-import { useAppDispatch } from '@/app/store/hooks'
 import { useDraft } from '@/app/store/use-draft'
 
 import { CommentBody } from './CommentBody'
@@ -132,7 +132,8 @@ const CommentReply = memo(function CommentReply({
   const { body, setBody, clearDraft } = useDraft(draftKey)
   const [isSubmitting, setIsSubmitting] = useState(false)
 
-  const dispatch = useAppDispatch()
+  const addComment = useAddComment()
+  const removeComment = useRemoveComment()
   const { user } = useAuth()
 
   const isReviewComment = comment.gitHubReviewThreadId !== null
@@ -141,7 +142,7 @@ const CommentReply = memo(function CommentReply({
     : undefined
 
   const handleSubmit = useCallback(
-    async (event: FormEvent) => {
+    (event: FormEvent) => {
       event.preventDefault()
 
       if (!body.trim() || isSubmitting || !user) {
@@ -150,7 +151,7 @@ const CommentReply = memo(function CommentReply({
 
       const trimmedBody = body.trim()
 
-      // Create optimistic comment and add to store immediately
+      // Create optimistic comment and add to cache immediately
       const optimisticComment = createOptimisticComment({
         body: trimmedBody,
         pullRequestId: pullRequest.id,
@@ -160,53 +161,45 @@ const CommentReply = memo(function CommentReply({
         gitHubReviewThreadId: comment.gitHubReviewThreadId ?? undefined
       })
 
-      dispatch(
-        commentsActions.addComment({
-          pullRequestId: pullRequest.id,
-          comment: optimisticComment
-        })
-      )
+      addComment(pullRequest.id, optimisticComment)
 
       // Clear draft immediately for better UX
       clearDraft()
       setIsSubmitting(true)
 
-      try {
-        await createComment({
-          body: trimmedBody,
-          owner: pullRequest.repositoryOwner,
-          pullNumber: pullRequest.number,
-          repo: pullRequest.repositoryName,
-          reviewCommentId
+      createComment({
+        body: trimmedBody,
+        owner: pullRequest.repositoryOwner,
+        pullNumber: pullRequest.number,
+        repo: pullRequest.repositoryName,
+        reviewCommentId
+      })
+        .then(() => {
+          // Trigger sync to get the real comment from the server
+          syncPullRequestDetails(pullRequest.id)
         })
+        .catch((error) => {
+          console.error('Failed to post comment:', error)
 
-        // Trigger sync to get the real comment from the server
-        syncPullRequestDetails(pullRequest.id)
-      } catch (error) {
-        console.error('Failed to post comment:', error)
-
-        // Rollback optimistic comment on error
-        dispatch(
-          commentsActions.removeComment({
-            pullRequestId: pullRequest.id,
-            commentId: optimisticComment.id
-          })
-        )
-      } finally {
-        setIsSubmitting(false)
-      }
+          // Rollback optimistic comment on error
+          removeComment(pullRequest.id, optimisticComment.id)
+        })
+        .finally(() => {
+          setIsSubmitting(false)
+        })
     },
     [
+      addComment,
       body,
       clearDraft,
       comment.gitHubId,
       comment.gitHubReviewThreadId,
-      dispatch,
       isSubmitting,
       pullRequest.id,
       pullRequest.number,
       pullRequest.repositoryName,
       pullRequest.repositoryOwner,
+      removeComment,
       reviewCommentId,
       user
     ]

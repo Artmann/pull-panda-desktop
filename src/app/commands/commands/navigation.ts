@@ -1,9 +1,11 @@
 import { ArrowRight, GitPullRequest, Home } from 'lucide-react'
 
+import { getQueryClient } from '@/app/lib/query-client-accessor'
+import { queryKeys } from '@/app/lib/query-keys'
+import type { PullRequest } from '@/types/pull-request'
+
 import { commandRegistry } from '../registry'
 import { getNavigate } from '../context'
-import { getStore } from '../store-accessor'
-import type { PullRequest } from '@/types/pull-request'
 
 // Tab names as used in the app
 const tabs = ['overview', 'checks', 'files'] as const
@@ -52,11 +54,11 @@ commandRegistry.register<PullRequest>({
     type: 'select',
     placeholder: 'Search pull requests...',
     getOptions: (_context, query) => {
-      const store = getStore()
+      const queryClient = getQueryClient()
+      const pullRequests =
+        queryClient.getQueryData<PullRequest[]>(queryKeys.pullRequests.all) ??
+        []
 
-      if (!store) return []
-
-      const pullRequests = store.getState().pullRequests.items
       const lowerQuery = query.toLowerCase()
 
       return pullRequests

@@ -8,8 +8,12 @@ import { describe, it, expect } from 'vitest'
 
 import type { PullRequest } from '@/types/pull-request'
 
+import {
+  createTestQueryClient,
+  QueryWrapper
+} from '@/app/lib/test-query-wrapper'
+import { queryKeys } from '@/app/lib/query-keys'
 import pendingReviewCommentsReducer from '@/app/store/pending-review-comments-slice'
-import pendingReviewsReducer from '@/app/store/pending-reviews-slice'
 
 import { PullRequestToolbar } from './PullRequestToolbar'
 
@@ -47,24 +51,29 @@ function createMockPullRequest(
   }
 }
 
-function createTestStore() {
+function createReduxStore() {
   return configureStore({
     reducer: {
-      pendingReviewComments: pendingReviewCommentsReducer,
-      pendingReviews: pendingReviewsReducer
+      pendingReviewComments: pendingReviewCommentsReducer
     },
     preloadedState: {
-      pendingReviewComments: {},
-      pendingReviews: {}
+      pendingReviewComments: {}
     }
   })
 }
 
-function renderWithProviders(
-  ui: React.ReactElement,
-  { store = createTestStore() } = {}
-) {
-  return render(<Provider store={store}>{ui}</Provider>)
+function renderWithProviders(ui: React.ReactElement) {
+  const queryClient = createTestQueryClient()
+  const store = createReduxStore()
+
+  // Seed empty pending reviews for the PR so the query resolves.
+  queryClient.setQueryData(queryKeys.pendingReviews.byPullRequest('pr-1'), null)
+
+  return render(
+    <QueryWrapper client={queryClient}>
+      <Provider store={store}>{ui}</Provider>
+    </QueryWrapper>
+  )
 }
 
 describe('PullRequestToolbar', () => {

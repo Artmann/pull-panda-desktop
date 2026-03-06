@@ -6,18 +6,23 @@ import {
   useEffect,
   type ReactNode
 } from 'react'
-import { shallowEqual, useStore } from 'react-redux'
 import { useLocation, useNavigate, type NavigateFunction } from 'react-router'
 
-import type { AppStore } from '@/app/store'
-import { useAppSelector } from '@/app/store/hooks'
+import { useChecks } from '@/app/lib/queries/use-checks'
+import { useComments } from '@/app/lib/queries/use-comments'
+import { useCommits } from '@/app/lib/queries/use-commits'
+import { useModifiedFiles } from '@/app/lib/queries/use-modified-files'
+import { usePullRequest } from '@/app/lib/queries/use-pull-requests'
+import { useReactions } from '@/app/lib/queries/use-reactions'
+import { useReviews } from '@/app/lib/queries/use-reviews'
+import { setQueryClient } from '@/app/lib/query-client-accessor'
 import type {
   Comment,
   ModifiedFile,
   PullRequestDetails
 } from '@/types/pull-request-details'
+import { useQueryClient } from '@tanstack/react-query'
 
-import { setStore } from './store-accessor'
 import type { CommandContext, CommandView } from './types'
 
 type CommandContextValue = {
@@ -55,75 +60,27 @@ export function CommandContextProvider({
 }: CommandContextProviderProps) {
   const location = useLocation()
   const navigate = useNavigate()
-  const store = useStore() as AppStore
+  const queryClient = useQueryClient()
 
   // Store references for commands to use
   useEffect(() => {
     navigateFunction = navigate
-    setStore(store)
+    setQueryClient(queryClient)
     return () => {
       navigateFunction = null
     }
-  }, [navigate, store])
+  }, [navigate, queryClient])
 
   // Extract PR ID from pathname (useParams doesn't work outside Routes)
   const pullRequestId = extractPullRequestId(location.pathname)
 
-  const pullRequest = useAppSelector((state) =>
-    pullRequestId
-      ? state.pullRequests.items.find((pr) => pr.id === pullRequestId)
-      : undefined
-  )
-
-  const checks = useAppSelector(
-    (state) =>
-      pullRequestId
-        ? state.checks.items.filter((c) => c.pullRequestId === pullRequestId)
-        : [],
-    shallowEqual
-  )
-
-  const comments = useAppSelector(
-    (state) =>
-      pullRequestId
-        ? state.comments.items.filter((c) => c.pullRequestId === pullRequestId)
-        : [],
-    shallowEqual
-  )
-
-  const commits = useAppSelector(
-    (state) =>
-      pullRequestId
-        ? state.commits.items.filter((c) => c.pullRequestId === pullRequestId)
-        : [],
-    shallowEqual
-  )
-
-  const files = useAppSelector(
-    (state) =>
-      pullRequestId
-        ? state.modifiedFiles.items.filter(
-            (f) => f.pullRequestId === pullRequestId
-          )
-        : [],
-    shallowEqual
-  )
-
-  const reactions = useAppSelector(
-    (state) =>
-      pullRequestId
-        ? state.reactions.items.filter((r) => r.pullRequestId === pullRequestId)
-        : [],
-    shallowEqual
-  )
-
-  const reviews = useAppSelector(
-    (state) =>
-      pullRequestId
-        ? state.reviews.items.filter((r) => r.pullRequestId === pullRequestId)
-        : [],
-    shallowEqual
-  )
+  const pullRequest = usePullRequest(pullRequestId)
+  const checks = useChecks(pullRequestId ?? '')
+  const comments = useComments(pullRequestId ?? '')
+  const commits = useCommits(pullRequestId ?? '')
+  const files = useModifiedFiles(pullRequestId ?? '')
+  const reactions = useReactions(pullRequestId ?? '')
+  const reviews = useReviews(pullRequestId ?? '')
 
   const pullRequestDetails: PullRequestDetails | undefined = useMemo(
     () =>

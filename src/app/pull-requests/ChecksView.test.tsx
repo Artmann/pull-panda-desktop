@@ -2,15 +2,16 @@
  * @vitest-environment jsdom
  */
 import { render, screen, act } from '@testing-library/react'
-import { Provider } from 'react-redux'
-import { configureStore } from '@reduxjs/toolkit'
 import { describe, it, expect, beforeAll } from 'vitest'
 
 import type { Check } from '@/types/pull-request-details'
 import type { PullRequest } from '@/types/pull-request'
 
 import { CodeThemeProvider } from '@/app/lib/store/codeThemeContext'
-import checksReducer from '@/app/store/checks-slice'
+import {
+  createTestQueryClient,
+  QueryWrapper
+} from '@/app/lib/test-query-wrapper'
 
 import { ChecksView } from './ChecksView'
 
@@ -101,35 +102,25 @@ function createMockPullRequest(
   }
 }
 
-function createTestStore(preloadedState?: { checks?: { items: Check[] } }) {
-  return configureStore({
-    reducer: {
-      checks: checksReducer
-    },
-    preloadedState
-  })
-}
-
 function renderWithProviders(
   ui: React.ReactElement,
-  { store = createTestStore() } = {}
+  { checks = [] as Check[] } = {}
 ) {
+  const queryClient = createTestQueryClient({ checks })
+
   return render(
-    <Provider store={store}>
+    <QueryWrapper client={queryClient}>
       <CodeThemeProvider>{ui}</CodeThemeProvider>
-    </Provider>
+    </QueryWrapper>
   )
 }
 
 describe('ChecksView', () => {
   it('renders empty state when no checks', async () => {
     const pullRequest = createMockPullRequest()
-    const store = createTestStore({
-      checks: { items: [] }
-    })
 
     await act(async () => {
-      renderWithProviders(<ChecksView pullRequest={pullRequest} />, { store })
+      renderWithProviders(<ChecksView pullRequest={pullRequest} />)
     })
 
     expect(screen.getByText('No checks found.')).toBeInTheDocument()
@@ -152,12 +143,11 @@ describe('ChecksView', () => {
       name: 'deploy',
       suiteName: 'Vercel'
     })
-    const store = createTestStore({
-      checks: { items: [check1, check2, check3] }
-    })
 
     await act(async () => {
-      renderWithProviders(<ChecksView pullRequest={pullRequest} />, { store })
+      renderWithProviders(<ChecksView pullRequest={pullRequest} />, {
+        checks: [check1, check2, check3]
+      })
     })
 
     expect(screen.getByText('GitHub Actions')).toBeInTheDocument()
@@ -172,12 +162,11 @@ describe('ChecksView', () => {
     const check = createMockCheck({
       conclusion: 'success'
     })
-    const store = createTestStore({
-      checks: { items: [check] }
-    })
 
     await act(async () => {
-      renderWithProviders(<ChecksView pullRequest={pullRequest} />, { store })
+      renderWithProviders(<ChecksView pullRequest={pullRequest} />, {
+        checks: [check]
+      })
     })
 
     expect(screen.getByText('Success')).toBeInTheDocument()
@@ -188,12 +177,11 @@ describe('ChecksView', () => {
     const check = createMockCheck({
       conclusion: 'failure'
     })
-    const store = createTestStore({
-      checks: { items: [check] }
-    })
 
     await act(async () => {
-      renderWithProviders(<ChecksView pullRequest={pullRequest} />, { store })
+      renderWithProviders(<ChecksView pullRequest={pullRequest} />, {
+        checks: [check]
+      })
     })
 
     expect(screen.getByText('Failed')).toBeInTheDocument()
@@ -205,12 +193,11 @@ describe('ChecksView', () => {
       state: 'in_progress',
       conclusion: null
     })
-    const store = createTestStore({
-      checks: { items: [check] }
-    })
 
     await act(async () => {
-      renderWithProviders(<ChecksView pullRequest={pullRequest} />, { store })
+      renderWithProviders(<ChecksView pullRequest={pullRequest} />, {
+        checks: [check]
+      })
     })
 
     expect(screen.getByText('Running')).toBeInTheDocument()
@@ -221,12 +208,11 @@ describe('ChecksView', () => {
     const check = createMockCheck({
       conclusion: 'cancelled'
     })
-    const store = createTestStore({
-      checks: { items: [check] }
-    })
 
     await act(async () => {
-      renderWithProviders(<ChecksView pullRequest={pullRequest} />, { store })
+      renderWithProviders(<ChecksView pullRequest={pullRequest} />, {
+        checks: [check]
+      })
     })
 
     expect(screen.getByText('Cancelled')).toBeInTheDocument()
@@ -246,12 +232,11 @@ describe('ChecksView', () => {
       message: 'New build',
       syncedAt: '2024-01-02T00:00:00Z'
     })
-    const store = createTestStore({
-      checks: { items: [oldCheck, newCheck] }
-    })
 
     await act(async () => {
-      renderWithProviders(<ChecksView pullRequest={pullRequest} />, { store })
+      renderWithProviders(<ChecksView pullRequest={pullRequest} />, {
+        checks: [oldCheck, newCheck]
+      })
     })
 
     // Should only show the newer check's message
@@ -264,12 +249,11 @@ describe('ChecksView', () => {
     const check = createMockCheck({
       detailsUrl: 'https://github.com/owner/repo/actions/runs/123'
     })
-    const store = createTestStore({
-      checks: { items: [check] }
-    })
 
     await act(async () => {
-      renderWithProviders(<ChecksView pullRequest={pullRequest} />, { store })
+      renderWithProviders(<ChecksView pullRequest={pullRequest} />, {
+        checks: [check]
+      })
     })
 
     const button = screen.getByTitle('Open on GitHub')
@@ -282,12 +266,11 @@ describe('ChecksView', () => {
     const check = createMockCheck({
       suiteName: null
     })
-    const store = createTestStore({
-      checks: { items: [check] }
-    })
 
     await act(async () => {
-      renderWithProviders(<ChecksView pullRequest={pullRequest} />, { store })
+      renderWithProviders(<ChecksView pullRequest={pullRequest} />, {
+        checks: [check]
+      })
     })
 
     expect(screen.getByText('Unknown')).toBeInTheDocument()
