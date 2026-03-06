@@ -56,21 +56,42 @@ export const PullRequestToolbar = memo(function PullRequestToolbar({
       return
     }
 
-    getMergeOptions(pullRequest.id)
-      .then((options) => {
-        setMergeOptions(options)
+    let cancelled = false
+    let retryTimeout: ReturnType<typeof setTimeout> | null = null
 
-        const first =
-          (options.allowSquashMerge && 'squash') ||
-          (options.allowMergeCommit && 'merge') ||
-          (options.allowRebaseMerge && 'rebase') ||
-          null
+    const fetchOptions = () => {
+      getMergeOptions(pullRequest.id)
+        .then((options) => {
+          if (cancelled) return
 
-        setSelectedMethod(first as MergeMethod | null)
-      })
-      .catch(() => {
-        // Silently fail — merge button just won't appear.
-      })
+          setMergeOptions(options)
+
+          const first =
+            (options.allowSquashMerge && 'squash') ||
+            (options.allowMergeCommit && 'merge') ||
+            (options.allowRebaseMerge && 'rebase') ||
+            null
+
+          setSelectedMethod(first as MergeMethod | null)
+
+          if (options.mergeable === null) {
+            retryTimeout = setTimeout(fetchOptions, 3000)
+          }
+        })
+        .catch(() => {
+          // Silently fail — merge button just won't appear.
+        })
+    }
+
+    fetchOptions()
+
+    return () => {
+      cancelled = true
+
+      if (retryTimeout !== null) {
+        clearTimeout(retryTimeout)
+      }
+    }
   }, [pullRequest.id, pullRequest.state])
 
   const allowedMethods: MergeMethod[] = mergeOptions
