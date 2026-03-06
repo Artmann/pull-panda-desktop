@@ -127,6 +127,14 @@ export const PullRequestHeader = memo(function PullRequestHeader({
         </div>
       )}
 
+      {pullRequest.state === 'MERGED' && (
+        <div>
+          <Badge className="bg-[oklch(0.50_0.20_300)] text-white border-transparent text-[10px]">
+            Merged
+          </Badge>
+        </div>
+      )}
+
       {latestReviews.length > 0 && (
         <div className="flex gap-2 overflow-x-auto">
           {latestReviews.map((review) => (
@@ -276,7 +284,12 @@ function Breadcrumbs({
 }): ReactElement {
   return (
     <div className="flex items-center gap-1 text-gray-500 dark:text-gray-400">
-      <GitPullRequest className="size-3 -mt-0.5 mr-2 text-green-500" />
+      <GitPullRequest
+        className={cn(
+          'size-3 -mt-0.5 mr-2',
+          pullRequest.state === 'MERGED' ? 'text-purple-500' : 'text-green-500'
+        )}
+      />
 
       <Breadcrumb>
         <BreadcrumbList>
