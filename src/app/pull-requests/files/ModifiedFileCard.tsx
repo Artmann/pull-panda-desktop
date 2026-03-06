@@ -1,4 +1,5 @@
 import { ExternalLinkIcon } from 'lucide-react'
+import { useTheme } from 'next-themes'
 import { memo, useMemo, type ReactElement } from 'react'
 import { shallowEqual } from 'react-redux'
 
@@ -6,6 +7,7 @@ import type { Comment, ModifiedFile } from '@/types/pull-request-details'
 import type { PullRequest } from '@/types/pull-request'
 
 import { CopyToClipboardButton } from '@/app/components/CopyToClipboardButton'
+import { useCodeTheme } from '@/app/lib/store/codeThemeContext'
 import { useAppSelector } from '@/app/store/hooks'
 import { type PendingReviewComment } from '@/app/store/pending-review-comments-slice'
 import { FileCard, FileCardBody, FileCardHeader } from '../components/FileCard'
@@ -22,6 +24,11 @@ export const ModifiedFileCard = memo(function ModifiedFileCard({
   file,
   pullRequest
 }: ModifiedFileCardProps): ReactElement {
+  const { darkBackground, lightBackground } = useCodeTheme()
+  const { resolvedTheme } = useTheme()
+  const isDark = resolvedTheme === 'dark'
+  const backgroundColor = isDark ? darkBackground : lightBackground
+
   const filePath = file.filePath
   const viewFileUrl = `https://github.com/${pullRequest.repositoryOwner}/${pullRequest.repositoryName}/blob/HEAD/${encodeURI(filePath)}`
 
@@ -47,7 +54,7 @@ export const ModifiedFileCard = memo(function ModifiedFileCard({
   )
 
   return (
-    <FileCard>
+    <FileCard style={{ backgroundColor }}>
       <FileCardHeader>
         <div className="flex-1 flex items-center gap-2 font-mono text-xs">
           <span className="truncate">{file.filePath}</span>

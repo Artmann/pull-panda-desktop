@@ -5,7 +5,7 @@ export const darkCodeThemes = [
     value: 'catppuccin-frappe'
   },
   {
-    background: '#303446',
+    background: '#24273A',
     label: 'Catppuccin Macchiato',
     value: 'catppuccin-macchiato'
   },

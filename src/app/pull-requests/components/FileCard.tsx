@@ -18,9 +18,10 @@ const FileCardContext = createContext<FileCardContextValue>({
 
 interface FileCardProps {
   children?: React.ReactNode | string
+  style?: React.CSSProperties
 }
 
-export function FileCard({ children }: FileCardProps): ReactElement {
+export function FileCard({ children, style }: FileCardProps): ReactElement {
   const [isCollapsed, setIsCollapsed] = useState(false)
 
   return (
@@ -31,6 +32,7 @@ export function FileCard({ children }: FileCardProps): ReactElement {
           text-xs text-foreground font-mono
           overflow-hidden
         `}
+        style={style}
       >
         {children}
       </div>
@@ -52,7 +54,7 @@ export function FileCardHeader({
   return (
     <header
       className={cn(
-        'flex items-center gap-2 px-4 py-2 border-border bg-background',
+        'flex items-center gap-2 px-4 py-2 border-border',
         isCollapsed ? 'border-0' : 'border-b'
       )}
     >
