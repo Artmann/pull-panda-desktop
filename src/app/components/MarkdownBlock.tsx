@@ -1,5 +1,5 @@
 import type { Element, Root } from 'hast'
-import isString from 'lodash/isString'
+import { isString } from 'radash'
 import { useTheme } from 'next-themes'
 import type { ReactElement } from 'react'
 import { memo, useCallback, useEffect, useRef, useState } from 'react'

@@ -40,6 +40,7 @@ import { pullRequestsActions } from '@/app/store/pull-requests-slice'
 import { reactionsActions } from '@/app/store/reactions-slice'
 import { reviewsActions } from '@/app/store/reviews-slice'
 import { AppFooter } from './AppFooter'
+import { NavigationContextProvider } from './pull-requests/NavigationContext'
 
 interface AppProps {
   store: AppStore
@@ -69,6 +70,8 @@ export function App({ store }: AppProps): ReactElement {
 function AppContent(): ReactElement {
   const { status, isNewSignIn } = useAuth()
   const dispatch = useAppDispatch()
+
+  const scrollContainerRef = useRef<HTMLDivElement>(null)
 
   // Listen for resource updates from the main process
   useEffect(() => {
@@ -185,72 +188,81 @@ function AppContent(): ReactElement {
   const postSignInRedirect = isNewSignIn ? '/onboarding' : '/'
 
   return (
-    <main className="w-full h-screen flex flex-col overflow-hidden">
-      <TitleBar />
+    <NavigationContextProvider scrollContainerRef={scrollContainerRef}>
+      <main className="w-full h-screen flex flex-col overflow-hidden">
+        <TitleBar />
 
-      <div className="flex-1 min-h-0 overflow-auto ">
-        <ErrorBoundary>
-          {isAuthenticated && <RouteRestorer />}
+        <div
+          className="flex-1 min-h-0 overflow-auto"
+          ref={scrollContainerRef}
+        >
+          <ErrorBoundary>
+            {isAuthenticated && <RouteRestorer />}
 
-          <Routes>
-            <Route
-              path="/sign-in"
-              element={
-                isAuthenticated ? (
-                  <Navigate to={postSignInRedirect} />
-                ) : (
-                  <SignInPage />
-                )
-              }
-            />
-            <Route
-              path="/onboarding"
-              element={
-                isAuthenticated ? (
-                  <OnboardingPage />
-                ) : (
-                  <Navigate to="/sign-in" />
-                )
-              }
-            />
-            <Route
-              path="/"
-              element={
-                isAuthenticated ? <HomePage /> : <Navigate to="/sign-in" />
-              }
-            />
-            <Route
-              path="/bg"
-              element={
-                isAuthenticated ? (
-                  <BackgroundSyncerPage />
-                ) : (
-                  <Navigate to="/sign-in" />
-                )
-              }
-            />
-            <Route
-              path="/pull-requests/:id"
-              element={
-                isAuthenticated ? (
-                  <PullRequestPage />
-                ) : (
-                  <Navigate to="/sign-in" />
-                )
-              }
-            />
-            <Route
-              path="/settings"
-              element={
-                isAuthenticated ? <SettingsPage /> : <Navigate to="/sign-in" />
-              }
-            />
-          </Routes>
-        </ErrorBoundary>
-      </div>
+            <Routes>
+              <Route
+                path="/sign-in"
+                element={
+                  isAuthenticated ? (
+                    <Navigate to={postSignInRedirect} />
+                  ) : (
+                    <SignInPage />
+                  )
+                }
+              />
+              <Route
+                path="/onboarding"
+                element={
+                  isAuthenticated ? (
+                    <OnboardingPage />
+                  ) : (
+                    <Navigate to="/sign-in" />
+                  )
+                }
+              />
+              <Route
+                path="/"
+                element={
+                  isAuthenticated ? <HomePage /> : <Navigate to="/sign-in" />
+                }
+              />
+              <Route
+                path="/bg"
+                element={
+                  isAuthenticated ? (
+                    <BackgroundSyncerPage />
+                  ) : (
+                    <Navigate to="/sign-in" />
+                  )
+                }
+              />
+              <Route
+                path="/pull-requests/:id"
+                element={
+                  isAuthenticated ? (
+                    <PullRequestPage />
+                  ) : (
+                    <Navigate to="/sign-in" />
+                  )
+                }
+              />
+              <Route
+                path="/settings"
+                element={
+                  isAuthenticated ? (
+                    <SettingsPage />
+                  ) : (
+                    <Navigate to="/sign-in" />
+                  )
+                }
+              />
+            </Routes>
+          </ErrorBoundary>
+        </div>
 
-      {isAuthenticated && <AppFooter />}
-    </main>
+        {isAuthenticated && <AppFooter />}
+      </main>
+    </NavigationContextProvider>
   )
 }
 

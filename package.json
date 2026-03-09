@@ -65,8 +65,6 @@
     "electron-squirrel-startup": "^1.0.1",
     "hast": "^1.0.0",
     "hono": "^4.11.3",
-    "lodash": "^4.17.21",
-    "lodash-es": "^4.17.22",
     "lucide-react": "^0.562.0",
     "next-themes": "^0.4.6",
     "radash": "^12.1.1",
