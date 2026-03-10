@@ -23,6 +23,10 @@ import {
 
 let bootstrapData: BootstrapData | null = null
 let mainWindow: BrowserWindow | null = null
+let isSyncingPullRequests = false
+let isSyncingDetails = false
+let pullRequestSyncIntervalId: NodeJS.Timeout | null = null
+let detailSyncIntervalId: NodeJS.Timeout | null = null
 
 // Handle creating/removing shortcuts on Windows when installing/uninstalling.
 if (started) {
@@ -143,10 +147,20 @@ const createWindow = () => {
 // This method will be called when Electron has finished
 // initialization and is ready to create browser windows.
 // Some APIs can only be used after this event occurs.
-function needsSync(pullRequest: {
-  detailsSyncedAt: string | null
-  updatedAt: string
-}): boolean {
+function needsSync(
+  pullRequest: {
+    id: string
+    detailsSyncedAt: string | null
+    state: string
+    updatedAt: string
+  },
+  activePullRequestIds: Set<string>
+): boolean {
+  // Merged or closed PRs don't need periodic syncing
+  if (pullRequest.state === 'MERGED' || pullRequest.state === 'CLOSED') {
+    return false
+  }
+
   // Never synced before
   if (!pullRequest.detailsSyncedAt) {
     return true
@@ -161,16 +175,21 @@ function needsSync(pullRequest: {
     return true
   }
 
-  // Use shorter stale threshold for recently active PRs
-  const oneDayMs = 24 * 60 * 60 * 1000
-  const isRecentlyUpdated = now - updatedAt < oneDayMs
-  const staleThresholdMs = isRecentlyUpdated ? 60 * 1000 : 60 * 60 * 1000
-
-  if (now - detailsSyncedAt > staleThresholdMs) {
-    return true
+  // Active PRs (user has opened them) sync every 10 seconds
+  if (activePullRequestIds.has(pullRequest.id)) {
+    return now - detailsSyncedAt > 10_000
   }
 
-  return false
+  // Recently updated open PRs sync every 60 seconds
+  const oneDayMs = 24 * 60 * 60 * 1000
+  const isRecentlyUpdated = now - updatedAt < oneDayMs
+
+  if (isRecentlyUpdated) {
+    return now - detailsSyncedAt > 60_000
+  }
+
+  // Older open PRs sync every 5 minutes
+  return now - detailsSyncedAt > 5 * 60_000
 }
 
 async function syncAllPullRequestDetails(token: string): Promise<void> {
@@ -179,7 +198,10 @@ async function syncAllPullRequestDetails(token: string): Promise<void> {
   }
 
   const allPullRequests = bootstrapData.pullRequests
-  const pullRequests = allPullRequests.filter(needsSync)
+  const activePullRequestIds = backgroundSyncer.getActivePullRequestIds()
+  const pullRequests = allPullRequests.filter((pr) =>
+    needsSync(pr, activePullRequestIds)
+  )
   const total = pullRequests.length
 
   console.log(
@@ -295,6 +317,70 @@ async function getUserLogin(): Promise<string | undefined> {
   }
 }
 
+async function runPullRequestSync(): Promise<void> {
+  const token = loadToken()
+
+  if (!token || isSyncingPullRequests) {
+    return
+  }
+
+  isSyncingPullRequests = true
+
+  try {
+    const result = await syncPullRequests(token)
+
+    console.log(`Synced ${result.synced} pull requests`)
+
+    if (result.errors.length > 0) {
+      console.warn('Sync warnings:', result.errors)
+    }
+
+    // Update stale PRs that were merged/closed on GitHub
+    try {
+      const staleUpdated = await syncStalePullRequests(token, result.syncedIds)
+
+      if (staleUpdated > 0) {
+        console.log(`Updated ${staleUpdated} stale pull requests`)
+      }
+    } catch (error) {
+      console.error('Failed to sync stale pull requests:', error)
+    }
+
+    // Rebuild bootstrap data for future IPC GetBootstrapData calls
+    const postSyncUserLogin = await getUserLogin()
+    bootstrapData = await bootstrap(postSyncUserLogin)
+
+    // Send the fresh PR list to the renderer
+    mainWindow?.webContents.send(ipcChannels.ResourceUpdated, {
+      type: 'pull-requests',
+      data: bootstrapData.pullRequests
+    })
+    mainWindow?.webContents.send(ipcChannels.SyncComplete)
+  } catch (error) {
+    console.error('Failed to sync pull requests:', error)
+  } finally {
+    isSyncingPullRequests = false
+  }
+}
+
+async function runDetailSync(): Promise<void> {
+  const token = loadToken()
+
+  if (!token || isSyncingDetails) {
+    return
+  }
+
+  isSyncingDetails = true
+
+  try {
+    await syncAllPullRequestDetails(token)
+  } catch (error) {
+    console.error('Failed to sync PR details:', error)
+  } finally {
+    isSyncingDetails = false
+  }
+}
+
 app.on('ready', async () => {
   setupIpcHandlers()
 
@@ -320,44 +406,18 @@ app.on('ready', async () => {
 
     taskManager.startTask(syncTask.id)
 
-    syncPullRequests(token)
-      .then(async (result) => {
+    runPullRequestSync()
+      .then(() => {
         taskManager.completeTask(syncTask.id)
 
-        console.log(`Synced ${result.synced} pull requests`)
-
-        if (result.errors.length > 0) {
-          console.warn('Sync warnings:', result.errors)
-        }
-
-        // Update stale PRs that were merged/closed on GitHub
-        try {
-          const staleUpdated = await syncStalePullRequests(
-            token,
-            result.syncedIds
-          )
-
-          if (staleUpdated > 0) {
-            console.log(`Updated ${staleUpdated} stale pull requests`)
-          }
-        } catch (error) {
-          console.error('Failed to sync stale pull requests:', error)
-        }
-
-        // Rebuild bootstrap data for future IPC GetBootstrapData calls
-        const postSyncUserLogin = await getUserLogin()
-        bootstrapData = await bootstrap(postSyncUserLogin)
-
-        // Send the fresh PR list to the renderer
-        mainWindow?.webContents.send(ipcChannels.ResourceUpdated, {
-          type: 'pull-requests',
-          data: bootstrapData.pullRequests
-        })
-        mainWindow?.webContents.send(ipcChannels.SyncComplete)
-
-        syncAllPullRequestDetails(token).catch((error) => {
+        // Run initial detail sync
+        runDetailSync().catch((error) => {
           console.error('Failed to sync PR details:', error)
         })
+
+        // Start periodic syncs
+        pullRequestSyncIntervalId = setInterval(runPullRequestSync, 3000)
+        detailSyncIntervalId = setInterval(runDetailSync, 10_000)
       })
       .catch((error) => {
         taskManager.failTask(
@@ -376,6 +436,14 @@ setInterval(() => {
 
 // Save database before quitting
 app.on('before-quit', () => {
+  if (pullRequestSyncIntervalId) {
+    clearInterval(pullRequestSyncIntervalId)
+  }
+
+  if (detailSyncIntervalId) {
+    clearInterval(detailSyncIntervalId)
+  }
+
   backgroundSyncer.stop()
   closeDatabase()
 })
