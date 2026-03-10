@@ -51,9 +51,7 @@ describe('FileCard', () => {
   })
 
   it('does not collapse when clicking a non-chevron button inside the header', () => {
-    renderFileCard(
-      <button data-testid="other-button">Action</button>
-    )
+    renderFileCard(<button data-testid="other-button">Action</button>)
 
     fireEvent.click(screen.getByTestId('other-button'))
 

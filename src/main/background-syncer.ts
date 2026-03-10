@@ -272,6 +272,10 @@ class BackgroundSyncer {
     }
   }
 
+  getActivePullRequestIds(): Set<string> {
+    return new Set(this.activePullRequests.keys())
+  }
+
   getMonitoringData(): MonitoringData {
     const data = {
       syncs: [...this.syncHistory],
