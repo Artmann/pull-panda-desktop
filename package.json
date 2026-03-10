@@ -67,6 +67,7 @@
     "lodash-es": "^4.17.22",
     "lucide-react": "^0.562.0",
     "next-themes": "^0.4.6",
+    "radash": "^12.1.1",
     "react": "^19.2.3",
     "react-dom": "^19.2.3",
     "react-hotkeys-hook": "^5.2.3",

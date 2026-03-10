@@ -1,5 +1,6 @@
 import { BrowserWindow } from 'electron'
 import { eq, and, isNull, inArray } from 'drizzle-orm'
+import { parallel } from 'radash'
 
 import { getDatabase } from '../database'
 import { checks, pullRequests } from '../database/schema'
@@ -101,6 +102,19 @@ class BackgroundSyncer {
     const now = Date.now()
     let nextSyncDelay = syncIntervalWithoutRunningChecks
 
+    // Collect PRs that are due for sync
+    const database = getDatabase()
+
+    interface PrToSync {
+      activePr: ActivePullRequest
+      owner: string
+      pullNumber: number
+      pullRequestId: string
+      repositoryName: string
+    }
+
+    const prsToSync: PrToSync[] = []
+
     for (const [pullRequestId, activePr] of this.activePullRequests) {
       const interval = activePr.hasRunningChecks
         ? syncIntervalWithRunningChecks
@@ -109,15 +123,12 @@ class BackgroundSyncer {
       const timeSinceLastSync = now - activePr.lastSyncedAt
 
       if (timeSinceLastSync < interval) {
-        // Not time to sync yet, but track the shortest remaining time
         const remaining = interval - timeSinceLastSync
         nextSyncDelay = Math.min(nextSyncDelay, remaining)
 
         continue
       }
 
-      // Get PR info from database
-      const database = getDatabase()
       const pullRequest = database
         .select()
         .from(pullRequests)
@@ -125,12 +136,22 @@ class BackgroundSyncer {
         .get()
 
       if (!pullRequest) {
-        // PR no longer exists, remove from active list
         this.activePullRequests.delete(pullRequestId)
 
         continue
       }
 
+      prsToSync.push({
+        activePr,
+        owner: pullRequest.repositoryOwner,
+        pullNumber: pullRequest.number,
+        pullRequestId,
+        repositoryName: pullRequest.repositoryName
+      })
+    }
+
+    // Sync up to 3 PRs concurrently
+    await parallel(3, prsToSync, async (item) => {
       const syncStartTime = Date.now()
       const syncId = `sync-${++this.syncIdCounter}`
       let syncSuccess = true
@@ -139,19 +160,18 @@ class BackgroundSyncer {
       try {
         await syncChecks({
           token,
-          pullRequestId,
-          owner: pullRequest.repositoryOwner,
-          repositoryName: pullRequest.repositoryName,
-          pullNumber: pullRequest.number
+          pullRequestId: item.pullRequestId,
+          owner: item.owner,
+          repositoryName: item.repositoryName,
+          pullNumber: item.pullNumber
         })
 
-        // Check if any checks are still running
         const runningChecks = database
           .select()
           .from(checks)
           .where(
             and(
-              eq(checks.pullRequestId, pullRequestId),
+              eq(checks.pullRequestId, item.pullRequestId),
               isNull(checks.deletedAt),
               inArray(checks.state, ['in_progress', 'queued'])
             )
@@ -160,40 +180,38 @@ class BackgroundSyncer {
 
         const hasRunning = runningChecks.length > 0
 
-        // Update active PR state
-        activePr.lastSyncedAt = Date.now()
-        activePr.hasRunningChecks = hasRunning
+        item.activePr.lastSyncedAt = Date.now()
+        item.activePr.hasRunningChecks = hasRunning
 
-        // Notify renderer that sync completed
-        this.notifyRenderer(pullRequestId)
-
-        // If this PR has running checks, we want to sync sooner
-        if (hasRunning) {
-          nextSyncDelay = Math.min(nextSyncDelay, syncIntervalWithRunningChecks)
-        }
+        this.notifyRenderer(item.pullRequestId)
       } catch (error) {
         syncSuccess = false
         syncError = error instanceof Error ? error.message : 'Unknown error'
         console.error(
-          `[BackgroundSyncer] Error syncing PR ${pullRequestId}:`,
+          `[BackgroundSyncer] Error syncing PR ${item.pullRequestId}:`,
           error
         )
       }
 
-      // Record sync history
       const syncEndTime = Date.now()
       this.recordSync({
         id: syncId,
         timestamp: syncStartTime,
         duration: syncEndTime - syncStartTime,
         resourceType: 'checks',
-        resourceId: pullRequestId,
+        resourceId: item.pullRequestId,
         success: syncSuccess,
         error: syncError
       })
 
-      // Record rate limit
       this.recordRateLimit()
+    })
+
+    // Compute next delay from updated active PR states
+    for (const [, activePr] of this.activePullRequests) {
+      if (activePr.hasRunningChecks) {
+        nextSyncDelay = Math.min(nextSyncDelay, syncIntervalWithRunningChecks)
+      }
     }
 
     // Schedule next sync
