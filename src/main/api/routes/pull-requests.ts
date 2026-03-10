@@ -16,6 +16,7 @@ import type { AppEnv } from './comments'
 export const pullRequestsRoute = new Hono<AppEnv>()
 
 pullRequestsRoute.post('/:pullRequestId/activate', (context) => {
+  const token = context.get('token')
   const pullRequestId = context.req.param('pullRequestId')
 
   if (!pullRequestId) {
@@ -23,6 +24,36 @@ pullRequestsRoute.post('/:pullRequestId/activate', (context) => {
   }
 
   backgroundSyncer.markPullRequestActive(pullRequestId)
+
+  // Fire-and-forget detail sync so the user gets fresh data immediately
+  const database = getDatabase()
+
+  const pullRequest = database
+    .select()
+    .from(pullRequests)
+    .where(eq(pullRequests.id, pullRequestId))
+    .get()
+
+  if (pullRequest) {
+    syncPullRequestDetails({
+      token,
+      pullRequestId,
+      owner: pullRequest.repositoryOwner,
+      repositoryName: pullRequest.repositoryName,
+      pullNumber: pullRequest.number
+    })
+      .then(() => {
+        for (const window of BrowserWindow.getAllWindows()) {
+          sendPullRequestResourceEvents(window, pullRequestId)
+        }
+      })
+      .catch((error) => {
+        console.error(
+          `Failed to sync details for activated PR ${pullRequestId}:`,
+          error
+        )
+      })
+  }
 
   return context.json({ success: true })
 })
