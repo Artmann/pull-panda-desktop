@@ -3,41 +3,23 @@ import { memo, ReactElement, useEffect, useState } from 'react'
 import { toast } from 'sonner'
 
 import { Button } from '@/app/components/ui/button'
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger
-} from '@/app/components/ui/dropdown-menu'
 import { Separator } from '@/app/components/ui/separator'
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger
-} from '@/app/components/ui/tooltip'
-import { createReview, getMergeOptions, mergePullRequest } from '@/app/lib/api'
+import { createReview, getMergeOptions } from '@/app/lib/api'
 import type { MergeOptions } from '@/app/lib/api'
 import { useAppDispatch, useAppSelector } from '@/app/store/hooks'
 import {
   createOptimisticReview,
   pendingReviewsActions
 } from '@/app/store/pending-reviews-slice'
-import { pullRequestsActions } from '@/app/store/pull-requests-slice'
 import { PullRequest } from '@/types/pull-request'
 
-type MergeMethod = 'merge' | 'squash' | 'rebase'
-
-const mergeMethodLabels: Record<MergeMethod, string> = {
-  merge: 'Merge commit',
-  rebase: 'Rebase and merge',
-  squash: 'Squash and merge'
-}
-
 interface PullRequestToolbarProps {
+  onOpenMergeDrawer: () => void
   pullRequest: PullRequest
 }
 
 export const PullRequestToolbar = memo(function PullRequestToolbar({
+  onOpenMergeDrawer,
   pullRequest
 }: PullRequestToolbarProps): ReactElement {
   const dispatch = useAppDispatch()
@@ -49,91 +31,44 @@ export const PullRequestToolbar = memo(function PullRequestToolbar({
   const hasPendingReview = Boolean(pendingReview)
 
   const [mergeOptions, setMergeOptions] = useState<MergeOptions | null>(null)
-  const [selectedMethod, setSelectedMethod] = useState<MergeMethod | null>(null)
 
-  useEffect(() => {
-    if (pullRequest.state !== 'OPEN') {
-      return
-    }
-
-    let cancelled = false
-    let retryTimeout: ReturnType<typeof setTimeout> | null = null
-
-    const fetchOptions = () => {
-      getMergeOptions(pullRequest.id)
-        .then((options) => {
-          if (cancelled) return
-
-          setMergeOptions(options)
-
-          const first =
-            (options.allowSquashMerge && 'squash') ||
-            (options.allowMergeCommit && 'merge') ||
-            (options.allowRebaseMerge && 'rebase') ||
-            null
-
-          setSelectedMethod(first as MergeMethod | null)
-
-          if (options.mergeable === null) {
-            retryTimeout = setTimeout(fetchOptions, 3000)
-          }
-        })
-        .catch(() => {
-          // Silently fail — merge button just won't appear.
-        })
-    }
-
-    fetchOptions()
-
-    return () => {
-      cancelled = true
-
-      if (retryTimeout !== null) {
-        clearTimeout(retryTimeout)
+  useEffect(
+    function fetchMergeOptionsForLabel() {
+      if (pullRequest.state !== 'OPEN') {
+        return
       }
-    }
-  }, [pullRequest.id, pullRequest.state])
 
-  const allowedMethods: MergeMethod[] = mergeOptions
-    ? ([
-        mergeOptions.allowMergeCommit && 'merge',
-        mergeOptions.allowSquashMerge && 'squash',
-        mergeOptions.allowRebaseMerge && 'rebase'
-      ].filter(Boolean) as MergeMethod[])
-    : []
+      let cancelled = false
+      let retryTimeout: ReturnType<typeof setTimeout> | null = null
 
-  const handleMerge = (mergeMethod: MergeMethod) => {
-    const originalPr = pullRequest
+      const fetch = () => {
+        getMergeOptions(pullRequest.id)
+          .then((options) => {
+            if (cancelled) return
 
-    dispatch(
-      pullRequestsActions.upsertItem({
-        ...pullRequest,
-        mergedAt: new Date().toISOString(),
-        state: 'MERGED'
-      })
-    )
+            setMergeOptions(options)
 
-    mergePullRequest({
-      mergeMethod,
-      owner: pullRequest.repositoryOwner,
-      pullNumber: pullRequest.number,
-      pullRequestId: pullRequest.id,
-      repo: pullRequest.repositoryName
-    })
-      .then((updated) => {
-        dispatch(pullRequestsActions.upsertItem(updated))
-      })
-      .catch((error) => {
-        dispatch(pullRequestsActions.upsertItem(originalPr))
+            if (options.mergeable === null) {
+              retryTimeout = setTimeout(fetch, 3000)
+            }
+          })
+          .catch(() => {
+            // Silently fail — merge button just won't appear.
+          })
+      }
 
-        const message =
-          error instanceof Error
-            ? error.message
-            : 'Failed to merge pull request'
+      fetch()
 
-        toast.error(message)
-      })
-  }
+      return () => {
+        cancelled = true
+
+        if (retryTimeout !== null) {
+          clearTimeout(retryTimeout)
+        }
+      }
+    },
+    [pullRequest.id, pullRequest.state]
+  )
 
   const handleStartReview = async () => {
     if (hasPendingReview) {
@@ -179,14 +114,9 @@ export const PullRequestToolbar = memo(function PullRequestToolbar({
     }
   }
 
-  const mergeDisabled = mergeOptions ? mergeOptions.mergeable !== true : false
-
-  const mergeDisabledReason = mergeOptions
-    ? getMergeDisabledReason(mergeOptions)
-    : null
-
-  const showMerge =
-    pullRequest.state === 'OPEN' && selectedMethod && allowedMethods.length > 0
+  const mergeButtonLabel = getMergeButtonLabel(mergeOptions)
+  const mergeReady = mergeOptions?.mergeable === true
+  const showMerge = pullRequest.state === 'OPEN'
 
   return (
     <div
@@ -241,80 +171,44 @@ export const PullRequestToolbar = memo(function PullRequestToolbar({
         <>
           <Separator orientation="vertical" />
 
-          <div className="flex items-center">
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <span>
-                  <Button
-                    className="rounded-r-none"
-                    disabled={mergeDisabled}
-                    onClick={() => handleMerge(selectedMethod)}
-                    size="xs"
-                  >
-                    {mergeOptions?.mergeable === null ? (
-                      <Loader2 className="size-3 animate-spin" />
-                    ) : (
-                      <GitMergeIcon className="size-3" />
-                    )}
-                    {mergeDisabledReason ?? mergeMethodLabels[selectedMethod]}
-                  </Button>
-                </span>
-              </TooltipTrigger>
-
-              {mergeDisabledReason && (
-                <TooltipContent side="top">
-                  {mergeDisabledReason}
-                </TooltipContent>
-              )}
-            </Tooltip>
-
-            {allowedMethods.length > 1 && (
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button
-                    className="rounded-l-none border-l border-l-primary-foreground/20 px-1.5"
-                    disabled={mergeDisabled}
-                    size="xs"
-                  >
-                    <ChevronDown className="size-3" />
-                  </Button>
-                </DropdownMenuTrigger>
-
-                <DropdownMenuContent align="end">
-                  {allowedMethods.map((method) => (
-                    <DropdownMenuItem
-                      key={method}
-                      onSelect={() => setSelectedMethod(method)}
-                    >
-                      {mergeMethodLabels[method]}
-                    </DropdownMenuItem>
-                  ))}
-                </DropdownMenuContent>
-              </DropdownMenu>
+          <Button
+            onClick={onOpenMergeDrawer}
+            size="xs"
+            variant={mergeReady ? 'default' : 'outline'}
+          >
+            {mergeOptions?.mergeable === null ? (
+              <Loader2 className="size-3 animate-spin" />
+            ) : (
+              <GitMergeIcon className="size-3" />
             )}
-          </div>
+            {mergeButtonLabel}
+          </Button>
         </>
       )}
     </div>
   )
 })
 
-function getMergeDisabledReason(options: MergeOptions): string | null {
+function getMergeButtonLabel(options: MergeOptions | null): string {
+  if (!options) {
+    return 'Merge'
+  }
+
   if (options.mergeable === true) {
-    return null
+    return 'Ready to merge'
   }
 
   if (options.mergeable === null) {
-    return 'Checking mergeability'
+    return 'Checking...'
   }
 
   switch (options.mergeableState) {
     case 'blocked':
       return 'Merge blocked'
     case 'dirty':
-      return 'Has merge conflicts'
+      return 'Has conflicts'
     case 'unstable':
-      return 'Checks are failing'
+      return 'Checks failing'
     default:
       return 'Cannot merge'
   }

@@ -2,6 +2,7 @@
  * @vitest-environment jsdom
  */
 import { act, render, screen } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { Provider } from 'react-redux'
 import { configureStore } from '@reduxjs/toolkit'
 import { describe, it, expect, vi } from 'vitest'
@@ -77,12 +78,21 @@ function renderWithProviders(
   return render(<Provider store={store}>{ui}</Provider>)
 }
 
+const defaultProps = {
+  onOpenMergeDrawer: vi.fn()
+}
+
 describe('PullRequestToolbar', () => {
   it('shows "Start review" button when user is not the author', async () => {
     const pullRequest = createMockPullRequest({ isAuthor: false })
 
     await act(async () => {
-      renderWithProviders(<PullRequestToolbar pullRequest={pullRequest} />)
+      renderWithProviders(
+        <PullRequestToolbar
+          {...defaultProps}
+          pullRequest={pullRequest}
+        />
+      )
     })
 
     expect(screen.getByText('Start review')).toBeInTheDocument()
@@ -92,13 +102,18 @@ describe('PullRequestToolbar', () => {
     const pullRequest = createMockPullRequest({ isAuthor: true })
 
     await act(async () => {
-      renderWithProviders(<PullRequestToolbar pullRequest={pullRequest} />)
+      renderWithProviders(
+        <PullRequestToolbar
+          {...defaultProps}
+          pullRequest={pullRequest}
+        />
+      )
     })
 
     expect(screen.queryByText('Start review')).not.toBeInTheDocument()
   })
 
-  it('shows "Checking mergeability" with spinner when mergeable is null', async () => {
+  it('shows "Checking..." with spinner when mergeable is null', async () => {
     const { getMergeOptions } = await import('@/app/lib/api')
     const mockGetMergeOptions = vi.mocked(getMergeOptions)
 
@@ -115,18 +130,22 @@ describe('PullRequestToolbar', () => {
     const pullRequest = createMockPullRequest()
 
     await act(async () => {
-      renderWithProviders(<PullRequestToolbar pullRequest={pullRequest} />)
+      renderWithProviders(
+        <PullRequestToolbar
+          {...defaultProps}
+          pullRequest={pullRequest}
+        />
+      )
     })
 
-    expect(screen.getByText('Checking mergeability')).toBeInTheDocument()
+    expect(screen.getByText('Checking...')).toBeInTheDocument()
 
-    const button = screen.getByText('Checking mergeability').closest('button')
+    const button = screen.getByText('Checking...').closest('button')
 
-    expect(button).toBeDisabled()
     expect(button?.querySelector('.animate-spin')).toBeInTheDocument()
   })
 
-  it('shows merge button when PR is mergeable', async () => {
+  it('shows "Ready to merge" when PR is mergeable', async () => {
     const { getMergeOptions } = await import('@/app/lib/api')
     const mockGetMergeOptions = vi.mocked(getMergeOptions)
 
@@ -141,15 +160,18 @@ describe('PullRequestToolbar', () => {
     const pullRequest = createMockPullRequest()
 
     await act(async () => {
-      renderWithProviders(<PullRequestToolbar pullRequest={pullRequest} />)
+      renderWithProviders(
+        <PullRequestToolbar
+          {...defaultProps}
+          pullRequest={pullRequest}
+        />
+      )
     })
 
-    const button = screen.getByText('Squash and merge').closest('button')
-
-    expect(button).not.toBeDisabled()
+    expect(screen.getByText('Ready to merge')).toBeInTheDocument()
   })
 
-  it('disables merge button with reason when PR has conflicts', async () => {
+  it('shows "Has conflicts" when PR has merge conflicts', async () => {
     const { getMergeOptions } = await import('@/app/lib/api')
     const mockGetMergeOptions = vi.mocked(getMergeOptions)
 
@@ -164,15 +186,18 @@ describe('PullRequestToolbar', () => {
     const pullRequest = createMockPullRequest()
 
     await act(async () => {
-      renderWithProviders(<PullRequestToolbar pullRequest={pullRequest} />)
+      renderWithProviders(
+        <PullRequestToolbar
+          {...defaultProps}
+          pullRequest={pullRequest}
+        />
+      )
     })
 
-    const button = screen.getByText('Has merge conflicts').closest('button')
-
-    expect(button).toBeDisabled()
+    expect(screen.getByText('Has conflicts')).toBeInTheDocument()
   })
 
-  it('disables merge button when merge is blocked', async () => {
+  it('shows "Merge blocked" when merge is blocked', async () => {
     const { getMergeOptions } = await import('@/app/lib/api')
     const mockGetMergeOptions = vi.mocked(getMergeOptions)
 
@@ -187,11 +212,59 @@ describe('PullRequestToolbar', () => {
     const pullRequest = createMockPullRequest()
 
     await act(async () => {
-      renderWithProviders(<PullRequestToolbar pullRequest={pullRequest} />)
+      renderWithProviders(
+        <PullRequestToolbar
+          {...defaultProps}
+          pullRequest={pullRequest}
+        />
+      )
     })
 
-    const button = screen.getByText('Merge blocked').closest('button')
+    expect(screen.getByText('Merge blocked')).toBeInTheDocument()
+  })
 
-    expect(button).toBeDisabled()
+  it('calls onOpenMergeDrawer when merge button is clicked', async () => {
+    const { getMergeOptions } = await import('@/app/lib/api')
+    const mockGetMergeOptions = vi.mocked(getMergeOptions)
+
+    mockGetMergeOptions.mockResolvedValue({
+      allowMergeCommit: true,
+      allowRebaseMerge: true,
+      allowSquashMerge: true,
+      mergeable: true,
+      mergeableState: 'clean'
+    })
+
+    const onOpenMergeDrawer = vi.fn()
+    const pullRequest = createMockPullRequest()
+
+    await act(async () => {
+      renderWithProviders(
+        <PullRequestToolbar
+          onOpenMergeDrawer={onOpenMergeDrawer}
+          pullRequest={pullRequest}
+        />
+      )
+    })
+
+    await userEvent.click(screen.getByText('Ready to merge'))
+
+    expect(onOpenMergeDrawer).toHaveBeenCalledTimes(1)
+  })
+
+  it('does not show merge button for closed PRs', async () => {
+    const pullRequest = createMockPullRequest({ state: 'CLOSED' })
+
+    await act(async () => {
+      renderWithProviders(
+        <PullRequestToolbar
+          {...defaultProps}
+          pullRequest={pullRequest}
+        />
+      )
+    })
+
+    expect(screen.queryByText('Merge')).not.toBeInTheDocument()
+    expect(screen.queryByText('Ready to merge')).not.toBeInTheDocument()
   })
 })
