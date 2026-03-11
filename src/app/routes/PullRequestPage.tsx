@@ -27,6 +27,7 @@ import { clamp01 } from '@/math'
 
 import { ChecksView } from '../pull-requests/ChecksView'
 import { FilesView } from '../pull-requests/FilesView'
+import { MergeDrawer } from '../pull-requests/MergeDrawer'
 import { Overview } from '../pull-requests/Overview'
 import {
   PullRequestHeader,
@@ -37,6 +38,7 @@ import { ReviewDrawer } from '../pull-requests/ReviewDrawer'
 
 export function PullRequestPage(): ReactElement {
   const containerRef = useRef<HTMLDivElement>(null)
+  const [isMergeDrawerOpen, setIsMergeDrawerOpen] = useState(false)
   const [stickyHeaderProgress, setStickyHeaderProgress] = useState(0)
 
   const { id } = useParams<{ id: string }>()
@@ -175,7 +177,16 @@ export function PullRequestPage(): ReactElement {
 
       <PullRequestHeader pullRequest={pullRequest} />
 
-      <PullRequestToolbar pullRequest={pullRequest} />
+      <PullRequestToolbar
+        onOpenMergeDrawer={() => setIsMergeDrawerOpen(true)}
+        pullRequest={pullRequest}
+      />
+
+      <MergeDrawer
+        onClose={() => setIsMergeDrawerOpen(false)}
+        open={isMergeDrawerOpen}
+        pullRequest={pullRequest}
+      />
 
       <ReviewDrawer pullRequest={pullRequest} />
 
