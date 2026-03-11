@@ -1,11 +1,19 @@
-import { throttle } from 'radash'
-import { createContext, useEffect } from 'react'
+import { createContext } from 'react'
+import { useLocation, useSearchParams } from 'react-router'
+
+import { useTrackScrollPosition } from '@/app/hooks/trackScrollPosition'
 
 interface INavigationContext {
+  currentTab: string
+  isPullRequestPage: boolean
+  pullRequestId: string | null
   scrollContainerRef: React.RefObject<HTMLDivElement> | null
 }
 
 export const NavigationContext = createContext<INavigationContext>({
+  currentTab: 'overview',
+  isPullRequestPage: false,
+  pullRequestId: null,
   scrollContainerRef: null
 })
 
@@ -18,32 +26,36 @@ export function NavigationContextProvider({
   children,
   scrollContainerRef
 }: NavigationContextProviderProps): React.ReactElement {
+  const { pathname } = useLocation()
+  const [searchParams] = useSearchParams()
+
+  const prMatch = pathname.match(/^\/pull-requests\/([^/]+)$/)
+  const isPullRequestPage = prMatch !== null
+  const pullRequestId = prMatch?.[1] ?? null
+  const currentTab = searchParams.get('tab') ?? 'overview'
+
+  console.log('NavigationContextProvider:', {
+    isPullRequestPage,
+    pullRequestId,
+    currentTab
+  })
+
+  useTrackScrollPosition(scrollContainerRef, (scrollTop) => {
+    console.log('Scroll position:', scrollTop)
+
+    if (isPullRequestPage) {
+      const key = `pr-${pullRequestId}-${currentTab}`
+
+      console.log('Saving scroll position for key:', key)
+    }
+  })
+
   const context = {
+    currentTab,
+    isPullRequestPage,
+    pullRequestId,
     scrollContainerRef
   }
-
-  useEffect(
-    function trackScrollPosition() {
-      const element = scrollContainerRef.current
-
-      if (!element) {
-        return
-      }
-
-      const handleScroll = throttle({ interval: 100 }, () => {
-        console.log('Scroll position:', element.scrollTop)
-      })
-
-      element.addEventListener('scroll', handleScroll, { passive: true })
-
-      return () => {
-        if (element) {
-          element.removeEventListener('scroll', handleScroll)
-        }
-      }
-    },
-    [scrollContainerRef]
-  )
 
   return (
     <NavigationContext.Provider value={context}>

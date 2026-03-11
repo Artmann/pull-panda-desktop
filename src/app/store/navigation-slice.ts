@@ -2,6 +2,7 @@ import { createSlice, type PayloadAction } from '@reduxjs/toolkit'
 
 export interface NavigationState {
   activeTab: Record<string, string>
+  pullRequestScrollPositions?: Record<string, number>
 }
 
 const initialState: NavigationState = {

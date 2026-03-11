@@ -285,7 +285,7 @@ function RouteRestorer(): null {
     if (saved && saved !== current) {
       navigate(saved, { replace: true })
     }
-  }, [])
+  }, [location.pathname, location.search, navigate])
 
   // Persist current route on every navigation
   useEffect(() => {
