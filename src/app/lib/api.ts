@@ -325,6 +325,8 @@ export async function getMergeOptions(
 }
 
 export interface MergePullRequestRequest {
+  commitMessage?: string
+  commitTitle?: string
   mergeMethod: 'merge' | 'squash' | 'rebase'
   owner: string
   pullNumber: number
@@ -345,6 +347,8 @@ export async function mergePullRequest(
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
+        ...(request.commitMessage !== undefined && { commitMessage: request.commitMessage }),
+        ...(request.commitTitle !== undefined && { commitTitle: request.commitTitle }),
         mergeMethod: request.mergeMethod,
         owner: request.owner,
         pullNumber: request.pullNumber,
