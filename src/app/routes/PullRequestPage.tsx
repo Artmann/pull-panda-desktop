@@ -192,7 +192,7 @@ export function PullRequestPage(): ReactElement {
                 className="px-6 py-2 cursor-pointer text-xs flex-1 flex justify-center items-center"
                 value={tab.id}
               >
-                <tab.icon className="size-3" /> {tab.label}
+                <tab.icon className="size-4" /> {tab.label}
                 {tab.itemCount !== undefined && (
                   <div className="text-[11px] bg-muted rounded-sm text-center px-1.5 ml-1.5 mt-1">
                     {tab.itemCount}
