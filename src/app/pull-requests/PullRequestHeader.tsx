@@ -43,13 +43,13 @@ export const StickyPullRequestHeader = memo(function StickyPullRequestHeader({
         flex flex-col gap-2
         bg-background
         border-b border-border
-        transition-all
+        transition-none
       `}
       style={{
         display: transitionProgress === 0 ? 'none' : 'flex',
-        filter: transitionProgress < 1 ? `blur(12px)` : undefined,
         opacity: transitionProgress,
-        pointerEvents: transitionProgress === 1 ? 'auto' : 'none'
+        pointerEvents: transitionProgress === 1 ? 'auto' : 'none',
+        transform: `translateY(${(1 - transitionProgress) * -6}px)`
       }}
     >
       <div className="w-full max-w-240 mx-auto px-3 py-3">
@@ -181,7 +181,7 @@ function Title({
   return (
     <h1
       className={cn(
-        'font-semibold leading-tight text-gray-900 dark:text-gray-100 transition-all duration-200 ease-out',
+        'font-semibold leading-tight text-foreground transition-all duration-200 ease-out',
         size === 'sm' ? 'text-xl' : 'text-2xl'
       )}
     >
@@ -250,7 +250,7 @@ function InlineEditableTitle({
       <input
         aria-label="Pull request title"
         autoFocus
-        className="w-full text-2xl font-semibold leading-tight text-gray-900 dark:text-gray-100 bg-transparent border-0 border-b-2 border-primary outline-none focus:ring-0 py-0.5"
+        className="w-full text-2xl font-semibold leading-tight text-foreground bg-transparent border-0 border-b-2 border-primary outline-none focus:ring-0 py-0.5"
         value={draft}
         onBlur={handleSave}
         onChange={(event) => setDraft(event.target.value)}
@@ -269,7 +269,7 @@ function InlineEditableTitle({
   return (
     <h1
       className={cn(
-        'font-semibold leading-tight text-gray-900 dark:text-gray-100 transition-all duration-200 ease-out text-2xl',
+        'font-semibold leading-tight text-foreground transition-all duration-200 ease-out text-2xl',
         !isMerged && 'cursor-text hover:opacity-80'
       )}
       onClick={handleStartEdit}
