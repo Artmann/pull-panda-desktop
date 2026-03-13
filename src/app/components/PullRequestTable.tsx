@@ -61,8 +61,9 @@ export function PullRequestTable({
 
   if (pullRequests.length === 0) {
     return (
-      <div className="text-center text-muted-foreground py-8">
-        <p>No pull requests in this section.</p>
+      <div className="text-center text-muted-foreground py-8 space-y-1">
+        <p className="font-medium">All clear here.</p>
+        <p className="text-sm">No open pull requests in this section.</p>
       </div>
     )
   }
@@ -75,8 +76,14 @@ export function PullRequestTable({
       />
 
       {filteredPullRequests.length === 0 ? (
-        <div className="text-center text-muted-foreground py-8">
+        <div className="text-center text-muted-foreground py-8 space-y-2">
           <p>No pull requests match your filter.</p>
+          <button
+            className="text-xs text-primary hover:underline"
+            onClick={() => handleFilterChange('')}
+          >
+            Clear filter
+          </button>
         </div>
       ) : (
         <>
