@@ -219,7 +219,9 @@ describe('HomePage', () => {
 
       renderWithProviders(<HomePage />)
 
-      expect(screen.getByText('No pull requests found.')).toBeInTheDocument()
+      expect(
+        screen.getByText('No pull requests synced yet.')
+      ).toBeInTheDocument()
     })
 
     it('shows sync message in empty state', () => {
@@ -228,7 +230,7 @@ describe('HomePage', () => {
       renderWithProviders(<HomePage />)
 
       expect(
-        screen.getByText('Pull requests will appear here after syncing.')
+        screen.getByText("They'll appear here once syncing completes.")
       ).toBeInTheDocument()
     })
   })

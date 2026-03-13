@@ -54,11 +54,12 @@ function renderTable(pullRequests: PullRequest[]) {
 
 describe('PullRequestTable', () => {
   describe('empty state', () => {
-    it('shows "No pull requests in this section." when empty', () => {
+    it('shows "All clear here." when empty', () => {
       renderTable([])
 
+      expect(screen.getByText('All clear here.')).toBeInTheDocument()
       expect(
-        screen.getByText('No pull requests in this section.')
+        screen.getByText('No open pull requests in this section.')
       ).toBeInTheDocument()
     })
 
