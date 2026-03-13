@@ -38,9 +38,9 @@ export function HomePage(): ReactElement {
         {pullRequests.length === 0 ? (
           <section>
             <div className="text-center text-muted-foreground py-12">
-              <p>No pull requests found.</p>
+              <p>No pull requests synced yet.</p>
               <p className="text-sm mt-2">
-                Pull requests will appear here after syncing.
+                They'll appear here once syncing completes.
               </p>
             </div>
           </section>
@@ -48,11 +48,11 @@ export function HomePage(): ReactElement {
           <div className="space-y-8 ">
             <section>
               <div className="flex items-center space-x-2 mb-4">
-                <h2 className="text-muted-foreground">Needs Your Attention</h2>
+                <h2 className="text-foreground font-medium">Needs Your Attention</h2>
 
                 <Badge
                   variant="outline"
-                  className="text-muted-foreground border-muted-foreground/20"
+                  className="text-muted-foreground border-border"
                 >
                   {pullRequestThatNeedsReview.length}
                 </Badge>
@@ -63,11 +63,11 @@ export function HomePage(): ReactElement {
 
             <section>
               <div className="flex items-center space-x-2 mb-4">
-                <h2 className="text-muted-foreground">Your Pull Requests</h2>
+                <h2 className="text-foreground font-medium">Your Pull Requests</h2>
 
                 <Badge
                   variant="outline"
-                  className="text-muted-foreground border-muted-foreground/20"
+                  className="text-muted-foreground border-border"
                 >
                   {yourPullRequests.length}
                 </Badge>
@@ -94,7 +94,7 @@ function Greetings({ name }: { name: string }): ReactElement {
   const greeting = greetings[timeOfDay] ?? greetings.morning
 
   return (
-    <h1 className="md:text-xl font-medium text-gray-900 dark:text-white">
+    <h1 className="text-2xl font-semibold text-foreground">
       {greeting}, {name}
     </h1>
   )
