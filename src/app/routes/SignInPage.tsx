@@ -1,5 +1,6 @@
 import { AlertCircleIcon, Github, Loader2 } from 'lucide-react'
 
+import logo from '@/assets/logo-transparent.png'
 import { DeviceCodeCard } from '@/app/components/auth/DeviceCodeCard'
 import { Alert, AlertDescription, AlertTitle } from '@/app/components/ui/alert'
 import { Button } from '@/app/components/ui/button'
@@ -28,8 +29,14 @@ export function SignInPage() {
         />
       ) : (
         <div>
-          <div className="flex flex-col gap-2">
-            <div className="flex items-center gap-2">
+          <div className="flex flex-col gap-4">
+            <div className="flex flex-col gap-2">
+              <img
+                alt="Pull Panda"
+                className="h-12 w-auto"
+                src={logo}
+              />
+
               <h1 className="text-3xl font-semibold">Pull Panda</h1>
             </div>
 
