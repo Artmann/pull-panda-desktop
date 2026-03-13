@@ -116,11 +116,11 @@ export const PullRequestHeader = memo(function PullRequestHeader({
       {pullRequest.state === 'OPEN' && (
         <div>
           {pullRequest.isDraft ? (
-            <Badge className="bg-[oklch(0.55_0.02_270)] text-white border-transparent text-[10px]">
+            <Badge className="bg-status-neutral border-status-neutral-border text-status-neutral-foreground text-[10px]">
               Draft
             </Badge>
           ) : (
-            <Badge className="bg-[oklch(0.52_0.17_150)] text-white border-transparent text-[10px]">
+            <Badge className="bg-status-success border-status-success-border text-status-success-foreground text-[10px]">
               Ready for review
             </Badge>
           )}
@@ -129,7 +129,7 @@ export const PullRequestHeader = memo(function PullRequestHeader({
 
       {pullRequest.state === 'CLOSED' && (
         <div>
-          <Badge className="bg-[oklch(0.45_0.15_25)] text-white border-transparent text-[10px]">
+          <Badge className="bg-status-danger border-status-danger-border text-status-danger-foreground text-[10px]">
             Closed
           </Badge>
         </div>
@@ -137,7 +137,7 @@ export const PullRequestHeader = memo(function PullRequestHeader({
 
       {pullRequest.state === 'MERGED' && (
         <div>
-          <Badge className="bg-[oklch(0.50_0.20_300)] text-white border-transparent text-[10px]">
+          <Badge className="bg-status-merged border-status-merged-border text-status-merged-foreground text-[10px]">
             Merged
           </Badge>
         </div>
@@ -160,7 +160,7 @@ export const PullRequestHeader = memo(function PullRequestHeader({
 
       {commits.length > 0 && (
         <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-          <GitCommitIcon className="size-3 shrink-0" />
+          <GitCommitIcon className="size-3.5 shrink-0" />
 
           <span>
             {commits.length} {commits.length === 1 ? 'commit' : 'commits'}
@@ -168,7 +168,7 @@ export const PullRequestHeader = memo(function PullRequestHeader({
 
           {latestCommit?.message && (
             <>
-              <span className="text-border">·</span>
+              <span className="text-muted-foreground/50">·</span>
 
               <span className="truncate font-mono">
                 {latestCommit.message.length > 80
@@ -338,7 +338,7 @@ function Breadcrumbs({
   pullRequest: PullRequest
 }): ReactElement {
   return (
-    <div className="flex items-center gap-1 text-gray-500 dark:text-gray-400">
+    <div className="flex items-center gap-1 text-muted-foreground">
       <GitPullRequest
         className={cn(
           'size-3 -mt-0.5 mr-2',

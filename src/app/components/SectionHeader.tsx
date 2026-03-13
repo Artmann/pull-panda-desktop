@@ -9,7 +9,7 @@ export const SectionHeader = memo(function SectionHeader({
 }): ReactElement {
   return (
     <h2
-      className="text-lg font-semibold text-gray-900 dark:text-gray-100 leading-tight mb-3"
+      className="text-lg font-semibold text-foreground leading-tight mb-3"
       data-testid={id}
       id={id}
     >
