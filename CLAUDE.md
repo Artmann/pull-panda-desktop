@@ -8,6 +8,8 @@ Vite.
 - Don't use the `sr-only` Tailwind class. It causes layout issues.
 - Before using `useEffect`, review
   https://react.dev/learn/you-might-not-need-an-effect.
+- After making code changes, always run `yarn lint` and `yarn tsc --noEmit` and
+  fix every error before considering the task done.
 - When creating or updating resources:
   1. Update the Redux state optimistically (synchronously, before any API call).
   2. Fire the API request — do NOT use `async/await` in event handlers (e.g.

@@ -192,9 +192,7 @@ describe('MergeDrawer', () => {
       )
     })
 
-    expect(screen.getByText('Reviews')).toBeInTheDocument()
     expect(screen.getByText('reviewer1')).toBeInTheDocument()
-    expect(screen.getByText('Approved')).toBeInTheDocument()
     expect(screen.getByText('1 approval')).toBeInTheDocument()
   })
 
@@ -218,12 +216,11 @@ describe('MergeDrawer', () => {
       )
     })
 
-    expect(screen.getByText('Checks')).toBeInTheDocument()
-    expect(screen.getByText('1 passed, 1 failed')).toBeInTheDocument()
+    expect(screen.getByText('1 of 2 checks failed')).toBeInTheDocument()
     expect(screen.getByText('Lint')).toBeInTheDocument()
   })
 
-  it('shows merge method selection', async () => {
+  it('shows merge method tabs', async () => {
     mockGetMergeOptions.mockResolvedValue(mergeableOptions)
 
     const pullRequest = createMockPullRequest()
@@ -238,13 +235,12 @@ describe('MergeDrawer', () => {
       )
     })
 
-    expect(screen.getByText('Merge method')).toBeInTheDocument()
-    expect(screen.getByText('Squash and merge')).toBeInTheDocument()
-    expect(screen.getByText('Merge commit')).toBeInTheDocument()
-    expect(screen.getByText('Rebase and merge')).toBeInTheDocument()
+    expect(screen.getByText('Squash')).toBeInTheDocument()
+    expect(screen.getByText('Merge')).toBeInTheDocument()
+    expect(screen.getByText('Rebase')).toBeInTheDocument()
   })
 
-  it('disables merge button when not mergeable', async () => {
+  it('shows blocked state when not mergeable', async () => {
     mockGetMergeOptions.mockResolvedValue({
       ...mergeableOptions,
       mergeable: false,
@@ -264,10 +260,13 @@ describe('MergeDrawer', () => {
     })
 
     const mergeButton = screen.getByRole('button', {
-      name: /squash and merge/i
+      name: /merge is blocked/i
     })
 
     expect(mergeButton).toBeDisabled()
+    expect(
+      screen.getByText('Merge without waiting for requirements')
+    ).toBeInTheDocument()
   })
 
   it('calls mergePullRequest with selected method on merge', async () => {
@@ -292,15 +291,22 @@ describe('MergeDrawer', () => {
       )
     })
 
-    // The footer merge button (not the method selector)
-    const mergeButtons = screen.getAllByRole('button', {
+    const mergeButton = screen.getByRole('button', {
       name: /squash and merge/i
     })
-    const footerMergeButton = mergeButtons[mergeButtons.length - 1]
 
-    await userEvent.click(footerMergeButton)
+    // First click reveals the squash commit fields.
+    await userEvent.click(mergeButton)
+
+    expect(mockMergePullRequest).not.toHaveBeenCalled()
+    expect(screen.getByPlaceholderText('Commit title')).toBeInTheDocument()
+
+    // Second click fires the merge.
+    await userEvent.click(mergeButton)
 
     expect(mockMergePullRequest).toHaveBeenCalledWith({
+      commitMessage: 'Test PR body',
+      commitTitle: 'Test PR (#42)',
       mergeMethod: 'squash',
       owner: 'owner',
       pullNumber: 42,
@@ -312,7 +318,7 @@ describe('MergeDrawer', () => {
   })
 
   it('shows loading state when merge options are being fetched', async () => {
-    mockGetMergeOptions.mockReturnValue(new Promise(() => {}))
+    mockGetMergeOptions.mockReturnValue(new Promise(() => undefined))
 
     const pullRequest = createMockPullRequest()
 

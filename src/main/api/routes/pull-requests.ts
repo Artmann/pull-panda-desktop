@@ -215,6 +215,8 @@ pullRequestsRoute.get('/:pullRequestId/merge-options', async (context) => {
 })
 
 interface MergePullRequestBody {
+  commitMessage?: string
+  commitTitle?: string
   mergeMethod: 'merge' | 'squash' | 'rebase'
   owner: string
   pullNumber: number
@@ -249,7 +251,9 @@ pullRequestsRoute.post('/:pullRequestId/merge', async (context) => {
       owner: request.owner,
       repo: request.repo,
       pull_number: request.pullNumber,
-      merge_method: request.mergeMethod
+      merge_method: request.mergeMethod,
+      ...(request.commitTitle !== undefined && { commit_title: request.commitTitle }),
+      ...(request.commitMessage !== undefined && { commit_message: request.commitMessage })
     })
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Unknown error'
