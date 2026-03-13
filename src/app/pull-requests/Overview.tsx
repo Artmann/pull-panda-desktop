@@ -163,7 +163,7 @@ function InlineEditableBody({
   if (pullRequest.body) {
     return (
       <div
-        className={!isMerged ? 'cursor-text' : undefined}
+        className={!isMerged ? 'cursor-text hover:opacity-80 transition-opacity' : undefined}
         onClick={handleStartEdit}
       >
         <MarkdownBlock
@@ -178,8 +178,8 @@ function InlineEditableBody({
     <div
       className={
         !isMerged
-          ? 'cursor-text text-muted-foreground text-sm'
-          : 'text-muted-foreground text-sm'
+          ? 'cursor-text text-muted-foreground text-sm italic hover:opacity-80 transition-opacity'
+          : 'text-muted-foreground text-sm italic'
       }
       onClick={!isMerged ? handleStartEdit : undefined}
     >
