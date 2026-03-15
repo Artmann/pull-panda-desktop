@@ -20,7 +20,7 @@ export const IssueCard = memo(function IssueCard({
     <a
       className={`
         flex items-center gap-4
-        rounded-sm border border-gray-200/50 dark:border-gray-700/50 hover:bg-gray-50 dark:hover:bg-gray-800
+        rounded-sm border border-border/50 hover:bg-muted
         px-4 py-3
         w-full max-w-2xl
       `}
@@ -28,7 +28,7 @@ export const IssueCard = memo(function IssueCard({
       rel="noreferrer noopener"
       target="_blank"
     >
-      <div className="size-6 text-gray-800 dark:text-gray-200 hover:text-gray-900 dark:hover:text-gray-100">
+      <div className="size-6 text-foreground">
         {issue.source === 'linear' ? (
           <LinearLogoIcon className="size-full" />
         ) : issue.source === 'jira' ? (
