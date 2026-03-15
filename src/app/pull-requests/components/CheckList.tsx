@@ -33,11 +33,15 @@ export function CheckList({ checks }: { checks: Check[] }): ReactElement {
 
   const icon = useMemo(() => {
     if (allChecksPassed) {
-      return <CircleCheckIcon className="size-6 text-status-success-foreground" />
+      return (
+        <CircleCheckIcon className="size-6 text-status-success-foreground" />
+      )
     }
 
     if (hasFailedChecks) {
-      return <CircleAlertIcon className="size-6 text-status-danger-foreground" />
+      return (
+        <CircleAlertIcon className="size-6 text-status-danger-foreground" />
+      )
     }
 
     return <CircleIcon className="size-6 text-muted-foreground" />
@@ -143,7 +147,9 @@ export function CheckList({ checks }: { checks: Check[] }): ReactElement {
     const conclusion = check.conclusion?.toLowerCase()
 
     if (state === 'queued' || state === 'in_progress') {
-      return <CircleIcon className="size-4 text-muted-foreground animate-pulse" />
+      return (
+        <CircleIcon className="size-4 text-muted-foreground animate-pulse" />
+      )
     }
 
     switch (conclusion) {

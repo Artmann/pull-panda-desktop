@@ -342,7 +342,9 @@ function Breadcrumbs({
       <GitPullRequest
         className={cn(
           'size-3 -mt-0.5 mr-2',
-          pullRequest.state === 'MERGED' ? 'text-status-merged-foreground' : 'text-status-success-foreground'
+          pullRequest.state === 'MERGED'
+            ? 'text-status-merged-foreground'
+            : 'text-status-success-foreground'
         )}
       />
 

@@ -1,4 +1,5 @@
 import { type ReactElement } from 'react'
+import { AccountSettings } from '../settings/account'
 import { AppearanceSettings } from '../settings/appearance'
 
 export function SettingsPage(): ReactElement {
@@ -8,6 +9,7 @@ export function SettingsPage(): ReactElement {
         <section className="flex flex-col gap-8">
           <h1 className="text-2xl font-medium">Settings</h1>
 
+          <AccountSettings />
           <AppearanceSettings />
         </section>
       </div>

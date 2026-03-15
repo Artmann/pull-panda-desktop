@@ -258,8 +258,12 @@ pullRequestsRoute.post('/:pullRequestId/merge', async (context) => {
       repo: request.repo,
       pull_number: request.pullNumber,
       merge_method: request.mergeMethod,
-      ...(request.commitTitle !== undefined && { commit_title: request.commitTitle }),
-      ...(request.commitMessage !== undefined && { commit_message: request.commitMessage })
+      ...(request.commitTitle !== undefined && {
+        commit_title: request.commitTitle
+      }),
+      ...(request.commitMessage !== undefined && {
+        commit_message: request.commitMessage
+      })
     })
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Unknown error'

@@ -304,7 +304,13 @@ export const MergeDrawer = memo(function MergeDrawer({
       </SidePanelHeader>
 
       <SidePanelContent className={showSquashFields ? 'flex flex-col' : ''}>
-        <div className={showSquashFields ? 'flex flex-col flex-1 min-h-0 p-5 pt-2' : 'flex flex-col gap-8 p-5 pt-2'}>
+        <div
+          className={
+            showSquashFields
+              ? 'flex flex-col flex-1 min-h-0 p-5 pt-2'
+              : 'flex flex-col gap-8 p-5 pt-2'
+          }
+        >
           {showSquashFields ? (
             <SquashCommitSection
               commitMessage={commitMessage}
@@ -529,12 +535,12 @@ function ReviewsSection({
     summaryText = 'Changes requested'
   } else if (approvalCount > 0) {
     const label = approvalCount === 1 ? 'approval' : 'approvals'
-    summaryIcon = <CheckCircle2 className="size-4 text-status-success-foreground shrink-0" />
+    summaryIcon = (
+      <CheckCircle2 className="size-4 text-status-success-foreground shrink-0" />
+    )
     summaryText = `${approvalCount} ${label}`
   } else {
-    summaryIcon = (
-      <Clock className="size-4 text-muted-foreground shrink-0" />
-    )
+    summaryIcon = <Clock className="size-4 text-muted-foreground shrink-0" />
     summaryText = 'Awaiting review'
   }
 
@@ -575,7 +581,9 @@ function ReviewsSection({
 
 function ReviewStateIcon({ state }: { state: string }): ReactElement {
   if (state === 'APPROVED') {
-    return <CheckCircle2 className="size-4 text-status-success-foreground shrink-0" />
+    return (
+      <CheckCircle2 className="size-4 text-status-success-foreground shrink-0" />
+    )
   }
 
   if (state === 'CHANGES_REQUESTED') {
@@ -604,7 +612,9 @@ function ChecksSection({ checks, summary }: ChecksSectionProps): ReactElement {
   let summaryText: string
 
   if (summary.failed > 0) {
-    summaryIcon = <XCircle className="size-4 text-status-danger-foreground shrink-0" />
+    summaryIcon = (
+      <XCircle className="size-4 text-status-danger-foreground shrink-0" />
+    )
     summaryText = `${summary.failed} of ${total} checks failed`
   } else if (summary.pending > 0) {
     summaryIcon = (
@@ -612,7 +622,9 @@ function ChecksSection({ checks, summary }: ChecksSectionProps): ReactElement {
     )
     summaryText = `${summary.pending} checks running`
   } else {
-    summaryIcon = <CheckCircle2 className="size-4 text-status-success-foreground shrink-0" />
+    summaryIcon = (
+      <CheckCircle2 className="size-4 text-status-success-foreground shrink-0" />
+    )
     summaryText = 'All checks have passed'
   }
 
