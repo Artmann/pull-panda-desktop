@@ -248,7 +248,9 @@ function CheckRow({ children }: { children: ReactNode }): ReactElement {
 
 function CheckStatusIcon({ check }: { check: Check }): ReactElement {
   if (check.state?.toLowerCase() === 'in_progress') {
-    return <Loader2Icon className="size-3 text-status-warning-foreground animate-spin" />
+    return (
+      <Loader2Icon className="size-3 text-status-warning-foreground animate-spin" />
+    )
   }
 
   if (check.state?.toLowerCase() === 'queued') {
@@ -256,7 +258,9 @@ function CheckStatusIcon({ check }: { check: Check }): ReactElement {
   }
 
   if (check.conclusion?.toLowerCase() === 'success') {
-    return <CheckCircle2Icon className="size-3 text-status-success-foreground" />
+    return (
+      <CheckCircle2Icon className="size-3 text-status-success-foreground" />
+    )
   }
 
   if (
@@ -280,7 +284,9 @@ function CheckStatusIcon({ check }: { check: Check }): ReactElement {
   }
 
   if (check.state?.toLowerCase() === 'action_required') {
-    return <AlertTriangleIcon className="size-3 text-status-warning-foreground" />
+    return (
+      <AlertTriangleIcon className="size-3 text-status-warning-foreground" />
+    )
   }
 
   return <ClockIcon className="size-3 text-status-warning-foreground" />
@@ -288,7 +294,9 @@ function CheckStatusIcon({ check }: { check: Check }): ReactElement {
 
 function StatusIcon({ status }: { status: string }): ReactElement {
   if (status === 'success') {
-    return <CheckCircle2Icon className="size-4 text-status-success-foreground" />
+    return (
+      <CheckCircle2Icon className="size-4 text-status-success-foreground" />
+    )
   }
 
   if (status === 'failure') {
@@ -296,11 +304,15 @@ function StatusIcon({ status }: { status: string }): ReactElement {
   }
 
   if (status === 'running') {
-    return <Loader2Icon className="size-4 text-status-warning-foreground animate-spin" />
+    return (
+      <Loader2Icon className="size-4 text-status-warning-foreground animate-spin" />
+    )
   }
 
   if (status === 'pending') {
-    return <Loader2Icon className="size-4 text-status-warning-foreground animate-spin" />
+    return (
+      <Loader2Icon className="size-4 text-status-warning-foreground animate-spin" />
+    )
   }
 
   if (status === 'cancelled') {

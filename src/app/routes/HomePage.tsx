@@ -48,7 +48,9 @@ export function HomePage(): ReactElement {
           <div className="space-y-8 ">
             <section>
               <div className="flex items-center space-x-2 mb-4">
-                <h2 className="text-foreground font-medium">Needs Your Attention</h2>
+                <h2 className="text-foreground font-medium">
+                  Needs Your Attention
+                </h2>
 
                 <Badge
                   variant="outline"
@@ -66,7 +68,9 @@ export function HomePage(): ReactElement {
 
             <section>
               <div className="flex items-center space-x-2 mb-4">
-                <h2 className="text-foreground font-medium">Your Pull Requests</h2>
+                <h2 className="text-foreground font-medium">
+                  Your Pull Requests
+                </h2>
 
                 <Badge
                   variant="outline"
