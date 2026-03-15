@@ -17,7 +17,7 @@ export const UserAvatar = memo(function UserAvatar({
         alt={displayLogin}
         src={avatarUrl ?? undefined}
       />
-      <AvatarFallback className="text-xs bg-gray-100">
+      <AvatarFallback className="text-xs bg-muted">
         {displayLogin
           .split(' ')
           .map((n) => n[0])
