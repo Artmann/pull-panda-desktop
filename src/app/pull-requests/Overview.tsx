@@ -104,7 +104,7 @@ function InlineEditableBody({
     setIsEditing(true)
   }
 
-  const handleSave = async () => {
+  const handleSave = () => {
     if (draft === (pullRequest.body ?? '')) {
       setIsEditing(false)
       return
@@ -117,24 +117,24 @@ function InlineEditableBody({
 
     dispatch(pullRequestsActions.upsertItem({ ...pullRequest, body: newBody }))
 
-    try {
-      const updated = await updatePullRequest({
-        body: newBody,
-        owner: pullRequest.repositoryOwner,
-        pullNumber: pullRequest.number,
-        pullRequestId: pullRequest.id,
-        repo: pullRequest.repositoryName
+    updatePullRequest({
+      body: newBody,
+      owner: pullRequest.repositoryOwner,
+      pullNumber: pullRequest.number,
+      pullRequestId: pullRequest.id,
+      repo: pullRequest.repositoryName
+    })
+      .then((updated) => {
+        dispatch(pullRequestsActions.upsertItem(updated))
       })
+      .catch((error: unknown) => {
+        dispatch(pullRequestsActions.upsertItem(originalPr))
 
-      dispatch(pullRequestsActions.upsertItem(updated))
-    } catch (error) {
-      dispatch(pullRequestsActions.upsertItem(originalPr))
+        const message =
+          error instanceof Error ? error.message : 'Failed to update description'
 
-      const message =
-        error instanceof Error ? error.message : 'Failed to update description'
-
-      toast.error(message)
-    }
+        toast.error(message)
+      })
   }
 
   const handleCancel = () => {

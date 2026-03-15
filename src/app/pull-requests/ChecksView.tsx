@@ -248,15 +248,15 @@ function CheckRow({ children }: { children: ReactNode }): ReactElement {
 
 function CheckStatusIcon({ check }: { check: Check }): ReactElement {
   if (check.state?.toLowerCase() === 'in_progress') {
-    return <Loader2Icon className="size-3 text-yellow-600 animate-spin" />
+    return <Loader2Icon className="size-3 text-status-warning-foreground animate-spin" />
   }
 
   if (check.state?.toLowerCase() === 'queued') {
-    return <ClockIcon className="size-3 text-yellow-600" />
+    return <ClockIcon className="size-3 text-status-warning-foreground" />
   }
 
   if (check.conclusion?.toLowerCase() === 'success') {
-    return <CheckCircle2Icon className="size-3 text-green-600" />
+    return <CheckCircle2Icon className="size-3 text-status-success-foreground" />
   }
 
   if (
@@ -264,7 +264,7 @@ function CheckStatusIcon({ check }: { check: Check }): ReactElement {
       check.conclusion?.toLowerCase() ?? ''
     )
   ) {
-    return <XCircleIcon className="size-3 text-red-600" />
+    return <XCircleIcon className="size-3 text-status-danger-foreground" />
   }
 
   if (
@@ -272,42 +272,42 @@ function CheckStatusIcon({ check }: { check: Check }): ReactElement {
       check.conclusion?.toLowerCase() ?? ''
     )
   ) {
-    return <AlertTriangleIcon className="size-3 text-gray-500" />
+    return <AlertTriangleIcon className="size-3 text-muted-foreground" />
   }
 
   if (check.state?.toLowerCase() === 'timed_out') {
-    return <ClockIcon className="size-3 text-yellow-600" />
+    return <ClockIcon className="size-3 text-status-warning-foreground" />
   }
 
   if (check.state?.toLowerCase() === 'action_required') {
-    return <AlertTriangleIcon className="size-3 text-yellow-600" />
+    return <AlertTriangleIcon className="size-3 text-status-warning-foreground" />
   }
 
-  return <ClockIcon className="size-3 text-yellow-600" />
+  return <ClockIcon className="size-3 text-status-warning-foreground" />
 }
 
 function StatusIcon({ status }: { status: string }): ReactElement {
   if (status === 'success') {
-    return <CheckCircle2Icon className="size-4 text-green-600" />
+    return <CheckCircle2Icon className="size-4 text-status-success-foreground" />
   }
 
   if (status === 'failure') {
-    return <XCircleIcon className="size-4 text-red-600" />
+    return <XCircleIcon className="size-4 text-status-danger-foreground" />
   }
 
   if (status === 'running') {
-    return <Loader2Icon className="size-4 text-yellow-600 animate-spin" />
+    return <Loader2Icon className="size-4 text-status-warning-foreground animate-spin" />
   }
 
   if (status === 'pending') {
-    return <Loader2Icon className="size-4 text-yellow-600 animate-spin" />
+    return <Loader2Icon className="size-4 text-status-warning-foreground animate-spin" />
   }
 
   if (status === 'cancelled') {
-    return <AlertTriangleIcon className="size-4 text-gray-500" />
+    return <AlertTriangleIcon className="size-4 text-muted-foreground" />
   }
 
-  return <ClockIcon className="size-4 text-gray-400" />
+  return <ClockIcon className="size-4 text-muted-foreground" />
 }
 
 function StatusBadge({ status }: { status: string }): ReactElement {

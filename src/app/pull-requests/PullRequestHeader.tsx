@@ -206,7 +206,7 @@ function InlineEditableTitle({
     setIsEditing(true)
   }
 
-  const handleSave = async () => {
+  const handleSave = () => {
     const trimmed = draft.trim()
 
     if (!trimmed || trimmed === pullRequest.title) {
@@ -220,24 +220,24 @@ function InlineEditableTitle({
 
     dispatch(pullRequestsActions.upsertItem({ ...pullRequest, title: trimmed }))
 
-    try {
-      const updated = await updatePullRequest({
-        owner: pullRequest.repositoryOwner,
-        pullNumber: pullRequest.number,
-        pullRequestId: pullRequest.id,
-        repo: pullRequest.repositoryName,
-        title: trimmed
+    updatePullRequest({
+      owner: pullRequest.repositoryOwner,
+      pullNumber: pullRequest.number,
+      pullRequestId: pullRequest.id,
+      repo: pullRequest.repositoryName,
+      title: trimmed
+    })
+      .then((updated) => {
+        dispatch(pullRequestsActions.upsertItem(updated))
       })
+      .catch((error: unknown) => {
+        dispatch(pullRequestsActions.upsertItem(originalPr))
 
-      dispatch(pullRequestsActions.upsertItem(updated))
-    } catch (error) {
-      dispatch(pullRequestsActions.upsertItem(originalPr))
+        const message =
+          error instanceof Error ? error.message : 'Failed to update title'
 
-      const message =
-        error instanceof Error ? error.message : 'Failed to update title'
-
-      toast.error(message)
-    }
+        toast.error(message)
+      })
   }
 
   const handleCancel = () => {
@@ -289,7 +289,7 @@ function Breadcrumbs({
       <GitPullRequest
         className={cn(
           'size-3 -mt-0.5 mr-2',
-          pullRequest.state === 'MERGED' ? 'text-purple-500' : 'text-green-500'
+          pullRequest.state === 'MERGED' ? 'text-status-merged-foreground' : 'text-status-success-foreground'
         )}
       />
 

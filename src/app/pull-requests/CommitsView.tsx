@@ -89,10 +89,10 @@ export const CommitsView = memo(function CommitsView({
                           {(commit.linesAdded !== null ||
                             commit.linesRemoved !== null) && (
                             <div className="text-xs text-muted-foreground opacity-75 flex gap-2">
-                              <div className="text-green-600">
+                              <div className="text-status-success-foreground">
                                 +{formatNumber(commit.linesAdded ?? 0)}
                               </div>{' '}
-                              <div className="text-red-600">
+                              <div className="text-status-danger-foreground">
                                 -{formatNumber(commit.linesRemoved ?? 0)}
                               </div>
                             </div>
