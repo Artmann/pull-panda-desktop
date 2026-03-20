@@ -113,7 +113,7 @@ function createTestStore({ checks = [], reviews = [] }: TestStoreOptions = {}) {
     },
     preloadedState: {
       checks: { items: checks },
-      pullRequests: { items: [], lastSyncedAt: null, loading: false },
+      pullRequests: { items: [], listCount: 0 },
       reviews: { items: reviews }
     }
   })

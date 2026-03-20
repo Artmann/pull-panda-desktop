@@ -3,12 +3,38 @@
  */
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import { configureStore } from '@reduxjs/toolkit'
+import { Provider } from 'react-redux'
 import { MemoryRouter } from 'react-router'
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, vi } from 'vitest'
 
 import type { PullRequest } from '@/types/pull-request'
+import type { Review } from '@/types/pull-request-details'
+
+import pendingReviewCommentsReducer from '@/app/store/pending-review-comments-slice'
+import pendingReviewsReducer from '@/app/store/pending-reviews-slice'
+import reviewsReducer from '@/app/store/reviews-slice'
 
 import { PullRequestTable } from './PullRequestTable'
+
+vi.mock('@/app/lib/store/authContext', () => ({
+  useAuth: () => ({
+    clearNewSignIn: vi.fn(),
+    error: null as null,
+    isNewSignIn: false,
+    logout: vi.fn(),
+    openVerificationUrl: vi.fn(),
+    startLogin: vi.fn(),
+    status: 'authenticated' as const,
+    user: {
+      avatar_url: 'https://example.com/avatar.png',
+      login: 'johndoe',
+      name: null as null
+    },
+    userCode: null as null,
+    verificationUri: null as null
+  })
+}))
 
 function createMockPullRequest(
   overrides: Partial<PullRequest> = {}
@@ -44,12 +70,58 @@ function createMockPullRequest(
   }
 }
 
-function renderTable(pullRequests: PullRequest[]) {
-  return render(
+function createMockReview(overrides: Partial<Review> = {}): Review {
+  return {
+    id: 'review-1',
+    gitHubId: 'gh-review-1',
+    gitHubNumericId: 1,
+    pullRequestId: 'pr-1',
+    state: 'APPROVED',
+    body: null,
+    bodyHtml: null,
+    url: null,
+    authorLogin: 'johndoe',
+    authorAvatarUrl: null,
+    gitHubCreatedAt: '2024-01-01T00:00:00Z',
+    gitHubSubmittedAt: '2024-01-01T00:00:00Z',
+    syncedAt: '2024-01-01T00:00:00Z',
+    ...overrides
+  }
+}
+
+function renderTable(
+  pullRequests: PullRequest[],
+  options: { reviewsItems?: Review[]; showActions?: boolean } = {}
+) {
+  const { reviewsItems = [], showActions = false } = options
+
+  const table = (
     <MemoryRouter>
-      <PullRequestTable pullRequests={pullRequests} />
+      <PullRequestTable
+        pullRequests={pullRequests}
+        showActions={showActions}
+      />
     </MemoryRouter>
   )
+
+  if (!showActions) {
+    return render(table)
+  }
+
+  const store = configureStore({
+    reducer: {
+      pendingReviewComments: pendingReviewCommentsReducer,
+      pendingReviews: pendingReviewsReducer,
+      reviews: reviewsReducer
+    },
+    preloadedState: {
+      pendingReviewComments: {},
+      pendingReviews: {},
+      reviews: { items: reviewsItems }
+    }
+  })
+
+  return render(<Provider store={store}>{table}</Provider>)
 }
 
 describe('PullRequestTable', () => {
@@ -89,6 +161,42 @@ describe('PullRequestTable', () => {
       expect(screen.getByText('Status')).toBeInTheDocument()
       expect(screen.getByText('Activity')).toBeInTheDocument()
       expect(screen.getByText('Updated')).toBeInTheDocument()
+    })
+
+    it('renders Actions column when showActions is true', () => {
+      const pullRequests = [createMockPullRequest()]
+
+      renderTable(pullRequests, { showActions: true })
+
+      expect(
+        screen.getByRole('columnheader', { name: 'Actions' })
+      ).toBeInTheDocument()
+      expect(
+        screen.getByRole('button', { name: 'Approve pull request' })
+      ).toBeInTheDocument()
+      expect(
+        screen.getByRole('button', { name: 'Copy pull request URL' })
+      ).toBeInTheDocument()
+      expect(
+        screen.getByRole('button', { name: 'Open pull request in browser' })
+      ).toBeInTheDocument()
+    })
+
+    it('uses success styling on approve when the current user already approved', () => {
+      const pullRequests = [createMockPullRequest({ id: 'pr-1' })]
+      const reviewsItems = [
+        createMockReview({
+          authorLogin: 'johndoe',
+          pullRequestId: 'pr-1',
+          state: 'APPROVED'
+        })
+      ]
+
+      renderTable(pullRequests, { reviewsItems, showActions: true })
+
+      expect(
+        screen.getByRole('button', { name: 'You approved this pull request' })
+      ).toHaveClass('text-status-success-foreground')
     })
 
     it('renders each PR as a row', () => {

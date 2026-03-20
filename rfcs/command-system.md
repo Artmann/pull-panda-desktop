@@ -6,13 +6,13 @@
 
 ## Summary
 
-This RFC proposes a unified command system for Pull Panda that powers keyboard
+This RFC proposes a unified command system for SnapPR that powers keyboard
 shortcuts, the command palette, and UI-triggered actions through a single
 abstraction. Commands are context-aware, discoverable, and extensible.
 
 ## Motivation
 
-Pull Panda needs to support multiple ways of triggering the same actions:
+SnapPR needs to support multiple ways of triggering the same actions:
 
 1. **Keyboard shortcuts** - Power users expect to navigate and act without
    touching the mouse. Quick switching between PRs with number keys, starting a

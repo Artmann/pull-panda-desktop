@@ -46,7 +46,7 @@ export interface TokenResponse {
   scope: string
 }
 
-const gitHubClientId = 'Ov23liTdCH6GSo575kz2'
+const gitHubClientId = 'Ov23liYqBqbIACgSzDCs'
 const gitHubScopes = 'repo read:user'
 
 function getTokenPath(): string {

@@ -1,6 +1,6 @@
 {
-  "name": "pull-panda",
-  "productName": "Pull Panda",
+  "name": "snappr",
+  "productName": "SnapPR",
   "version": "1.0.0",
   "description": "A delightful code review tool for the AI era",
   "main": ".vite/build/main.js",
@@ -17,7 +17,7 @@
   ],
   "license": "MIT",
   "bin": {
-    "pull-panda": "./bin/pullpanda.js"
+    "snappr": "./bin/snappr.js"
   },
   "files": [
     "bin/",

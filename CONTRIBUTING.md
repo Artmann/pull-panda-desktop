@@ -1,4 +1,4 @@
-# Contributing to Pull Panda
+# Contributing to SnapPR
 
 Welcome! We're glad you're interested in contributing.
 
@@ -36,7 +36,7 @@ This launches the Electron app with hot reload.
 
 ## Architecture
 
-Pull Panda uses Electron's process model:
+SnapPR uses Electron's process model:
 
 - **Main process** (`src/main.ts`) - Node.js environment, handles IPC, secure
   storage, GitHub API calls

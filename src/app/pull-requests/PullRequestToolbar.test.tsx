@@ -66,7 +66,7 @@ function createTestStore() {
     preloadedState: {
       pendingReviewComments: {},
       pendingReviews: {},
-      pullRequests: { items: [], lastSyncedAt: null, loading: false }
+      pullRequests: { items: [], listCount: 0 }
     }
   })
 }

@@ -40,3 +40,28 @@ export function getLatestReviews(reviews: Review[]): Review[] {
 
   return [...latestByAuthor.values()]
 }
+
+/** Whether the user's latest review on this PR is an approval (same rules as {@link getLatestReviews}). */
+export function hasLatestApprovalFromUser(
+  reviews: Review[],
+  pullRequestId: string,
+  userLogin: string
+): boolean {
+  const normalized = userLogin.trim().toLowerCase()
+
+  if (!normalized) {
+    return false
+  }
+
+  const forPullRequest = reviews.filter(
+    (review) => review.pullRequestId === pullRequestId
+  )
+
+  const latest = getLatestReviews(forPullRequest)
+
+  return latest.some(
+    (review) =>
+      review.authorLogin?.trim().toLowerCase() === normalized &&
+      review.state === 'APPROVED'
+  )
+}

@@ -140,12 +140,12 @@ async function main() {
 
   // Open database
 
-  const databasePath = path.join(process.cwd(), 'pull-panda.db')
+  const databasePath = path.join(process.cwd(), 'snappr.db')
 
   if (!fs.existsSync(databasePath)) {
     console.error(
       red(`Error: Database not found at ${databasePath}`),
-      '\nMake sure you run this from the project root where pull-panda.db exists.'
+      '\nMake sure you run this from the project root where snappr.db exists.'
     )
     process.exit(1)
   }

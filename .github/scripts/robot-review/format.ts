@@ -1,6 +1,6 @@
 import type { Issue, Severity } from './types'
 
-export const signature = '**🤖 Pull Panda**'
+export const signature = '**🤖 SnapPR**'
 export const summaryMarker =
   '<!-- robot-code-review -->\n<!-- robot-code-review-summary -->'
 export const commentMarker = '<!-- robot-code-review -->'

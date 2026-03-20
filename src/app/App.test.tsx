@@ -96,8 +96,7 @@ function createTestStore() {
       pendingReviews: {},
       pullRequests: {
         items: [],
-        lastSyncedAt: null,
-        loading: false
+        listCount: 0
       },
       reactions: { items: [] },
       reviews: { items: [] },
@@ -153,6 +152,7 @@ describe('App', () => {
         getApiPort: vi.fn().mockResolvedValue(3000),
         getBootstrapData: vi.fn().mockResolvedValue(null),
         getTasks: vi.fn().mockResolvedValue([]),
+        requestPullRequestSync: vi.fn().mockResolvedValue({ ok: true }),
         onResourceUpdated: vi.fn((callback) => {
           resourceUpdatedCallback = callback
 

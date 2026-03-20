@@ -3,7 +3,10 @@ import { contextBridge, ipcRenderer } from 'electron'
 import { ipcChannels } from './lib/ipc/channels'
 import type { BootstrapData } from './main/bootstrap'
 import type { DeviceCodeResponse, GitHubUser } from './types/auth'
-import type { ResourceUpdatedEvent } from './types/ipc-events'
+import type {
+  RequestPullRequestSyncResult,
+  ResourceUpdatedEvent
+} from './types/ipc-events'
 import type { MonitoringData } from './types/syncer-monitoring'
 import type { Task, TaskUpdateEvent } from './types/task'
 
@@ -38,6 +41,9 @@ const electronApi = {
   },
 
   getTasks: (): Promise<Task[]> => ipcRenderer.invoke(ipcChannels.GetTasks),
+
+  requestPullRequestSync: (): Promise<RequestPullRequestSyncResult> =>
+    ipcRenderer.invoke(ipcChannels.RequestPullRequestSync),
 
   onTaskUpdate: (callback: (event: TaskUpdateEvent) => void): (() => void) => {
     const handler = (_event: unknown, data: TaskUpdateEvent) => callback(data)

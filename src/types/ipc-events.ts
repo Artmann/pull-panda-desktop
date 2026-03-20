@@ -9,6 +9,10 @@ import type {
 } from './pull-request-details'
 import type { PendingReview } from '../main/bootstrap'
 
+export type RequestPullRequestSyncResult =
+  | { ok: true }
+  | { ok: false; reason: 'no_token' | 'already_syncing' }
+
 export type ResourceUpdatedEvent =
   | { data: Check[]; pullRequestId: string; type: 'checks' }
   | { data: Comment[]; pullRequestId: string; type: 'comments' }

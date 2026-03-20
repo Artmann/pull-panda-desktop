@@ -12,7 +12,7 @@
       "Bash(yarn test:run:*)",
       "Bash(find:*)",
       "Bash(yarn typecheck:*)",
-      "Bash(del pull-panda.db)",
+      "Bash(del snappr.db)",
       "Bash(yarn drizzle-kit push:*)",
       "Bash(yarn start)",
       "Skill(branch-review)",

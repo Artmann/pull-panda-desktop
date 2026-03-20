@@ -5,6 +5,6 @@ export default defineConfig({
   out: './drizzle',
   dialect: 'sqlite',
   dbCredentials: {
-    url: 'file:./pull-panda.db'
+    url: 'file:./snappr.db'
   }
 })

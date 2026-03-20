@@ -153,6 +153,39 @@ export async function submitReview(
   }
 }
 
+/** Submits an approval for the PR, creating a pending review first when needed. */
+export async function approvePullRequest(
+  pullRequest: PullRequest,
+  existingGitHubReviewId: number | null
+): Promise<void> {
+  const payload = {
+    event: 'APPROVE' as const,
+    owner: pullRequest.repositoryOwner,
+    pullNumber: pullRequest.number,
+    repo: pullRequest.repositoryName
+  }
+
+  if (existingGitHubReviewId !== null && existingGitHubReviewId > 0) {
+    await submitReview({
+      ...payload,
+      reviewId: existingGitHubReviewId
+    })
+
+    return
+  }
+
+  const created = await createReview({
+    owner: pullRequest.repositoryOwner,
+    pullNumber: pullRequest.number,
+    repo: pullRequest.repositoryName
+  })
+
+  await submitReview({
+    ...payload,
+    reviewId: created.gitHubNumericId
+  })
+}
+
 export async function deleteReview(
   request: DeleteReviewRequest
 ): Promise<void> {

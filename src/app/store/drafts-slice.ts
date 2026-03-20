@@ -4,7 +4,7 @@ export interface DraftsState {
   [draftKey: string]: string
 }
 
-const localStorageKey = 'pull-panda-drafts'
+const localStorageKey = 'snappr-drafts'
 
 export function loadDraftsFromStorage(): DraftsState {
   try {

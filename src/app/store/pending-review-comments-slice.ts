@@ -12,7 +12,7 @@ export interface PendingReviewCommentsState {
   [pullRequestId: string]: PendingReviewComment[]
 }
 
-const localStorageKey = 'pull-panda-pending-review-comments'
+const localStorageKey = 'snappr-pending-review-comments'
 
 export function loadPendingReviewCommentsFromStorage(): PendingReviewCommentsState {
   try {

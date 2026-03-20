@@ -56,7 +56,9 @@ function createTestStore(pullRequest: PullRequest) {
     middleware: (getDefaultMiddleware) =>
       getDefaultMiddleware({ immutableCheck: false, serializableCheck: false }),
     reducer: { pullRequests: pullRequestsReducer },
-    preloadedState: { pullRequests: { items: [pullRequest] } }
+    preloadedState: {
+      pullRequests: { items: [pullRequest], listCount: 1 }
+    }
   })
 }
 

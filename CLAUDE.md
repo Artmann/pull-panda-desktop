@@ -1,4 +1,4 @@
-# Pull Panda App
+# SnapPR App
 
 Electron desktop app for GitHub PR management built with React, TypeScript, and
 Vite.
@@ -79,7 +79,7 @@ src/
 - Migrations stored in `drizzle/` and run automatically on app startup.
 - After modifying the schema, run `yarn drizzle-kit generate` to create a new
   migration.
-- To reset the database, delete `pull-panda.db` and restart the app.
+- To reset the database, delete `snappr.db` and restart the app.
 
 ## Security
 

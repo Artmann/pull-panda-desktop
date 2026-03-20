@@ -2,7 +2,10 @@ import { describe, expect, it } from 'vitest'
 
 import type { Review } from '@/types/pull-request-details'
 
-import { getLatestReviews } from './get-latest-reviews'
+import {
+  getLatestReviews,
+  hasLatestApprovalFromUser
+} from './get-latest-reviews'
 
 function createMockReview(overrides: Partial<Review> = {}): Review {
   return {
@@ -171,5 +174,65 @@ describe('getLatestReviews', () => {
     const result = getLatestReviews([changesRequested, approved])
 
     expect(result).toEqual([approved])
+  })
+})
+
+describe('hasLatestApprovalFromUser', () => {
+  it('returns false when userLogin is empty', () => {
+    expect(
+      hasLatestApprovalFromUser(
+        [createMockReview({ authorLogin: 'alice', state: 'APPROVED' })],
+        'pr-1',
+        ''
+      )
+    ).toBe(false)
+  })
+
+  it('returns true when latest review from user is APPROVED', () => {
+    const reviews = [
+      createMockReview({
+        authorLogin: 'self',
+        pullRequestId: 'pr-1',
+        state: 'APPROVED'
+      })
+    ]
+
+    expect(hasLatestApprovalFromUser(reviews, 'pr-1', 'self')).toBe(true)
+  })
+
+  it('returns false when latest review from user is CHANGES_REQUESTED', () => {
+    const reviews = [
+      createMockReview({
+        authorLogin: 'self',
+        pullRequestId: 'pr-1',
+        state: 'CHANGES_REQUESTED'
+      })
+    ]
+
+    expect(hasLatestApprovalFromUser(reviews, 'pr-1', 'self')).toBe(false)
+  })
+
+  it('ignores reviews for other pull requests', () => {
+    const reviews = [
+      createMockReview({
+        authorLogin: 'self',
+        pullRequestId: 'pr-other',
+        state: 'APPROVED'
+      })
+    ]
+
+    expect(hasLatestApprovalFromUser(reviews, 'pr-1', 'self')).toBe(false)
+  })
+
+  it('matches login case-insensitively', () => {
+    const reviews = [
+      createMockReview({
+        authorLogin: 'SelfUser',
+        pullRequestId: 'pr-1',
+        state: 'APPROVED'
+      })
+    ]
+
+    expect(hasLatestApprovalFromUser(reviews, 'pr-1', 'selfuser')).toBe(true)
   })
 })

@@ -3,20 +3,27 @@ import {
   ChevronRightIcon,
   HomeIcon,
   MinusIcon,
+  RefreshCwIcon,
   SettingsIcon,
   SquareIcon,
   XIcon
 } from 'lucide-react'
 import { type ReactElement, useEffect, useRef } from 'react'
 import { useLocation, useNavigate } from 'react-router'
+import { toast } from 'sonner'
 
+import { useAuth } from '@/app/lib/store/authContext'
+import { useTasks } from '@/app/lib/store/tasksContext'
 import { cn } from '@/app/lib/utils'
+import type { RequestPullRequestSyncResult } from '@/types/ipc-events'
 
 const isMac = navigator.platform.toLowerCase().includes('mac')
 
 export function TitleBar(): ReactElement {
   const navigate = useNavigate()
   const location = useLocation()
+  const { status } = useAuth()
+  const { hasSyncInProgress } = useTasks()
   const maxHistoryIndexRef = useRef(0)
 
   const historyIndex = (window.history.state?.idx as number) ?? 0
@@ -51,6 +58,18 @@ export function TitleBar(): ReactElement {
   const handleClose = () => {
     window.electron.windowClose()
   }
+
+  const handleRefreshPullRequests = () => {
+    window.electron.requestPullRequestSync().then((raw) => {
+      const result = raw as RequestPullRequestSyncResult
+
+      if (result.ok === false && result.reason === 'already_syncing') {
+        toast.message('A sync is already running.')
+      }
+    })
+  }
+
+  const isAuthenticated = status === 'authenticated'
 
   return (
     <div className="title-bar h-8 flex items-center justify-between bg-background border-b border-border select-none">
@@ -98,13 +117,32 @@ export function TitleBar(): ReactElement {
         style={{ WebkitAppRegion: 'drag' } as React.CSSProperties}
       >
         <span className="text-xs text-muted-foreground font-medium">
-          Pull Panda
+          SnapPR
         </span>
       </div>
 
-      <div className="h-full flex-1 max-w-50">
+      <div
+        className="h-full flex-1 max-w-50 flex items-center justify-end"
+        style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}
+      >
+        {isAuthenticated && (
+          <NavigationButton
+            ariaLabel="Refresh pull requests from GitHub"
+            disabled={hasSyncInProgress}
+            onClick={handleRefreshPullRequests}
+            testId="title-bar-refresh"
+          >
+            <RefreshCwIcon
+              className={cn(
+                'size-4',
+                hasSyncInProgress && 'animate-spin'
+              )}
+            />
+          </NavigationButton>
+        )}
+
         {!isMac && (
-          <div className="h-full flex items-center float-right">
+          <>
             <WindowButton
               onClick={handleMinimize}
               testId="title-bar-minimize"
@@ -126,7 +164,7 @@ export function TitleBar(): ReactElement {
             >
               <XIcon className="size-4" />
             </WindowButton>
-          </div>
+          </>
         )}
       </div>
     </div>
@@ -162,6 +200,7 @@ function WindowButton({
 }
 
 interface NavigationButtonProps {
+  ariaLabel?: string
   children: React.ReactNode
   disabled: boolean
   onClick: () => void
@@ -169,6 +208,7 @@ interface NavigationButtonProps {
 }
 
 function NavigationButton({
+  ariaLabel,
   children,
   disabled,
   onClick,
@@ -176,6 +216,7 @@ function NavigationButton({
 }: NavigationButtonProps): ReactElement {
   return (
     <button
+      aria-label={ariaLabel}
       className={cn(
         'w-8 h-full flex items-center justify-center transition-colors',
         disabled
@@ -185,6 +226,7 @@ function NavigationButton({
       data-testid={testId}
       disabled={disabled}
       onClick={onClick}
+      type="button"
     >
       {children}
     </button>

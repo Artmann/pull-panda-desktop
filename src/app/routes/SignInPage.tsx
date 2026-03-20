@@ -32,12 +32,12 @@ export function SignInPage() {
           <div className="flex flex-col gap-4">
             <div className="flex flex-col gap-2">
               <img
-                alt="Pull Panda"
-                className="h-12 w-auto"
+                alt="SnapPR"
+                className="h-24 w-auto object-contain"
                 src={logo}
               />
 
-              <h1 className="text-3xl font-semibold">Pull Panda</h1>
+              <h1 className="text-3xl font-semibold">SnapPR</h1>
             </div>
 
             <div className="text-muted-foreground text-left text-lg mb-4">

@@ -1,10 +1,31 @@
 /**
  * @vitest-environment jsdom
  */
-import { render, screen, fireEvent } from '@testing-library/react'
+import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+import { toast } from 'sonner'
 
 import { TitleBar } from './TitleBar'
+
+vi.mock('sonner', () => ({
+  toast: {
+    message: vi.fn()
+  }
+}))
+
+vi.mock('@/app/lib/store/authContext', () => ({
+  useAuth: vi.fn()
+}))
+
+vi.mock('@/app/lib/store/tasksContext', () => ({
+  useTasks: vi.fn()
+}))
+
+import { useAuth } from '@/app/lib/store/authContext'
+import { useTasks } from '@/app/lib/store/tasksContext'
+
+const mockUseAuth = vi.mocked(useAuth)
+const mockUseTasks = vi.mocked(useTasks)
 
 const mockNavigate = vi.fn()
 const mockLocation: {
@@ -41,6 +62,26 @@ describe('TitleBar', () => {
   beforeEach(() => {
     mockNavigate.mockClear()
 
+    mockUseAuth.mockReturnValue({
+      status: 'idle',
+      user: null,
+      userCode: null,
+      verificationUri: null,
+      error: null,
+      isNewSignIn: false,
+      startLogin: vi.fn(),
+      logout: vi.fn(),
+      openVerificationUrl: vi.fn(),
+      clearNewSignIn: vi.fn()
+    })
+
+    mockUseTasks.mockReturnValue({
+      hasSyncInProgress: false,
+      tasksInitialized: true,
+      runningTasks: [],
+      tasks: []
+    })
+
     setHistoryState({ idx: 0 })
 
     Object.defineProperty(navigator, 'platform', {
@@ -51,6 +92,7 @@ describe('TitleBar', () => {
     window.electron = {
       ...window.electron,
       openUrl: vi.fn(),
+      requestPullRequestSync: vi.fn().mockResolvedValue({ ok: true }),
       windowClose: vi.fn(),
       windowMaximize: vi.fn(),
       windowMinimize: vi.fn()
@@ -72,7 +114,7 @@ describe('TitleBar', () => {
   it('renders the title', () => {
     render(<TitleBar />)
 
-    expect(screen.getByText('Pull Panda')).toBeInTheDocument()
+    expect(screen.getByText('SnapPR')).toBeInTheDocument()
   })
 
   it('renders navigation buttons', () => {
@@ -213,6 +255,84 @@ describe('TitleBar', () => {
       fireEvent.click(screen.getByTestId('title-bar-close'))
 
       expect(window.electron.windowClose).toHaveBeenCalled()
+    })
+  })
+
+  describe('refresh pull requests', () => {
+    it('does not render refresh when not authenticated', () => {
+      mockUseAuth.mockReturnValue({
+        status: 'idle',
+        user: null,
+        userCode: null,
+        verificationUri: null,
+        error: null,
+        isNewSignIn: false,
+        startLogin: vi.fn(),
+        logout: vi.fn(),
+        openVerificationUrl: vi.fn(),
+        clearNewSignIn: vi.fn()
+      })
+
+      render(<TitleBar />)
+
+      expect(screen.queryByTestId('title-bar-refresh')).not.toBeInTheDocument()
+    })
+
+    it('calls requestPullRequestSync when refresh is clicked', () => {
+      mockUseAuth.mockReturnValue({
+        status: 'authenticated',
+        user: {
+          login: 'u',
+          name: 'User',
+          avatar_url: 'https://example.com/a.png'
+        },
+        userCode: null,
+        verificationUri: null,
+        error: null,
+        isNewSignIn: false,
+        startLogin: vi.fn(),
+        logout: vi.fn(),
+        openVerificationUrl: vi.fn(),
+        clearNewSignIn: vi.fn()
+      })
+
+      render(<TitleBar />)
+
+      fireEvent.click(screen.getByTestId('title-bar-refresh'))
+
+      expect(window.electron.requestPullRequestSync).toHaveBeenCalled()
+    })
+
+    it('shows a toast when sync is already running', async () => {
+      mockUseAuth.mockReturnValue({
+        status: 'authenticated',
+        user: {
+          login: 'u',
+          name: 'User',
+          avatar_url: 'https://example.com/a.png'
+        },
+        userCode: null,
+        verificationUri: null,
+        error: null,
+        isNewSignIn: false,
+        startLogin: vi.fn(),
+        logout: vi.fn(),
+        openVerificationUrl: vi.fn(),
+        clearNewSignIn: vi.fn()
+      })
+
+      vi.mocked(window.electron.requestPullRequestSync).mockResolvedValue({
+        ok: false,
+        reason: 'already_syncing'
+      })
+
+      render(<TitleBar />)
+
+      fireEvent.click(screen.getByTestId('title-bar-refresh'))
+
+      await waitFor(() => {
+        expect(toast.message).toHaveBeenCalledWith('A sync is already running.')
+      })
     })
   })
 })

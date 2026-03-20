@@ -91,6 +91,4 @@ typings/
 # Electron-Forge
 out/
 
-pull-panda.db
-
-bin/
+snappr.db

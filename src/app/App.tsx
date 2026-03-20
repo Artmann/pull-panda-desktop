@@ -131,11 +131,17 @@ function AppContent(): ReactElement {
           dispatch(pullRequestsActions.upsertItem(event.data))
           break
 
-        case 'pull-requests':
+        case 'pull-requests': {
+          const rawList = event.data
+
           dispatch(
-            pullRequestsActions.setItems(filterReadyPullRequests(event.data))
+            pullRequestsActions.setFromListSync({
+              items: filterReadyPullRequests(rawList),
+              listCount: rawList.length
+            })
           )
           break
+        }
 
         case 'reactions':
           dispatch(

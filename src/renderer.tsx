@@ -38,13 +38,18 @@ async function main() {
   const bootstrapData = await window.electron.getBootstrapData()
   const readyPullRequests = filterReadyPullRequests(bootstrapData?.pullRequests)
 
+  const rawPullRequests = bootstrapData?.pullRequests ?? []
+
   const store = createStore({
     checks: { items: bootstrapData?.checks ?? [] },
     comments: { items: bootstrapData?.comments ?? [] },
     commits: { items: bootstrapData?.commits ?? [] },
     modifiedFiles: { items: bootstrapData?.modifiedFiles ?? [] },
     pendingReviews: bootstrapData?.pendingReviews ?? {},
-    pullRequests: { items: readyPullRequests },
+    pullRequests: {
+      items: readyPullRequests,
+      listCount: rawPullRequests.length
+    },
     reactions: { items: bootstrapData?.reactions ?? [] },
     reviews: { items: bootstrapData?.reviews ?? [] }
   })

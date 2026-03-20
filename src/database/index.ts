@@ -19,16 +19,16 @@ function getPackageRoot(): string {
 
 function getDatabasePath(): string {
   if (isCliMode()) {
-    return path.join(app.getPath('userData'), 'pull-panda.db')
+    return path.join(app.getPath('userData'), 'snappr.db')
   }
 
   const isDevelopment = !app?.isPackaged
 
   if (isDevelopment) {
-    return path.join(process.cwd(), 'pull-panda.db')
+    return path.join(process.cwd(), 'snappr.db')
   }
 
-  return path.join(app.getPath('userData'), 'pull-panda.db')
+  return path.join(app.getPath('userData'), 'snappr.db')
 }
 
 function getMigrationsPath(): string {

@@ -1,16 +1,14 @@
-# Pull Panda
+# SnapPR
 
-[![CI](https://github.com/artmann/pull-panda-desktop/actions/workflows/ci.yml/badge.svg)](https://github.com/artmann/pull-panda-desktop/actions/workflows/ci.yml)
-[![GitHub release](https://img.shields.io/github/v/release/artmann/pull-panda-desktop)](https://github.com/artmann/pull-panda-desktop/releases)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 A delightful code review tool for the AI era.
 
-![Pull Panda Screenshot](images/pull-request-overview.png)
+![SnapPR Screenshot](images/pull-request-overview.png)
 
-## What is Pull Panda?
+## What is SnapPR?
 
-Pull Panda is a desktop app that makes reviewing GitHub pull requests faster and
+SnapPR is a desktop app that makes reviewing GitHub pull requests faster and
 more pleasant. In an era where AI is generating more code than ever, we believe
 code review should be a smooth, focused experience rather than a chore.
 
@@ -20,17 +18,17 @@ code review should be a smooth, focused experience rather than a chore.
 
 ## Quick Start
 
-Try Pull Panda instantly without installing:
+Try SnapPR instantly without installing:
 
 ```bash
-npx pull-panda
+npx snappr
 ```
 
 ## Download
 
 Or grab the latest release for your platform:
 
-[**Download Pull Panda**](../../releases/latest)
+[**Download SnapPR**](../../releases/latest)
 
 Available for Windows, macOS, and Linux.
 

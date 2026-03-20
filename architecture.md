@@ -36,13 +36,16 @@ app.on('ready')
 ├─ bootstrap(userLogin)               # SQLite → BootstrapData (flat arrays)
 ├─ createWindow()
 ├─ backgroundSyncer.start(loadToken)
-└─ syncPullRequests(token)            # GraphQL search
+└─ syncPullRequests(token)            # GraphQL search (startup + title bar refresh)
    ├─ syncStalePullRequests()         # Prune closed/merged PRs
    ├─ send ResourceUpdated { type: 'pull-requests', data }
    ├─ send SyncComplete              # Signal to renderer (no data)
    └─ syncAllPullRequestDetails()    # REST per-PR (if stale)
       └─ per PR: sendPullRequestResourceEvents()  # Data-carrying events
 ```
+
+There is **no** periodic timer for the PR list; users refresh explicitly from the
+title bar (or restart the app).
 
 ### Bootstrap
 
@@ -77,19 +80,23 @@ arrays contain all items across all PRs, each tagged with a `pullRequestId`.
 
 ### Background syncer
 
-`src/main/background-syncer.ts` polls check statuses for "active" PRs (those the
-user is currently viewing):
+`src/main/background-syncer.ts` is **separate** from the GitHub PR **list** sync
+(`syncPullRequests` in `src/sync/pull-requests.ts`). It only refreshes **CI check
+statuses** for PRs the user has opened in the app (“active” PRs):
 
 - **With running checks:** every 2 seconds.
 - **Without running checks:** every 10 seconds.
 
-After each sync it sends data-carrying `ResourceUpdated` events (checks and
-pull-request data) directly to the renderer via
-`sendPullRequestResourceEvents()`.
+It does **not** re-fetch the home-page PR list from GitHub; that is handled by
+`runPullRequestSync()` in `src/main.ts` (on startup, and on demand via the title
+bar refresh — IPC `RequestPullRequestSync`).
+
+After each checks cycle it sends data-carrying `ResourceUpdated` events (checks
+and pull-request summary) via `notifyRenderer()`.
 
 A PR becomes active when the renderer calls
 `POST /api/pull-requests/{id}/activate`, which calls
-`backgroundSyncer.markPullRequestActive()` and triggers an immediate sync.
+`backgroundSyncer.markPullRequestActive()` and schedules an immediate sync cycle.
 
 ### IPC event listeners
 

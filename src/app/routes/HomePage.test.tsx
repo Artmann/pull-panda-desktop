@@ -9,7 +9,10 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 
 import type { PullRequest } from '@/types/pull-request'
 
+import pendingReviewCommentsReducer from '@/app/store/pending-review-comments-slice'
+import pendingReviewsReducer from '@/app/store/pending-reviews-slice'
 import pullRequestsReducer from '@/app/store/pull-requests-slice'
+import reviewsReducer from '@/app/store/reviews-slice'
 
 import { HomePage } from './HomePage'
 
@@ -17,9 +20,15 @@ vi.mock('@/app/lib/store/authContext', () => ({
   useAuth: vi.fn()
 }))
 
+vi.mock('@/app/lib/store/tasksContext', () => ({
+  useTasks: vi.fn()
+}))
+
 import { useAuth } from '@/app/lib/store/authContext'
+import { useTasks } from '@/app/lib/store/tasksContext'
 
 const mockUseAuth = vi.mocked(useAuth)
+const mockUseTasks = vi.mocked(useTasks)
 
 function createMockPullRequest(
   overrides: Partial<PullRequest> = {}
@@ -58,12 +67,19 @@ function createMockPullRequest(
 function createTestStore(pullRequests: PullRequest[] = []) {
   return configureStore({
     reducer: {
-      pullRequests: pullRequestsReducer
+      pendingReviewComments: pendingReviewCommentsReducer,
+      pendingReviews: pendingReviewsReducer,
+      pullRequests: pullRequestsReducer,
+      reviews: reviewsReducer
     },
     preloadedState: {
+      pendingReviewComments: {},
+      pendingReviews: {},
       pullRequests: {
-        items: pullRequests
-      }
+        items: pullRequests,
+        listCount: pullRequests.length
+      },
+      reviews: { items: [] }
     }
   })
 }
@@ -82,6 +98,13 @@ function renderWithProviders(
 describe('HomePage', () => {
   beforeEach(() => {
     vi.useFakeTimers()
+
+    mockUseTasks.mockReturnValue({
+      hasSyncInProgress: false,
+      tasksInitialized: true,
+      runningTasks: [],
+      tasks: []
+    })
 
     mockUseAuth.mockReturnValue({
       status: 'authenticated',
@@ -233,6 +256,68 @@ describe('HomePage', () => {
         screen.getByText("They'll appear here once syncing completes.")
       ).toBeInTheDocument()
     })
+
+    it('shows loading and duration hint while PR sync is in progress', () => {
+      vi.setSystemTime(new Date('2024-01-15T10:00:00'))
+
+      mockUseTasks.mockReturnValue({
+        hasSyncInProgress: true,
+        tasksInitialized: true,
+        runningTasks: [],
+        tasks: []
+      })
+
+      renderWithProviders(<HomePage />)
+
+      expect(screen.getByText('Syncing pull requests…')).toBeInTheDocument()
+      expect(
+        screen.getByText('This may take a few minutes.')
+      ).toBeInTheDocument()
+      expect(
+        screen.queryByText('No pull requests synced yet.')
+      ).not.toBeInTheDocument()
+    })
+
+    it('shows loading when the server list has PRs but none are detail-ready yet', () => {
+      vi.setSystemTime(new Date('2024-01-15T10:00:00'))
+
+      const store = configureStore({
+        reducer: {
+          pendingReviewComments: pendingReviewCommentsReducer,
+          pendingReviews: pendingReviewsReducer,
+          pullRequests: pullRequestsReducer,
+          reviews: reviewsReducer
+        },
+        preloadedState: {
+          pendingReviewComments: {},
+          pendingReviews: {},
+          pullRequests: { items: [], listCount: 2 },
+          reviews: { items: [] }
+        }
+      })
+
+      renderWithProviders(<HomePage />, { store })
+
+      expect(screen.getByText('Syncing pull requests…')).toBeInTheDocument()
+      expect(
+        screen.queryByText('No pull requests synced yet.')
+      ).not.toBeInTheDocument()
+    })
+
+    it('shows loading before tasks state is initialized', () => {
+      vi.setSystemTime(new Date('2024-01-15T10:00:00'))
+
+      mockUseTasks.mockReturnValue({
+        hasSyncInProgress: false,
+        tasksInitialized: false,
+        runningTasks: [],
+        tasks: []
+      })
+
+      renderWithProviders(<HomePage />)
+
+      expect(screen.getByText('Syncing pull requests…')).toBeInTheDocument()
+    })
   })
 
   describe('PR sections', () => {
@@ -252,6 +337,9 @@ describe('HomePage', () => {
 
       expect(screen.getByText('Needs Your Attention')).toBeInTheDocument()
       expect(screen.getByText('Review me')).toBeInTheDocument()
+      expect(
+        screen.getAllByRole('columnheader', { name: 'Actions' })
+      ).toHaveLength(1)
     })
 
     it('renders "Your Pull Requests" with PRs where isAuthor: true', () => {

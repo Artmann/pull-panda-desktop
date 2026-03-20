@@ -24,8 +24,8 @@ const config: ForgeConfig = {
   packagerConfig: {
     asar: true,
     icon: './icon',
-    executableName: 'pull-panda',
-    appBundleId: 'io.pullpanda.app',
+    executableName: 'snappr',
+    appBundleId: 'io.snappr.app',
     extraResource: ['./node_modules/sql.js/dist/sql-wasm.wasm', './drizzle'],
     ...(process.env.APPLE_TEAM_ID && {
       osxSign: {
@@ -59,13 +59,13 @@ const config: ForgeConfig = {
     new MakerDMG({}),
     new MakerRpm({
       options: {
-        bin: 'pull-panda',
+        bin: 'snappr',
         icon: './icon.png'
       }
     }),
     new MakerDeb({
       options: {
-        bin: 'pull-panda',
+        bin: 'snappr',
         icon: './icon.png'
       }
     })

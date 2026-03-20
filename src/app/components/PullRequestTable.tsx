@@ -10,10 +10,12 @@ const pageSize = 10
 
 interface PullRequestTableProps {
   pullRequests: PullRequest[]
+  showActions?: boolean
 }
 
 export function PullRequestTable({
-  pullRequests
+  pullRequests,
+  showActions = false
 }: PullRequestTableProps): ReactElement {
   const [currentPage, setCurrentPage] = useState(1)
   const [filterValue, setFilterValue] = useState('')
@@ -95,6 +97,7 @@ export function PullRequestTable({
                 <TableHead>Status</TableHead>
                 <TableHead>Activity</TableHead>
                 <TableHead>Updated</TableHead>
+                {showActions ? <TableHead>Actions</TableHead> : null}
               </TableRow>
             </TableHeader>
 
@@ -103,6 +106,7 @@ export function PullRequestTable({
                 <PullRequestTableRow
                   key={pullRequest.id}
                   pullRequest={pullRequest}
+                  showActions={showActions}
                 />
               ))}
             </TableBody>

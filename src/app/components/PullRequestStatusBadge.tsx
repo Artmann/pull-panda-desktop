@@ -34,7 +34,7 @@ export function PullRequestStatusBadge({
       return 'Changes Requested'
     }
 
-    if (approvalCount > 0) {
+    if (approvalCount > 1) {
       return 'Approved'
     }
 

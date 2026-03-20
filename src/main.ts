@@ -23,6 +23,7 @@ import {
 
 let bootstrapData: BootstrapData | null = null
 let mainWindow: BrowserWindow | null = null
+let pullRequestSyncLocked = false
 
 // Handle creating/removing shortcuts on Windows when installing/uninstalling.
 if (started) {
@@ -40,6 +41,20 @@ function setupIpcHandlers(): void {
 
   ipcMain.handle(ipcChannels.GetTasks, () => {
     return taskManager.getTasks()
+  })
+
+  ipcMain.handle(ipcChannels.RequestPullRequestSync, () => {
+    const token = loadToken()
+
+    if (!token) {
+      return { ok: false as const, reason: 'no_token' as const }
+    }
+
+    if (!runPullRequestSync(token)) {
+      return { ok: false as const, reason: 'already_syncing' as const }
+    }
+
+    return { ok: true as const }
   })
 
   ipcMain.handle(ipcChannels.AuthRequestDeviceCode, async () => {
@@ -336,7 +351,14 @@ app.on('ready', async () => {
   }
 })
 
-async function runPullRequestSync(token: string): Promise<void> {
+/** Starts a GitHub PR list sync. Returns false if one is already running. */
+function runPullRequestSync(token: string): boolean {
+  if (pullRequestSyncLocked) {
+    return false
+  }
+
+  pullRequestSyncLocked = true
+
   const syncTask = taskManager.createTask('syncPullRequests', {
     message: 'Synchronizing pull requests...'
   })
@@ -389,23 +411,17 @@ async function runPullRequestSync(token: string): Promise<void> {
       )
       console.error('Failed to sync pull requests:', error)
     })
+    .finally(() => {
+      pullRequestSyncLocked = false
+    })
+
+  return true
 }
 
 // Save database periodically (every 30 seconds)
 setInterval(() => {
   saveDatabase()
 }, 30000)
-
-// Re-sync pull requests periodically (every 5 minutes)
-const pullRequestSyncInterval = 5 * 60 * 1000
-
-setInterval(() => {
-  const token = loadToken()
-
-  if (token) {
-    runPullRequestSync(token)
-  }
-}, pullRequestSyncInterval)
 
 // Save database before quitting
 app.on('before-quit', () => {
