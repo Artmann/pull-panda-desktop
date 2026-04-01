@@ -154,6 +154,9 @@ describe('App', () => {
         getApiPort: vi.fn().mockResolvedValue(3000),
         getBootstrapData: vi.fn().mockResolvedValue(null),
         getTasks: vi.fn().mockResolvedValue([]),
+        onNavigateTo: vi.fn().mockReturnValue(() => {
+          // Unsubscribe mock
+        }),
         onResourceUpdated: vi.fn((callback) => {
           resourceUpdatedCallback = callback
 
