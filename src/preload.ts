@@ -24,6 +24,16 @@ const electronApi = {
     }
   },
 
+  onNavigateTo: (callback: (path: string) => void): (() => void) => {
+    const handler = (_event: unknown, path: string) => callback(path)
+
+    ipcRenderer.on(ipcChannels.NavigateTo, handler)
+
+    return () => {
+      ipcRenderer.removeListener(ipcChannels.NavigateTo, handler)
+    }
+  },
+
   onResourceUpdated: (
     callback: (event: ResourceUpdatedEvent) => void
   ): (() => void) => {

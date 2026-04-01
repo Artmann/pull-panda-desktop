@@ -29,18 +29,18 @@ export function SignInPage() {
         />
       ) : (
         <div>
-          <div className="flex flex-col gap-4">
-            <div className="flex flex-col gap-2">
+          <div className="flex flex-col items-center gap-4">
+            <div className="flex flex-col items-center gap-2">
               <img
                 alt="Pull Panda"
-                className="h-12 w-auto"
+                className="size-16 object-contain"
                 src={logo}
               />
 
               <h1 className="text-3xl font-semibold">Pull Panda</h1>
             </div>
 
-            <div className="text-muted-foreground text-left text-lg mb-4">
+            <div className="text-muted-foreground text-center text-lg mb-4">
               Make great code reviews the default for your team.
             </div>
 
