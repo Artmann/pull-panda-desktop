@@ -9,6 +9,7 @@ export const ipcChannels = {
   GetBootstrapData: 'get-bootstrap-data',
   GetSyncerStats: 'syncer:get-stats',
   GetTasks: 'tasks:get',
+  NavigateTo: 'navigate:to',
   OpenUrl: 'shell:open-url',
   ResourceUpdated: 'resource:updated',
   SyncComplete: 'sync:complete',

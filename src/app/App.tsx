@@ -69,6 +69,16 @@ export function App({ store }: AppProps): ReactElement {
 function AppContent(): ReactElement {
   const { status, isNewSignIn } = useAuth()
   const dispatch = useAppDispatch()
+  const navigate = useNavigate()
+
+  // Listen for navigation requests from the main process
+  useEffect(() => {
+    const unsubscribe = window.electron.onNavigateTo((path) => {
+      navigate(path)
+    })
+
+    return unsubscribe
+  }, [navigate])
 
   // Listen for resource updates from the main process
   useEffect(() => {

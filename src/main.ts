@@ -4,7 +4,7 @@ import path from 'node:path'
 
 import { initializeDatabase, closeDatabase, saveDatabase } from './database'
 import { ipcChannels } from './lib/ipc/channels'
-import { getApiPort, startApiServer } from './main/api'
+import { getApiPort, setApiMainWindow, startApiServer, stopApiServer } from './main/api'
 import { bootstrap, BootstrapData } from './main/bootstrap'
 import { sendPullRequestResourceEvents } from './main/send-resource-events'
 import { backgroundSyncer } from './main/background-syncer'
@@ -326,6 +326,10 @@ app.on('ready', async () => {
 
   createWindow()
 
+  if (mainWindow) {
+    setApiMainWindow(mainWindow)
+  }
+
   // Start background syncer
   backgroundSyncer.start(loadToken)
 
@@ -410,6 +414,7 @@ setInterval(() => {
 // Save database before quitting
 app.on('before-quit', () => {
   backgroundSyncer.stop()
+  stopApiServer()
   closeDatabase()
 })
 

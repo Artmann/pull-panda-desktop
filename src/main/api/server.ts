@@ -1,6 +1,9 @@
+import fs from 'node:fs'
 import http, { IncomingMessage, Server, ServerResponse } from 'node:http'
+import path from 'node:path'
 import { AddressInfo } from 'node:net'
 
+import { app as electronApp, BrowserWindow } from 'electron'
 import { Hono } from 'hono'
 import { cors } from 'hono/cors'
 import type { ContentfulStatusCode } from 'hono/utils/http-status'
@@ -8,12 +11,23 @@ import type { ContentfulStatusCode } from 'hono/utils/http-status'
 import { BackendError } from './errors'
 import { checksRoute } from './routes/checks'
 import { commentsRoute, type AppEnv } from './routes/comments'
+import { navigateRoute } from './routes/navigate'
 import { pullRequestsRoute } from './routes/pull-requests'
 import { reviewsRoute } from './routes/reviews'
+import { screenshotRoute } from './routes/screenshot'
 import { syncsRoute } from './routes/syncs'
 
+let mainWindowRef: BrowserWindow | null = null
 let server: Server | null = null
 let apiPort: number | null = null
+
+export function getApiMainWindow(): BrowserWindow | null {
+  return mainWindowRef
+}
+
+export function setApiMainWindow(window: BrowserWindow): void {
+  mainWindowRef = window
+}
 
 export function getApiPort(): number | null {
   return apiPort
@@ -45,8 +59,10 @@ export function startApiServer(getToken: () => string | null): Promise<number> {
 
     app.route('/api/checks', checksRoute)
     app.route('/api/comments', commentsRoute)
+    app.route('/api/navigate', navigateRoute)
     app.route('/api/pull-requests', pullRequestsRoute)
     app.route('/api/reviews', reviewsRoute)
+    app.route('/api/screenshot', screenshotRoute)
     app.route('/api/syncs', syncsRoute)
 
     app.get('/api/health', (context) => {
@@ -116,6 +132,9 @@ export function startApiServer(getToken: () => string | null): Promise<number> {
         const address = server.address() as AddressInfo
         apiPort = address.port
 
+        const portFilePath = path.join(electronApp.getPath('userData'), 'api-port')
+        fs.writeFileSync(portFilePath, String(apiPort))
+
         console.log(`API server started on port ${apiPort}`)
         resolve(apiPort)
       })
@@ -128,6 +147,14 @@ export function startApiServer(getToken: () => string | null): Promise<number> {
 }
 
 export function stopApiServer(): void {
+  const portFilePath = path.join(electronApp.getPath('userData'), 'api-port')
+
+  try {
+    fs.unlinkSync(portFilePath)
+  } catch {
+    // Port file may not exist.
+  }
+
   if (server) {
     server.close()
     server = null
