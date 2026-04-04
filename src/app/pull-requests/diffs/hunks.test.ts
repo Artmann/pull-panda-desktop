@@ -168,6 +168,79 @@ describe('parseDiffHunk', () => {
     })
   })
 
+  it('should parse a hunk header with omitted old line count (implies 1)', () => {
+    const diffHunk = `@@ -1 +1,6 @@
++line1
++line2
++line3
++line4
++line5
+ line6`
+
+    const result = parseDiffHunk(diffHunk)
+
+    expect(result).toEqual({
+      oldStartLine: 1,
+      oldLineCount: 1,
+      newStartLine: 1,
+      newLineCount: 6,
+      lines: [
+        { content: 'line1', localLineNumber: 1, type: 'add', oldLineNumber: null, newLineNumber: 1 },
+        { content: 'line2', localLineNumber: 2, type: 'add', oldLineNumber: null, newLineNumber: 2 },
+        { content: 'line3', localLineNumber: 3, type: 'add', oldLineNumber: null, newLineNumber: 3 },
+        { content: 'line4', localLineNumber: 4, type: 'add', oldLineNumber: null, newLineNumber: 4 },
+        { content: 'line5', localLineNumber: 5, type: 'add', oldLineNumber: null, newLineNumber: 5 },
+        { content: 'line6', localLineNumber: 6, type: 'context', oldLineNumber: 1, newLineNumber: 6 },
+      ],
+    })
+  })
+
+  it('should parse a hunk header with omitted new line count (implies 1)', () => {
+    const diffHunk = `@@ -1,6 +1 @@
+-line1
+-line2
+-line3
+-line4
+-line5
+ line6`
+
+    const result = parseDiffHunk(diffHunk)
+
+    expect(result).toEqual({
+      oldStartLine: 1,
+      oldLineCount: 6,
+      newStartLine: 1,
+      newLineCount: 1,
+      lines: [
+        { content: 'line1', localLineNumber: 1, type: 'remove', oldLineNumber: 1, newLineNumber: null },
+        { content: 'line2', localLineNumber: 2, type: 'remove', oldLineNumber: 2, newLineNumber: null },
+        { content: 'line3', localLineNumber: 3, type: 'remove', oldLineNumber: 3, newLineNumber: null },
+        { content: 'line4', localLineNumber: 4, type: 'remove', oldLineNumber: 4, newLineNumber: null },
+        { content: 'line5', localLineNumber: 5, type: 'remove', oldLineNumber: 5, newLineNumber: null },
+        { content: 'line6', localLineNumber: 6, type: 'context', oldLineNumber: 6, newLineNumber: 1 },
+      ],
+    })
+  })
+
+  it('should parse a hunk header with both line counts omitted (implies 1,1)', () => {
+    const diffHunk = `@@ -1 +1 @@
+-old
++new`
+
+    const result = parseDiffHunk(diffHunk)
+
+    expect(result).toEqual({
+      oldStartLine: 1,
+      oldLineCount: 1,
+      newStartLine: 1,
+      newLineCount: 1,
+      lines: [
+        { content: 'old', localLineNumber: 1, type: 'remove', oldLineNumber: 1, newLineNumber: null },
+        { content: 'new', localLineNumber: 2, type: 'add', oldLineNumber: null, newLineNumber: 1 },
+      ],
+    })
+  })
+
   it('should throw error for invalid diff hunk format', () => {
     const invalidDiff = 'not a valid diff'
 

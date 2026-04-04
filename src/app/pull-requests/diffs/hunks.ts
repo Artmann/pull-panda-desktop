@@ -131,17 +131,17 @@ function parseSingleHunk(
   const allLines = diffHunk.split('\n')
   const headerLine = allLines[0]
 
-  const headerRegex = /@@\s-(\d+),(\d+)\s\+(\d+),(\d+)\s@@\s*(.*)/
+  const headerRegex = /@@\s-(\d+)(?:,(\d+))?\s\+(\d+)(?:,(\d+))?\s@@\s*(.*)/
   const headerMatch = headerLine.match(headerRegex)
 
   if (!headerMatch) {
-    throw new Error('Invalid diff hunk format')
+    throw new Error(`Invalid diff hunk format: ${JSON.stringify(headerLine)}`)
   }
 
   const oldStartLine = parseInt(headerMatch[1], 10)
-  const oldLineCount = parseInt(headerMatch[2], 10)
+  const oldLineCount = headerMatch[2] ? parseInt(headerMatch[2], 10) : 1
   const newStartLine = parseInt(headerMatch[3], 10)
-  const newLineCount = parseInt(headerMatch[4], 10)
+  const newLineCount = headerMatch[4] ? parseInt(headerMatch[4], 10) : 1
   const headerContext = headerMatch[5]
 
   let rawLines = allLines.slice(1).filter((line) => line !== '')
