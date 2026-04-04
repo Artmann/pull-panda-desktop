@@ -1,8 +1,8 @@
 /**
  * @vitest-environment jsdom
  */
-import { render, screen, fireEvent } from '@testing-library/react'
-import { describe, it, expect } from 'vitest'
+import { render, screen, fireEvent, act } from '@testing-library/react'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 
 import { FileCard, FileCardBody, FileCardHeader } from './FileCard'
 
@@ -56,5 +56,112 @@ describe('FileCard', () => {
     fireEvent.click(screen.getByTestId('other-button'))
 
     expect(screen.getByTestId('body-content')).toBeInTheDocument()
+  })
+})
+
+describe('FileCard scroll adjustment on collapse', () => {
+  let rafCallbacks: FrameRequestCallback[]
+
+  beforeEach(() => {
+    rafCallbacks = []
+
+    vi.spyOn(window, 'requestAnimationFrame').mockImplementation(
+      (callback: FrameRequestCallback) => {
+        rafCallbacks.push(callback)
+
+        return rafCallbacks.length
+      }
+    )
+  })
+
+  afterEach(() => {
+    vi.restoreAllMocks()
+  })
+
+  function flushRaf() {
+    const callbacks = [...rafCallbacks]
+    rafCallbacks = []
+
+    act(() => {
+      for (const callback of callbacks) {
+        callback(0)
+      }
+    })
+  }
+
+  it('adjusts scroll position when collapsing', () => {
+    const scrollContainer = document.createElement('div')
+    scrollContainer.className = 'overflow-auto'
+    Object.defineProperty(scrollContainer, 'scrollTop', {
+      value: 500,
+      writable: true
+    })
+    scrollContainer.getBoundingClientRect = () =>
+      ({ top: 32, left: 0, right: 800, bottom: 600, width: 800, height: 568 }) as DOMRect
+    document.body.appendChild(scrollContainer)
+
+    render(
+      <FileCard>
+        <FileCardHeader>file.tsx</FileCardHeader>
+        <FileCardBody>
+          <div data-testid="body-content">Diff content</div>
+        </FileCardBody>
+      </FileCard>,
+      { container: scrollContainer }
+    )
+
+    const card = scrollContainer.firstElementChild as HTMLElement
+    card.getBoundingClientRect = () =>
+      ({ top: -200, left: 0, right: 800, bottom: 108, width: 800, height: 308 }) as DOMRect
+
+    fireEvent.click(screen.getByRole('banner'))
+    flushRaf()
+
+    expect(scrollContainer.scrollTop).toEqual(500 + (-200 - 32 - 76))
+
+    document.body.removeChild(scrollContainer)
+  })
+
+  it('does not adjust scroll position when expanding', () => {
+    const scrollContainer = document.createElement('div')
+    scrollContainer.className = 'overflow-auto'
+    Object.defineProperty(scrollContainer, 'scrollTop', {
+      value: 500,
+      writable: true
+    })
+    document.body.appendChild(scrollContainer)
+
+    render(
+      <FileCard>
+        <FileCardHeader>file.tsx</FileCardHeader>
+        <FileCardBody>
+          <div data-testid="body-content">Diff content</div>
+        </FileCardBody>
+      </FileCard>,
+      { container: scrollContainer }
+    )
+
+    // Collapse first
+    fireEvent.click(screen.getByRole('banner'))
+    flushRaf()
+
+    // Reset scrollTop for the expand check
+    scrollContainer.scrollTop = 300
+
+    // Expand
+    fireEvent.click(screen.getByRole('banner'))
+    flushRaf()
+
+    expect(scrollContainer.scrollTop).toEqual(300)
+
+    document.body.removeChild(scrollContainer)
+  })
+
+  it('schedules scroll via requestAnimationFrame', () => {
+    renderFileCard()
+
+    fireEvent.click(screen.getByRole('banner'))
+
+    expect(window.requestAnimationFrame).toHaveBeenCalledOnce()
   })
 })

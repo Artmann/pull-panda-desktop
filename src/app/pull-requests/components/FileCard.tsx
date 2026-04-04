@@ -1,15 +1,24 @@
 import { ChevronDownIcon, ChevronRightIcon } from 'lucide-react'
-import { createContext, useContext, useState, type ReactElement } from 'react'
+import {
+  createContext,
+  useContext,
+  useRef,
+  useState,
+  type ReactElement,
+  type RefObject
+} from 'react'
 
 import { Button } from '@/app/components/ui/button'
 import { cn } from '@/app/lib/utils'
 
 interface FileCardContextValue {
+  cardRef: RefObject<HTMLDivElement | null>
   isCollapsed: boolean
   setIsCollapsed: (value: boolean) => void
 }
 
 const FileCardContext = createContext<FileCardContextValue>({
+  cardRef: { current: null },
   isCollapsed: false,
   setIsCollapsed: () => {
     // Default no-op
@@ -23,14 +32,15 @@ interface FileCardProps {
 
 export function FileCard({ children, style }: FileCardProps): ReactElement {
   const [isCollapsed, setIsCollapsed] = useState(false)
+  const cardRef = useRef<HTMLDivElement>(null)
 
   return (
-    <FileCardContext.Provider value={{ isCollapsed, setIsCollapsed }}>
+    <FileCardContext.Provider value={{ cardRef, isCollapsed, setIsCollapsed }}>
       <div
+        ref={cardRef}
         className={`
           border border-border rounded-md
           text-xs text-foreground font-mono
-          overflow-hidden
         `}
         style={style}
       >
@@ -47,14 +57,14 @@ interface FileCardHeaderProps {
 export function FileCardHeader({
   children
 }: FileCardHeaderProps): ReactElement {
-  const { isCollapsed, setIsCollapsed } = useContext(FileCardContext)
+  const { cardRef, isCollapsed, setIsCollapsed } = useContext(FileCardContext)
 
   const ChevronIcon = isCollapsed ? ChevronRightIcon : ChevronDownIcon
 
   return (
     <header
       className={cn(
-        'flex items-center gap-2 pl-3 pr-4 py-1 border-border cursor-pointer',
+        'flex items-center gap-2 pl-3 pr-4 py-1 border-border cursor-pointer sticky top-[76px] z-10 bg-background',
         isCollapsed ? 'border-0' : 'border-b'
       )}
       onClick={(event) => {
@@ -64,7 +74,26 @@ export function FileCardHeader({
           return
         }
 
-        setIsCollapsed(!isCollapsed)
+        if (!isCollapsed) {
+          setIsCollapsed(true)
+
+          requestAnimationFrame(() => {
+            const card = cardRef.current
+            const scrollContainer = card?.closest('.overflow-auto')
+
+            if (card && scrollContainer instanceof HTMLElement) {
+              const cardRect = card.getBoundingClientRect()
+              const containerRect = scrollContainer.getBoundingClientRect()
+
+              scrollContainer.scrollTop +=
+                cardRect.top - containerRect.top - 76
+            }
+          })
+
+          return
+        }
+
+        setIsCollapsed(false)
       }}
     >
       <Button
