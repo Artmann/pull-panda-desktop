@@ -25,6 +25,11 @@ import {
   SidePanelTitle
 } from '@/app/components/ui/side-panel'
 import { Textarea } from '@/app/components/ui/textarea'
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger
+} from '@/app/components/ui/tooltip'
 import { getMergeOptions, mergePullRequest } from '@/app/lib/api'
 import type { MergeOptions } from '@/app/lib/api'
 import { cn } from '@/app/lib/utils'
@@ -399,13 +404,35 @@ export const MergeDrawer = memo(function MergeDrawer({
                   {mergeBlockedReason(mergeOptions.mergeableState)}
                 </p>
 
-                <button
-                  className="text-xs text-muted-foreground hover:text-foreground transition-colors text-center"
-                  onClick={handleForceMerge}
-                  type="button"
-                >
-                  Merge without waiting for requirements
-                </button>
+                {mergeOptions.mergeableState === 'dirty' ? (
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <div>
+                        <Button
+                          className="w-full"
+                          disabled
+                          size="sm"
+                          variant="destructive"
+                        >
+                          Merge without waiting for requirements
+                        </Button>
+                      </div>
+                    </TooltipTrigger>
+
+                    <TooltipContent>
+                      Cannot merge while there are conflicts.
+                    </TooltipContent>
+                  </Tooltip>
+                ) : (
+                  <Button
+                    className="w-full"
+                    onClick={handleForceMerge}
+                    size="sm"
+                    variant="destructive"
+                  >
+                    Merge without waiting for requirements
+                  </Button>
+                )}
               </div>
             )
           )}
