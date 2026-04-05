@@ -1,3 +1,4 @@
+import { Pencil } from 'lucide-react'
 import { memo, useMemo, useState, type ReactElement } from 'react'
 import { shallowEqual } from 'react-redux'
 import { toast } from 'sonner'
@@ -8,6 +9,7 @@ import type { Check, Comment } from '@/types/pull-request-details'
 import { MarkdownBlock } from '@/app/components/MarkdownBlock'
 import { SectionHeader } from '@/app/components/SectionHeader'
 import { Separator } from '@/app/components/ui/separator'
+import { Textarea } from '@/app/components/ui/textarea'
 import { updatePullRequest } from '@/app/lib/api'
 import { useAppDispatch, useAppSelector } from '@/app/store/hooks'
 import { pullRequestsActions } from '@/app/store/pull-requests-slice'
@@ -144,10 +146,9 @@ function InlineEditableBody({
 
   if (isEditing) {
     return (
-      <textarea
+      <Textarea
         autoFocus
-        className="w-full resize-y bg-muted/40 border border-border rounded-md p-3 text-sm font-inherit outline-none focus:ring-2 focus:ring-primary/50 min-h-32"
-        rows={8}
+        className="min-h-48 text-sm resize-y"
         value={draft}
         onBlur={handleSave}
         onChange={(event) => setDraft(event.target.value)}
@@ -162,28 +163,42 @@ function InlineEditableBody({
 
   if (pullRequest.body) {
     return (
-      <div
-        className={!isMerged ? 'cursor-text' : undefined}
-        onClick={handleStartEdit}
-      >
+      <div className="group relative">
         <MarkdownBlock
           className="pull-request-description prose-sm *:first:mt-0!"
           content={pullRequest.body}
         />
+
+        {!isMerged && (
+          <button
+            aria-label="Edit description"
+            className="absolute top-0 right-0 p-1 rounded text-muted-foreground hover:text-foreground hover:bg-muted transition-colors cursor-pointer opacity-0 group-hover:opacity-100"
+            onClick={handleStartEdit}
+            title="Edit description"
+            type="button"
+          >
+            <Pencil className="size-3" />
+          </button>
+        )}
       </div>
     )
   }
 
   return (
-    <div
-      className={
-        !isMerged
-          ? 'cursor-text text-muted-foreground text-sm'
-          : 'text-muted-foreground text-sm'
-      }
-      onClick={!isMerged ? handleStartEdit : undefined}
-    >
+    <div className="group relative text-muted-foreground text-sm">
       No description provided.
+
+      {!isMerged && (
+        <button
+          aria-label="Edit description"
+          className="absolute top-0 right-0 p-1 rounded text-muted-foreground hover:text-foreground hover:bg-muted transition-colors cursor-pointer opacity-0 group-hover:opacity-100"
+          onClick={handleStartEdit}
+          title="Edit description"
+          type="button"
+        >
+          <Pencil className="size-3" />
+        </button>
+      )}
     </div>
   )
 }
