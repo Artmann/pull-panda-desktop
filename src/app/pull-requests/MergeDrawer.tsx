@@ -343,6 +343,10 @@ export const MergeDrawer = memo(function MergeDrawer({
                   Merge is blocked
                 </Button>
 
+                <p className="text-xs text-muted-foreground text-center">
+                  {mergeBlockedReason(mergeOptions.mergeableState)}
+                </p>
+
                 <button
                   className="text-xs text-muted-foreground hover:text-foreground transition-colors text-center"
                   onClick={handleForceMerge}
@@ -553,6 +557,22 @@ function ChecksSection({ checks, summary }: ChecksSectionProps): ReactElement {
       )}
     </div>
   )
+}
+
+function mergeBlockedReason(mergeableState: string): string {
+  if (mergeableState === 'dirty') {
+    return 'This branch has conflicts that must be resolved.'
+  }
+
+  if (mergeableState === 'blocked') {
+    return 'Blocked by branch protection rules.'
+  }
+
+  if (mergeableState === 'unstable') {
+    return 'Some required checks are failing.'
+  }
+
+  return 'This pull request cannot be merged.'
 }
 
 interface MergeStatusBannerProps {

@@ -265,7 +265,34 @@ describe('MergeDrawer', () => {
 
     expect(mergeButton).toBeDisabled()
     expect(
+      screen.getByText('Blocked by branch protection rules.')
+    ).toBeInTheDocument()
+    expect(
       screen.getByText('Merge without waiting for requirements')
+    ).toBeInTheDocument()
+  })
+
+  it('shows conflict reason when merge is blocked by dirty state', async () => {
+    mockGetMergeOptions.mockResolvedValue({
+      ...mergeableOptions,
+      mergeable: false,
+      mergeableState: 'dirty'
+    })
+
+    const pullRequest = createMockPullRequest()
+
+    await act(async () => {
+      renderWithProviders(
+        <MergeDrawer
+          onClose={vi.fn()}
+          open={true}
+          pullRequest={pullRequest}
+        />
+      )
+    })
+
+    expect(
+      screen.getByText('This branch has conflicts that must be resolved.')
     ).toBeInTheDocument()
   })
 
