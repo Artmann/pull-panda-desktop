@@ -1,7 +1,9 @@
 import {
   AlertTriangle,
+  Check as CheckIcon,
   CheckCircle2,
   Clock,
+  Copy,
   GitBranch,
   GitCommitHorizontal,
   GitMerge,
@@ -270,7 +272,7 @@ export const MergeDrawer = memo(function MergeDrawer({
               )}
 
               {mergeOptions !== null && mergeOptions.mergeable !== null && (
-                <MergeStatusBanner mergeOptions={mergeOptions} />
+                <MergeStatusBanner mergeOptions={mergeOptions} pullRequest={pullRequest} />
               )}
 
               {!mergeOptions && (
@@ -575,13 +577,28 @@ function mergeBlockedReason(mergeableState: string): string {
   return 'This pull request cannot be merged.'
 }
 
+function buildConflictPrompt(pullRequest: PullRequest): string {
+  const repo = `${pullRequest.repositoryOwner}/${pullRequest.repositoryName}`
+  const branch = pullRequest.headRefName ?? `pr-${pullRequest.number}`
+
+  return [
+    `The pull request #${pullRequest.number} in ${repo} has merge conflicts.`,
+    `The branch is \`${branch}\`.`,
+    '',
+    `Please resolve the merge conflicts by rebasing \`${branch}\` onto the base branch and fixing any conflicts.`
+  ].join('\n')
+}
+
 interface MergeStatusBannerProps {
   mergeOptions: MergeOptions
+  pullRequest: PullRequest
 }
 
 function MergeStatusBanner({
-  mergeOptions
+  mergeOptions,
+  pullRequest
 }: MergeStatusBannerProps): ReactElement {
+  const [copied, setCopied] = useState(false)
   const { mergeable, mergeableState } = mergeOptions
 
   if (mergeable === true) {
@@ -594,10 +611,34 @@ function MergeStatusBanner({
   }
 
   if (mergeableState === 'dirty') {
+    const prompt = buildConflictPrompt(pullRequest)
+
+    const handleCopy = () => {
+      navigator.clipboard.writeText(prompt)
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
+    }
+
     return (
-      <div className="flex items-center gap-2 px-3 py-2.5 rounded-lg border border-status-danger-border bg-status-danger text-sm text-status-danger-foreground">
-        <AlertTriangle className="size-4 shrink-0" />
-        <span>This branch has conflicts that must be resolved</span>
+      <div className="flex flex-col gap-2 px-3 py-2.5 rounded-lg border border-status-danger-border bg-status-danger text-sm text-status-danger-foreground">
+        <div className="flex items-center gap-2">
+          <AlertTriangle className="size-4 shrink-0" />
+          <span>This branch has conflicts that must be resolved</span>
+        </div>
+
+        <button
+          aria-label="Copy prompt"
+          className="inline-flex items-center gap-1 px-2 py-1 rounded text-xs font-medium bg-status-danger-foreground/10 hover:bg-status-danger-foreground/20 transition-colors cursor-pointer self-start"
+          onClick={handleCopy}
+          type="button"
+        >
+          {copied ? (
+            <CheckIcon className="size-3" />
+          ) : (
+            <Copy className="size-3" />
+          )}
+          {copied ? 'Copied' : 'Copy prompt'}
+        </button>
       </div>
     )
   }

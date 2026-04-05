@@ -293,7 +293,11 @@ describe('MergeDrawer', () => {
     })
 
     expect(
-      screen.getByText('This branch has conflicts that must be resolved.')
+      screen.getByText('This branch has conflicts that must be resolved')
+    ).toBeInTheDocument()
+
+    expect(
+      screen.getByRole('button', { name: /copy prompt/i })
     ).toBeInTheDocument()
   })
 
