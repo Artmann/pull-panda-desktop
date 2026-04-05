@@ -105,7 +105,8 @@
       "Bash(\"/c/Program Files/GitHub CLI/gh.exe\" run:*)",
       "Bash(\"/c/Program Files/GitHub CLI/gh.exe\" api:*)",
       "Bash(python3 /Users/artmann/.claude/skills/skill-creator/scripts/init_skill.py github-api --path /Users/artmann/.claude/skills/ 2>&1)",
-      "Bash(rm -rf /Users/artmann/.claude/skills/github-api/scripts /Users/artmann/.claude/skills/github-api/assets /Users/artmann/.claude/skills/github-api/references/api_reference.md && mkdir -p /Users/artmann/.claude/skills/github-api/references)"
+      "Bash(rm -rf /Users/artmann/.claude/skills/github-api/scripts /Users/artmann/.claude/skills/github-api/assets /Users/artmann/.claude/skills/github-api/references/api_reference.md && mkdir -p /Users/artmann/.claude/skills/github-api/references)",
+      "Bash(yarn drizzle-kit:*)"
     ]
   }
 }
