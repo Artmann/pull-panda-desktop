@@ -21,6 +21,7 @@ export const pullRequests = sqliteTable('pull_requests', {
 
   body: text('body'),
   bodyHtml: text('body_html'),
+  headRefName: text('head_ref_name'),
 
   isDraft: integer('is_draft', { mode: 'boolean' }).notNull().default(false),
   isAuthor: integer('is_author', { mode: 'boolean' }).notNull().default(false),

@@ -1,4 +1,11 @@
-import { ExternalLinkIcon, GitCommitIcon, GitPullRequest } from 'lucide-react'
+import {
+  Check,
+  Copy,
+  ExternalLinkIcon,
+  GitBranch,
+  GitCommitIcon,
+  GitPullRequest
+} from 'lucide-react'
 import { memo, ReactElement, useMemo, useState } from 'react'
 import { shallowEqual } from 'react-redux'
 import { toast } from 'sonner'
@@ -133,6 +140,10 @@ export const PullRequestHeader = memo(function PullRequestHeader({
             Merged
           </Badge>
         </div>
+      )}
+
+      {pullRequest.headRefName && (
+        <BranchName name={pullRequest.headRefName} />
       )}
 
       {latestReviews.length > 0 && (
@@ -276,6 +287,39 @@ function InlineEditableTitle({
     >
       {pullRequest.title}
     </h1>
+  )
+}
+
+function BranchName({ name }: { name: string }): ReactElement {
+  const [copied, setCopied] = useState(false)
+
+  const handleCopy = () => {
+    navigator.clipboard.writeText(name)
+    setCopied(true)
+    setTimeout(() => setCopied(false), 2000)
+  }
+
+  return (
+    <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+      <GitBranch className="size-3 shrink-0" />
+
+      <span className="truncate font-mono max-w-80" title={name}>
+        {name}
+      </span>
+
+      <button
+        aria-label="Copy branch name"
+        className="p-0.5 rounded text-muted-foreground hover:text-foreground hover:bg-muted transition-colors cursor-pointer shrink-0"
+        onClick={handleCopy}
+        type="button"
+      >
+        {copied ? (
+          <Check className="size-3" />
+        ) : (
+          <Copy className="size-3" />
+        )}
+      </button>
+    </div>
   )
 }
 

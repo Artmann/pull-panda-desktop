@@ -14,6 +14,7 @@ export interface PullRequest {
   title: string
   body: string | null
   bodyHtml: string | null
+  headRefName: string | null
   state: 'OPEN' | 'CLOSED' | 'MERGED'
   url: string
   repositoryOwner: string

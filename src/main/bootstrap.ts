@@ -72,6 +72,7 @@ function buildPullRequest(
     closedAt: row.closedAt,
     commentCount: counts.commentCount,
     createdAt: row.createdAt,
+    headRefName: row.headRefName ?? null,
     detailsSyncedAt: row.detailsSyncedAt,
     id: row.id,
     isDraft: row.isDraft,

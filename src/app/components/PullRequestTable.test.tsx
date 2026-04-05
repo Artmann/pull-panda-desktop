@@ -19,6 +19,7 @@ function createMockPullRequest(
     title: 'Test PR',
     body: 'Test PR body',
     bodyHtml: null,
+    headRefName: null,
     state: 'OPEN',
     url: 'https://github.com/owner/repo/pull/42',
     repositoryOwner: 'owner',

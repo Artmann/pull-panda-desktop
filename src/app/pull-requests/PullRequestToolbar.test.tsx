@@ -41,6 +41,7 @@ function createMockPullRequest(
     mergedAt: null,
     body: 'Test PR body',
     bodyHtml: null,
+    headRefName: null,
     isDraft: false,
     isAuthor: false,
     isAssignee: false,

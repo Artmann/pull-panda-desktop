@@ -25,6 +25,7 @@ interface GraphQLPullRequestNode {
   title: string
   body: string | null
   bodyHTML: string
+  headRefName: string
   state: 'OPEN' | 'CLOSED' | 'MERGED'
   isDraft: boolean
   url: string
@@ -77,6 +78,7 @@ interface GitHubPullRequest {
   title: string
   body: string | null
   bodyHtml: string | null
+  headRefName: string
   state: 'OPEN' | 'CLOSED' | 'MERGED'
   url: string
   repositoryOwner: string
@@ -99,6 +101,7 @@ function transformGraphQLNode(node: GraphQLPullRequestNode): GitHubPullRequest {
     title: node.title,
     body: node.body,
     bodyHtml: node.bodyHTML,
+    headRefName: node.headRefName,
     state: node.state,
     url: node.url,
     repositoryOwner: node.repository.owner.login,
@@ -133,6 +136,7 @@ function transformPullRequest(
     title: pullRequest.title,
     body: pullRequest.body,
     bodyHtml: pullRequest.bodyHtml,
+    headRefName: pullRequest.headRefName,
     state: pullRequest.state,
     url: pullRequest.url,
     repositoryOwner: pullRequest.repositoryOwner,
@@ -164,6 +168,7 @@ const searchPullRequestsQuery = `
           title
           body
           bodyHTML
+          headRefName
           state
           isDraft
           url
@@ -205,6 +210,7 @@ const searchPullRequestsQuery = `
           title
           body
           bodyHTML
+          headRefName
           state
           isDraft
           url
@@ -246,6 +252,7 @@ const searchPullRequestsQuery = `
           title
           body
           bodyHTML
+          headRefName
           state
           isDraft
           url
@@ -383,6 +390,7 @@ export async function syncPullRequests(token: string): Promise<SyncResult> {
           title: pullRequest.title,
           body: pullRequest.body,
           bodyHtml: pullRequest.bodyHtml,
+          headRefName: pullRequest.headRefName,
           state: pullRequest.state,
           url: pullRequest.url,
           repositoryOwner: pullRequest.repositoryOwner,
