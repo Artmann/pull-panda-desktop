@@ -108,7 +108,7 @@ function SidePanelFooter({
 }: SidePanelFooterProps) {
   return (
     <div
-      className={cn('mt-auto p-4', collapsed && 'hidden', className)}
+      className={cn('mt-auto p-4 pb-6', collapsed && 'hidden', className)}
       {...props}
     />
   )
