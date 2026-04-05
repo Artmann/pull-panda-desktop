@@ -370,7 +370,7 @@ export const MergeDrawer = memo(function MergeDrawer({
               </div>
 
               {selectedMethod && (
-                <p className="text-xs text-muted-foreground">
+                <p className="text-xs text-muted-foreground text-center">
                   {mergeMethodDescriptions[selectedMethod]}
                 </p>
               )}
