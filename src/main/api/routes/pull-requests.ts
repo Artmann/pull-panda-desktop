@@ -9,6 +9,7 @@ import { ipcChannels } from '../../../lib/ipc/channels'
 import { backgroundSyncer } from '../../background-syncer'
 import { getPullRequest, getPullRequestDetails } from '../../bootstrap'
 import { sendPullRequestResourceEvents } from '../../send-resource-events'
+import { etagManager } from '../../../sync/etag-manager'
 import { syncPullRequestDetails } from '../../../sync/sync-pull-request-details'
 
 import type { AppEnv } from './comments'
@@ -35,6 +36,11 @@ pullRequestsRoute.post('/:pullRequestId/activate', (context) => {
     .get()
 
   if (pullRequest) {
+    // Clear cached ETags so force pushes and amended commits are picked up.
+    for (const endpointType of ['checks', 'commits', 'files', 'reviews', 'comments']) {
+      etagManager.delete({ endpointType, resourceId: pullRequestId })
+    }
+
     syncPullRequestDetails({
       token,
       pullRequestId,
