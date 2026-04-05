@@ -1,4 +1,5 @@
-import { useMemo, useState, type ReactElement } from 'react'
+import { useEffect, useMemo, type ReactElement } from 'react'
+import { useSearchParams } from 'react-router'
 
 import { PullRequest } from '@/types/pull-request'
 import { Pagination } from './Pagination'
@@ -9,14 +10,21 @@ import { Table, TableBody, TableHead, TableHeader, TableRow } from './ui/table'
 const pageSize = 10
 
 interface PullRequestTableProps {
+  paramPrefix: string
   pullRequests: PullRequest[]
 }
 
 export function PullRequestTable({
+  paramPrefix,
   pullRequests
 }: PullRequestTableProps): ReactElement {
-  const [currentPage, setCurrentPage] = useState(1)
-  const [filterValue, setFilterValue] = useState('')
+  const [searchParams, setSearchParams] = useSearchParams()
+
+  const filterParamName = `${paramPrefix}Filter`
+  const pageParamName = `${paramPrefix}Page`
+
+  const filterValue = searchParams.get(filterParamName) ?? ''
+  const currentPage = Number(searchParams.get(pageParamName)) || 1
 
   const filteredPullRequests = useMemo(() => {
     if (!filterValue.trim()) {
@@ -50,13 +58,43 @@ export function PullRequestTable({
     return filteredPullRequests.slice(startIndex, endIndex)
   }, [currentPage, filteredPullRequests])
 
+  useEffect(
+    function clampPageToValidRange() {
+      if (totalPages > 0 && currentPage > totalPages) {
+        handlePageChange(totalPages)
+      }
+    },
+    [currentPage, totalPages]
+  )
+
   const handleFilterChange = (value: string) => {
-    setFilterValue(value)
-    setCurrentPage(1)
+    setSearchParams((previous) => {
+      const next = new URLSearchParams(previous)
+
+      if (value) {
+        next.set(filterParamName, value)
+      } else {
+        next.delete(filterParamName)
+      }
+
+      next.delete(pageParamName)
+
+      return next
+    })
   }
 
   const handlePageChange = (page: number) => {
-    setCurrentPage(page)
+    setSearchParams((previous) => {
+      const next = new URLSearchParams(previous)
+
+      if (page > 1) {
+        next.set(pageParamName, String(page))
+      } else {
+        next.delete(pageParamName)
+      }
+
+      return next
+    })
   }
 
   if (pullRequests.length === 0) {

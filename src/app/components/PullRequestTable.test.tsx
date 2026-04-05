@@ -44,10 +44,13 @@ function createMockPullRequest(
   }
 }
 
-function renderTable(pullRequests: PullRequest[]) {
+function renderTable(pullRequests: PullRequest[], paramPrefix = 'test') {
   return render(
     <MemoryRouter>
-      <PullRequestTable pullRequests={pullRequests} />
+      <PullRequestTable
+        paramPrefix={paramPrefix}
+        pullRequests={pullRequests}
+      />
     </MemoryRouter>
   )
 }

@@ -140,7 +140,12 @@ export function PullRequestPage(): ReactElement {
   }, [])
 
   const handleTabChange = (tabId: string) => {
-    setSearchParams({ tab: tabId })
+    setSearchParams((previous) => {
+      const next = new URLSearchParams(previous)
+      next.set('tab', tabId)
+
+      return next
+    })
     dispatch(navigationActions.setActiveTab({ pullRequestId: id, tab: tabId }))
   }
 

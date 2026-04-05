@@ -58,7 +58,10 @@ export function HomePage(): ReactElement {
                 </Badge>
               </div>
 
-              <PullRequestTable pullRequests={pullRequestThatNeedsReview} />
+              <PullRequestTable
+                paramPrefix="review"
+                pullRequests={pullRequestThatNeedsReview}
+              />
             </section>
 
             <section>
@@ -73,7 +76,10 @@ export function HomePage(): ReactElement {
                 </Badge>
               </div>
 
-              <PullRequestTable pullRequests={yourPullRequests} />
+              <PullRequestTable
+                paramPrefix="your"
+                pullRequests={yourPullRequests}
+              />
             </section>
           </div>
         )}
