@@ -374,7 +374,7 @@ export const MergeDrawer = memo(function MergeDrawer({
 
           {canMerge && selectedMethod ? (
             <Button
-              className="w-full bg-status-success border border-status-success-border text-status-success-foreground hover:opacity-90"
+              className="w-full bg-status-success border border-status-success-border text-status-success-foreground hover:bg-status-success/90"
               onClick={handleMerge}
               size="sm"
             >
