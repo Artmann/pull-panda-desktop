@@ -35,6 +35,46 @@ import type { PullRequest } from '@/types/pull-request'
 
 type MergeMethod = 'merge' | 'rebase' | 'squash'
 
+const mergeMethodStorageKey = 'pull-panda-merge-method'
+
+function getSavedMergeMethod(repo: string): MergeMethod | null {
+  const stored = localStorage.getItem(mergeMethodStorageKey)
+
+  if (!stored) {
+    return null
+  }
+
+  try {
+    const map = JSON.parse(stored) as Record<string, string>
+
+    const method = map[repo]
+
+    if (method === 'merge' || method === 'rebase' || method === 'squash') {
+      return method
+    }
+
+    return null
+  } catch {
+    return null
+  }
+}
+
+function saveMergeMethod(repo: string, method: MergeMethod): void {
+  let map: Record<string, string> = {}
+  const stored = localStorage.getItem(mergeMethodStorageKey)
+
+  if (stored) {
+    try {
+      map = JSON.parse(stored) as Record<string, string>
+    } catch {
+      // Ignore corrupt data.
+    }
+  }
+
+  map[repo] = method
+  localStorage.setItem(mergeMethodStorageKey, JSON.stringify(map))
+}
+
 const mergeMethodDescriptions: Record<MergeMethod, string> = {
   merge: 'All commits will be added to the base branch via a merge commit.',
   rebase: 'All commits will be rebased and added to the base branch.',
@@ -103,13 +143,23 @@ export const MergeDrawer = memo(function MergeDrawer({
             if (options.mergeable === null) {
               retryTimeout = setTimeout(fetch, 3000)
             } else {
-              const first =
+              const repo = `${pullRequest.repositoryOwner}/${pullRequest.repositoryName}`
+              const saved = getSavedMergeMethod(repo)
+
+              const allowedMap: Record<MergeMethod, boolean> = {
+                merge: options.allowMergeCommit,
+                rebase: options.allowRebaseMerge,
+                squash: options.allowSquashMerge
+              }
+
+              const initial =
+                (saved && allowedMap[saved] && saved) ||
                 (options.allowSquashMerge && 'squash') ||
                 (options.allowMergeCommit && 'merge') ||
                 (options.allowRebaseMerge && 'rebase') ||
                 null
 
-              setSelectedMethod(first as MergeMethod | null)
+              setSelectedMethod(initial as MergeMethod | null)
             }
           })
           .catch(() => {
@@ -153,6 +203,9 @@ export const MergeDrawer = memo(function MergeDrawer({
   }
 
   const executeMerge = (method: MergeMethod) => {
+    const repo = `${pullRequest.repositoryOwner}/${pullRequest.repositoryName}`
+    saveMergeMethod(repo, method)
+
     const originalPr = pullRequest
 
     dispatch(
@@ -296,7 +349,7 @@ export const MergeDrawer = memo(function MergeDrawer({
                   .map((method) => (
                     <button
                       className={cn(
-                        'flex-1 flex flex-col items-center gap-2 p-3 rounded-lg border cursor-pointer transition-colors',
+                        'flex-1 flex items-center justify-center gap-1.5 px-2 py-1.5 rounded-md border cursor-pointer transition-colors text-xs font-medium',
                         selectedMethod === method
                           ? 'border-primary bg-primary/10 text-primary'
                           : 'border-border hover:border-foreground/20'
@@ -306,10 +359,7 @@ export const MergeDrawer = memo(function MergeDrawer({
                       type="button"
                     >
                       <MergeMethodIcon method={method} />
-
-                      <span className="text-xs font-medium">
-                        {mergeMethodShortLabels[method]}
-                      </span>
+                      {mergeMethodShortLabels[method]}
                     </button>
                   ))}
               </div>
@@ -367,14 +417,14 @@ export const MergeDrawer = memo(function MergeDrawer({
 
 function MergeMethodIcon({ method }: { method: MergeMethod }): ReactElement {
   if (method === 'squash') {
-    return <GitCommitHorizontal className="size-4" />
+    return <GitCommitHorizontal className="size-3.5" />
   }
 
   if (method === 'rebase') {
-    return <GitBranch className="size-4" />
+    return <GitBranch className="size-3.5" />
   }
 
-  return <GitMerge className="size-4" />
+  return <GitMerge className="size-3.5" />
 }
 
 function useLatestReviews(reviews: Review[]): Review[] {
