@@ -17,6 +17,7 @@ import { pullRequestsActions } from '@/app/store/pull-requests-slice'
 import { PullRequest } from '@/types/pull-request'
 import type { Commit, Review } from '@/types/pull-request-details'
 import { ReviewBadge } from '../components/ReviewBadge'
+import { TimeAgo } from '../components/TimeAgo'
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -174,6 +175,14 @@ export const PullRequestHeader = memo(function PullRequestHeader({
                   ? latestCommit.message.slice(0, 80) + '…'
                   : latestCommit.message}
               </span>
+            </>
+          )}
+
+          {latestCommit?.gitHubCreatedAt && (
+            <>
+              <span className="text-border">·</span>
+
+              <TimeAgo dateTime={latestCommit.gitHubCreatedAt} />
             </>
           )}
         </div>
