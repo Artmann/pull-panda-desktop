@@ -347,7 +347,7 @@ export const MergeDrawer = memo(function MergeDrawer({
       <SidePanelFooter>
         <div className="flex flex-col gap-4">
           {allowedMethods.length > 0 && !showSquashFields && (
-            <>
+            <div className="flex flex-col gap-2">
               <div className="flex gap-2">
                 {(['squash', 'merge', 'rebase'] as MergeMethod[])
                   .filter((method) => allowedMethods.includes(method))
@@ -374,7 +374,7 @@ export const MergeDrawer = memo(function MergeDrawer({
                   {mergeMethodDescriptions[selectedMethod]}
                 </p>
               )}
-            </>
+            </div>
           )}
 
           {canMerge && selectedMethod ? (
