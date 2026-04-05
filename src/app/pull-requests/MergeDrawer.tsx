@@ -389,20 +389,22 @@ export const MergeDrawer = memo(function MergeDrawer({
           ) : (
             mergeOptions !== null &&
             !canMerge && (
-              <div className="flex flex-col gap-2">
-                <Button
-                  className="w-full"
-                  disabled
-                  size="sm"
-                  variant="outline"
-                >
-                  <ShieldAlert className="size-3" />
-                  Merge is blocked
-                </Button>
+              <div className="flex flex-col gap-4">
+                <div className="flex flex-col gap-2 items-center">
+                  <Button
+                    className="w-full"
+                    disabled
+                    size="sm"
+                    variant="outline"
+                  >
+                    <ShieldAlert className="size-3" />
+                    Merge is blocked
+                  </Button>
 
-                <p className="text-xs text-muted-foreground text-center">
-                  {mergeBlockedReason(mergeOptions.mergeableState)}
-                </p>
+                  <p className="text-xs text-muted-foreground text-center">
+                    {mergeBlockedReason(mergeOptions.mergeableState)}
+                  </p>
+                </div>
 
                 {mergeOptions.mergeableState === 'dirty' ? (
                   <Tooltip>
