@@ -44,7 +44,7 @@ async function main() {
     commits: { items: bootstrapData?.commits ?? [] },
     modifiedFiles: { items: bootstrapData?.modifiedFiles ?? [] },
     pendingReviews: bootstrapData?.pendingReviews ?? {},
-    pullRequests: { items: readyPullRequests },
+    pullRequests: { initialized: true, items: readyPullRequests },
     reactions: { items: bootstrapData?.reactions ?? [] },
     reviews: { items: bootstrapData?.reviews ?? [] }
   })

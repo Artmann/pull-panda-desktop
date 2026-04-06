@@ -151,9 +151,8 @@ function createTestStore(
       pendingReviewComments: {},
       pendingReviews: {},
       pullRequests: {
-        items: options.pullRequests ?? [],
-        lastSyncedAt: null,
-        loading: false
+        initialized: true,
+        items: options.pullRequests ?? []
       },
       reactions: { items: [] },
       reviews: { items: [] },

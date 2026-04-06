@@ -2,6 +2,15 @@ import dayjs from 'dayjs'
 import { type ReactElement } from 'react'
 
 import { Badge } from '@/app/components/ui/badge'
+import { Skeleton } from '@/app/components/ui/skeleton'
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow
+} from '@/app/components/ui/table'
 import { useAuth } from '@/app/lib/store/authContext'
 import { useAppSelector } from '@/app/store/hooks'
 import { PullRequestTable } from '../components/PullRequestTable'
@@ -9,6 +18,7 @@ import { PullRequestTable } from '../components/PullRequestTable'
 export function HomePage(): ReactElement {
   const { user } = useAuth()
   const pullRequests = useAppSelector((state) => state.pullRequests.items)
+  const initialized = useAppSelector((state) => state.pullRequests.initialized)
   const fullName = user?.name ?? user?.login ?? 'User'
   const displayName = fullName.split(' ')[0]
 
@@ -35,15 +45,11 @@ export function HomePage(): ReactElement {
           </div>
         </section>
 
-        {pullRequests.length === 0 ? (
-          <section>
-            <div className="text-center text-muted-foreground py-12">
-              <p>No pull requests synced yet.</p>
-              <p className="text-sm mt-2">
-                They'll appear here once syncing completes.
-              </p>
-            </div>
-          </section>
+        {!initialized ? (
+          <div className="space-y-8">
+            <SkeletonSection title="Needs Your Attention" />
+            <SkeletonSection title="Your Pull Requests" />
+          </div>
         ) : (
           <div className="space-y-8 ">
             <section>
@@ -122,4 +128,60 @@ function getTimeOfDay(): string {
   }
 
   return 'morning'
+}
+
+function SkeletonSection({ title }: { title: string }): ReactElement {
+  return (
+    <section>
+      <div className="flex items-center space-x-2 mb-4">
+        <h2 className="text-foreground font-medium">{title}</h2>
+
+        <Skeleton className="h-5 w-5 rounded-full" />
+      </div>
+
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead>Pull Request</TableHead>
+            <TableHead>Author</TableHead>
+            <TableHead>Status</TableHead>
+            <TableHead>Activity</TableHead>
+            <TableHead>Updated</TableHead>
+          </TableRow>
+        </TableHeader>
+
+        <TableBody>
+          {Array.from({ length: 3 }, (_, index) => (
+            <TableRow key={index}>
+              <TableCell>
+                <div className="flex flex-col gap-1.5">
+                  <Skeleton className="h-4 w-48" />
+                  <Skeleton className="h-3 w-32" />
+                </div>
+              </TableCell>
+
+              <TableCell>
+                <div className="flex items-center gap-2">
+                  <Skeleton className="h-5 w-5 rounded-full" />
+                  <Skeleton className="h-3 w-20" />
+                </div>
+              </TableCell>
+
+              <TableCell>
+                <Skeleton className="h-5 w-16 rounded-full" />
+              </TableCell>
+
+              <TableCell>
+                <Skeleton className="h-3 w-14" />
+              </TableCell>
+
+              <TableCell>
+                <Skeleton className="h-3 w-16" />
+              </TableCell>
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
+    </section>
+  )
 }

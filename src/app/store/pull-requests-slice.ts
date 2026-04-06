@@ -3,10 +3,12 @@ import { createSlice, type PayloadAction } from '@reduxjs/toolkit'
 import type { PullRequest } from '@/types/pull-request'
 
 export interface PullRequestsState {
+  initialized: boolean
   items: PullRequest[]
 }
 
 const initialState: PullRequestsState = {
+  initialized: false,
   items: []
 }
 
@@ -15,6 +17,7 @@ export const pullRequestsSlice = createSlice({
   initialState,
   reducers: {
     setItems(state, action: PayloadAction<PullRequest[]>) {
+      state.initialized = true
       state.items = action.payload
     },
 
