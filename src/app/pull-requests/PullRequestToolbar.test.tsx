@@ -123,7 +123,8 @@ describe('PullRequestToolbar', () => {
       allowRebaseMerge: true,
       allowSquashMerge: true,
       mergeable: null,
-      mergeableState: 'unknown'
+      mergeableState: 'unknown',
+      requirements: []
     }
 
     mockGetMergeOptions.mockResolvedValue(options)
@@ -155,7 +156,8 @@ describe('PullRequestToolbar', () => {
       allowRebaseMerge: true,
       allowSquashMerge: true,
       mergeable: true,
-      mergeableState: 'clean'
+      mergeableState: 'clean',
+      requirements: []
     })
 
     const pullRequest = createMockPullRequest()
@@ -181,7 +183,8 @@ describe('PullRequestToolbar', () => {
       allowRebaseMerge: true,
       allowSquashMerge: true,
       mergeable: false,
-      mergeableState: 'dirty'
+      mergeableState: 'dirty',
+      requirements: []
     })
 
     const pullRequest = createMockPullRequest()
@@ -207,7 +210,8 @@ describe('PullRequestToolbar', () => {
       allowRebaseMerge: true,
       allowSquashMerge: true,
       mergeable: false,
-      mergeableState: 'blocked'
+      mergeableState: 'blocked',
+      requirements: []
     })
 
     const pullRequest = createMockPullRequest()
@@ -233,7 +237,8 @@ describe('PullRequestToolbar', () => {
       allowRebaseMerge: true,
       allowSquashMerge: true,
       mergeable: true,
-      mergeableState: 'clean'
+      mergeableState: 'clean',
+      requirements: []
     })
 
     const onOpenMergeDrawer = vi.fn()

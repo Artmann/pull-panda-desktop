@@ -132,7 +132,8 @@ const mergeableOptions: MergeOptions = {
   allowRebaseMerge: true,
   allowSquashMerge: true,
   mergeable: true,
-  mergeableState: 'clean'
+  mergeableState: 'clean',
+  requirements: []
 }
 
 describe('MergeDrawer', () => {
@@ -273,11 +274,19 @@ describe('MergeDrawer', () => {
     ).toBeInTheDocument()
   })
 
-  it('shows conflict reason when merge is blocked by dirty state', async () => {
+  it('shows conflict requirement when merge is blocked by dirty state', async () => {
     mockGetMergeOptions.mockResolvedValue({
       ...mergeableOptions,
       mergeable: false,
-      mergeableState: 'dirty'
+      mergeableState: 'dirty',
+      requirements: [
+        {
+          description: 'This branch has conflicts that must be resolved.',
+          key: 'no-conflicts',
+          label: 'No merge conflicts',
+          satisfied: false
+        }
+      ]
     })
 
     const pullRequest = createMockPullRequest()
@@ -292,13 +301,13 @@ describe('MergeDrawer', () => {
       )
     })
 
-    expect(
-      screen.getByText('This branch has conflicts that must be resolved')
-    ).toBeInTheDocument()
+    expect(screen.getByText('No merge conflicts')).toBeInTheDocument()
 
-    expect(
-      screen.getByRole('button', { name: /copy prompt/i })
-    ).toBeInTheDocument()
+    const conflictTexts = screen.getAllByText(
+      'This branch has conflicts that must be resolved.'
+    )
+
+    expect(conflictTexts.length).toBeGreaterThan(0)
   })
 
   it('calls mergePullRequest with selected method on merge', async () => {
@@ -347,6 +356,149 @@ describe('MergeDrawer', () => {
     })
 
     expect(onClose).toHaveBeenCalledTimes(1)
+  })
+
+  it('shows requirements checklist with all items satisfied', async () => {
+    mockGetMergeOptions.mockResolvedValue({
+      ...mergeableOptions,
+      requirements: [
+        {
+          description: 'No merge conflicts.',
+          key: 'no-conflicts',
+          label: 'No merge conflicts',
+          satisfied: true
+        },
+        {
+          description: 'Pull request is ready for review.',
+          key: 'not-draft',
+          label: 'Not a draft',
+          satisfied: true
+        }
+      ]
+    })
+
+    const pullRequest = createMockPullRequest()
+
+    await act(async () => {
+      renderWithProviders(
+        <MergeDrawer
+          onClose={vi.fn()}
+          open={true}
+          pullRequest={pullRequest}
+        />
+      )
+    })
+
+    expect(screen.getByText('Requirements')).toBeInTheDocument()
+    expect(screen.getByText('No merge conflicts')).toBeInTheDocument()
+    expect(screen.getByText('Not a draft')).toBeInTheDocument()
+  })
+
+  it('shows unsatisfied requirements with descriptions', async () => {
+    mockGetMergeOptions.mockResolvedValue({
+      ...mergeableOptions,
+      mergeable: false,
+      mergeableState: 'blocked',
+      requirements: [
+        {
+          description: 'No merge conflicts.',
+          key: 'no-conflicts',
+          label: 'No merge conflicts',
+          satisfied: true
+        },
+        {
+          description: 'Waiting for required approving reviews.',
+          key: 'approving-reviews',
+          label: '2 approving reviews required',
+          satisfied: false
+        },
+        {
+          description: '3 unresolved conversations.',
+          key: 'conversations-resolved',
+          label: 'Conversations resolved',
+          satisfied: false
+        }
+      ]
+    })
+
+    const pullRequest = createMockPullRequest()
+
+    await act(async () => {
+      renderWithProviders(
+        <MergeDrawer
+          onClose={vi.fn()}
+          open={true}
+          pullRequest={pullRequest}
+        />
+      )
+    })
+
+    expect(screen.getByText('No merge conflicts')).toBeInTheDocument()
+    expect(screen.getByText('2 approving reviews required')).toBeInTheDocument()
+    expect(
+      screen.getByText('Waiting for required approving reviews.')
+    ).toBeInTheDocument()
+    expect(screen.getByText('Conversations resolved')).toBeInTheDocument()
+    expect(
+      screen.getByText('3 unresolved conversations.')
+    ).toBeInTheDocument()
+  })
+
+  it('does not show requirements section when list is empty', async () => {
+    mockGetMergeOptions.mockResolvedValue({
+      ...mergeableOptions,
+      requirements: []
+    })
+
+    const pullRequest = createMockPullRequest()
+
+    await act(async () => {
+      renderWithProviders(
+        <MergeDrawer
+          onClose={vi.fn()}
+          open={true}
+          pullRequest={pullRequest}
+        />
+      )
+    })
+
+    expect(screen.queryByText('Requirements')).not.toBeInTheDocument()
+  })
+
+  it('shows blocked summary from failing requirements', async () => {
+    mockGetMergeOptions.mockResolvedValue({
+      ...mergeableOptions,
+      mergeable: false,
+      mergeableState: 'blocked',
+      requirements: [
+        {
+          description: 'Waiting for required approving reviews.',
+          key: 'approving-reviews',
+          label: '2 approving reviews required',
+          satisfied: false
+        }
+      ]
+    })
+
+    const pullRequest = createMockPullRequest()
+
+    await act(async () => {
+      renderWithProviders(
+        <MergeDrawer
+          onClose={vi.fn()}
+          open={true}
+          pullRequest={pullRequest}
+        />
+      )
+    })
+
+    // Description appears in both the checklist item and the blocked footer summary.
+    const descriptions = screen.getAllByText(
+      'Waiting for required approving reviews.'
+    )
+
+    expect(descriptions).toHaveLength(2)
+    expect(screen.getByText('2 approving reviews required')).toBeInTheDocument()
   })
 
   it('shows loading state when merge options are being fetched', async () => {

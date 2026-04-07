@@ -292,12 +292,20 @@ export async function syncPullRequestDetails(
   }
 }
 
+export interface MergeRequirement {
+  description: string
+  key: string
+  label: string
+  satisfied: boolean
+}
+
 export interface MergeOptions {
   allowMergeCommit: boolean
   allowRebaseMerge: boolean
   allowSquashMerge: boolean
   mergeable: boolean | null
   mergeableState: string
+  requirements: MergeRequirement[]
 }
 
 export async function getMergeOptions(

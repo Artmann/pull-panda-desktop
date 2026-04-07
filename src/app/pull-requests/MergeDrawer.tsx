@@ -1,9 +1,7 @@
 import {
   AlertTriangle,
-  Check as CheckIcon,
   CheckCircle2,
   Clock,
-  Copy,
   GitBranch,
   GitCommitHorizontal,
   GitMerge,
@@ -31,7 +29,7 @@ import {
   TooltipTrigger
 } from '@/app/components/ui/tooltip'
 import { getMergeOptions, mergePullRequest } from '@/app/lib/api'
-import type { MergeOptions } from '@/app/lib/api'
+import type { MergeOptions, MergeRequirement } from '@/app/lib/api'
 import { cn } from '@/app/lib/utils'
 import { useAppDispatch, useAppSelector } from '@/app/store/hooks'
 import { pullRequestsActions } from '@/app/store/pull-requests-slice'
@@ -293,11 +291,11 @@ export const MergeDrawer = memo(function MergeDrawer({
         </div>
 
         <div className="flex items-center gap-2 mt-2">
-          <span className="text-xs bg-muted px-2 py-0.5 rounded-full text-muted-foreground">
+          <span className="text-xs bg-muted/50 px-2 py-0.5 rounded-full text-muted-foreground">
             #{pullRequest.number}
           </span>
 
-          <span className="text-xs bg-muted px-2 py-0.5 rounded-full text-muted-foreground">
+          <span className="text-xs bg-muted/50 px-2 py-0.5 rounded-full text-muted-foreground">
             {pullRequest.repositoryOwner}/{pullRequest.repositoryName}
           </span>
         </div>
@@ -335,8 +333,12 @@ export const MergeDrawer = memo(function MergeDrawer({
                 />
               )}
 
-              {mergeOptions !== null && mergeOptions.mergeable !== null && (
-                <MergeStatusBanner mergeOptions={mergeOptions} pullRequest={pullRequest} />
+              {mergeOptions !== null &&
+                mergeOptions.mergeable !== null &&
+                mergeOptions.requirements.length > 0 && (
+                <MergeRequirementsChecklist
+                  requirements={mergeOptions.requirements}
+                />
               )}
 
               {!mergeOptions && (
@@ -351,7 +353,7 @@ export const MergeDrawer = memo(function MergeDrawer({
       </SidePanelContent>
 
       <SidePanelFooter>
-        <div className="flex flex-col gap-6">
+        <div className="flex flex-col gap-6 max-w-72 mx-auto w-full">
           {allowedMethods.length > 0 && !showSquashFields && (
             <div className="flex flex-col gap-2">
               <div className="flex gap-2">
@@ -408,7 +410,7 @@ export const MergeDrawer = memo(function MergeDrawer({
                   </Button>
 
                   <p className="text-xs text-muted-foreground text-center">
-                    {mergeBlockedReason(mergeOptions.mergeableState)}
+                    {mergeBlockedSummary(mergeOptions)}
                   </p>
                 </div>
 
@@ -551,7 +553,7 @@ function ReviewsSection({
         <span>{summaryText}</span>
       </div>
 
-      <div className="bg-muted/40 border border-border rounded-lg overflow-hidden">
+      <div className="border border-border rounded-lg overflow-hidden">
         {reviews.map((review) => (
           <div
             className="flex items-center gap-3 px-3 py-3 text-sm border-b border-border last:border-0"
@@ -636,7 +638,7 @@ function ChecksSection({ checks, summary }: ChecksSectionProps): ReactElement {
       </div>
 
       {failedChecks.length > 0 && (
-        <div className="bg-muted/40 border border-border rounded-lg overflow-hidden">
+        <div className="border border-border rounded-lg overflow-hidden">
           {failedChecks.map((check) => (
             <div
               className="flex items-center gap-2 px-3 py-3 text-sm text-status-danger-foreground border-b border-border last:border-0"
@@ -652,111 +654,85 @@ function ChecksSection({ checks, summary }: ChecksSectionProps): ReactElement {
   )
 }
 
-function mergeBlockedReason(mergeableState: string): string {
-  if (mergeableState === 'dirty') {
+function mergeBlockedSummary(mergeOptions: MergeOptions): string {
+  const failing = mergeOptions.requirements.filter(
+    (requirement) => !requirement.satisfied
+  )
+
+  if (failing.length > 0) {
+    return failing.map((requirement) => requirement.description).join(' ')
+  }
+
+  if (mergeOptions.mergeableState === 'dirty') {
     return 'This branch has conflicts that must be resolved.'
   }
 
-  if (mergeableState === 'blocked') {
+  if (mergeOptions.mergeableState === 'blocked') {
     return 'Blocked by branch protection rules.'
-  }
-
-  if (mergeableState === 'unstable') {
-    return 'Some required checks are failing.'
   }
 
   return 'This pull request cannot be merged.'
 }
 
-function buildConflictPrompt(pullRequest: PullRequest): string {
-  const repo = `${pullRequest.repositoryOwner}/${pullRequest.repositoryName}`
-  const branch = pullRequest.headRefName ?? `pr-${pullRequest.number}`
-
-  return [
-    `The pull request #${pullRequest.number} in ${repo} has merge conflicts.`,
-    `The branch is \`${branch}\`.`,
-    '',
-    `Please resolve the merge conflicts by rebasing \`${branch}\` onto the base branch and fixing any conflicts.`
-  ].join('\n')
+interface MergeRequirementsChecklistProps {
+  requirements: MergeRequirement[]
 }
 
-interface MergeStatusBannerProps {
-  mergeOptions: MergeOptions
-  pullRequest: PullRequest
+function MergeRequirementsChecklist({
+  requirements
+}: MergeRequirementsChecklistProps): ReactElement {
+  return (
+    <div className="flex flex-col gap-2">
+      <h4 className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+        Requirements
+      </h4>
+
+      <div className="border border-border rounded-lg overflow-hidden">
+        {requirements.map((requirement) => (
+          <div
+            className="flex items-start gap-3 px-3 py-2.5 text-sm border-b border-border last:border-0"
+            key={requirement.key}
+          >
+            <RequirementIcon satisfied={requirement.satisfied} />
+
+            <div className="flex flex-col gap-0.5 min-w-0">
+              <span
+                className={cn(
+                  'truncate',
+                  requirement.satisfied
+                    ? 'text-foreground'
+                    : 'text-red-500'
+                )}
+              >
+                {requirement.label}
+              </span>
+
+              {!requirement.satisfied && (
+                <span className="text-xs text-muted-foreground">
+                  {requirement.description}
+                </span>
+              )}
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
 }
 
-function MergeStatusBanner({
-  mergeOptions,
-  pullRequest
-}: MergeStatusBannerProps): ReactElement {
-  const [copied, setCopied] = useState(false)
-  const { mergeable, mergeableState } = mergeOptions
-
-  if (mergeable === true) {
+function RequirementIcon({
+  satisfied
+}: {
+  satisfied: boolean
+}): ReactElement {
+  if (satisfied) {
     return (
-      <div className="flex items-center gap-2 px-3 py-2.5 rounded-lg border border-status-success-border bg-status-success text-sm text-status-success-foreground">
-        <GitMerge className="size-4 shrink-0" />
-        <span>Branch is ready to merge</span>
-      </div>
-    )
-  }
-
-  if (mergeableState === 'dirty') {
-    const prompt = buildConflictPrompt(pullRequest)
-
-    const handleCopy = () => {
-      navigator.clipboard.writeText(prompt)
-      setCopied(true)
-      setTimeout(() => setCopied(false), 2000)
-    }
-
-    return (
-      <div className="flex flex-col gap-2 px-3 py-2.5 rounded-lg border border-status-danger-border bg-status-danger text-sm text-status-danger-foreground">
-        <div className="flex items-center gap-2">
-          <AlertTriangle className="size-4 shrink-0" />
-          <span>This branch has conflicts that must be resolved</span>
-        </div>
-
-        <button
-          aria-label="Copy prompt"
-          className="inline-flex items-center gap-1 px-2 py-1 rounded text-xs font-medium bg-status-danger-foreground/10 hover:bg-status-danger-foreground/20 transition-colors cursor-pointer self-start"
-          onClick={handleCopy}
-          type="button"
-        >
-          {copied ? (
-            <CheckIcon className="size-3" />
-          ) : (
-            <Copy className="size-3" />
-          )}
-          {copied ? 'Copied' : 'Copy prompt'}
-        </button>
-      </div>
-    )
-  }
-
-  if (mergeableState === 'blocked') {
-    return (
-      <div className="flex items-center gap-2 px-3 py-2.5 rounded-lg border border-status-warning-border bg-status-warning text-sm text-status-warning-foreground">
-        <ShieldAlert className="size-4 shrink-0" />
-        <span>Merge is blocked by branch protection rules</span>
-      </div>
-    )
-  }
-
-  if (mergeableState === 'unstable') {
-    return (
-      <div className="flex items-center gap-2 px-3 py-2.5 rounded-lg border border-status-warning-border bg-status-warning text-sm text-status-warning-foreground">
-        <AlertTriangle className="size-4 shrink-0" />
-        <span>Some required checks are failing</span>
-      </div>
+      <CheckCircle2 className="size-4 text-status-success-foreground shrink-0 mt-0.5" />
     )
   }
 
   return (
-    <div className="flex items-center gap-2 px-3 py-2.5 rounded-lg border border-border text-sm text-muted-foreground">
-      <ShieldAlert className="size-4 shrink-0" />
-      <span>This pull request cannot be merged.</span>
-    </div>
+    <XCircle className="size-4 text-red-500 shrink-0 mt-0.5" />
   )
 }
 
