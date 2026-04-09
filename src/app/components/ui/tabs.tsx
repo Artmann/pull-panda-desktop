@@ -45,7 +45,7 @@ function TabsTrigger({
         'data-[state=active]:text-foreground',
         'after:absolute after:bottom-0 after:left-0 after:right-0 after:h-px after:bg-transparent after:transition-colors',
         'data-[state=active]:after:bg-cyan-500 data-[state=active]:after:h-0.5 after:bg-border',
-        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
+        'focus-visible:outline-none',
         'disabled:pointer-events-none disabled:opacity-50',
         '[&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*="size-"])]:size-4',
         className
