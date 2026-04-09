@@ -119,6 +119,10 @@ export function getDatabase() {
   return database
 }
 
+export function isDatabaseInitialized(): boolean {
+  return database !== null
+}
+
 export function setDatabase(db: ReturnType<typeof drizzle> | null): void {
   database = db
 }

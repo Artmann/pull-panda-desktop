@@ -1,7 +1,7 @@
 import { RequestError } from '@octokit/request-error'
 import { eq } from 'drizzle-orm'
 
-import { getDatabase } from '../database'
+import { getDatabase, isDatabaseInitialized } from '../database'
 import { pullRequests } from '../database/schema'
 import { sleep } from './rate-limit-manager'
 import { syncChecks } from './sync-checks'
@@ -42,6 +42,10 @@ export async function syncPullRequestDetails({
   repositoryName,
   pullNumber
 }: SyncPullRequestDetailsParams): Promise<SyncPullRequestDetailsResult> {
+  if (!isDatabaseInitialized()) {
+    return { errors: ['Database not initialized'], notFound: false, success: false }
+  }
+
   const errors: string[] = []
 
   console.log(
@@ -82,7 +86,7 @@ export async function syncPullRequestDetails({
   )
 
   // Update detailsSyncedAt if sync was successful
-  if (errors.length === 0) {
+  if (errors.length === 0 && isDatabaseInitialized()) {
     const database = getDatabase()
 
     database

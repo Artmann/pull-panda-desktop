@@ -2,7 +2,7 @@ import { BrowserWindow } from 'electron'
 import { eq, and, isNull, inArray } from 'drizzle-orm'
 import { parallel } from 'radash'
 
-import { getDatabase } from '../database'
+import { getDatabase, isDatabaseInitialized } from '../database'
 import { checks, pullRequests } from '../database/schema'
 import { ipcChannels } from '../lib/ipc/channels'
 import { getPullRequest, getPullRequestDetails } from './bootstrap'
@@ -94,6 +94,12 @@ class BackgroundSyncer {
 
     if (!token) {
       // No token, try again later
+      this.scheduleNextSync(5000)
+
+      return
+    }
+
+    if (!isDatabaseInitialized()) {
       this.scheduleNextSync(5000)
 
       return
