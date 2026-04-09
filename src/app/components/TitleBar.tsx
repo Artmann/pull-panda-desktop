@@ -53,7 +53,7 @@ export function TitleBar(): ReactElement {
   }
 
   return (
-    <div className="title-bar h-8 flex items-center justify-between bg-background border-b border-border select-none">
+    <div className="title-bar h-8 flex items-center justify-between bg-titlebar border-b border-border select-none">
       <div
         className={cn('flex-1 max-w-50 h-full', isMac && 'pl-17')}
         style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}

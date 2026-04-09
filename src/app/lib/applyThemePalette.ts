@@ -47,7 +47,8 @@ const variableMap: Record<keyof ThemePalette, string> = {
   statusSuccessForeground: '--status-success-foreground',
   statusWarning: '--status-warning',
   statusWarningBorder: '--status-warning-border',
-  statusWarningForeground: '--status-warning-foreground'
+  statusWarningForeground: '--status-warning-foreground',
+  titlebar: '--titlebar'
 }
 
 export function applyThemePalette(palette: ThemePalette): void {

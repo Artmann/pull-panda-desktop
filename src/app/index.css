@@ -33,8 +33,9 @@
   --accent-foreground: oklch(0.395 0.026 266);
   --destructive: oklch(0.53 0.22 25);
   --destructive-foreground: oklch(0.955 0.007 255);
-  --border: oklch(0.905 0.011 255);
-  --input: oklch(0.905 0.011 255);
+  --border: oklch(0.876 0.017 268);
+  --input: oklch(0.876 0.017 268);
+  --titlebar: oklch(0.909 0.012 265);
   --ring: oklch(0.65 0.15 275);
   --chart-1: oklch(0.53 0.22 25);
   --chart-2: oklch(0.65 0.18 55);
@@ -48,7 +49,7 @@
   --sidebar-primary-foreground: oklch(0.955 0.007 255);
   --sidebar-accent: oklch(0.845 0.013 257);
   --sidebar-accent-foreground: oklch(0.395 0.026 266);
-  --sidebar-border: oklch(0.905 0.011 255);
+  --sidebar-border: oklch(0.876 0.017 268);
   --sidebar-ring: oklch(0.65 0.15 275);
 
   --status-danger: oklch(0.955 0.02 25);
@@ -88,6 +89,7 @@
   --destructive-foreground: oklch(0.22 0.02 280);
   --border: oklch(0.36 0.02 275);
   --input: oklch(0.36 0.02 275);
+  --titlebar: oklch(0.22 0.02 280);
   --ring: oklch(0.8 0.1 275);
   --chart-1: oklch(0.72 0.14 10);
   --chart-2: oklch(0.75 0.14 55);
@@ -139,6 +141,7 @@
   --color-destructive-foreground: var(--destructive-foreground);
   --color-border: var(--border);
   --color-input: var(--input);
+  --color-titlebar: var(--titlebar);
   --color-ring: var(--ring);
   --color-chart-1: var(--chart-1);
   --color-chart-2: var(--chart-2);
@@ -222,6 +225,7 @@ body {
   overflow-x: auto;
   font-size: 0.875rem;
   line-height: 1.5;
+  background-color: var(--muted) !important;
 }
 
 .dark .shiki,

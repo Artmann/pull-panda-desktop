@@ -49,6 +49,18 @@ function migrateFromLegacyKeys(): void {
     localStorage.removeItem('app-theme')
   }
 
+  // Migrate from the old combined "catppuccin" value to the split variants.
+  const storedDark = localStorage.getItem(darkStorageKey)
+  const storedLight = localStorage.getItem(lightStorageKey)
+
+  if (storedDark === 'catppuccin') {
+    localStorage.setItem(darkStorageKey, 'catppuccin-mocha')
+  }
+
+  if (storedLight === 'catppuccin') {
+    localStorage.setItem(lightStorageKey, 'catppuccin-latte')
+  }
+
   // Migrate from even older per-mode code-theme keys.
   const oldDark = localStorage.getItem('code-theme-dark')
   const oldLight = localStorage.getItem('code-theme-light')

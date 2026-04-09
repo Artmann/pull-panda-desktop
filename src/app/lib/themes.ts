@@ -50,6 +50,7 @@ export type ThemePalette = {
   statusWarning: string
   statusWarningBorder: string
   statusWarningForeground: string
+  titlebar: string
 }
 
 export type AppTheme = {
@@ -71,7 +72,7 @@ const catppuccinLattePalette: ThemePalette = {
   accent: 'oklch(0.8 0.01 265)',
   accentForeground: 'oklch(0.42 0.03 280)',
   background: 'oklch(0.96 0.005 270)',
-  border: 'oklch(0.8 0.01 265)',
+  border: 'oklch(0.876 0.017 268)',
   card: 'oklch(0.96 0.005 270)',
   cardForeground: 'oklch(0.42 0.03 280)',
   chart1: 'oklch(0.53 0.22 25)',
@@ -82,7 +83,7 @@ const catppuccinLattePalette: ThemePalette = {
   destructive: 'oklch(0.53 0.22 25)',
   destructiveForeground: 'oklch(0.96 0.005 270)',
   foreground: 'oklch(0.42 0.03 280)',
-  input: 'oklch(0.8 0.01 265)',
+  input: 'oklch(0.876 0.017 268)',
   muted: 'oklch(0.85 0.01 265)',
   mutedForeground: 'oklch(0.52 0.02 270)',
   popover: 'oklch(0.96 0.005 270)',
@@ -95,7 +96,7 @@ const catppuccinLattePalette: ThemePalette = {
   sidebar: 'oklch(0.93 0.008 270)',
   sidebarAccent: 'oklch(0.85 0.01 265)',
   sidebarAccentForeground: 'oklch(0.42 0.03 280)',
-  sidebarBorder: 'oklch(0.8 0.01 265)',
+  sidebarBorder: 'oklch(0.876 0.017 268)',
   sidebarForeground: 'oklch(0.42 0.03 280)',
   sidebarPrimary: 'oklch(0.55 0.2 260)',
   sidebarPrimaryForeground: 'oklch(0.96 0.005 270)',
@@ -114,7 +115,8 @@ const catppuccinLattePalette: ThemePalette = {
   statusSuccessForeground: 'oklch(0.4 0.1 150)',
   statusWarning: 'oklch(0.96 0.03 80)',
   statusWarningBorder: 'oklch(0.87 0.05 80)',
-  statusWarningForeground: 'oklch(0.4 0.1 80)'
+  statusWarningForeground: 'oklch(0.4 0.1 80)',
+  titlebar: 'oklch(0.909 0.012 265)'
 }
 
 const catppuccinMochaPalette: ThemePalette = {
@@ -164,7 +166,8 @@ const catppuccinMochaPalette: ThemePalette = {
   statusSuccessForeground: 'oklch(0.82 0.08 150)',
   statusWarning: 'oklch(0.27 0.03 80)',
   statusWarningBorder: 'oklch(0.38 0.05 80)',
-  statusWarningForeground: 'oklch(0.82 0.08 80)'
+  statusWarningForeground: 'oklch(0.82 0.08 80)',
+  titlebar: 'oklch(0.22 0.02 280)'
 }
 
 // ---------------------------------------------------------------------------
@@ -172,15 +175,26 @@ const catppuccinMochaPalette: ThemePalette = {
 // ---------------------------------------------------------------------------
 
 export const appThemes: AppTheme[] = [
-  // --- Catppuccin (Latte / Mocha) - default ---
+  // --- Catppuccin Latte (light) - default light theme ---
+  {
+    dark: catppuccinLattePalette,
+    darkShikiTheme: 'catppuccin-latte',
+    label: 'Catppuccin Latte',
+    light: catppuccinLattePalette,
+    lightShikiTheme: 'catppuccin-latte',
+    modes: 'light',
+    value: 'catppuccin-latte'
+  },
+
+  // --- Catppuccin Mocha (dark) - default dark theme ---
   {
     dark: catppuccinMochaPalette,
     darkShikiTheme: 'catppuccin-mocha',
-    label: 'Catppuccin',
-    light: catppuccinLattePalette,
-    lightShikiTheme: 'catppuccin-latte',
-    modes: 'both',
-    value: 'catppuccin'
+    label: 'Catppuccin Mocha',
+    light: catppuccinMochaPalette,
+    lightShikiTheme: 'catppuccin-mocha',
+    modes: 'dark',
+    value: 'catppuccin-mocha'
   },
 
   // --- Catppuccin Frappé (dark only, Latte for light) ---
@@ -211,7 +225,8 @@ export const appThemes: AppTheme[] = [
       sidebarForeground: 'oklch(0.85 0.03 270)',
       sidebarPrimary: 'oklch(0.72 0.12 250)',
       sidebarPrimaryForeground: 'oklch(0.3 0.02 270)',
-      sidebarRing: 'oklch(0.72 0.1 270)'
+      sidebarRing: 'oklch(0.72 0.1 270)',
+      titlebar: 'oklch(0.3 0.02 270)'
     },
     darkShikiTheme: 'catppuccin-frappe',
     label: 'Catppuccin Frappé',
@@ -249,7 +264,8 @@ export const appThemes: AppTheme[] = [
       sidebarForeground: 'oklch(0.86 0.03 276)',
       sidebarPrimary: 'oklch(0.74 0.12 252)',
       sidebarPrimaryForeground: 'oklch(0.25 0.02 278)',
-      sidebarRing: 'oklch(0.76 0.1 276)'
+      sidebarRing: 'oklch(0.76 0.1 276)',
+      titlebar: 'oklch(0.25 0.02 278)'
     },
     darkShikiTheme: 'catppuccin-macchiato',
     label: 'Catppuccin Macchiato',
@@ -308,7 +324,8 @@ export const appThemes: AppTheme[] = [
       statusSuccessForeground: 'oklch(0.82 0.08 145)',
       statusWarning: 'oklch(0.3 0.04 80)',
       statusWarningBorder: 'oklch(0.4 0.06 80)',
-      statusWarningForeground: 'oklch(0.82 0.08 80)'
+      statusWarningForeground: 'oklch(0.82 0.08 80)',
+      titlebar: 'oklch(0.25 0.03 280)'
     },
     darkShikiTheme: 'dracula',
     label: 'Dracula',
@@ -367,7 +384,8 @@ export const appThemes: AppTheme[] = [
       statusSuccessForeground: 'oklch(0.8 0.08 150)',
       statusWarning: 'oklch(0.24 0.03 80)',
       statusWarningBorder: 'oklch(0.35 0.05 80)',
-      statusWarningForeground: 'oklch(0.8 0.08 80)'
+      statusWarningForeground: 'oklch(0.8 0.08 80)',
+      titlebar: 'oklch(0.18 0.01 250)'
     },
     darkShikiTheme: 'github-dark',
     label: 'GitHub',
@@ -418,7 +436,8 @@ export const appThemes: AppTheme[] = [
       statusSuccessForeground: 'oklch(0.4 0.1 150)',
       statusWarning: 'oklch(0.96 0.03 80)',
       statusWarningBorder: 'oklch(0.88 0.05 80)',
-      statusWarningForeground: 'oklch(0.4 0.1 80)'
+      statusWarningForeground: 'oklch(0.4 0.1 80)',
+      titlebar: 'oklch(0.97 0.003 220)'
     },
     lightShikiTheme: 'github-light',
     modes: 'both',
@@ -477,7 +496,8 @@ export const appThemes: AppTheme[] = [
       statusSuccessForeground: 'oklch(0.4 0.1 150)',
       statusWarning: 'oklch(0.96 0.03 80)',
       statusWarningBorder: 'oklch(0.88 0.05 80)',
-      statusWarningForeground: 'oklch(0.4 0.1 80)'
+      statusWarningForeground: 'oklch(0.4 0.1 80)',
+      titlebar: 'oklch(0.96 0.003 240)'
     },
     lightShikiTheme: 'light-plus',
     modes: 'light',
@@ -536,7 +556,8 @@ export const appThemes: AppTheme[] = [
       statusSuccessForeground: 'oklch(0.4 0.1 150)',
       statusWarning: 'oklch(0.96 0.03 80)',
       statusWarningBorder: 'oklch(0.88 0.05 80)',
-      statusWarningForeground: 'oklch(0.4 0.1 80)'
+      statusWarningForeground: 'oklch(0.4 0.1 80)',
+      titlebar: 'oklch(0.97 0.002 0)'
     },
     lightShikiTheme: 'min-light',
     modes: 'light',
@@ -592,7 +613,8 @@ export const appThemes: AppTheme[] = [
       statusSuccessForeground: 'oklch(0.82 0.08 100)',
       statusWarning: 'oklch(0.28 0.03 55)',
       statusWarningBorder: 'oklch(0.38 0.05 55)',
-      statusWarningForeground: 'oklch(0.82 0.08 55)'
+      statusWarningForeground: 'oklch(0.82 0.08 55)',
+      titlebar: 'oklch(0.24 0.015 85)'
     },
     darkShikiTheme: 'monokai',
     label: 'Monokai',
@@ -651,7 +673,8 @@ export const appThemes: AppTheme[] = [
       statusSuccessForeground: 'oklch(0.8 0.06 150)',
       statusWarning: 'oklch(0.3 0.03 80)',
       statusWarningBorder: 'oklch(0.4 0.05 80)',
-      statusWarningForeground: 'oklch(0.8 0.06 80)'
+      statusWarningForeground: 'oklch(0.8 0.06 80)',
+      titlebar: 'oklch(0.27 0.02 240)'
     },
     darkShikiTheme: 'nord',
     label: 'Nord',
@@ -710,7 +733,8 @@ export const appThemes: AppTheme[] = [
       statusSuccessForeground: 'oklch(0.8 0.08 150)',
       statusWarning: 'oklch(0.28 0.03 80)',
       statusWarningBorder: 'oklch(0.38 0.05 80)',
-      statusWarningForeground: 'oklch(0.8 0.08 80)'
+      statusWarningForeground: 'oklch(0.8 0.08 80)',
+      titlebar: 'oklch(0.25 0.015 240)'
     },
     darkShikiTheme: 'one-dark-pro',
     label: 'One Dark Pro',
@@ -769,7 +793,8 @@ export const appThemes: AppTheme[] = [
       statusSuccessForeground: 'oklch(0.78 0.08 150)',
       statusWarning: 'oklch(0.2 0.04 80)',
       statusWarningBorder: 'oklch(0.32 0.06 80)',
-      statusWarningForeground: 'oklch(0.78 0.08 80)'
+      statusWarningForeground: 'oklch(0.78 0.08 80)',
+      titlebar: 'oklch(0.15 0.04 205)'
     },
     darkShikiTheme: 'solarized-dark',
     label: 'Solarized',
@@ -820,7 +845,8 @@ export const appThemes: AppTheme[] = [
       statusSuccessForeground: 'oklch(0.42 0.1 150)',
       statusWarning: 'oklch(0.93 0.03 80)',
       statusWarningBorder: 'oklch(0.84 0.04 80)',
-      statusWarningForeground: 'oklch(0.42 0.1 80)'
+      statusWarningForeground: 'oklch(0.42 0.1 80)',
+      titlebar: 'oklch(0.92 0.018 85)'
     },
     lightShikiTheme: 'solarized-light',
     modes: 'both',
@@ -879,7 +905,8 @@ export const appThemes: AppTheme[] = [
       statusSuccessForeground: 'oklch(0.4 0.1 150)',
       statusWarning: 'oklch(0.96 0.03 80)',
       statusWarningBorder: 'oklch(0.88 0.05 80)',
-      statusWarningForeground: 'oklch(0.4 0.1 80)'
+      statusWarningForeground: 'oklch(0.4 0.1 80)',
+      titlebar: 'oklch(0.97 0.003 50)'
     },
     lightShikiTheme: 'vitesse-light',
     modes: 'light',
@@ -887,9 +914,9 @@ export const appThemes: AppTheme[] = [
   }
 ]
 
-export const defaultDarkThemeValue = 'catppuccin'
-export const defaultLightThemeValue = 'catppuccin'
-export const defaultThemeValue = 'catppuccin'
+export const defaultDarkThemeValue = 'catppuccin-mocha'
+export const defaultLightThemeValue = 'catppuccin-latte'
+export const defaultThemeValue = 'catppuccin-latte'
 
 export function getThemesForMode(mode: 'dark' | 'light'): AppTheme[] {
   return appThemes.filter((t) => t.modes === 'both' || t.modes === mode)
