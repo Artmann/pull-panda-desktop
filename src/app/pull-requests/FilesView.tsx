@@ -32,9 +32,16 @@ export const FilesView = memo(function FilesView({
   const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(new Set())
 
   const groupedFiles = useMemo(() => {
-    const sorted = [...files].sort((a, b) =>
-      a.filePath.localeCompare(b.filePath)
-    )
+    const sorted = [...files].sort((a, b) => {
+      const aDot = a.filePath.startsWith('.') ? 1 : 0
+      const bDot = b.filePath.startsWith('.') ? 1 : 0
+
+      if (aDot !== bDot) {
+        return aDot - bDot
+      }
+
+      return a.filePath.localeCompare(b.filePath)
+    })
     const tree = createFileTree(sorted.map((file) => file.filePath))
 
     return extractGroupedFilesFromTree(tree)

@@ -255,6 +255,44 @@ describe('FilesView', () => {
     expect(screen.getByText('No changes to display.')).toBeInTheDocument()
   })
 
+  it('sorts dotfiles and dotfolders after regular files', async () => {
+    const pullRequest = createMockPullRequest()
+    const files = [
+      createMockFile({
+        id: 'f1',
+        filename: 'controlled-step-mode.md',
+        filePath: '.changeset/controlled-step-mode.md'
+      }),
+      createMockFile({
+        id: 'f2',
+        filename: 'index.ts',
+        filePath: 'src/index.ts'
+      }),
+      createMockFile({
+        id: 'f3',
+        filename: '.env.example',
+        filePath: '.env.example'
+      })
+    ]
+    const store = createTestStore({
+      modifiedFiles: files
+    })
+
+    await act(async () => {
+      renderWithProviders(<FilesView pullRequest={pullRequest} />, { store })
+    })
+
+    const sections = screen.getAllByRole('button')
+    const sectionLabels = sections.map((button) => button.textContent)
+
+    const srcIndex = sectionLabels.findIndex((label) => label?.includes('src'))
+    const changesetIndex = sectionLabels.findIndex((label) =>
+      label?.includes('.changeset')
+    )
+
+    expect(srcIndex).toBeLessThan(changesetIndex)
+  })
+
   it('opens file on GitHub when clicking the external link button', async () => {
     const openUrl = vi.fn()
     window.electron = { openUrl } as unknown as typeof window.electron
