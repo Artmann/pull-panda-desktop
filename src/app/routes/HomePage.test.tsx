@@ -63,6 +63,7 @@ function createTestStore(pullRequests: PullRequest[] = []) {
     },
     preloadedState: {
       pullRequests: {
+        initialized: true,
         items: pullRequests
       }
     }
@@ -215,24 +216,26 @@ describe('HomePage', () => {
   })
 
   describe('empty state', () => {
-    it('shows "No pull requests found." when no PRs', () => {
+    it('shows empty message when no PRs exist', () => {
       vi.setSystemTime(new Date('2024-01-15T10:00:00'))
 
       renderWithProviders(<HomePage />)
 
-      expect(
-        screen.getByText('No pull requests synced yet.')
-      ).toBeInTheDocument()
+      const emptyMessages = screen.getAllByText('All clear here.')
+
+      expect(emptyMessages.length).toEqual(2)
     })
 
-    it('shows sync message in empty state', () => {
+    it('shows section description in empty state', () => {
       vi.setSystemTime(new Date('2024-01-15T10:00:00'))
 
       renderWithProviders(<HomePage />)
 
-      expect(
-        screen.getByText("They'll appear here once syncing completes.")
-      ).toBeInTheDocument()
+      const descriptions = screen.getAllByText(
+        'No open pull requests in this section.'
+      )
+
+      expect(descriptions.length).toEqual(2)
     })
   })
 
@@ -348,25 +351,31 @@ describe('HomePage', () => {
 
       renderWithProviders(<HomePage />, { store })
 
-      const rows = screen.getAllByRole('row')
-      const titles = rows
-        .map((row) => row.textContent)
-        .filter((text) => text?.includes('PR'))
+      const cells = screen.getAllByRole('cell')
+      const cellTexts = cells.map((cell) => cell.textContent)
 
       // Newer PR should appear before Older PR in the "Needs Your Attention" section.
-      const newerIndex = titles.findIndex((text) => text?.includes('Newer PR'))
-      const olderIndex = titles.findIndex((text) => text?.includes('Older PR'))
+      const newerIndex = cellTexts.findIndex((text) =>
+        text?.includes('Newer PR')
+      )
+      const olderIndex = cellTexts.findIndex((text) =>
+        text?.includes('Older PR')
+      )
 
+      expect(newerIndex).toBeGreaterThan(-1)
+      expect(olderIndex).toBeGreaterThan(-1)
       expect(newerIndex).toBeLessThan(olderIndex)
 
       // New Author PR should appear before Old Author PR in the "Your Pull Requests" section.
-      const newAuthorIndex = titles.findIndex((text) =>
+      const newAuthorIndex = cellTexts.findIndex((text) =>
         text?.includes('New Author PR')
       )
-      const oldAuthorIndex = titles.findIndex((text) =>
+      const oldAuthorIndex = cellTexts.findIndex((text) =>
         text?.includes('Old Author PR')
       )
 
+      expect(newAuthorIndex).toBeGreaterThan(-1)
+      expect(oldAuthorIndex).toBeGreaterThan(-1)
       expect(newAuthorIndex).toBeLessThan(oldAuthorIndex)
     })
   })
