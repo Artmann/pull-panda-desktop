@@ -28,7 +28,7 @@ import {
   TooltipContent,
   TooltipTrigger
 } from '@/app/components/ui/tooltip'
-import { getMergeOptions, mergePullRequest } from '@/app/lib/api'
+import { mergePullRequest } from '@/app/lib/api'
 import type { MergeOptions, MergeRequirement } from '@/app/lib/api'
 import { cn } from '@/app/lib/utils'
 import { useAppDispatch, useAppSelector } from '@/app/store/hooks'
@@ -109,11 +109,14 @@ export const MergeDrawer = memo(function MergeDrawer({
 }: MergeDrawerProps): ReactElement {
   const [commitMessage, setCommitMessage] = useState('')
   const [commitTitle, setCommitTitle] = useState('')
-  const [mergeOptions, setMergeOptions] = useState<MergeOptions | null>(null)
   const [selectedMethod, setSelectedMethod] = useState<MergeMethod | null>(null)
   const [showSquashFields, setShowSquashFields] = useState(false)
 
   const dispatch = useAppDispatch()
+
+  const mergeOptions = useAppSelector(
+    (state) => state.mergeOptions[pullRequest.id] ?? null
+  )
 
   const reviews = useAppSelector((state) =>
     state.reviews.items.filter(
@@ -126,63 +129,36 @@ export const MergeDrawer = memo(function MergeDrawer({
   )
 
   useEffect(
-    function fetchMergeOptions() {
-      if (!open || pullRequest.state !== 'OPEN') {
+    function initializeSelectedMethod() {
+      if (!mergeOptions || mergeOptions.mergeable === null) {
+        setSelectedMethod(null)
+
         return
       }
 
-      let cancelled = false
-      let retryTimeout: ReturnType<typeof setTimeout> | null = null
+      const repo = `${pullRequest.repositoryOwner}/${pullRequest.repositoryName}`
+      const saved = getSavedMergeMethod(repo)
 
-      const fetch = () => {
-        getMergeOptions(pullRequest.id)
-          .then((options) => {
-            if (cancelled) {
-              return
-            }
-
-            setMergeOptions(options)
-
-            if (options.mergeable === null) {
-              retryTimeout = setTimeout(fetch, 3000)
-            } else {
-              const repo = `${pullRequest.repositoryOwner}/${pullRequest.repositoryName}`
-              const saved = getSavedMergeMethod(repo)
-
-              const allowedMap: Record<MergeMethod, boolean> = {
-                merge: options.allowMergeCommit,
-                rebase: options.allowRebaseMerge,
-                squash: options.allowSquashMerge
-              }
-
-              const initial =
-                (saved && allowedMap[saved] && saved) ||
-                (options.allowSquashMerge && 'squash') ||
-                (options.allowMergeCommit && 'merge') ||
-                (options.allowRebaseMerge && 'rebase') ||
-                null
-
-              setSelectedMethod(initial as MergeMethod | null)
-            }
-          })
-          .catch(() => {
-            // Silently fail — merge options just won't appear.
-          })
+      const allowedMap: Record<MergeMethod, boolean> = {
+        merge: mergeOptions.allowMergeCommit,
+        rebase: mergeOptions.allowRebaseMerge,
+        squash: mergeOptions.allowSquashMerge
       }
 
-      setMergeOptions(null)
-      setSelectedMethod(null)
-      fetch()
+      const initial =
+        (saved && allowedMap[saved] && saved) ||
+        (mergeOptions.allowSquashMerge && 'squash') ||
+        (mergeOptions.allowMergeCommit && 'merge') ||
+        (mergeOptions.allowRebaseMerge && 'rebase') ||
+        null
 
-      return () => {
-        cancelled = true
-
-        if (retryTimeout !== null) {
-          clearTimeout(retryTimeout)
-        }
-      }
+      setSelectedMethod(initial as MergeMethod | null)
     },
-    [open, pullRequest.id, pullRequest.state]
+    [
+      mergeOptions,
+      pullRequest.repositoryName,
+      pullRequest.repositoryOwner
+    ]
   )
 
   const allowedMethods: MergeMethod[] = mergeOptions

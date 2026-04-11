@@ -10,6 +10,7 @@ import { describe, it, expect, vi } from 'vitest'
 import type { MergeOptions } from '@/app/lib/api'
 import type { PullRequest } from '@/types/pull-request'
 
+import mergeOptionsReducer from '@/app/store/merge-options-slice'
 import pendingReviewCommentsReducer from '@/app/store/pending-review-comments-slice'
 import pendingReviewsReducer from '@/app/store/pending-reviews-slice'
 import pullRequestsReducer from '@/app/store/pull-requests-slice'
@@ -18,7 +19,6 @@ import { PullRequestToolbar } from './PullRequestToolbar'
 
 vi.mock('@/app/lib/api', () => ({
   createReview: vi.fn(),
-  getMergeOptions: vi.fn().mockRejectedValue(new Error('not configured')),
   mergePullRequest: vi.fn()
 }))
 
@@ -57,14 +57,18 @@ function createMockPullRequest(
   }
 }
 
-function createTestStore() {
+function createTestStore(
+  mergeOptions: Record<string, MergeOptions | null> = {}
+) {
   return configureStore({
     reducer: {
+      mergeOptions: mergeOptionsReducer,
       pendingReviewComments: pendingReviewCommentsReducer,
       pendingReviews: pendingReviewsReducer,
       pullRequests: pullRequestsReducer
     },
     preloadedState: {
+      mergeOptions,
       pendingReviewComments: {},
       pendingReviews: {},
       pullRequests: { initialized: true, items: [] }
@@ -115,9 +119,6 @@ describe('PullRequestToolbar', () => {
   })
 
   it('shows "Checking..." with spinner when mergeable is null', async () => {
-    const { getMergeOptions } = await import('@/app/lib/api')
-    const mockGetMergeOptions = vi.mocked(getMergeOptions)
-
     const options: MergeOptions = {
       allowMergeCommit: true,
       allowRebaseMerge: true,
@@ -127,16 +128,16 @@ describe('PullRequestToolbar', () => {
       requirements: []
     }
 
-    mockGetMergeOptions.mockResolvedValue(options)
-
     const pullRequest = createMockPullRequest()
+    const store = createTestStore({ 'pr-1': options })
 
     await act(async () => {
       renderWithProviders(
         <PullRequestToolbar
           {...defaultProps}
           pullRequest={pullRequest}
-        />
+        />,
+        { store }
       )
     })
 
@@ -148,26 +149,25 @@ describe('PullRequestToolbar', () => {
   })
 
   it('shows "Ready to merge" when PR is mergeable', async () => {
-    const { getMergeOptions } = await import('@/app/lib/api')
-    const mockGetMergeOptions = vi.mocked(getMergeOptions)
-
-    mockGetMergeOptions.mockResolvedValue({
-      allowMergeCommit: true,
-      allowRebaseMerge: true,
-      allowSquashMerge: true,
-      mergeable: true,
-      mergeableState: 'clean',
-      requirements: []
-    })
-
     const pullRequest = createMockPullRequest()
+    const store = createTestStore({
+      'pr-1': {
+        allowMergeCommit: true,
+        allowRebaseMerge: true,
+        allowSquashMerge: true,
+        mergeable: true,
+        mergeableState: 'clean',
+        requirements: []
+      }
+    })
 
     await act(async () => {
       renderWithProviders(
         <PullRequestToolbar
           {...defaultProps}
           pullRequest={pullRequest}
-        />
+        />,
+        { store }
       )
     })
 
@@ -175,26 +175,25 @@ describe('PullRequestToolbar', () => {
   })
 
   it('shows "Has conflicts" when PR has merge conflicts', async () => {
-    const { getMergeOptions } = await import('@/app/lib/api')
-    const mockGetMergeOptions = vi.mocked(getMergeOptions)
-
-    mockGetMergeOptions.mockResolvedValue({
-      allowMergeCommit: true,
-      allowRebaseMerge: true,
-      allowSquashMerge: true,
-      mergeable: false,
-      mergeableState: 'dirty',
-      requirements: []
-    })
-
     const pullRequest = createMockPullRequest()
+    const store = createTestStore({
+      'pr-1': {
+        allowMergeCommit: true,
+        allowRebaseMerge: true,
+        allowSquashMerge: true,
+        mergeable: false,
+        mergeableState: 'dirty',
+        requirements: []
+      }
+    })
 
     await act(async () => {
       renderWithProviders(
         <PullRequestToolbar
           {...defaultProps}
           pullRequest={pullRequest}
-        />
+        />,
+        { store }
       )
     })
 
@@ -202,26 +201,25 @@ describe('PullRequestToolbar', () => {
   })
 
   it('shows "Merge blocked" when merge is blocked', async () => {
-    const { getMergeOptions } = await import('@/app/lib/api')
-    const mockGetMergeOptions = vi.mocked(getMergeOptions)
-
-    mockGetMergeOptions.mockResolvedValue({
-      allowMergeCommit: true,
-      allowRebaseMerge: true,
-      allowSquashMerge: true,
-      mergeable: false,
-      mergeableState: 'blocked',
-      requirements: []
-    })
-
     const pullRequest = createMockPullRequest()
+    const store = createTestStore({
+      'pr-1': {
+        allowMergeCommit: true,
+        allowRebaseMerge: true,
+        allowSquashMerge: true,
+        mergeable: false,
+        mergeableState: 'blocked',
+        requirements: []
+      }
+    })
 
     await act(async () => {
       renderWithProviders(
         <PullRequestToolbar
           {...defaultProps}
           pullRequest={pullRequest}
-        />
+        />,
+        { store }
       )
     })
 
@@ -229,27 +227,26 @@ describe('PullRequestToolbar', () => {
   })
 
   it('calls onOpenMergeDrawer when merge button is clicked', async () => {
-    const { getMergeOptions } = await import('@/app/lib/api')
-    const mockGetMergeOptions = vi.mocked(getMergeOptions)
-
-    mockGetMergeOptions.mockResolvedValue({
-      allowMergeCommit: true,
-      allowRebaseMerge: true,
-      allowSquashMerge: true,
-      mergeable: true,
-      mergeableState: 'clean',
-      requirements: []
-    })
-
     const onOpenMergeDrawer = vi.fn()
     const pullRequest = createMockPullRequest()
+    const store = createTestStore({
+      'pr-1': {
+        allowMergeCommit: true,
+        allowRebaseMerge: true,
+        allowSquashMerge: true,
+        mergeable: true,
+        mergeableState: 'clean',
+        requirements: []
+      }
+    })
 
     await act(async () => {
       renderWithProviders(
         <PullRequestToolbar
           onOpenMergeDrawer={onOpenMergeDrawer}
           pullRequest={pullRequest}
-        />
+        />,
+        { store }
       )
     })
 

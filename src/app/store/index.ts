@@ -8,6 +8,9 @@ import draftsReducer, {
   loadDraftsFromStorage,
   saveDraftsToStorage
 } from './drafts-slice'
+import mergeOptionsReducer, {
+  MergeOptionsState
+} from './merge-options-slice'
 import modifiedFilesReducer, {
   ModifiedFilesState
 } from './modified-files-slice'
@@ -30,6 +33,7 @@ export interface PreloadedState {
   comments: CommentsState
   commits: CommitsState
   drafts?: DraftsState
+  mergeOptions?: MergeOptionsState
   modifiedFiles: ModifiedFilesState
   navigation?: NavigationState
   pendingReviewComments?: PendingReviewCommentsState
@@ -57,6 +61,7 @@ export function createStore(preloadedState?: PreloadedState) {
       comments: commentsReducer,
       commits: commitsReducer,
       drafts: draftsReducer,
+      mergeOptions: mergeOptionsReducer,
       modifiedFiles: modifiedFilesReducer,
       navigation: navigationReducer,
       pendingReviewComments: pendingReviewCommentsReducer,

@@ -1,10 +1,10 @@
 import { ChevronDown, ChevronUp, GitMergeIcon, Loader2 } from 'lucide-react'
-import { memo, ReactElement, useEffect, useState } from 'react'
+import { memo, ReactElement } from 'react'
 import { toast } from 'sonner'
 
 import { Button } from '@/app/components/ui/button'
 import { Separator } from '@/app/components/ui/separator'
-import { createReview, getMergeOptions } from '@/app/lib/api'
+import { createReview } from '@/app/lib/api'
 import type { MergeOptions } from '@/app/lib/api'
 import { useAppDispatch, useAppSelector } from '@/app/store/hooks'
 import {
@@ -30,44 +30,8 @@ export const PullRequestToolbar = memo(function PullRequestToolbar({
 
   const hasPendingReview = Boolean(pendingReview)
 
-  const [mergeOptions, setMergeOptions] = useState<MergeOptions | null>(null)
-
-  useEffect(
-    function fetchMergeOptionsForLabel() {
-      if (pullRequest.state !== 'OPEN') {
-        return
-      }
-
-      let cancelled = false
-      let retryTimeout: ReturnType<typeof setTimeout> | null = null
-
-      const fetch = () => {
-        getMergeOptions(pullRequest.id)
-          .then((options) => {
-            if (cancelled) return
-
-            setMergeOptions(options)
-
-            if (options.mergeable === null) {
-              retryTimeout = setTimeout(fetch, 3000)
-            }
-          })
-          .catch(() => {
-            // Silently fail — merge button just won't appear.
-          })
-      }
-
-      fetch()
-
-      return () => {
-        cancelled = true
-
-        if (retryTimeout !== null) {
-          clearTimeout(retryTimeout)
-        }
-      }
-    },
-    [pullRequest.id, pullRequest.state]
+  const mergeOptions = useAppSelector(
+    (state) => state.mergeOptions[pullRequest.id] ?? null
   )
 
   const handleStartReview = async () => {

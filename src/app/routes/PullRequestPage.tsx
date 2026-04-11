@@ -5,6 +5,7 @@ import {
   MessageSquareIcon
 } from 'lucide-react'
 import React, {
+  useCallback,
   useEffect,
   useMemo,
   useRef,
@@ -20,8 +21,9 @@ import {
   TabsList,
   TabsTrigger
 } from '@/app/components/ui/tabs'
-import { markPullRequestActive } from '@/app/lib/api'
+import { getMergeOptions, markPullRequestActive } from '@/app/lib/api'
 import { useAppDispatch, useAppSelector } from '@/app/store/hooks'
+import { mergeOptionsActions } from '@/app/store/merge-options-slice'
 import { navigationActions } from '@/app/store/navigation-slice'
 import { clamp01 } from '@/math'
 
@@ -71,6 +73,59 @@ export function PullRequestPage(): ReactElement {
     },
     [id]
   )
+
+  const [fetchGeneration, setFetchGeneration] = useState(0)
+
+  useEffect(
+    function fetchMergeOptions() {
+      if (!pullRequest || pullRequest.state !== 'OPEN') {
+        return
+      }
+
+      let cancelled = false
+      let retryTimeout: ReturnType<typeof setTimeout> | null = null
+
+      const fetch = () => {
+        getMergeOptions(pullRequest.id)
+          .then((options) => {
+            if (cancelled) return
+
+            dispatch(
+              mergeOptionsActions.setForPullRequest({
+                options,
+                pullRequestId: pullRequest.id
+              })
+            )
+
+            if (options.mergeable === null) {
+              retryTimeout = setTimeout(fetch, 3000)
+            }
+          })
+          .catch(() => {
+            // Silently fail — merge button just won't appear.
+          })
+      }
+
+      fetch()
+
+      return () => {
+        cancelled = true
+
+        if (retryTimeout !== null) {
+          clearTimeout(retryTimeout)
+        }
+      }
+    },
+    [dispatch, fetchGeneration, pullRequest?.id, pullRequest?.state]
+  )
+
+  const refreshMergeOptions = useCallback(() => {
+    if (pullRequest) {
+      dispatch(mergeOptionsActions.clearForPullRequest(pullRequest.id))
+    }
+
+    setFetchGeneration((generation) => generation + 1)
+  }, [dispatch, pullRequest?.id])
 
   const tabs: Array<{
     content: React.ComponentType<{
@@ -183,7 +238,10 @@ export function PullRequestPage(): ReactElement {
       <PullRequestHeader pullRequest={pullRequest} />
 
       <PullRequestToolbar
-        onOpenMergeDrawer={() => setIsMergeDrawerOpen(true)}
+        onOpenMergeDrawer={() => {
+          setIsMergeDrawerOpen(true)
+          refreshMergeOptions()
+        }}
         pullRequest={pullRequest}
       />
 

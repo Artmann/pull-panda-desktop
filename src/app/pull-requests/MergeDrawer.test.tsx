@@ -12,16 +12,15 @@ import type { PullRequest } from '@/types/pull-request'
 import type { Check, Review } from '@/types/pull-request-details'
 
 import checksReducer from '@/app/store/checks-slice'
+import mergeOptionsReducer from '@/app/store/merge-options-slice'
 import pullRequestsReducer from '@/app/store/pull-requests-slice'
 import reviewsReducer from '@/app/store/reviews-slice'
 
 import { MergeDrawer } from './MergeDrawer'
 
-const mockGetMergeOptions = vi.fn()
 const mockMergePullRequest = vi.fn()
 
 vi.mock('@/app/lib/api', () => ({
-  getMergeOptions: (...args: unknown[]) => mockGetMergeOptions(...args),
   mergePullRequest: (...args: unknown[]) => mockMergePullRequest(...args)
 }))
 
@@ -102,18 +101,25 @@ function createMockCheck(overrides: Partial<Check> = {}): Check {
 
 interface TestStoreOptions {
   checks?: Check[]
+  mergeOptions?: Record<string, MergeOptions | null>
   reviews?: Review[]
 }
 
-function createTestStore({ checks = [], reviews = [] }: TestStoreOptions = {}) {
+function createTestStore({
+  checks = [],
+  mergeOptions = {},
+  reviews = []
+}: TestStoreOptions = {}) {
   return configureStore({
     reducer: {
       checks: checksReducer,
+      mergeOptions: mergeOptionsReducer,
       pullRequests: pullRequestsReducer,
       reviews: reviewsReducer
     },
     preloadedState: {
       checks: { items: checks },
+      mergeOptions,
       pullRequests: { initialized: true, items: [] },
       reviews: { items: reviews }
     }
@@ -138,9 +144,7 @@ const mergeableOptions: MergeOptions = {
 
 describe('MergeDrawer', () => {
   beforeEach(() => {
-    mockGetMergeOptions.mockReset()
     mockMergePullRequest.mockReset()
-    mockGetMergeOptions.mockRejectedValue(new Error('not configured'))
   })
 
   it('renders nothing when closed', async () => {
@@ -160,28 +164,10 @@ describe('MergeDrawer', () => {
   })
 
   it('renders header when open', async () => {
-    mockGetMergeOptions.mockResolvedValue(mergeableOptions)
-
     const pullRequest = createMockPullRequest()
-
-    await act(async () => {
-      renderWithProviders(
-        <MergeDrawer
-          onClose={vi.fn()}
-          open={true}
-          pullRequest={pullRequest}
-        />
-      )
+    const store = createTestStore({
+      mergeOptions: { 'pr-1': mergeableOptions }
     })
-
-    expect(screen.getByText('Merge pull request')).toBeInTheDocument()
-  })
-
-  it('shows reviews section when reviews exist', async () => {
-    mockGetMergeOptions.mockResolvedValue(mergeableOptions)
-
-    const pullRequest = createMockPullRequest({ approvalCount: 1 })
-    const reviews = [createMockReview({ state: 'APPROVED' })]
 
     await act(async () => {
       renderWithProviders(
@@ -190,7 +176,29 @@ describe('MergeDrawer', () => {
           open={true}
           pullRequest={pullRequest}
         />,
-        { store: createTestStore({ reviews }) }
+        { store }
+      )
+    })
+
+    expect(screen.getByText('Merge pull request')).toBeInTheDocument()
+  })
+
+  it('shows reviews section when reviews exist', async () => {
+    const pullRequest = createMockPullRequest({ approvalCount: 1 })
+    const reviews = [createMockReview({ state: 'APPROVED' })]
+    const store = createTestStore({
+      mergeOptions: { 'pr-1': mergeableOptions },
+      reviews
+    })
+
+    await act(async () => {
+      renderWithProviders(
+        <MergeDrawer
+          onClose={vi.fn()}
+          open={true}
+          pullRequest={pullRequest}
+        />,
+        { store }
       )
     })
 
@@ -199,13 +207,15 @@ describe('MergeDrawer', () => {
   })
 
   it('shows checks summary when checks exist', async () => {
-    mockGetMergeOptions.mockResolvedValue(mergeableOptions)
-
     const pullRequest = createMockPullRequest()
     const checks = [
       createMockCheck({ id: 'c1', name: 'CI Build', conclusion: 'success' }),
       createMockCheck({ id: 'c2', name: 'Lint', conclusion: 'failure' })
     ]
+    const store = createTestStore({
+      checks,
+      mergeOptions: { 'pr-1': mergeableOptions }
+    })
 
     await act(async () => {
       renderWithProviders(
@@ -214,7 +224,7 @@ describe('MergeDrawer', () => {
           open={true}
           pullRequest={pullRequest}
         />,
-        { store: createTestStore({ checks }) }
+        { store }
       )
     })
 
@@ -223,9 +233,10 @@ describe('MergeDrawer', () => {
   })
 
   it('shows merge method tabs', async () => {
-    mockGetMergeOptions.mockResolvedValue(mergeableOptions)
-
     const pullRequest = createMockPullRequest()
+    const store = createTestStore({
+      mergeOptions: { 'pr-1': mergeableOptions }
+    })
 
     await act(async () => {
       renderWithProviders(
@@ -233,7 +244,8 @@ describe('MergeDrawer', () => {
           onClose={vi.fn()}
           open={true}
           pullRequest={pullRequest}
-        />
+        />,
+        { store }
       )
     })
 
@@ -243,13 +255,16 @@ describe('MergeDrawer', () => {
   })
 
   it('shows blocked state when not mergeable', async () => {
-    mockGetMergeOptions.mockResolvedValue({
-      ...mergeableOptions,
-      mergeable: false,
-      mergeableState: 'blocked'
-    })
-
     const pullRequest = createMockPullRequest()
+    const store = createTestStore({
+      mergeOptions: {
+        'pr-1': {
+          ...mergeableOptions,
+          mergeable: false,
+          mergeableState: 'blocked'
+        }
+      }
+    })
 
     await act(async () => {
       renderWithProviders(
@@ -257,7 +272,8 @@ describe('MergeDrawer', () => {
           onClose={vi.fn()}
           open={true}
           pullRequest={pullRequest}
-        />
+        />,
+        { store }
       )
     })
 
@@ -275,21 +291,24 @@ describe('MergeDrawer', () => {
   })
 
   it('shows conflict requirement when merge is blocked by dirty state', async () => {
-    mockGetMergeOptions.mockResolvedValue({
-      ...mergeableOptions,
-      mergeable: false,
-      mergeableState: 'dirty',
-      requirements: [
-        {
-          description: 'This branch has conflicts that must be resolved.',
-          key: 'no-conflicts',
-          label: 'No merge conflicts',
-          satisfied: false
-        }
-      ]
-    })
-
     const pullRequest = createMockPullRequest()
+    const store = createTestStore({
+      mergeOptions: {
+        'pr-1': {
+          ...mergeableOptions,
+          mergeable: false,
+          mergeableState: 'dirty',
+          requirements: [
+            {
+              description: 'This branch has conflicts that must be resolved.',
+              key: 'no-conflicts',
+              label: 'No merge conflicts',
+              satisfied: false
+            }
+          ]
+        }
+      }
+    })
 
     await act(async () => {
       renderWithProviders(
@@ -297,7 +316,8 @@ describe('MergeDrawer', () => {
           onClose={vi.fn()}
           open={true}
           pullRequest={pullRequest}
-        />
+        />,
+        { store }
       )
     })
 
@@ -311,7 +331,6 @@ describe('MergeDrawer', () => {
   })
 
   it('calls mergePullRequest with selected method on merge', async () => {
-    mockGetMergeOptions.mockResolvedValue(mergeableOptions)
     mockMergePullRequest.mockResolvedValue(
       createMockPullRequest({
         state: 'MERGED',
@@ -321,6 +340,9 @@ describe('MergeDrawer', () => {
 
     const onClose = vi.fn()
     const pullRequest = createMockPullRequest()
+    const store = createTestStore({
+      mergeOptions: { 'pr-1': mergeableOptions }
+    })
 
     await act(async () => {
       renderWithProviders(
@@ -328,7 +350,8 @@ describe('MergeDrawer', () => {
           onClose={onClose}
           open={true}
           pullRequest={pullRequest}
-        />
+        />,
+        { store }
       )
     })
 
@@ -359,25 +382,28 @@ describe('MergeDrawer', () => {
   })
 
   it('shows requirements checklist with all items satisfied', async () => {
-    mockGetMergeOptions.mockResolvedValue({
-      ...mergeableOptions,
-      requirements: [
-        {
-          description: 'No merge conflicts.',
-          key: 'no-conflicts',
-          label: 'No merge conflicts',
-          satisfied: true
-        },
-        {
-          description: 'Pull request is ready for review.',
-          key: 'not-draft',
-          label: 'Not a draft',
-          satisfied: true
-        }
-      ]
-    })
-
     const pullRequest = createMockPullRequest()
+    const store = createTestStore({
+      mergeOptions: {
+        'pr-1': {
+          ...mergeableOptions,
+          requirements: [
+            {
+              description: 'No merge conflicts.',
+              key: 'no-conflicts',
+              label: 'No merge conflicts',
+              satisfied: true
+            },
+            {
+              description: 'Pull request is ready for review.',
+              key: 'not-draft',
+              label: 'Not a draft',
+              satisfied: true
+            }
+          ]
+        }
+      }
+    })
 
     await act(async () => {
       renderWithProviders(
@@ -385,7 +411,8 @@ describe('MergeDrawer', () => {
           onClose={vi.fn()}
           open={true}
           pullRequest={pullRequest}
-        />
+        />,
+        { store }
       )
     })
 
@@ -395,33 +422,36 @@ describe('MergeDrawer', () => {
   })
 
   it('shows unsatisfied requirements with descriptions', async () => {
-    mockGetMergeOptions.mockResolvedValue({
-      ...mergeableOptions,
-      mergeable: false,
-      mergeableState: 'blocked',
-      requirements: [
-        {
-          description: 'No merge conflicts.',
-          key: 'no-conflicts',
-          label: 'No merge conflicts',
-          satisfied: true
-        },
-        {
-          description: 'Waiting for required approving reviews.',
-          key: 'approving-reviews',
-          label: '2 approving reviews required',
-          satisfied: false
-        },
-        {
-          description: '3 unresolved conversations.',
-          key: 'conversations-resolved',
-          label: 'Conversations resolved',
-          satisfied: false
-        }
-      ]
-    })
-
     const pullRequest = createMockPullRequest()
+    const store = createTestStore({
+      mergeOptions: {
+        'pr-1': {
+          ...mergeableOptions,
+          mergeable: false,
+          mergeableState: 'blocked',
+          requirements: [
+            {
+              description: 'No merge conflicts.',
+              key: 'no-conflicts',
+              label: 'No merge conflicts',
+              satisfied: true
+            },
+            {
+              description: 'Waiting for required approving reviews.',
+              key: 'approving-reviews',
+              label: '2 approving reviews required',
+              satisfied: false
+            },
+            {
+              description: '3 unresolved conversations.',
+              key: 'conversations-resolved',
+              label: 'Conversations resolved',
+              satisfied: false
+            }
+          ]
+        }
+      }
+    })
 
     await act(async () => {
       renderWithProviders(
@@ -429,7 +459,8 @@ describe('MergeDrawer', () => {
           onClose={vi.fn()}
           open={true}
           pullRequest={pullRequest}
-        />
+        />,
+        { store }
       )
     })
 
@@ -445,12 +476,15 @@ describe('MergeDrawer', () => {
   })
 
   it('does not show requirements section when list is empty', async () => {
-    mockGetMergeOptions.mockResolvedValue({
-      ...mergeableOptions,
-      requirements: []
-    })
-
     const pullRequest = createMockPullRequest()
+    const store = createTestStore({
+      mergeOptions: {
+        'pr-1': {
+          ...mergeableOptions,
+          requirements: []
+        }
+      }
+    })
 
     await act(async () => {
       renderWithProviders(
@@ -458,7 +492,8 @@ describe('MergeDrawer', () => {
           onClose={vi.fn()}
           open={true}
           pullRequest={pullRequest}
-        />
+        />,
+        { store }
       )
     })
 
@@ -466,21 +501,24 @@ describe('MergeDrawer', () => {
   })
 
   it('shows blocked summary from failing requirements', async () => {
-    mockGetMergeOptions.mockResolvedValue({
-      ...mergeableOptions,
-      mergeable: false,
-      mergeableState: 'blocked',
-      requirements: [
-        {
-          description: 'Waiting for required approving reviews.',
-          key: 'approving-reviews',
-          label: '2 approving reviews required',
-          satisfied: false
-        }
-      ]
-    })
-
     const pullRequest = createMockPullRequest()
+    const store = createTestStore({
+      mergeOptions: {
+        'pr-1': {
+          ...mergeableOptions,
+          mergeable: false,
+          mergeableState: 'blocked',
+          requirements: [
+            {
+              description: 'Waiting for required approving reviews.',
+              key: 'approving-reviews',
+              label: '2 approving reviews required',
+              satisfied: false
+            }
+          ]
+        }
+      }
+    })
 
     await act(async () => {
       renderWithProviders(
@@ -488,7 +526,8 @@ describe('MergeDrawer', () => {
           onClose={vi.fn()}
           open={true}
           pullRequest={pullRequest}
-        />
+        />,
+        { store }
       )
     })
 
@@ -502,9 +541,10 @@ describe('MergeDrawer', () => {
   })
 
   it('shows loading state when merge options are being fetched', async () => {
-    mockGetMergeOptions.mockReturnValue(new Promise(() => undefined))
-
     const pullRequest = createMockPullRequest()
+    const store = createTestStore({
+      mergeOptions: { 'pr-1': null }
+    })
 
     await act(async () => {
       renderWithProviders(
@@ -512,7 +552,8 @@ describe('MergeDrawer', () => {
           onClose={vi.fn()}
           open={true}
           pullRequest={pullRequest}
-        />
+        />,
+        { store }
       )
     })
 

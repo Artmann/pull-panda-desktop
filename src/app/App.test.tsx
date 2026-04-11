@@ -12,6 +12,7 @@ import checksReducer from '@/app/store/checks-slice'
 import commentsReducer from '@/app/store/comments-slice'
 import commitsReducer from '@/app/store/commits-slice'
 import draftsReducer from '@/app/store/drafts-slice'
+import mergeOptionsReducer from '@/app/store/merge-options-slice'
 import modifiedFilesReducer from '@/app/store/modified-files-slice'
 import navigationReducer from '@/app/store/navigation-slice'
 import pendingReviewCommentsReducer from '@/app/store/pending-review-comments-slice'
@@ -76,6 +77,7 @@ function createTestStore() {
       comments: commentsReducer,
       commits: commitsReducer,
       drafts: draftsReducer,
+      mergeOptions: mergeOptionsReducer,
       modifiedFiles: modifiedFilesReducer,
       navigation: navigationReducer,
       pendingReviewComments: pendingReviewCommentsReducer,
@@ -90,6 +92,7 @@ function createTestStore() {
       comments: { items: [] },
       commits: { items: [] },
       drafts: {},
+      mergeOptions: {},
       modifiedFiles: { items: [] },
       navigation: { activeTab: {} },
       pendingReviewComments: {},

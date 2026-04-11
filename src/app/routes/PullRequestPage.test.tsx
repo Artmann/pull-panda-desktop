@@ -14,6 +14,7 @@ import checksReducer from '@/app/store/checks-slice'
 import commentsReducer from '@/app/store/comments-slice'
 import commitsReducer from '@/app/store/commits-slice'
 import draftsReducer from '@/app/store/drafts-slice'
+import mergeOptionsReducer from '@/app/store/merge-options-slice'
 import modifiedFilesReducer from '@/app/store/modified-files-slice'
 import navigationReducer from '@/app/store/navigation-slice'
 import pendingReviewCommentsReducer from '@/app/store/pending-review-comments-slice'
@@ -27,6 +28,11 @@ import { AuthProvider } from '@/app/lib/store/authContext'
 import { ThemeProvider } from '@/app/lib/store/themeContext'
 
 import { PullRequestPage } from './PullRequestPage'
+
+vi.mock('@/app/lib/api', () => ({
+  getMergeOptions: vi.fn().mockRejectedValue(new Error('not configured')),
+  markPullRequestActive: vi.fn().mockResolvedValue(undefined)
+}))
 
 beforeAll(() => {
   global.IntersectionObserver = class IntersectionObserver {
@@ -133,6 +139,7 @@ function createTestStore(
       comments: commentsReducer,
       commits: commitsReducer,
       drafts: draftsReducer,
+      mergeOptions: mergeOptionsReducer,
       modifiedFiles: modifiedFilesReducer,
       navigation: navigationReducer,
       pendingReviewComments: pendingReviewCommentsReducer,
@@ -147,6 +154,7 @@ function createTestStore(
       comments: { items: [] },
       commits: { items: options.commits ?? [] },
       drafts: {},
+      mergeOptions: {},
       modifiedFiles: { items: options.modifiedFiles ?? [] },
       pendingReviewComments: {},
       pendingReviews: {},
