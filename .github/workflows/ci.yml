@@ -8,69 +8,81 @@ on:
 
 jobs:
   typecheck:
-    name: Typecheck
+    name: Typecheck (Node ${{ matrix.node }})
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        node: [22, 24, 26]
     steps:
       - uses: actions/checkout@v5
 
       - uses: actions/setup-node@v5
         with:
-          node-version: 22
-          cache: yarn
+          node-version: ${{ matrix.node }}
 
       - name: Install dependencies
-        run: yarn install
+        run: npm install
 
       - name: Typecheck
-        run: yarn typecheck
+        run: npm run typecheck
 
   lint:
-    name: Lint
+    name: Lint (Node ${{ matrix.node }})
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        node: [22, 24, 26]
     steps:
       - uses: actions/checkout@v5
 
       - uses: actions/setup-node@v5
         with:
-          node-version: 22
-          cache: yarn
+          node-version: ${{ matrix.node }}
 
       - name: Install dependencies
-        run: yarn install
+        run: npm install
 
       - name: Lint
-        run: yarn lint
+        run: npm run lint
 
   test:
-    name: Test
+    name: Test (Node ${{ matrix.node }})
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        node: [22, 24, 26]
     steps:
       - uses: actions/checkout@v5
 
       - uses: actions/setup-node@v5
         with:
-          node-version: 22
-          cache: yarn
+          node-version: ${{ matrix.node }}
 
       - name: Install dependencies
-        run: yarn install
+        run: npm install
 
       - name: Test
-        run: yarn test:run
+        run: npm run test:run
 
   build:
-    name: Build
+    name: Build (Node ${{ matrix.node }})
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        node: [22, 24, 26]
     steps:
       - uses: actions/checkout@v5
 
       - uses: actions/setup-node@v5
         with:
-          node-version: 22
-          cache: yarn
+          node-version: ${{ matrix.node }}
 
       - name: Install dependencies
-        run: yarn install
+        run: npm install
 
       - name: Build
-        run: yarn package
+        run: npm run package
