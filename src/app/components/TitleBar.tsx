@@ -11,6 +11,7 @@ import { type ReactElement, useEffect, useRef } from 'react'
 import { useLocation, useNavigate } from 'react-router'
 
 import { cn } from '@/app/lib/utils'
+import { Wordmark } from './PandaMark'
 
 const isMac = navigator.platform.toLowerCase().includes('mac')
 
@@ -97,9 +98,7 @@ export function TitleBar(): ReactElement {
         className="flex-1 h-full min-w-90 flex items-center justify-center"
         style={{ WebkitAppRegion: 'drag' } as React.CSSProperties}
       >
-        <span className="text-xs text-muted-foreground font-medium">
-          Pull Panda
-        </span>
+        <Wordmark />
       </div>
 
       <div className="h-full flex-1 max-w-50">

@@ -35,7 +35,11 @@ export function HomePage(): ReactElement {
   return (
     <div className="bg-background w-full p-4 sm:p-6">
       <div className="w-full max-w-6xl mx-auto">
-        <section className="mb-8">
+        <section className="mb-10">
+          <div className="mb-2.5 text-[11px] font-mono font-medium uppercase tracking-wider text-primary">
+            {dayjs().format('dddd, MMMM D')}
+          </div>
+
           <div className="mb-2">
             <Greetings name={displayName} />
           </div>

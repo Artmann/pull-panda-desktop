@@ -2,7 +2,6 @@ import { useMemo, type ReactElement } from 'react'
 
 import { cn } from '@/app/lib/utils'
 import { PullRequest } from '@/types/pull-request'
-import { Badge } from './ui/badge'
 
 type PullRequestStatus =
   | 'Approved'
@@ -50,30 +49,33 @@ export function PullRequestStatusBadge({
     pullRequest.state
   ])
 
-  const statusColorClasses = useMemo((): string => {
-    const colorMap: Record<PullRequestStatus, string> = {
-      Approved:
-        'bg-status-success border-status-success-border text-status-success-foreground',
-      'Changes Requested':
-        'bg-status-danger border-status-danger-border text-status-danger-foreground',
-      Closed:
-        'bg-status-danger border-status-danger-border text-status-danger-foreground',
-      Draft:
-        'bg-status-neutral border-status-neutral-border text-status-neutral-foreground',
-      Merged:
-        'bg-status-merged border-status-merged-border text-status-merged-foreground',
-      Pending: 'bg-primary text-primary-foreground border-transparent'
+  const colorClass = useMemo((): string => {
+    const map: Record<PullRequestStatus, string> = {
+      Approved: 'text-[var(--status-success-foreground)]',
+      'Changes Requested': 'text-[var(--status-danger-foreground)]',
+      Closed: 'text-[var(--status-danger-foreground)]',
+      Draft: 'text-muted-foreground',
+      Merged: 'text-[var(--status-merged-foreground)]',
+      Pending: 'text-[var(--status-warning-foreground)]'
     }
 
-    return colorMap[status]
+    return map[status]
   }, [status])
 
   return (
-    <Badge
-      variant="outline"
-      className={cn(statusColorClasses, 'capitalize text-[10px]')}
+    <span
+      className={cn(
+        'inline-flex items-center gap-1.5',
+        'rounded-full border border-current/60',
+        'px-2 py-0.5 text-[10px] font-medium whitespace-nowrap',
+        colorClass
+      )}
     >
+      <span
+        aria-hidden
+        className="h-1.5 w-1.5 rounded-full bg-current"
+      />
       {status}
-    </Badge>
+    </span>
   )
 }

@@ -40,6 +40,8 @@
   "dependencies": {
     "@fontsource-variable/geist": "^5.2.8",
     "@fontsource-variable/geist-mono": "^5.2.7",
+    "@fontsource/ibm-plex-mono": "^5.2.7",
+    "@fontsource/ibm-plex-sans": "^5.2.8",
     "@octokit/graphql": "^9.0.3",
     "@octokit/rest": "^22.0.1",
     "@radix-ui/react-accordion": "^1.2.12",
