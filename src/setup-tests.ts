@@ -15,16 +15,26 @@ if (typeof window !== 'undefined') {
     })
   })
 
-  // Node 25+ ships a native `localStorage`/`sessionStorage` global that
-  // throws without the `--localstorage-file` flag. Shadow it with jsdom's
-  // window storage so bare `localStorage.getItem(...)` calls work.
+  // Node 25+ ships a native `localStorage`/`sessionStorage` global without
+  // useful methods unless `--localstorage-file` is set. Delete Node's
+  // version and install jsdom's so bare `localStorage.getItem(...)` works.
   for (const key of ['localStorage', 'sessionStorage'] as const) {
-    if (window[key]) {
-      Object.defineProperty(globalThis, key, {
-        configurable: true,
-        value: window[key],
-        writable: true
-      })
+    const storage = window[key]
+
+    if (!storage) {
+      continue
     }
+
+    try {
+      delete (globalThis as Record<string, unknown>)[key]
+    } catch {
+      // Ignore — will be overwritten by defineProperty below.
+    }
+
+    Object.defineProperty(globalThis, key, {
+      configurable: true,
+      value: storage,
+      writable: true
+    })
   }
 }
