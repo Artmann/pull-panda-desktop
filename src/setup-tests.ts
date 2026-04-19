@@ -15,26 +15,56 @@ if (typeof window !== 'undefined') {
     })
   })
 
-  // Node 25+ ships a native `localStorage`/`sessionStorage` global without
-  // useful methods unless `--localstorage-file` is set. Delete Node's
-  // version and install jsdom's so bare `localStorage.getItem(...)` works.
-  for (const key of ['localStorage', 'sessionStorage'] as const) {
-    const storage = window[key]
+  // Node 25+ exposes a native `localStorage`/`sessionStorage` global whose
+  // methods throw without the `--localstorage-file` flag. Install an
+  // in-memory polyfill on both window and globalThis so bare
+  // `localStorage.getItem(...)` calls work regardless of the runtime.
+  class MemoryStorage {
+    private store = new Map<string, string>()
 
-    if (!storage) {
-      continue
+    get length(): number {
+      return this.store.size
     }
 
-    try {
-      delete (globalThis as Record<string, unknown>)[key]
-    } catch {
-      // Ignore — will be overwritten by defineProperty below.
+    clear(): void {
+      this.store.clear()
     }
 
-    Object.defineProperty(globalThis, key, {
-      configurable: true,
-      value: storage,
-      writable: true
-    })
+    getItem(key: string): string | null {
+      return this.store.get(key) ?? null
+    }
+
+    key(index: number): string | null {
+      return Array.from(this.store.keys())[index] ?? null
+    }
+
+    removeItem(key: string): void {
+      this.store.delete(key)
+    }
+
+    setItem(key: string, value: string): void {
+      this.store.set(key, String(value))
+    }
+  }
+
+  for (const name of ['localStorage', 'sessionStorage'] as const) {
+    const storage = new MemoryStorage()
+
+    for (const target of [globalThis, window] as unknown[]) {
+      try {
+        Object.defineProperty(target as object, name, {
+          configurable: true,
+          value: storage,
+          writable: true
+        })
+      } catch {
+        // Best effort — fall through to direct assignment.
+        try {
+          (target as Record<string, unknown>)[name] = storage
+        } catch {
+          // Ignore.
+        }
+      }
+    }
   }
 }
