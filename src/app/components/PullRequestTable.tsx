@@ -125,26 +125,38 @@ export function PullRequestTable({
         </div>
       ) : (
         <>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Pull Request</TableHead>
-                <TableHead>Author</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Activity</TableHead>
-                <TableHead>Updated</TableHead>
-              </TableRow>
-            </TableHeader>
+          <div className="rounded-xl border border-border bg-card overflow-hidden">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="text-[10px] uppercase tracking-wider font-medium px-4">
+                    Pull Request
+                  </TableHead>
+                  <TableHead className="text-[10px] uppercase tracking-wider font-medium">
+                    Author
+                  </TableHead>
+                  <TableHead className="text-[10px] uppercase tracking-wider font-medium">
+                    Status
+                  </TableHead>
+                  <TableHead className="text-[10px] uppercase tracking-wider font-medium">
+                    Activity
+                  </TableHead>
+                  <TableHead className="text-[10px] uppercase tracking-wider font-medium text-right pr-4">
+                    Updated
+                  </TableHead>
+                </TableRow>
+              </TableHeader>
 
-            <TableBody>
-              {paginatedPullRequests.map((pullRequest) => (
-                <PullRequestTableRow
-                  key={pullRequest.id}
-                  pullRequest={pullRequest}
-                />
-              ))}
-            </TableBody>
-          </Table>
+              <TableBody>
+                {paginatedPullRequests.map((pullRequest) => (
+                  <PullRequestTableRow
+                    key={pullRequest.id}
+                    pullRequest={pullRequest}
+                  />
+                ))}
+              </TableBody>
+            </Table>
+          </div>
 
           <Pagination
             currentPage={currentPage}

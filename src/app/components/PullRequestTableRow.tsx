@@ -30,11 +30,15 @@ export function PullRequestTableRow({
       className="cursor-pointer"
       onClick={handleClick}
     >
-      <TableCell>
+      <TableCell className="px-4">
         <div className="flex flex-col gap-0.5">
-          <span className="truncate max-w-md">{pullRequest.title}</span>
+          <span className="truncate max-w-md font-medium">
+            {pullRequest.title}
+          </span>
 
-          <span className="text-xs text-muted-foreground">{repoSlug}</span>
+          <span className="text-xs text-muted-foreground font-mono">
+            {repoSlug}
+          </span>
         </div>
       </TableCell>
 
@@ -62,21 +66,27 @@ export function PullRequestTableRow({
       </TableCell>
 
       <TableCell>
-        <div className="flex items-center gap-3 text-muted-foreground">
-          <div className="flex items-center gap-2">
+        <div className="flex items-center gap-3 text-muted-foreground font-mono">
+          <div className="flex items-center gap-1.5">
             <MessageCircle className="size-3" />
-            <span className="text-sm">{pullRequest.commentCount}</span>
+            <span className="text-xs">{pullRequest.commentCount}</span>
           </div>
 
-          <div className="flex items-center gap-1">
+          <div
+            className={
+              pullRequest.approvalCount > 0
+                ? 'flex items-center gap-1 text-[var(--status-success-foreground)]'
+                : 'flex items-center gap-1'
+            }
+          >
             <CheckCircle className="size-3" />
-            <span className="text-sm">{pullRequest.approvalCount}</span>
+            <span className="text-xs">{pullRequest.approvalCount}</span>
           </div>
         </div>
       </TableCell>
 
-      <TableCell>
-        <span className="text-sm text-muted-foreground">
+      <TableCell className="text-right pr-4">
+        <span className="text-xs text-muted-foreground font-mono">
           <TimeAgo dateTime={pullRequest.updatedAt} />
         </span>
       </TableCell>
