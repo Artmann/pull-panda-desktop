@@ -5,7 +5,8 @@ import type {
   CommentReaction,
   Commit,
   ModifiedFile,
-  Review
+  Review,
+  ReviewThread
 } from './pull-request-details'
 import type { PendingReview } from '../main/bootstrap'
 
@@ -23,3 +24,4 @@ export type ResourceUpdatedEvent =
   | { data: PullRequest[]; type: 'pull-requests' }
   | { data: CommentReaction[]; pullRequestId: string; type: 'reactions' }
   | { data: Review[]; pullRequestId: string; type: 'reviews' }
+  | { data: ReviewThread[]; pullRequestId: string; type: 'review-threads' }

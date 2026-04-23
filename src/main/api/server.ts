@@ -15,6 +15,7 @@ import { commentsRoute, type AppEnv } from './routes/comments'
 import { navigateRoute } from './routes/navigate'
 import { pullRequestsRoute } from './routes/pull-requests'
 import { reviewsRoute } from './routes/reviews'
+import { reviewThreadsRoute } from './routes/review-threads'
 import { screenshotRoute } from './routes/screenshot'
 import { syncsRoute } from './routes/syncs'
 
@@ -56,6 +57,7 @@ export function startApiServer(getToken: () => string | null): Promise<number> {
     app.route('/api/navigate', navigateRoute)
     app.route('/api/pull-requests', pullRequestsRoute)
     app.route('/api/reviews', reviewsRoute)
+    app.route('/api/review-threads', reviewThreadsRoute)
     app.route('/api/screenshot', screenshotRoute)
     app.route('/api/syncs', syncsRoute)
 

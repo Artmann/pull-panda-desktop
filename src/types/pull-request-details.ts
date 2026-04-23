@@ -96,6 +96,15 @@ export interface ModifiedFile {
   syncedAt: string
 }
 
+export interface ReviewThread {
+  id: string
+  gitHubId: string
+  pullRequestId: string
+  isResolved: boolean
+  resolvedByLogin: string | null
+  syncedAt: string
+}
+
 export interface PullRequestDetails {
   checks: Check[]
   comments: Comment[]
@@ -104,4 +113,5 @@ export interface PullRequestDetails {
   pendingReview?: Review | null
   reactions: CommentReaction[]
   reviews: Review[]
+  reviewThreads: ReviewThread[]
 }
