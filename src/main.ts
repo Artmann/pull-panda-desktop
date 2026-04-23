@@ -29,6 +29,10 @@ if (started) {
   app.quit()
 }
 
+if (!app.isPackaged) {
+  app.commandLine.appendSwitch('remote-debugging-port', '9222')
+}
+
 function setupIpcHandlers(): void {
   ipcMain.handle(ipcChannels.ApiGetPort, () => {
     return getApiPort()

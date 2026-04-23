@@ -45,6 +45,17 @@ Vite.
   comments, checks, commits, files). Use `--brief` for just the PR record,
   `--repo owner/name` to disambiguate across repos.
 
+## Driving the running app with agent-browser
+
+- `yarn start` runs the app with Chromium's remote debugging port exposed on
+  `9222` in development (gated on `!app.isPackaged`, so packaged production
+  builds are unaffected).
+- While it is running, use the `agent-browser` CLI (installed as a dev
+  dependency) to inspect and control the UI over CDP, e.g.
+  `yarn agent-browser --cdp 9222 snapshot -i` or
+  `yarn agent-browser --cdp 9222 click @e2`.
+- Prefer this over asking the user to verify UI behaviour manually.
+
 ## Architecture
 
 ### Electron Process Model

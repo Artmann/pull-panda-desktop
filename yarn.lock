@@ -1889,11 +1889,6 @@
     "@octokit/types" "^16.0.0"
     universal-user-agent "^7.0.0"
 
-"@octokit/openapi-types@^25.1.0":
-  version "25.1.0"
-  resolved "https://registry.yarnpkg.com/@octokit/openapi-types/-/openapi-types-25.1.0.tgz#5a72a9dfaaba72b5b7db375fd05e90ca90dc9682"
-  integrity sha512-idsIggNXUKkk0+BExUn1dQ92sfysJrje03Q0bv0e+KPLrvyqZF8MnBpFz8UNfYDwB3Ie7Z0TByjWfzxt7vseaA==
-
 "@octokit/openapi-types@^27.0.0":
   version "27.0.0"
   resolved "https://registry.yarnpkg.com/@octokit/openapi-types/-/openapi-types-27.0.0.tgz#374ea53781965fd02a9d36cacb97e152cefff12d"
@@ -1918,14 +1913,7 @@
   dependencies:
     "@octokit/types" "^16.0.0"
 
-"@octokit/request-error@^6.1.8":
-  version "6.1.8"
-  resolved "https://registry.yarnpkg.com/@octokit/request-error/-/request-error-6.1.8.tgz#3c7ce1ca6721eabd43dbddc76b44860de1fdea75"
-  integrity sha512-WEi/R0Jmq+IJKydWlKDmryPcmdYSVjL3ekaiEL1L9eo1sUnqMJ+grqmC9cjk7CA7+b2/T397tO5d8YLOH3qYpQ==
-  dependencies:
-    "@octokit/types" "^14.0.0"
-
-"@octokit/request-error@^7.0.2":
+"@octokit/request-error@^7.0.2", "@octokit/request-error@^7.1.0":
   version "7.1.0"
   resolved "https://registry.yarnpkg.com/@octokit/request-error/-/request-error-7.1.0.tgz#440fa3cae310466889778f5a222b47a580743638"
   integrity sha512-KMQIfq5sOPpkQYajXHwnhjCC0slzCNScLHs9JafXc4RAJI+9f+jNDlBNaIMTvazOPLgb4BnlhGJOTbnN0wIjPw==
@@ -1952,13 +1940,6 @@
     "@octokit/plugin-paginate-rest" "^14.0.0"
     "@octokit/plugin-request-log" "^6.0.0"
     "@octokit/plugin-rest-endpoint-methods" "^17.0.0"
-
-"@octokit/types@^14.0.0":
-  version "14.1.0"
-  resolved "https://registry.yarnpkg.com/@octokit/types/-/types-14.1.0.tgz#3bf9b3a3e3b5270964a57cc9d98592ed44f840f2"
-  integrity sha512-1y6DgTy8Jomcpu33N+p5w58l6xyt55Ar2I91RPiIA0xCJBXyUAhXCcmZaDWSANiha7R9a6qJJ2CRomGPZ6f46g==
-  dependencies:
-    "@octokit/openapi-types" "^25.1.0"
 
 "@octokit/types@^16.0.0":
   version "16.0.0"
@@ -3566,6 +3547,11 @@ agent-base@^7.1.0, agent-base@^7.1.2:
   version "7.1.4"
   resolved "https://registry.yarnpkg.com/agent-base/-/agent-base-7.1.4.tgz#e3cd76d4c548ee895d3c3fd8dc1f6c5b9032e7a8"
   integrity sha512-MnA+YT8fwfJPgBx3m60MNqakm30XOkyIoH1y6huTQvC0PwZG7ki8NacLBcrPbNoo8vEZy7Jpuk7+jMO+CUovTQ==
+
+agent-browser@^0.26.0:
+  version "0.26.0"
+  resolved "https://registry.yarnpkg.com/agent-browser/-/agent-browser-0.26.0.tgz#d3fc017e7f00757b454de6c997120a044a7d7f98"
+  integrity sha512-pdqSfjwbFSp+qnwlb2g23e9wXveIOfMi19xpPA9xZUbzEAUp6W4YBZj6Ybj8z4M7WkcbGDDYc+oDIHDt9R3EDQ==
 
 agentkeepalive@^4.2.1:
   version "4.6.0"
