@@ -7,6 +7,7 @@ import {
 import React, {
   useCallback,
   useEffect,
+  useLayoutEffect,
   useMemo,
   useRef,
   useState,
@@ -22,9 +23,9 @@ import {
   TabsTrigger
 } from '@/app/components/ui/tabs'
 import { getMergeOptions, markPullRequestActive } from '@/app/lib/api'
+import { usePullRequestNavigation } from '@/app/pull-requests/PullRequestNavigationProvider'
 import { useAppDispatch, useAppSelector } from '@/app/store/hooks'
 import { mergeOptionsActions } from '@/app/store/merge-options-slice'
-import { navigationActions } from '@/app/store/navigation-slice'
 import { clamp01 } from '@/math'
 
 import { ChecksView } from '../pull-requests/ChecksView'
@@ -50,7 +51,8 @@ export function PullRequestPage(): ReactElement {
   )
 
   const dispatch = useAppDispatch()
-  const [searchParams, setSearchParams] = useSearchParams()
+  const [searchParams] = useSearchParams()
+  const navigation = usePullRequestNavigation()
 
   const checksCount = useAppSelector(
     (state) => state.checks.items.filter((c) => c.pullRequestId === id).length
@@ -161,47 +163,71 @@ export function PullRequestPage(): ReactElement {
     [checksCount, filesCount]
   )
 
-  useEffect(function trackScrollPosition() {
-    const scrollContainer = containerRef.current?.closest('.overflow-auto')
+  useEffect(
+    function trackScrollPosition() {
+      const scrollContainer = containerRef.current?.closest('.overflow-auto')
 
-    if (!scrollContainer) {
+      if (!(scrollContainer instanceof HTMLElement)) {
+        return
+      }
+
+      navigation.registerScrollContainer(scrollContainer)
+
+      let rafId: number | null = null
+
+      const onScroll = () => {
+        if (rafId !== null) return
+
+        rafId = requestAnimationFrame(() => {
+          rafId = null
+          const threshold = 110
+          const progress = clamp01(
+            Math.min(scrollContainer.scrollTop, threshold) / threshold
+          )
+
+          setStickyHeaderProgress(progress)
+        })
+      }
+
+      scrollContainer.addEventListener('scroll', onScroll)
+
+      onScroll()
+
+      return () => {
+        scrollContainer.removeEventListener('scroll', onScroll)
+        if (rafId !== null) cancelAnimationFrame(rafId)
+      }
+    },
+    [navigation]
+  )
+
+  useLayoutEffect(
+    function restoreScrollPosition() {
+      if (!id) {
+        return
+      }
+
+      const scrollContainer = containerRef.current?.closest('.overflow-auto')
+
+      if (!(scrollContainer instanceof HTMLElement)) {
+        return
+      }
+
+      navigation.setActiveKey(id, activeTab)
+
+      const saved = navigation.getScrollPosition(id, activeTab)
+
+      scrollContainer.scrollTop = saved
+    },
+    [id, activeTab, navigation]
+  )
+
+  const handleTabChange = (tabId: string) => {
+    if (!id) {
       return
     }
 
-    let rafId: number | null = null
-
-    const onScroll = () => {
-      if (rafId !== null) return
-
-      rafId = requestAnimationFrame(() => {
-        rafId = null
-        const threshold = 110
-        const progress = clamp01(
-          Math.min(scrollContainer.scrollTop, threshold) / threshold
-        )
-
-        setStickyHeaderProgress(progress)
-      })
-    }
-
-    scrollContainer.addEventListener('scroll', onScroll)
-
-    onScroll()
-
-    return () => {
-      scrollContainer.removeEventListener('scroll', onScroll)
-      if (rafId !== null) cancelAnimationFrame(rafId)
-    }
-  }, [])
-
-  const handleTabChange = (tabId: string) => {
-    setSearchParams((previous) => {
-      const next = new URLSearchParams(previous)
-      next.set('tab', tabId)
-
-      return next
-    })
-    dispatch(navigationActions.setActiveTab({ pullRequestId: id, tab: tabId }))
+    navigation.setActiveTab(id, tabId)
   }
 
   if (!pullRequest) {

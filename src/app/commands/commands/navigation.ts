@@ -2,6 +2,7 @@ import { ArrowRight, GitPullRequest, Home } from 'lucide-react'
 
 import { commandRegistry } from '../registry'
 import { getNavigate } from '../context'
+import { getPullRequestNavigation } from '../pr-navigation-accessor'
 import { getStore } from '../store-accessor'
 import type { PullRequest } from '@/types/pull-request'
 
@@ -20,6 +21,14 @@ tabs.forEach((tab, index) => {
       ctx.view === 'pr-detail' && ctx.pullRequest !== undefined,
     execute: (ctx) => {
       if (!ctx.pullRequest) return
+
+      const navigation = getPullRequestNavigation()
+
+      if (navigation) {
+        navigation.setActiveTab(ctx.pullRequest.id, tab)
+        return
+      }
+
       const navigate = getNavigate()
       navigate(`/pull-requests/${ctx.pullRequest.id}?tab=${tab}`)
     }

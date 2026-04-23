@@ -26,6 +26,7 @@ import { ThemeProvider } from '@/app/lib/store/themeContext'
 import { BackgroundSyncerPage } from '@/app/routes/BackgroundSyncerPage'
 import { HomePage } from '@/app/routes/HomePage'
 import { OnboardingPage } from '@/app/routes/OnboardingPage'
+import { PullRequestNavigationProvider } from '@/app/pull-requests/PullRequestNavigationProvider'
 import { PullRequestPage } from '@/app/routes/PullRequestPage'
 import { SettingsPage } from '@/app/routes/SettingsPage'
 import { SignInPage } from '@/app/routes/SignInPage'
@@ -53,9 +54,11 @@ export function App({ store }: AppProps): ReactElement {
           <TasksProvider>
             <AuthProvider>
               <CommandContextProvider>
-                <ShortcutListener />
-                <CommandPalette />
-                <AppContent />
+                <PullRequestNavigationProvider>
+                  <ShortcutListener />
+                  <CommandPalette />
+                  <AppContent />
+                </PullRequestNavigationProvider>
               </CommandContextProvider>
             </AuthProvider>
           </TasksProvider>
