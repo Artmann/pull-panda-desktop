@@ -16,7 +16,6 @@ import commitsReducer from '@/app/store/commits-slice'
 import draftsReducer from '@/app/store/drafts-slice'
 import mergeOptionsReducer from '@/app/store/merge-options-slice'
 import modifiedFilesReducer from '@/app/store/modified-files-slice'
-import navigationReducer from '@/app/store/navigation-slice'
 import pendingReviewCommentsReducer from '@/app/store/pending-review-comments-slice'
 import pendingReviewsReducer from '@/app/store/pending-reviews-slice'
 import pullRequestsReducer from '@/app/store/pull-requests-slice'
@@ -26,6 +25,7 @@ import tasksReducer from '@/app/store/tasks-slice'
 
 import { AuthProvider } from '@/app/lib/store/authContext'
 import { ThemeProvider } from '@/app/lib/store/themeContext'
+import { PullRequestNavigationProvider } from '@/app/pull-requests/PullRequestNavigationProvider'
 
 import { PullRequestPage } from './PullRequestPage'
 
@@ -141,7 +141,6 @@ function createTestStore(
       drafts: draftsReducer,
       mergeOptions: mergeOptionsReducer,
       modifiedFiles: modifiedFilesReducer,
-      navigation: navigationReducer,
       pendingReviewComments: pendingReviewCommentsReducer,
       pendingReviews: pendingReviewsReducer,
       pullRequests: pullRequestsReducer,
@@ -178,12 +177,14 @@ function renderWithProviders(
       <ThemeProvider>
         <AuthProvider>
           <MemoryRouter initialEntries={[`/pr/${pullRequestId}`]}>
-            <Routes>
-              <Route
-                element={<PullRequestPage />}
-                path="/pr/:id"
-              />
-            </Routes>
+            <PullRequestNavigationProvider>
+              <Routes>
+                <Route
+                  element={<PullRequestPage />}
+                  path="/pr/:id"
+                />
+              </Routes>
+            </PullRequestNavigationProvider>
           </MemoryRouter>
         </AuthProvider>
       </ThemeProvider>

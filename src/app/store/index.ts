@@ -14,7 +14,6 @@ import mergeOptionsReducer, {
 import modifiedFilesReducer, {
   ModifiedFilesState
 } from './modified-files-slice'
-import navigationReducer, { NavigationState } from './navigation-slice'
 import pendingReviewCommentsReducer, {
   loadPendingReviewCommentsFromStorage,
   PendingReviewCommentsState,
@@ -35,7 +34,6 @@ export interface PreloadedState {
   drafts?: DraftsState
   mergeOptions?: MergeOptionsState
   modifiedFiles: ModifiedFilesState
-  navigation?: NavigationState
   pendingReviewComments?: PendingReviewCommentsState
   pendingReviews?: PendingReviewsState
   pullRequests?: PullRequestsState
@@ -63,7 +61,6 @@ export function createStore(preloadedState?: PreloadedState) {
       drafts: draftsReducer,
       mergeOptions: mergeOptionsReducer,
       modifiedFiles: modifiedFilesReducer,
-      navigation: navigationReducer,
       pendingReviewComments: pendingReviewCommentsReducer,
       pendingReviews: pendingReviewsReducer,
       pullRequests: pullRequestsReducer,
