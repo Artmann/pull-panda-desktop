@@ -1228,6 +1228,41 @@
   resolved "https://registry.yarnpkg.com/@exodus/bytes/-/bytes-1.8.0.tgz#8382835f71db8377cf634a4ef5a71806e86ba9c7"
   integrity sha512-8JPn18Bcp8Uo1T82gR8lh2guEOa5KKU/IEKvvdp0sgmi7coPBWf1Doi1EXsGZb2ehc8ym/StJCjffYV+ne7sXQ==
 
+"@fallow-cli/darwin-arm64@2.45.1":
+  version "2.45.1"
+  resolved "https://registry.yarnpkg.com/@fallow-cli/darwin-arm64/-/darwin-arm64-2.45.1.tgz#cca8e9a5d93df8a19956f093a6223a2993f69ec9"
+  integrity sha512-93BVMr8pw9pKu46yMdTZ7K0wFHuAcdfTvwzJ5uqhn075w5e/63LpRuejYj17Np1t3Grb76JB9Sbk9TGDmxYQVw==
+
+"@fallow-cli/darwin-x64@2.45.1":
+  version "2.45.1"
+  resolved "https://registry.yarnpkg.com/@fallow-cli/darwin-x64/-/darwin-x64-2.45.1.tgz#558f50b1ee2ed97b2b0574bbe0eefa6095716e70"
+  integrity sha512-OKAvhEUCJvPODHond7g6zWP0Pi1KkBuEXaAPh7sIms5aLYYCjmf9aA4XiMnkHS3whHaTDFEys9sK4ou+u5nB8Q==
+
+"@fallow-cli/linux-arm64-gnu@2.45.1":
+  version "2.45.1"
+  resolved "https://registry.yarnpkg.com/@fallow-cli/linux-arm64-gnu/-/linux-arm64-gnu-2.45.1.tgz#63168058c06efd77b1e1fe1d51f47db410847c18"
+  integrity sha512-p/WIclQVmwa1FnXWMlN/2MyiU6GKLPHvXmj3tF2+gZkcelAbzM1ApUOfcShzdtQEzJSILRJolCAXl+QWByQJJQ==
+
+"@fallow-cli/linux-arm64-musl@2.45.1":
+  version "2.45.1"
+  resolved "https://registry.yarnpkg.com/@fallow-cli/linux-arm64-musl/-/linux-arm64-musl-2.45.1.tgz#00229d8be1e7ba6f30ea42fbbac252ddb8adc668"
+  integrity sha512-EnRlXLHBWNNWGUHApPnU2/SXs62Nr1qKXeSpeliZNSRUaWmNSYYe+YtBPOU51JN9+t8NDkown8TJUDFp4v4pRg==
+
+"@fallow-cli/linux-x64-gnu@2.45.1":
+  version "2.45.1"
+  resolved "https://registry.yarnpkg.com/@fallow-cli/linux-x64-gnu/-/linux-x64-gnu-2.45.1.tgz#20f03c002eff2c882f1a5b26e3c7ad9ef0e17c72"
+  integrity sha512-mdC8NxUCB6TGGs0lV65F8eZ5SsEUrzG1+jkWpxOfGIyGpBRQYgcv0uYVnA2/wUCQAJJx0ab1X2j9gR34/VwZ/w==
+
+"@fallow-cli/linux-x64-musl@2.45.1":
+  version "2.45.1"
+  resolved "https://registry.yarnpkg.com/@fallow-cli/linux-x64-musl/-/linux-x64-musl-2.45.1.tgz#296b220d45574f518f654d46f99086ba954f848c"
+  integrity sha512-65Xzy63xbT80io6t1OVQoA/xddu7V3rcWlNQd2+FFn0I8Sw2/VwKBAXebmjfI/qiBUuZwPBRsl4lk27rq2Vwow==
+
+"@fallow-cli/win32-x64-msvc@2.45.1":
+  version "2.45.1"
+  resolved "https://registry.yarnpkg.com/@fallow-cli/win32-x64-msvc/-/win32-x64-msvc-2.45.1.tgz#574cc5f870fa4441516bc1c25f239af7ee93fcb0"
+  integrity sha512-bjSTrAaJzAqT/mAylY9XMz0ntDsZhyTek3Ay9xhsw/93+2hPyfglpV7oGj/t/NTc+q2/OUIoThv6W27I8XnVLw==
+
 "@floating-ui/core@^1.7.3":
   version "1.7.3"
   resolved "https://registry.yarnpkg.com/@floating-ui/core/-/core-1.7.3.tgz#462d722f001e23e46d86fd2bd0d21b7693ccb8b7"
@@ -4040,7 +4075,7 @@ dequal@^2.0.0, dequal@^2.0.3:
   resolved "https://registry.yarnpkg.com/dequal/-/dequal-2.0.3.tgz#2644214f1997d39ed0ee0ece72335490a7ac67be"
   integrity sha512-0je+qPKHEMohvfRTCEo3CrPG6cAzAYgmzKyxRiYSSDkS6eGJdyVJm7WaYA5ECaAD9wLB2T4EEeymA5aFVcYXCA==
 
-detect-libc@^2.0.1, detect-libc@^2.0.3:
+detect-libc@2.1.2, detect-libc@^2.0.1, detect-libc@^2.0.3:
   version "2.1.2"
   resolved "https://registry.yarnpkg.com/detect-libc/-/detect-libc-2.1.2.tgz#689c5dcdc1900ef5583a4cb9f6d7b473742074ad"
   integrity sha512-Btj2BOOO83o3WyH59e8MgXsxEQVcarkUOpEYrubB0urwnN10yQ364rsiByU11nZlqWYZm05i/of7io4mzihBtQ==
@@ -4797,6 +4832,21 @@ extract-zip@^2.0.0, extract-zip@^2.0.1:
     yauzl "^2.10.0"
   optionalDependencies:
     "@types/yauzl" "^2.9.1"
+
+fallow@^2.45.1:
+  version "2.45.1"
+  resolved "https://registry.yarnpkg.com/fallow/-/fallow-2.45.1.tgz#6b1093fff496d418ddc8b2f4a9c64e0f547667c0"
+  integrity sha512-kLEjNzjyfU4Jjg1hixBR+fMzlRs9lKe9yxKulkhg6LkRMh7oggxnQp6mDeSrgFjxA3/XvV+alCUsgtdFQgWaQg==
+  dependencies:
+    detect-libc "2.1.2"
+  optionalDependencies:
+    "@fallow-cli/darwin-arm64" "2.45.1"
+    "@fallow-cli/darwin-x64" "2.45.1"
+    "@fallow-cli/linux-arm64-gnu" "2.45.1"
+    "@fallow-cli/linux-arm64-musl" "2.45.1"
+    "@fallow-cli/linux-x64-gnu" "2.45.1"
+    "@fallow-cli/linux-x64-musl" "2.45.1"
+    "@fallow-cli/win32-x64-msvc" "2.45.1"
 
 fast-content-type-parse@^3.0.0:
   version "3.0.0"

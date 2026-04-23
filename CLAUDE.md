@@ -8,8 +8,8 @@ Vite.
 - Don't use the `sr-only` Tailwind class. It causes layout issues.
 - Before using `useEffect`, review
   https://react.dev/learn/you-might-not-need-an-effect.
-- After making code changes, always run `yarn lint` and `yarn tsc --noEmit` and
-  fix every error before considering the task done.
+- After making code changes, always run `yarn lint`, `yarn tsc --noEmit`, and
+  `yarn fallow` and fix every error before considering the task done.
 - When creating or updating resources:
   1. Update the Redux state optimistically (synchronously, before any API call).
   2. Fire the API request — do NOT use `async/await` in event handlers (e.g.
@@ -25,6 +25,8 @@ Vite.
 - `yarn start` - Start development server
 - `yarn make` - Build distributable packages
 - `yarn lint` - Run ESLint
+- `yarn fallow` - Run fallow to check for dead code, circular deps, and
+  complexity hotspots
 - `yarn format` - Format code with Prettier
 - `yarn drizzle-kit generate` - Generate new migration from schema changes
 - `yarn drizzle-kit migrate` - Apply pending migrations
