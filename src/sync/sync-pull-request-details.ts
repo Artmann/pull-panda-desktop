@@ -9,6 +9,7 @@ import { syncComments } from './sync-comments'
 import { syncCommits } from './sync-commits'
 import { syncFiles } from './sync-files'
 import { syncReviews } from './sync-reviews'
+import { syncReviewThreads } from './sync-review-threads'
 
 // Delay between sync operations to avoid burst requests
 const delayBetweenSyncs = 200
@@ -59,7 +60,8 @@ export async function syncPullRequestDetails({
     { name: 'Commits', fn: syncCommits },
     { name: 'Files', fn: syncFiles },
     { name: 'Reviews', fn: syncReviews },
-    { name: 'Comments', fn: syncComments }
+    { name: 'Comments', fn: syncComments },
+    { name: 'ReviewThreads', fn: syncReviewThreads }
   ]
 
   for (const operation of syncOperations) {

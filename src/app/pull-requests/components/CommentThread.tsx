@@ -1,4 +1,4 @@
-import { Code2, Loader2 } from 'lucide-react'
+import { Check, CircleCheck, Code2, Loader2 } from 'lucide-react'
 import {
   Fragment,
   memo,
@@ -7,10 +7,13 @@ import {
   type FormEvent,
   type ReactElement
 } from 'react'
+import { shallowEqual } from 'react-redux'
+import { toast } from 'sonner'
 
 import type { PullRequest } from '@/types/pull-request'
-import type { Comment } from '@/types/pull-request-details'
+import type { Comment, ReviewThread } from '@/types/pull-request-details'
 
+import { cn } from '@/app/lib/utils'
 import { TimeAgo } from '@/app/components/TimeAgo'
 import { Avatar, AvatarFallback, AvatarImage } from '@/app/components/ui/avatar'
 import { Button } from '@/app/components/ui/button'
@@ -23,14 +26,20 @@ import {
 } from '@/app/components/ui/card'
 import { Separator } from '@/app/components/ui/separator'
 import { Textarea } from '@/app/components/ui/textarea'
-import { createComment, syncPullRequestDetails } from '@/app/lib/api'
+import {
+  createComment,
+  resolveReviewThread,
+  syncPullRequestDetails,
+  unresolveReviewThread
+} from '@/app/lib/api'
 import { useAuth } from '@/app/lib/store/authContext'
 import {
   commentsActions,
   createOptimisticComment
 } from '@/app/store/comments-slice'
 import { getDraftKeyForReply } from '@/app/store/drafts-slice'
-import { useAppDispatch } from '@/app/store/hooks'
+import { useAppDispatch, useAppSelector } from '@/app/store/hooks'
+import { reviewThreadsActions } from '@/app/store/review-threads-slice'
 import { useDraft } from '@/app/store/use-draft'
 
 import { CommentBody } from './CommentBody'
@@ -238,6 +247,125 @@ const CommentReply = memo(function CommentReply({
   )
 })
 
+interface ResolveThreadButtonProps {
+  pullRequest: PullRequest
+  thread: ReviewThread
+}
+
+const ResolveThreadButton = memo(function ResolveThreadButton({
+  pullRequest,
+  thread
+}: ResolveThreadButtonProps): ReactElement {
+  const dispatch = useAppDispatch()
+  const [isSubmitting, setIsSubmitting] = useState(false)
+
+  const handleClick = useCallback(() => {
+    if (isSubmitting) {
+      return
+    }
+
+    const wasResolved = thread.isResolved
+    const previousResolvedByLogin = thread.resolvedByLogin
+
+    dispatch(
+      reviewThreadsActions.updateResolution({
+        gitHubId: thread.gitHubId,
+        isResolved: !wasResolved,
+        resolvedByLogin: wasResolved ? null : previousResolvedByLogin
+      })
+    )
+
+    setIsSubmitting(true)
+
+    const action = wasResolved ? unresolveReviewThread : resolveReviewThread
+
+    action({
+      owner: pullRequest.repositoryOwner,
+      pullNumber: pullRequest.number,
+      repo: pullRequest.repositoryName,
+      threadId: thread.gitHubId
+    })
+      .then((response) => {
+        dispatch(
+          reviewThreadsActions.updateResolution({
+            gitHubId: response.gitHubId,
+            isResolved: response.isResolved,
+            resolvedByLogin: response.resolvedByLogin
+          })
+        )
+      })
+      .catch((error: unknown) => {
+        dispatch(
+          reviewThreadsActions.updateResolution({
+            gitHubId: thread.gitHubId,
+            isResolved: wasResolved,
+            resolvedByLogin: previousResolvedByLogin
+          })
+        )
+
+        const message =
+          error instanceof Error
+            ? error.message
+            : wasResolved
+              ? 'Failed to unresolve thread'
+              : 'Failed to resolve thread'
+
+        toast.error(message)
+      })
+      .finally(() => {
+        setIsSubmitting(false)
+      })
+  }, [dispatch, isSubmitting, pullRequest, thread])
+
+  return (
+    <Button
+      disabled={isSubmitting}
+      onClick={handleClick}
+      size="sm"
+      variant={thread.isResolved ? 'ghost' : 'outline'}
+    >
+      {isSubmitting ? (
+        <Loader2 className="size-3 animate-spin" />
+      ) : thread.isResolved ? (
+        <CircleCheck className="size-3" />
+      ) : (
+        <Check className="size-3" />
+      )}
+      {thread.isResolved ? 'Unresolve' : 'Resolve'}
+    </Button>
+  )
+})
+
+interface ResolvedBadgeProps {
+  thread: ReviewThread
+}
+
+function ResolvedBadge({ thread }: ResolvedBadgeProps): ReactElement {
+  return (
+    <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+      <CircleCheck className="size-3" />
+      <span>
+        Resolved
+        {thread.resolvedByLogin ? ` by ${thread.resolvedByLogin}` : ''}
+      </span>
+    </div>
+  )
+}
+
+function useReviewThread(threadGitHubId: string | null): ReviewThread | null {
+  return useAppSelector((state) => {
+    if (!threadGitHubId) {
+      return null
+    }
+
+    return (
+      state.reviewThreads.items.find(
+        (item) => item.gitHubId === threadGitHubId
+      ) ?? null
+    )
+  }, shallowEqual)
+}
+
 interface CommentThreadCardProps {
   comment: Comment
   allComments: Comment[]
@@ -251,11 +379,16 @@ export const CommentThreadCard = memo(function CommentThreadCard({
   hideAuthor = false,
   pullRequest
 }: CommentThreadCardProps): ReactElement {
-  // Only show reply form for review comments (where GitHub supports threading)
   const isReviewComment = comment.gitHubReviewThreadId !== null
+  const thread = useReviewThread(comment.gitHubReviewThreadId)
 
   return (
-    <Card className="p-0 w-full gap-0 shadow-none">
+    <Card
+      className={cn(
+        'p-0 w-full gap-0 shadow-none',
+        thread?.isResolved && 'opacity-70'
+      )}
+    >
       <CardContent className="p-0 w-full">
         <CommentThread
           comment={comment}
@@ -264,7 +397,16 @@ export const CommentThreadCard = memo(function CommentThreadCard({
         />
       </CardContent>
       {pullRequest && isReviewComment && (
-        <CardFooter className="px-3 pt-1! pb-2 border-t border-border">
+        <CardFooter className="px-3 pt-1! pb-2 border-t border-border flex flex-col items-stretch gap-2">
+          {thread && (
+            <div className="flex items-center justify-between pt-1">
+              {thread.isResolved ? <ResolvedBadge thread={thread} /> : <span />}
+              <ResolveThreadButton
+                pullRequest={pullRequest}
+                thread={thread}
+              />
+            </div>
+          )}
           <CommentReply
             comment={comment}
             pullRequest={pullRequest}
@@ -292,9 +434,15 @@ export const FileCommentThreadCard = memo(function FileCommentThreadCard({
   const line = comment.line ? comment.line : (comment.originalLine ?? 0)
   const lineStart = Math.max(0, line - numberOfLinesToShow)
   const lineEnd = Math.max(0, line)
+  const thread = useReviewThread(comment.gitHubReviewThreadId)
 
   return (
-    <Card className="p-0 w-full gap-0 shadow-none">
+    <Card
+      className={cn(
+        'p-0 w-full gap-0 shadow-none',
+        thread?.isResolved && 'opacity-70'
+      )}
+    >
       <CardHeader className="px-4 py-3 pb-4! bg-muted border-b border-border flex items-center gap-3">
         <Code2 className="w-4 h-4 text-muted-foreground shrink-0" />
         <CardTitle className="text-xs text-foreground/80 font-mono truncate">
@@ -318,7 +466,16 @@ export const FileCommentThreadCard = memo(function FileCommentThreadCard({
         />
       </CardContent>
       {pullRequest && (
-        <CardFooter className="px-3 pt-1! pb-2 border-t border-border">
+        <CardFooter className="px-3 pt-1! pb-2 border-t border-border flex flex-col items-stretch gap-2">
+          {thread && (
+            <div className="flex items-center justify-between pt-1">
+              {thread.isResolved ? <ResolvedBadge thread={thread} /> : <span />}
+              <ResolveThreadButton
+                pullRequest={pullRequest}
+                thread={thread}
+              />
+            </div>
+          )}
           <CommentReply
             comment={comment}
             pullRequest={pullRequest}

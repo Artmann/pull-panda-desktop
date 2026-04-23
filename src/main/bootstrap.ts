@@ -4,6 +4,7 @@ import { getDatabase } from '../database'
 import {
   pullRequests,
   reviews,
+  reviewThreads,
   comments,
   commentReactions,
   checks,
@@ -17,6 +18,7 @@ import type {
 } from '../types/pull-request'
 import type {
   Review,
+  ReviewThread,
   Comment,
   CommentReaction,
   Check,
@@ -45,6 +47,7 @@ export interface BootstrapData {
   pullRequests: PullRequest[]
   reactions: CommentReaction[]
   reviews: Review[]
+  reviewThreads: ReviewThread[]
 }
 
 interface PullRequestCounts {
@@ -161,6 +164,7 @@ export async function bootstrap(userLogin?: string): Promise<BootstrapData> {
   const allModifiedFiles: ModifiedFile[] = []
   const allReactions: CommentReaction[] = []
   const allReviews: Review[] = []
+  const allReviewThreads: ReviewThread[] = []
 
   for (const pullRequest of parsedPullRequests) {
     const details = await getPullRequestDetails(pullRequest.id, userLogin)
@@ -172,6 +176,7 @@ export async function bootstrap(userLogin?: string): Promise<BootstrapData> {
       allModifiedFiles.push(...details.files)
       allReactions.push(...details.reactions)
       allReviews.push(...details.reviews)
+      allReviewThreads.push(...details.reviewThreads)
     }
   }
 
@@ -183,7 +188,8 @@ export async function bootstrap(userLogin?: string): Promise<BootstrapData> {
     pendingReviews,
     pullRequests: parsedPullRequests,
     reactions: allReactions,
-    reviews: allReviews
+    reviews: allReviews,
+    reviewThreads: allReviewThreads
   }
 }
 
@@ -243,6 +249,17 @@ export async function getPullRequestDetails(
       and(
         eq(modifiedFiles.pullRequestId, pullRequestId),
         isNull(modifiedFiles.deletedAt)
+      )
+    )
+    .all()
+
+  const reviewThreadRows = database
+    .select()
+    .from(reviewThreads)
+    .where(
+      and(
+        eq(reviewThreads.pullRequestId, pullRequestId),
+        isNull(reviewThreads.deletedAt)
       )
     )
     .all()
@@ -345,6 +362,15 @@ export async function getPullRequestDetails(
     syncedAt: row.syncedAt
   }))
 
+  const parsedReviewThreads: ReviewThread[] = reviewThreadRows.map((row) => ({
+    id: row.id,
+    gitHubId: row.gitHubId,
+    pullRequestId: row.pullRequestId,
+    isResolved: row.isResolved,
+    resolvedByLogin: row.resolvedByLogin,
+    syncedAt: row.syncedAt
+  }))
+
   const pendingReview = userLogin
     ? (parsedReviews.find(
         (review) =>
@@ -359,7 +385,8 @@ export async function getPullRequestDetails(
     files: parsedFiles,
     pendingReview,
     reactions: parsedReactions,
-    reviews: parsedReviews
+    reviews: parsedReviews,
+    reviewThreads: parsedReviewThreads
   }
 }
 

@@ -14,6 +14,7 @@ import { AuthProvider } from '@/app/lib/store/authContext'
 import { ThemeProvider } from '@/app/lib/store/themeContext'
 import commentsReducer from '@/app/store/comments-slice'
 import draftsReducer, { getDraftKeyForReply } from '@/app/store/drafts-slice'
+import reviewThreadsReducer from '@/app/store/review-threads-slice'
 
 import { FileCommentThreadCard } from './CommentThread'
 
@@ -127,11 +128,13 @@ function createTestStore(preloadedState?: { drafts?: Record<string, string> }) {
   return configureStore({
     reducer: {
       comments: commentsReducer,
-      drafts: draftsReducer
+      drafts: draftsReducer,
+      reviewThreads: reviewThreadsReducer
     },
     preloadedState: {
       ...preloadedState,
-      comments: { items: [] }
+      comments: { items: [] },
+      reviewThreads: { items: [] }
     }
   })
 }

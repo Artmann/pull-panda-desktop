@@ -59,6 +59,12 @@ export async function sendPullRequestResourceEvents(
     })
 
     sendEvent(window, {
+      data: details.reviewThreads,
+      pullRequestId,
+      type: 'review-threads'
+    })
+
+    sendEvent(window, {
       data: details.pendingReview ?? null,
       pullRequestId,
       type: 'pending-review'

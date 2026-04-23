@@ -150,6 +150,63 @@ export async function deleteReview(
   }
 }
 
+export interface ReviewThreadResolutionRequest {
+  owner: string
+  pullNumber: number
+  repo: string
+  threadId: string
+}
+
+export interface ReviewThreadResolutionResponse {
+  gitHubId: string
+  isResolved: boolean
+  resolvedByLogin: string | null
+}
+
+export async function resolveReviewThread(
+  request: ReviewThreadResolutionRequest
+): Promise<ReviewThreadResolutionResponse> {
+  const baseUrl = await getApiBaseUrl()
+
+  const response = await fetch(`${baseUrl}/api/review-threads/resolve`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify(request)
+  })
+
+  if (!response.ok) {
+    const error = await response.json()
+
+    throw new Error(error.error ?? 'Failed to resolve review thread')
+  }
+
+  return response.json()
+}
+
+export async function unresolveReviewThread(
+  request: ReviewThreadResolutionRequest
+): Promise<ReviewThreadResolutionResponse> {
+  const baseUrl = await getApiBaseUrl()
+
+  const response = await fetch(`${baseUrl}/api/review-threads/unresolve`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify(request)
+  })
+
+  if (!response.ok) {
+    const error = await response.json()
+
+    throw new Error(error.error ?? 'Failed to unresolve review thread')
+  }
+
+  return response.json()
+}
+
 export async function createComment(
   request: CreateCommentRequest
 ): Promise<CreateCommentResponse> {

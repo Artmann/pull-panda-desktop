@@ -25,6 +25,9 @@ import pendingReviewsReducer, {
 import pullRequestsReducer, { PullRequestsState } from './pull-requests-slice'
 import reactionsReducer, { ReactionsState } from './reactions-slice'
 import reviewsReducer, { ReviewsState } from './reviews-slice'
+import reviewThreadsReducer, {
+  ReviewThreadsState
+} from './review-threads-slice'
 import tasksReducer, { TasksState } from './tasks-slice'
 
 export interface PreloadedState {
@@ -39,6 +42,7 @@ export interface PreloadedState {
   pullRequests?: PullRequestsState
   reactions: ReactionsState
   reviews: ReviewsState
+  reviewThreads: ReviewThreadsState
   tasks?: TasksState
 }
 
@@ -66,6 +70,7 @@ export function createStore(preloadedState?: PreloadedState) {
       pullRequests: pullRequestsReducer,
       reactions: reactionsReducer,
       reviews: reviewsReducer,
+      reviewThreads: reviewThreadsReducer,
       tasks: tasksReducer
     }
   })

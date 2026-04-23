@@ -19,6 +19,7 @@ import pendingReviewsReducer from '@/app/store/pending-reviews-slice'
 import pullRequestsReducer from '@/app/store/pull-requests-slice'
 import reactionsReducer from '@/app/store/reactions-slice'
 import reviewsReducer from '@/app/store/reviews-slice'
+import reviewThreadsReducer from '@/app/store/review-threads-slice'
 import tasksReducer from '@/app/store/tasks-slice'
 
 import { App } from './App'
@@ -83,6 +84,7 @@ function createTestStore() {
       pullRequests: pullRequestsReducer,
       reactions: reactionsReducer,
       reviews: reviewsReducer,
+      reviewThreads: reviewThreadsReducer,
       tasks: tasksReducer
     },
     preloadedState: {
@@ -100,6 +102,7 @@ function createTestStore() {
       },
       reactions: { items: [] },
       reviews: { items: [] },
+      reviewThreads: { items: [] },
       tasks: { items: [] }
     }
   })

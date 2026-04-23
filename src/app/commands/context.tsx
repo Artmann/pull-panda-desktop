@@ -125,12 +125,39 @@ export function CommandContextProvider({
     shallowEqual
   )
 
+  const reviewThreads = useAppSelector(
+    (state) =>
+      pullRequestId
+        ? state.reviewThreads.items.filter(
+            (t) => t.pullRequestId === pullRequestId
+          )
+        : [],
+    shallowEqual
+  )
+
   const pullRequestDetails: PullRequestDetails | undefined = useMemo(
     () =>
       pullRequestId
-        ? { checks, comments, commits, files, reactions, reviews }
+        ? {
+            checks,
+            comments,
+            commits,
+            files,
+            reactions,
+            reviews,
+            reviewThreads
+          }
         : undefined,
-    [pullRequestId, checks, comments, commits, files, reactions, reviews]
+    [
+      pullRequestId,
+      checks,
+      comments,
+      commits,
+      files,
+      reactions,
+      reviews,
+      reviewThreads
+    ]
   )
 
   // Derive view from current path

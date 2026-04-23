@@ -24,11 +24,16 @@ vi.mock('./sync-comments', () => ({
   syncComments: vi.fn()
 }))
 
+vi.mock('./sync-review-threads', () => ({
+  syncReviewThreads: vi.fn()
+}))
+
 import { syncChecks } from './sync-checks'
 import { syncCommits } from './sync-commits'
 import { syncFiles } from './sync-files'
 import { syncReviews } from './sync-reviews'
 import { syncComments } from './sync-comments'
+import { syncReviewThreads } from './sync-review-threads'
 import { syncPullRequestDetails } from './sync-pull-request-details'
 
 describe('syncPullRequestDetails', () => {
@@ -41,6 +46,7 @@ describe('syncPullRequestDetails', () => {
     vi.mocked(syncFiles).mockResolvedValue(undefined)
     vi.mocked(syncReviews).mockResolvedValue(undefined)
     vi.mocked(syncComments).mockResolvedValue(undefined)
+    vi.mocked(syncReviewThreads).mockResolvedValue(undefined)
 
     // Insert test PR records for the tests that need them
     const db = getDatabase()
@@ -204,6 +210,9 @@ describe('syncPullRequestDetails', () => {
     vi.mocked(syncFiles).mockRejectedValue(new Error('Files error'))
     vi.mocked(syncReviews).mockRejectedValue(new Error('Reviews error'))
     vi.mocked(syncComments).mockRejectedValue(new Error('Comments error'))
+    vi.mocked(syncReviewThreads).mockRejectedValue(
+      new Error('ReviewThreads error')
+    )
 
     const result = await syncPullRequestDetails({
       token: 'test-token',
@@ -214,7 +223,7 @@ describe('syncPullRequestDetails', () => {
     })
 
     expect(result.success).toEqual(false)
-    expect(result.errors).toHaveLength(5)
+    expect(result.errors).toHaveLength(6)
   })
 
   it('should pass correct parameters to syncFiles', async () => {

@@ -129,6 +129,30 @@ export const commentReactions = sqliteTable(
 export type CommentReaction = typeof commentReactions.$inferSelect
 export type NewCommentReaction = typeof commentReactions.$inferInsert
 
+export const reviewThreads = sqliteTable(
+  'review_threads',
+  {
+    id: text('id').primaryKey(),
+    gitHubId: text('github_id').notNull(),
+    pullRequestId: text('pull_request_id').notNull(),
+
+    isResolved: integer('is_resolved', { mode: 'boolean' })
+      .notNull()
+      .default(false),
+    resolvedByLogin: text('resolved_by_login'),
+
+    syncedAt: text('synced_at').notNull(),
+    deletedAt: text('deleted_at')
+  },
+  (table) => [
+    index('review_threads_pull_request_id_idx').on(table.pullRequestId),
+    index('review_threads_github_id_idx').on(table.gitHubId)
+  ]
+)
+
+export type ReviewThread = typeof reviewThreads.$inferSelect
+export type NewReviewThread = typeof reviewThreads.$inferInsert
+
 export const checks = sqliteTable(
   'checks',
   {

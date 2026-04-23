@@ -46,7 +46,8 @@ async function main() {
     pendingReviews: bootstrapData?.pendingReviews ?? {},
     pullRequests: { initialized: true, items: readyPullRequests },
     reactions: { items: bootstrapData?.reactions ?? [] },
-    reviews: { items: bootstrapData?.reviews ?? [] }
+    reviews: { items: bootstrapData?.reviews ?? [] },
+    reviewThreads: { items: bootstrapData?.reviewThreads ?? [] }
   })
 
   const root = document.getElementById('root')

@@ -40,6 +40,7 @@ import { pendingReviewsActions } from '@/app/store/pending-reviews-slice'
 import { pullRequestsActions } from '@/app/store/pull-requests-slice'
 import { reactionsActions } from '@/app/store/reactions-slice'
 import { reviewsActions } from '@/app/store/reviews-slice'
+import { reviewThreadsActions } from '@/app/store/review-threads-slice'
 import { AppFooter } from './AppFooter'
 
 interface AppProps {
@@ -162,6 +163,15 @@ function AppContent(): ReactElement {
         case 'reviews':
           dispatch(
             reviewsActions.setForPullRequest({
+              pullRequestId: event.pullRequestId,
+              items: event.data
+            })
+          )
+          break
+
+        case 'review-threads':
+          dispatch(
+            reviewThreadsActions.setForPullRequest({
               pullRequestId: event.pullRequestId,
               items: event.data
             })
