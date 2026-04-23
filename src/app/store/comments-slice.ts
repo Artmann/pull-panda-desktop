@@ -8,7 +8,7 @@ export interface CommentsState {
 
 const initialState: CommentsState = { items: [] }
 
-export const commentsSlice = createSlice({
+const commentsSlice = createSlice({
   name: 'comments',
   initialState,
   reducers: {

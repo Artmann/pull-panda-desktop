@@ -32,7 +32,7 @@ export function createOptimisticReview(pullRequestId: string): PendingReview {
   }
 }
 
-export const pendingReviewsSlice = createSlice({
+const pendingReviewsSlice = createSlice({
   name: 'pendingReviews',
   initialState,
   reducers: {

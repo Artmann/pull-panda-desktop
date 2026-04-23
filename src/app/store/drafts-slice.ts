@@ -26,7 +26,7 @@ export function saveDraftsToStorage(drafts: DraftsState): void {
 
 const initialState: DraftsState = {}
 
-export const draftsSlice = createSlice({
+const draftsSlice = createSlice({
   name: 'drafts',
   initialState,
   reducers: {

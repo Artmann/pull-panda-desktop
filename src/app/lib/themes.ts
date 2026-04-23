@@ -916,7 +916,6 @@ export const appThemes: AppTheme[] = [
 
 export const defaultDarkThemeValue = 'catppuccin-mocha'
 export const defaultLightThemeValue = 'catppuccin-latte'
-export const defaultThemeValue = 'catppuccin-latte'
 
 export function getThemesForMode(mode: 'dark' | 'light'): AppTheme[] {
   return appThemes.filter((t) => t.modes === 'both' || t.modes === mode)

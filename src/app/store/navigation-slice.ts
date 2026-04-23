@@ -8,7 +8,7 @@ const initialState: NavigationState = {
   activeTab: {}
 }
 
-export const navigationSlice = createSlice({
+const navigationSlice = createSlice({
   name: 'navigation',
   initialState,
   reducers: {

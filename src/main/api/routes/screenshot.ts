@@ -3,7 +3,7 @@ import path from 'node:path'
 
 import { Hono } from 'hono'
 
-import { getApiMainWindow } from '../server'
+import { getApiMainWindow } from '../main-window-ref'
 import type { AppEnv } from './comments'
 
 export const screenshotRoute = new Hono<AppEnv>()

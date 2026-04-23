@@ -8,7 +8,7 @@ export interface ReviewsState {
 
 const initialState: ReviewsState = { items: [] }
 
-export const reviewsSlice = createSlice({
+const reviewsSlice = createSlice({
   name: 'reviews',
   initialState,
   reducers: {

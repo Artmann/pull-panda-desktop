@@ -18,37 +18,7 @@ async function getApiBaseUrl(): Promise<string> {
   return apiBaseUrl
 }
 
-export interface GetChecksRequest {
-  owner: string
-  pullNumber: number
-  pullRequestId: string
-  repo: string
-}
-
-export interface Check {
-  id: string
-  gitHubId: string
-  pullRequestId: string
-  name: string
-  state: string | null
-  conclusion: string | null
-  commitSha: string | null
-  suiteName: string | null
-  durationInSeconds: number | null
-  detailsUrl: string | null
-  message: string | null
-  url: string | null
-  gitHubCreatedAt: string | null
-  gitHubUpdatedAt: string | null
-  syncedAt: string
-}
-
-export interface GetChecksResponse {
-  checks: Check[]
-  hasRunningChecks: boolean
-}
-
-export interface CreateCommentRequest {
+interface CreateCommentRequest {
   body: string
   owner: string
   pullNumber: number
@@ -56,18 +26,18 @@ export interface CreateCommentRequest {
   reviewCommentId?: number
 }
 
-export interface CreateCommentResponse {
+interface CreateCommentResponse {
   id: number
   success: boolean
 }
 
-export interface CreateReviewRequest {
+interface CreateReviewRequest {
   owner: string
   pullNumber: number
   repo: string
 }
 
-export interface CreateReviewResponse {
+interface CreateReviewResponse {
   authorAvatarUrl: string | null
   authorLogin: string | null
   body: string | null
@@ -77,14 +47,14 @@ export interface CreateReviewResponse {
   state: string
 }
 
-export interface ReviewComment {
+interface ReviewComment {
   body: string
   line: number
   path: string
   side: 'LEFT' | 'RIGHT'
 }
 
-export interface SubmitReviewRequest {
+interface SubmitReviewRequest {
   body?: string
   comments?: ReviewComment[]
   event: 'APPROVE' | 'REQUEST_CHANGES' | 'COMMENT'
@@ -94,7 +64,7 @@ export interface SubmitReviewRequest {
   reviewId: number
 }
 
-export interface DeleteReviewRequest {
+interface DeleteReviewRequest {
   owner: string
   pullNumber: number
   repo: string
@@ -231,45 +201,6 @@ export async function markPullRequestActive(
   }
 }
 
-const checksRequestTimeout = 10000
-
-export async function getChecks(
-  request: GetChecksRequest
-): Promise<GetChecksResponse> {
-  const baseUrl = await getApiBaseUrl()
-  const params = new URLSearchParams({
-    owner: request.owner,
-    pullNumber: String(request.pullNumber),
-    repo: request.repo
-  })
-
-  const controller = new AbortController()
-  const timeoutId = setTimeout(() => controller.abort(), checksRequestTimeout)
-
-  try {
-    const response = await fetch(
-      `${baseUrl}/api/checks/${request.pullRequestId}?${params}`,
-      {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        signal: controller.signal
-      }
-    )
-
-    if (!response.ok) {
-      const error = await response.json()
-
-      throw new Error(error.error ?? 'Failed to fetch checks')
-    }
-
-    return response.json()
-  } finally {
-    clearTimeout(timeoutId)
-  }
-}
-
 export async function syncPullRequestDetails(
   pullRequestId: string
 ): Promise<void> {
@@ -332,7 +263,7 @@ export async function getMergeOptions(
   return response.json()
 }
 
-export interface MergePullRequestRequest {
+interface MergePullRequestRequest {
   commitMessage?: string
   commitTitle?: string
   mergeMethod: 'merge' | 'squash' | 'rebase'
@@ -378,7 +309,7 @@ export async function mergePullRequest(
   return response.json()
 }
 
-export interface UpdatePullRequestRequest {
+interface UpdatePullRequestRequest {
   body?: string
   isDraft?: boolean
   owner: string

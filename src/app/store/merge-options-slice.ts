@@ -8,7 +8,7 @@ export interface MergeOptionsState {
 
 const initialState: MergeOptionsState = {}
 
-export const mergeOptionsSlice = createSlice({
+const mergeOptionsSlice = createSlice({
   name: 'mergeOptions',
   initialState,
   reducers: {

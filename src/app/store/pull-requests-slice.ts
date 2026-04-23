@@ -12,7 +12,7 @@ const initialState: PullRequestsState = {
   items: []
 }
 
-export const pullRequestsSlice = createSlice({
+const pullRequestsSlice = createSlice({
   name: 'pullRequests',
   initialState,
   reducers: {

@@ -102,4 +102,3 @@ export function getLanguageFromPath(path?: string): string | undefined {
   }
 }
 
-export { supportedLanguages }

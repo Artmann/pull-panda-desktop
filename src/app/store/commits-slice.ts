@@ -8,7 +8,7 @@ export interface CommitsState {
 
 const initialState: CommitsState = { items: [] }
 
-export const commitsSlice = createSlice({
+const commitsSlice = createSlice({
   name: 'commits',
   initialState,
   reducers: {
