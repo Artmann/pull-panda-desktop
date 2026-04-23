@@ -8,7 +8,7 @@ export interface ModifiedFilesState {
 
 const initialState: ModifiedFilesState = { items: [] }
 
-export const modifiedFilesSlice = createSlice({
+const modifiedFilesSlice = createSlice({
   name: 'modifiedFiles',
   initialState,
   reducers: {

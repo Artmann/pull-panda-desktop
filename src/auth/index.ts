@@ -3,15 +3,6 @@ import { app, safeStorage } from 'electron'
 import fs from 'node:fs'
 import path from 'node:path'
 
-export interface AuthState {
-  status: AuthStatus
-  userCode?: string
-  verificationUri?: string
-  expiresAt?: number
-  error?: string
-  isAuthenticated: boolean
-}
-
 export type AuthStatus =
   | 'authenticated'
   | 'error'
@@ -34,13 +25,13 @@ export interface GitHubUser {
   name: string | null
 }
 
-export interface TokenErrorResponse {
+interface TokenErrorResponse {
   error: string
   error_description: string
   error_uri?: string
 }
 
-export interface TokenResponse {
+interface TokenResponse {
   access_token: string
   token_type: string
   scope: string

@@ -36,7 +36,7 @@ export function savePendingReviewCommentsToStorage(
 
 const initialState: PendingReviewCommentsState = {}
 
-export const pendingReviewCommentsSlice = createSlice({
+const pendingReviewCommentsSlice = createSlice({
   name: 'pendingReviewComments',
   initialState,
   reducers: {

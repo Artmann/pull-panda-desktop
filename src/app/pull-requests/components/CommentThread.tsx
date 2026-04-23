@@ -42,7 +42,7 @@ interface CommentThreadProps {
   hideAuthor?: boolean
 }
 
-export const CommentThread = memo(function CommentThread({
+const CommentThread = memo(function CommentThread({
   comment,
   allComments,
   hideAuthor = false

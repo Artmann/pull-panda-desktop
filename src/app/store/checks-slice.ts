@@ -8,7 +8,7 @@ export interface ChecksState {
 
 const initialState: ChecksState = { items: [] }
 
-export const checksSlice = createSlice({
+const checksSlice = createSlice({
   name: 'checks',
   initialState,
   reducers: {

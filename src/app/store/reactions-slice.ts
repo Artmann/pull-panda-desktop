@@ -8,7 +8,7 @@ export interface ReactionsState {
 
 const initialState: ReactionsState = { items: [] }
 
-export const reactionsSlice = createSlice({
+const reactionsSlice = createSlice({
   name: 'reactions',
   initialState,
   reducers: {

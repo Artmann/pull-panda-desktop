@@ -3,12 +3,13 @@ import http, { IncomingMessage, Server, ServerResponse } from 'node:http'
 import path from 'node:path'
 import { AddressInfo } from 'node:net'
 
-import { app as electronApp, BrowserWindow } from 'electron'
+import { app as electronApp } from 'electron'
 import { Hono } from 'hono'
 import { cors } from 'hono/cors'
 import type { ContentfulStatusCode } from 'hono/utils/http-status'
 
 import { BackendError } from './errors'
+import { getApiMainWindow, setApiMainWindow } from './main-window-ref'
 import { checksRoute } from './routes/checks'
 import { commentsRoute, type AppEnv } from './routes/comments'
 import { navigateRoute } from './routes/navigate'
@@ -17,17 +18,10 @@ import { reviewsRoute } from './routes/reviews'
 import { screenshotRoute } from './routes/screenshot'
 import { syncsRoute } from './routes/syncs'
 
-let mainWindowRef: BrowserWindow | null = null
 let server: Server | null = null
 let apiPort: number | null = null
 
-export function getApiMainWindow(): BrowserWindow | null {
-  return mainWindowRef
-}
-
-export function setApiMainWindow(window: BrowserWindow): void {
-  mainWindowRef = window
-}
+export { getApiMainWindow, setApiMainWindow }
 
 export function getApiPort(): number | null {
   return apiPort
