@@ -10,6 +10,14 @@ Vite.
   https://react.dev/learn/you-might-not-need-an-effect.
 - After making code changes, always run `yarn lint`, `yarn tsc --noEmit`, and
   `yarn fallow` and fix every error before considering the task done.
+- When working on a UI component, browse Storybook
+  (`src/app/components/**/*.stories.tsx`) first to see how existing components
+  look and are used. Prefer reusing or extending these patterns over inventing
+  new ones.
+- When adding a new UI component (under `src/app/components/` or
+  `src/app/components/ui/`), add a `*.stories.tsx` file next to it covering the
+  meaningful variants and states. Use title prefix `Components/<Name>` for
+  custom components and `shadcn/<Name>` for shadcn primitives.
 - When creating or updating resources:
   1. Update the Redux state optimistically (synchronously, before any API call).
   2. Fire the API request — do NOT use `async/await` in event handlers (e.g.
@@ -23,6 +31,9 @@ Vite.
 ## Commands
 
 - `yarn start` - Start development server
+- `yarn storybook` - Launch Storybook on `localhost:6006` to browse UI
+  components
+- `yarn build-storybook` - Build a static Storybook bundle
 - `yarn make` - Build distributable packages
 - `yarn lint` - Run ESLint
 - `yarn fallow` - Run fallow to check for dead code, circular deps, and

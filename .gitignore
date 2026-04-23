@@ -95,3 +95,6 @@ pull-panda.db
 
 bin/
 .fallow/
+
+# Storybook
+storybook-static/
