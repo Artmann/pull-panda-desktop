@@ -11,6 +11,7 @@ import { CopyToClipboardButton } from '@/app/components/CopyToClipboardButton'
 import { useAppTheme } from '@/app/lib/store/themeContext'
 import { useAppSelector } from '@/app/store/hooks'
 import { type PendingReviewComment } from '@/app/store/pending-review-comments-slice'
+import { useLandmark } from '@/app/pull-requests/PullRequestNavigationProvider'
 import { FileCard, FileCardBody, FileCardHeader } from '../components/FileCard'
 import { SimpleDiff } from '../diffs/SimpleDiff'
 
@@ -56,7 +57,10 @@ export const ModifiedFileCard = memo(function ModifiedFileCard({
     [allSubmittedComments, filePath]
   )
 
+  const landmarkRef = useLandmark(`file-${filePath}`)
+
   return (
+    <div ref={landmarkRef}>
     <FileCard style={{ backgroundColor }}>
       <FileCardHeader>
         <div className="flex-1 flex items-center gap-2 font-mono text-xs">
@@ -95,6 +99,7 @@ export const ModifiedFileCard = memo(function ModifiedFileCard({
             filePath={file.filePath}
             pendingComments={filePendingComments}
             pullRequest={pullRequest}
+            registerCommentLandmarks={true}
             submittedComments={fileSubmittedComments}
           />
         ) : (
@@ -104,5 +109,6 @@ export const ModifiedFileCard = memo(function ModifiedFileCard({
         )}
       </FileCardBody>
     </FileCard>
+    </div>
   )
 })

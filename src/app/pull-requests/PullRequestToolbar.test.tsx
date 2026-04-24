@@ -4,6 +4,7 @@
 import { act, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { Provider } from 'react-redux'
+import { MemoryRouter } from 'react-router'
 import { configureStore } from '@reduxjs/toolkit'
 import { describe, it, expect, vi } from 'vitest'
 
@@ -15,6 +16,7 @@ import pendingReviewCommentsReducer from '@/app/store/pending-review-comments-sl
 import pendingReviewsReducer from '@/app/store/pending-reviews-slice'
 import pullRequestsReducer from '@/app/store/pull-requests-slice'
 
+import { PullRequestNavigationProvider } from './PullRequestNavigationProvider'
 import { PullRequestToolbar } from './PullRequestToolbar'
 
 vi.mock('@/app/lib/api', () => ({
@@ -80,7 +82,13 @@ function renderWithProviders(
   ui: React.ReactElement,
   { store = createTestStore() } = {}
 ) {
-  return render(<Provider store={store}>{ui}</Provider>)
+  return render(
+    <Provider store={store}>
+      <MemoryRouter>
+        <PullRequestNavigationProvider>{ui}</PullRequestNavigationProvider>
+      </MemoryRouter>
+    </Provider>
+  )
 }
 
 const defaultProps = {

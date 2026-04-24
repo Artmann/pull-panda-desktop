@@ -6,6 +6,7 @@ import { Button } from '@/app/components/ui/button'
 import { Separator } from '@/app/components/ui/separator'
 import { createReview } from '@/app/lib/api'
 import type { MergeOptions } from '@/app/lib/api'
+import { usePullRequestNavigation } from '@/app/pull-requests/PullRequestNavigationProvider'
 import { useAppDispatch, useAppSelector } from '@/app/store/hooks'
 import {
   createOptimisticReview,
@@ -23,6 +24,7 @@ export const PullRequestToolbar = memo(function PullRequestToolbar({
   pullRequest
 }: PullRequestToolbarProps): ReactElement {
   const dispatch = useAppDispatch()
+  const navigation = usePullRequestNavigation()
 
   const pendingReview = useAppSelector(
     (state) => state.pendingReviews[pullRequest.id]
@@ -94,17 +96,21 @@ export const PullRequestToolbar = memo(function PullRequestToolbar({
     >
       <div className="flex items-center gap-1">
         <Button
-          variant="outline"
+          onClick={() => navigation.jumpToPreviousLandmark()}
           size="icon-xs"
+          title="Previous landmark (k)"
+          variant="outline"
         >
-          <ChevronDown className="size-3" />
+          <ChevronUp className="size-3" />
         </Button>
 
         <Button
-          variant="outline"
+          onClick={() => navigation.jumpToNextLandmark()}
           size="icon-xs"
+          title="Next landmark (j)"
+          variant="outline"
         >
-          <ChevronUp className="size-3" />
+          <ChevronDown className="size-3" />
         </Button>
       </div>
 

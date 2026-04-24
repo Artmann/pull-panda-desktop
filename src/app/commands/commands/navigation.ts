@@ -1,4 +1,10 @@
-import { ArrowRight, GitPullRequest, Home } from 'lucide-react'
+import {
+  ArrowRight,
+  ChevronDown,
+  ChevronUp,
+  GitPullRequest,
+  Home
+} from 'lucide-react'
 
 import { commandRegistry } from '../registry'
 import { getNavigate } from '../context'
@@ -33,6 +39,35 @@ tabs.forEach((tab, index) => {
       navigate(`/pull-requests/${ctx.pullRequest.id}?tab=${tab}`)
     }
   })
+})
+
+// Landmark jump commands (j/k on PR detail view)
+commandRegistry.register({
+  id: 'navigation.landmark-next',
+  label: 'Jump To Next Landmark',
+  icon: ChevronDown,
+  group: 'navigation',
+  shortcut: { key: 'j' },
+  isAvailable: (ctx) => ctx.view === 'pr-detail',
+  execute: () => {
+    const navigation = getPullRequestNavigation()
+
+    navigation?.jumpToNextLandmark()
+  }
+})
+
+commandRegistry.register({
+  id: 'navigation.landmark-previous',
+  label: 'Jump To Previous Landmark',
+  icon: ChevronUp,
+  group: 'navigation',
+  shortcut: { key: 'k' },
+  isAvailable: (ctx) => ctx.view === 'pr-detail',
+  execute: () => {
+    const navigation = getPullRequestNavigation()
+
+    navigation?.jumpToPreviousLandmark()
+  }
 })
 
 // Go home command

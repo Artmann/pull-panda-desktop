@@ -23,7 +23,10 @@ import {
   TabsTrigger
 } from '@/app/components/ui/tabs'
 import { getMergeOptions, markPullRequestActive } from '@/app/lib/api'
-import { usePullRequestNavigation } from '@/app/pull-requests/PullRequestNavigationProvider'
+import {
+  LandmarkScope,
+  usePullRequestNavigation
+} from '@/app/pull-requests/PullRequestNavigationProvider'
 import { useAppDispatch, useAppSelector } from '@/app/store/hooks'
 import { mergeOptionsActions } from '@/app/store/merge-options-slice'
 import { clamp01 } from '@/math'
@@ -314,7 +317,16 @@ export function PullRequestPage(): ReactElement {
               value={tab.id}
             >
               <div className="w-full pb-12">
-                <tab.content pullRequest={pullRequest} />
+                {id ? (
+                  <LandmarkScope
+                    pullRequestId={id}
+                    tab={tab.id}
+                  >
+                    <tab.content pullRequest={pullRequest} />
+                  </LandmarkScope>
+                ) : (
+                  <tab.content pullRequest={pullRequest} />
+                )}
               </div>
             </TabsContent>
           ))}

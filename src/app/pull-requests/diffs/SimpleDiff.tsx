@@ -27,6 +27,7 @@ import { applyIntraLineDiffHighlighting } from './intra-line-diff'
 import { PendingComment } from './PendingComment'
 import { SubmittedComment } from './SubmittedComment'
 import { Button } from '@/app/components/ui/button'
+import { useLandmark } from '@/app/pull-requests/PullRequestNavigationProvider'
 
 async function highlightLines(
   lines: DiffHunkLine[],
@@ -85,6 +86,7 @@ interface SimpleDiffProps {
   lineStart?: number
   pendingComments?: PendingReviewComment[]
   pullRequest?: PullRequest
+  registerCommentLandmarks?: boolean
   submittedComments?: Comment[]
 }
 
@@ -96,6 +98,7 @@ export const SimpleDiff = memo(function SimpleDiff({
   lineStart,
   pendingComments = [],
   pullRequest,
+  registerCommentLandmarks = false,
   submittedComments = []
 }: SimpleDiffProps): ReactElement {
   const containerRef = useRef<HTMLDivElement>(null)
@@ -319,20 +322,41 @@ export const SimpleDiff = memo(function SimpleDiff({
               onClick={() => handleLineClick(index)}
             />
 
-            {lineSubmittedComments.map((comment) => (
-              <SubmittedComment
-                key={comment.id}
-                comment={comment}
-              />
-            ))}
+            {lineSubmittedComments.map((comment) =>
+              registerCommentLandmarks ? (
+                <LandmarkWrapper
+                  key={comment.id}
+                  id={`file-comment-${comment.id}`}
+                >
+                  <SubmittedComment comment={comment} />
+                </LandmarkWrapper>
+              ) : (
+                <SubmittedComment
+                  key={comment.id}
+                  comment={comment}
+                />
+              )
+            )}
 
-            {linePendingComments.map((comment) => (
-              <PendingComment
-                key={comment.id}
-                comment={comment}
-                pullRequestId={pullRequest?.id ?? ''}
-              />
-            ))}
+            {linePendingComments.map((comment) =>
+              registerCommentLandmarks ? (
+                <LandmarkWrapper
+                  key={comment.id}
+                  id={`file-pending-comment-${comment.id}`}
+                >
+                  <PendingComment
+                    comment={comment}
+                    pullRequestId={pullRequest?.id ?? ''}
+                  />
+                </LandmarkWrapper>
+              ) : (
+                <PendingComment
+                  key={comment.id}
+                  comment={comment}
+                  pullRequestId={pullRequest?.id ?? ''}
+                />
+              )
+            )}
 
             {isActiveCommentLine && pullRequest && filePath && (
               <InlineCommentInput
@@ -350,6 +374,18 @@ export const SimpleDiff = memo(function SimpleDiff({
 })
 
 const blankSpace = '\u00A0'
+
+function LandmarkWrapper({
+  children,
+  id
+}: {
+  children: ReactElement
+  id: string
+}): ReactElement {
+  const landmarkRef = useLandmark(id)
+
+  return <div ref={landmarkRef}>{children}</div>
+}
 
 const DiffLine = memo(function DiffLine({
   canComment,

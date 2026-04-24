@@ -8,6 +8,7 @@ import { TimeAgo } from '@/app/components/TimeAgo'
 import { UserAvatar } from '@/app/components/UserAvatar'
 import { Card, CardContent } from '@/app/components/ui/card'
 import { useAppSelector } from '@/app/store/hooks'
+import { useLandmark } from '@/app/pull-requests/PullRequestNavigationProvider'
 
 import { CommentBody } from './CommentBody'
 import { NewCommentForm } from './CommentInput'
@@ -124,6 +125,8 @@ const ActivityItemComponent = memo(function ActivityItemComponent({
   item: ActivityItem
   pullRequest: PullRequest
 }): ReactElement {
+  const landmarkRef = useLandmark(`activity-${item.id}`)
+
   const eventText = useMemo(() => {
     if (isComment(item)) {
       return 'commented'
@@ -176,7 +179,10 @@ const ActivityItemComponent = memo(function ActivityItemComponent({
   }, [item])
 
   return (
-    <div className="flex flex-col gap-2">
+    <div
+      ref={landmarkRef}
+      className="flex flex-col gap-2"
+    >
       <div className="flex justify-between items-center gap-4 text-xs">
         <div className="flex items-center gap-4">
           <UserAvatar
