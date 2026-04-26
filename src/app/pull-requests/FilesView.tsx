@@ -31,8 +31,8 @@ export const FilesView = memo(function FilesView({
 
   const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(new Set())
 
-  const groupedFiles = useMemo(() => {
-    const sorted = [...files].sort((a, b) => {
+  const sortedFiles = useMemo(() => {
+    return [...files].sort((a, b) => {
       const aDot = a.filePath.startsWith('.') ? 1 : 0
       const bDot = b.filePath.startsWith('.') ? 1 : 0
 
@@ -42,10 +42,21 @@ export const FilesView = memo(function FilesView({
 
       return a.filePath.localeCompare(b.filePath)
     })
-    const tree = createFileTree(sorted.map((file) => file.filePath))
+  }, [files])
+
+  const filesByPath = useMemo(() => {
+    return new Map(sortedFiles.map((file) => [file.filePath, file]))
+  }, [sortedFiles])
+
+  const eagerFilePaths = useMemo(() => {
+    return new Set(sortedFiles.slice(0, 3).map((file) => file.filePath))
+  }, [sortedFiles])
+
+  const groupedFiles = useMemo(() => {
+    const tree = createFileTree(sortedFiles.map((file) => file.filePath))
 
     return extractGroupedFilesFromTree(tree)
-  }, [files])
+  }, [sortedFiles])
 
   const toggleGroupCollapse = (groupName: string) => {
     setCollapsedGroups((previous) => {
@@ -106,9 +117,7 @@ export const FilesView = memo(function FilesView({
               {!isCollapsed && (
                 <div className="flex flex-col gap-6">
                   {group.files.map((groupFile) => {
-                    const modifiedFile = files.find(
-                      (f) => f.filePath === groupFile.filePath
-                    )
+                    const modifiedFile = filesByPath.get(groupFile.filePath)
 
                     if (!modifiedFile) {
                       return null
@@ -117,6 +126,7 @@ export const FilesView = memo(function FilesView({
                     return (
                       <ModifiedFileCard
                         key={groupFile.filePath}
+                        eager={eagerFilePaths.has(groupFile.filePath)}
                         file={modifiedFile}
                         pullRequest={pullRequest}
                       />

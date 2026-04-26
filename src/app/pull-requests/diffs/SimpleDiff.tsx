@@ -14,6 +14,7 @@ import {
   getLanguageFromPath,
   getSharedHighlighter
 } from '@/app/lib/highlighter'
+import { scheduleIdleTask } from '@/app/lib/idle-scheduler'
 import { useAppTheme } from '@/app/lib/store/themeContext'
 import { getDiffColors } from '@/app/lib/themes'
 import { cn, escapeHtml } from '@/app/lib/utils'
@@ -171,17 +172,23 @@ export const SimpleDiff = memo(function SimpleDiff({
       return
     }
 
+    let isCancelled = false
+    let scheduledTask: ReturnType<typeof scheduleIdleTask> | null = null
     const observer = new IntersectionObserver(
       ([entry]) => {
         if (entry.isIntersecting) {
-          void highlightLines(
-            filteredLines,
-            language,
-            intraLineDiffMap,
-            lightTheme,
-            darkTheme
-          ).then((highlighted) => {
-            setSyntaxHighlightedLines(highlighted)
+          scheduledTask = scheduleIdleTask(() => {
+            highlightLines(
+              filteredLines,
+              language,
+              intraLineDiffMap,
+              lightTheme,
+              darkTheme
+            ).then((highlighted) => {
+              if (!isCancelled) {
+                setSyntaxHighlightedLines(highlighted)
+              }
+            })
           })
           observer.disconnect()
         }
@@ -191,7 +198,11 @@ export const SimpleDiff = memo(function SimpleDiff({
 
     observer.observe(container)
 
-    return () => observer.disconnect()
+    return () => {
+      isCancelled = true
+      observer.disconnect()
+      scheduledTask?.cancel()
+    }
   }, [filePath, filteredLines, intraLineDiffMap, lightTheme, darkTheme])
 
   const highlightedLines = useMemo(() => {

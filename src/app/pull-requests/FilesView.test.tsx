@@ -234,6 +234,28 @@ describe('FilesView', () => {
     expect(screen.getByText('added')).toBeInTheDocument()
   })
 
+  it('defers diff rendering after the initial eager files', async () => {
+    const pullRequest = createMockPullRequest()
+    const files = Array.from({ length: 4 }, (_, index) =>
+      createMockFile({
+        id: `f${index + 1}`,
+        filename: `file-${index + 1}.ts`,
+        filePath: `src/file-${index + 1}.ts`,
+        diffHunk: `@@ -1,3 +1,3 @@\n context\n-old-${index + 1}\n+new-${index + 1}`
+      })
+    )
+    const store = createTestStore({
+      modifiedFiles: files
+    })
+
+    await act(async () => {
+      renderWithProviders(<FilesView pullRequest={pullRequest} />, { store })
+    })
+
+    expect(screen.getByText('src/file-4.ts')).toBeInTheDocument()
+    expect(screen.getByText('Diff rendering queued.')).toBeInTheDocument()
+  })
+
   it('displays "No changes" message for files without diffHunk', async () => {
     const pullRequest = createMockPullRequest()
     const files = [

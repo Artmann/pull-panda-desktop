@@ -18,11 +18,13 @@ import { SimpleDiff } from '../diffs/SimpleDiff'
 const emptyPendingComments: PendingReviewComment[] = []
 
 interface ModifiedFileCardProps {
+  eager?: boolean
   file: ModifiedFile
   pullRequest: PullRequest
 }
 
 export const ModifiedFileCard = memo(function ModifiedFileCard({
+  eager = false,
   file,
   pullRequest
 }: ModifiedFileCardProps): ReactElement {
@@ -92,7 +94,11 @@ export const ModifiedFileCard = memo(function ModifiedFileCard({
         </button>
       </FileCardHeader>
 
-      <FileCardBody>
+      <FileCardBody
+        eager={eager}
+        fallback={<DiffQueuedFallback />}
+        lazy={Boolean(file.diffHunk)}
+      >
         {file.diffHunk ? (
           <SimpleDiff
             diffHunk={file.diffHunk}
@@ -112,3 +118,11 @@ export const ModifiedFileCard = memo(function ModifiedFileCard({
     </div>
   )
 })
+
+function DiffQueuedFallback(): ReactElement {
+  return (
+    <div className="px-3 py-3 text-xs text-muted-foreground">
+      Diff rendering queued.
+    </div>
+  )
+}

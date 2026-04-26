@@ -17,6 +17,7 @@ import {
   ShortcutListener
 } from '@/app/commands'
 import { ErrorBoundary } from '@/app/components/ErrorBoundary'
+import { FpsCounter } from '@/app/components/FpsCounter'
 import { TitleBar } from '@/app/components/TitleBar'
 import { Toaster } from '@/app/components/ui/sonner'
 import { filterReadyPullRequests } from '@/app/lib/pull-requests'
@@ -58,6 +59,7 @@ export function App({ store }: AppProps): ReactElement {
                 <PullRequestNavigationProvider>
                   <ShortcutListener />
                   <CommandPalette />
+                  <FpsCounter />
                   <AppContent />
                 </PullRequestNavigationProvider>
               </CommandContextProvider>
