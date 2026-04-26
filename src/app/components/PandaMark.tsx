@@ -10,22 +10,18 @@ export function PandaMark({
   size = 18
 }: PandaMarkProps): ReactElement {
   return (
-    <svg
+    <span
       aria-hidden
       className={className}
-      fill="none"
-      height={size}
-      viewBox="0 0 24 24"
-      width={size}
+      role="img"
+      style={{
+        fontSize: size,
+        lineHeight: 1,
+        display: 'inline-block'
+      }}
     >
-      <circle cx="6.5" cy="7" fill="currentColor" r="3" />
-      <circle cx="17.5" cy="7" fill="currentColor" r="3" />
-      <circle cx="12" cy="13" fill="currentColor" r="7" />
-      <circle cx="9.3" cy="12" fill="var(--titlebar)" r="1.6" />
-      <circle cx="14.7" cy="12" fill="var(--titlebar)" r="1.6" />
-      <circle cx="9.3" cy="12" fill="currentColor" r="0.7" />
-      <circle cx="14.7" cy="12" fill="currentColor" r="0.7" />
-    </svg>
+      🐼
+    </span>
   )
 }
 
