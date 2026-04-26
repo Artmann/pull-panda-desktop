@@ -9,6 +9,7 @@ import {
 } from 'react'
 
 import { Button } from '@/app/components/ui/button'
+import { useLazyRender } from '@/app/lib/lazy-render'
 import { cn } from '@/app/lib/utils'
 
 interface FileCardContextValue {
@@ -111,16 +112,33 @@ export function FileCardHeader({
 
 interface FileCardBodyProps {
   children?: React.ReactNode | string
+  eager?: boolean
+  fallback?: React.ReactNode
+  lazy?: boolean
 }
 
 export function FileCardBody({
-  children
+  children,
+  eager = false,
+  fallback = null,
+  lazy = false
 }: FileCardBodyProps): ReactElement | null {
   const { isCollapsed } = useContext(FileCardContext)
+  const { ref, shouldRender } = useLazyRender<HTMLDivElement>({
+    eager: eager || !lazy,
+    enabled: lazy
+  })
 
   if (isCollapsed) {
     return null
   }
 
-  return <div className="w-full">{children}</div>
+  return (
+    <div
+      ref={ref}
+      className="w-full"
+    >
+      {shouldRender ? children : fallback}
+    </div>
+  )
 }

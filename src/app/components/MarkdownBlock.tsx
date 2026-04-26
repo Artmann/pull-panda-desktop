@@ -15,8 +15,9 @@ import remarkRehype, {
 import { type Plugin, unified } from 'unified'
 import { visit } from 'unist-util-visit'
 
+import { scheduleIdleTask } from '@/app/lib/idle-scheduler'
+import { useLazyRender } from '@/app/lib/lazy-render'
 import { useOpenExternalLinks } from '@/app/lib/useOpenExternalLinks'
-import { Skeleton } from './ui/skeleton'
 
 import {
   getLanguageFromPath,
@@ -91,9 +92,11 @@ export const MarkdownBlock = memo(function MarkdownBlock({
   content: string
   path?: string
 }): ReactElement {
-  const containerRef = useRef<HTMLDivElement>(null)
+  const { ref: containerRef, shouldRender } = useLazyRender<HTMLDivElement>()
   useOpenExternalLinks(containerRef)
-  const [result, createMarkdownContent] = useRemark({ path })
+  const [result, createMarkdownContent, resetMarkdownContent] = useRemark({
+    path
+  })
   const [isHighlighted, setIsHighlighted] = useState(false)
   const lastContentRef = useRef<string | null>(null)
   const { appTheme } = useAppTheme()
@@ -105,40 +108,41 @@ export const MarkdownBlock = memo(function MarkdownBlock({
     ? appTheme.dark.background
     : appTheme.light.background
 
-  // Parse markdown without syntax highlighting
   useEffect(() => {
-    // Only re-parse if content actually changed
     if (lastContentRef.current === content) {
       return
     }
-    lastContentRef.current = content
-    createMarkdownContent(content)
-    setIsHighlighted(false) // Reset when content changes
-  }, [content, createMarkdownContent])
 
-  // Lazy syntax highlighting with Intersection Observer
+    lastContentRef.current = content
+    resetMarkdownContent()
+    setIsHighlighted(false)
+  }, [content, resetMarkdownContent])
+
+  useEffect(() => {
+    if (!shouldRender || result) {
+      return
+    }
+
+    const scheduledTask = scheduleIdleTask(() => {
+      createMarkdownContent(content)
+    })
+
+    return () => scheduledTask.cancel()
+  }, [content, createMarkdownContent, result, shouldRender])
+
   useEffect(() => {
     if (!result || isHighlighted || !containerRef.current) {
       return
     }
 
     const container = containerRef.current
+    const scheduledTask = scheduleIdleTask(() => {
+      highlightCodeBlocks(container, lightTheme, darkTheme).then(() => {
+        setIsHighlighted(true)
+      })
+    })
 
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        if (entry.isIntersecting && container) {
-          highlightCodeBlocks(container, lightTheme, darkTheme).then(() => {
-            setIsHighlighted(true)
-          })
-          observer.disconnect()
-        }
-      },
-      { rootMargin: '500px 0px' }
-    )
-
-    observer.observe(container)
-
-    return () => observer.disconnect()
+    return () => scheduledTask.cancel()
   }, [result, isHighlighted, lightTheme, darkTheme])
 
   return (
@@ -153,11 +157,9 @@ export const MarkdownBlock = memo(function MarkdownBlock({
       {result ? (
         result
       ) : (
-        <div className="flex flex-col gap-3">
-          <Skeleton className="h-3 w-full rounded-full" />
-          <Skeleton className="h-3 w-full rounded-full" />
-          <Skeleton className="h-3 w-full rounded-full" />
-        </div>
+        <pre className="m-0 whitespace-pre-wrap break-words bg-transparent p-0 font-sans text-sm text-foreground">
+          {content}
+        </pre>
       )}
     </div>
   )
@@ -179,8 +181,13 @@ function useRemark({
   remarkParseOptions,
   remarkRehypeOptions,
   onError = defaultOnError
-}: UseRemarkOptions = {}): [ReactElement | null, (source: string) => void] {
+}: UseRemarkOptions = {}): [
+  ReactElement | null,
+  (source: string) => void,
+  () => void
+] {
   const [content, setContent] = useState<ReactElement | null>(null)
+  const parseGenerationRef = useRef(0)
 
   const rehypeDetectLanguageFromPath: Plugin<[], Root> = useCallback(() => {
     return (tree: Root) => {
@@ -227,6 +234,10 @@ function useRemark({
   // Parse markdown WITHOUT syntax highlighting for fast initial render
   const createMarkdown = useCallback(
     (source: string) => {
+      const parseGeneration = parseGenerationRef.current + 1
+
+      parseGenerationRef.current = parseGeneration
+
       void (async () => {
         try {
           const file = await unified()
@@ -246,6 +257,10 @@ function useRemark({
             } satisfies RehypeReactOptions)
             .process(source)
 
+          if (parseGenerationRef.current !== parseGeneration) {
+            return
+          }
+
           setContent(file.result as ReactElement)
         } catch (error) {
           onError(error as Error)
@@ -261,5 +276,10 @@ function useRemark({
     ]
   )
 
-  return [content, createMarkdown]
+  const resetMarkdown = useCallback(() => {
+    parseGenerationRef.current += 1
+    setContent(null)
+  }, [])
+
+  return [content, createMarkdown, resetMarkdown]
 }

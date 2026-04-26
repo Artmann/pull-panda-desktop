@@ -4,6 +4,11 @@
 import { render, screen, fireEvent, act } from '@testing-library/react'
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 
+import {
+  setupLazyBrowserTestHarness,
+  type LazyBrowserTestHarness
+} from '@/app/lib/test-lazy-browser'
+
 import { FileCard, FileCardBody, FileCardHeader } from './FileCard'
 
 function renderFileCard(headerChildren?: React.ReactNode) {
@@ -54,6 +59,36 @@ describe('FileCard', () => {
     renderFileCard(<button data-testid="other-button">Action</button>)
 
     fireEvent.click(screen.getByTestId('other-button'))
+
+    expect(screen.getByTestId('body-content')).toBeInTheDocument()
+  })
+})
+
+describe('FileCard lazy body rendering', () => {
+  let lazyBrowser: LazyBrowserTestHarness
+
+  beforeEach(() => {
+    lazyBrowser = setupLazyBrowserTestHarness()
+  })
+
+  it('waits for visibility and idle time before rendering lazy body content', async () => {
+    render(
+      <FileCard>
+        <FileCardHeader>file.tsx</FileCardHeader>
+        <FileCardBody
+          lazy
+          fallback={<div data-testid="fallback">file.tsx</div>}
+        >
+          <div data-testid="body-content">Diff content</div>
+        </FileCardBody>
+      </FileCard>
+    )
+
+    expect(screen.getByTestId('fallback')).toBeInTheDocument()
+    expect(screen.queryByTestId('body-content')).toEqual(null)
+
+    lazyBrowser.triggerIntersecting()
+    await lazyBrowser.flushIdleCallbacks()
 
     expect(screen.getByTestId('body-content')).toBeInTheDocument()
   })
