@@ -108,7 +108,7 @@ export const PullRequestHeader = memo(function PullRequestHeader({
   const latestReviews = useMemo(() => getLatestReviews(reviews), [reviews])
 
   return (
-    <header className="flex flex-col gap-2 p-6">
+    <header className="flex flex-col gap-4 p-6">
       <Breadcrumbs pullRequest={pullRequest} />
 
       <div>
@@ -335,47 +335,48 @@ function Breadcrumbs({
   const navigate = useNavigate()
 
   return (
-    <div className="flex items-center gap-1.5 text-muted-foreground">
+    <div className="flex items-center gap-2 text-xs font-mono text-muted-foreground">
       <Button
         aria-label="Back to dashboard"
+        className="size-[22px]"
         onClick={() => navigate('/')}
         size="icon-xs"
         title="Back to dashboard"
         type="button"
         variant="outline"
       >
-        <ChevronLeft className="size-3" />
+        <ChevronLeft className="size-2.5" />
       </Button>
 
       <Breadcrumb>
-        <BreadcrumbList>
+        <BreadcrumbList className="gap-2 sm:gap-2 text-xs font-mono">
           <BreadcrumbItem>
             <BreadcrumbPage>
-              <span className="text-xs text-foreground/80">
+              <span className="text-foreground/80">
                 {pullRequest.repositoryOwner}
               </span>
             </BreadcrumbPage>
           </BreadcrumbItem>
 
-          <BreadcrumbSeparator>
+          <BreadcrumbSeparator className="[&>svg]:hidden">
             <span className="opacity-40">/</span>
           </BreadcrumbSeparator>
 
           <BreadcrumbItem>
             <BreadcrumbPage>
-              <span className="text-xs text-foreground/80">
+              <span className="text-foreground/80">
                 {pullRequest.repositoryName}
               </span>
             </BreadcrumbPage>
           </BreadcrumbItem>
 
-          <BreadcrumbSeparator>
+          <BreadcrumbSeparator className="[&>svg]:hidden">
             <span className="opacity-40">/</span>
           </BreadcrumbSeparator>
 
           <BreadcrumbItem>
             <BreadcrumbPage>
-              <span className="text-xs text-muted-foreground">
+              <span className="text-muted-foreground">
                 #{pullRequest.number}
               </span>
             </BreadcrumbPage>
@@ -386,6 +387,7 @@ function Breadcrumbs({
       <div className="ml-auto flex items-center gap-1.5">
         <Button
           aria-label="Open on GitHub"
+          className="size-[22px]"
           onClick={() => {
             window.electron.openUrl(
               `https://github.com/${pullRequest.repositoryOwner}/${pullRequest.repositoryName}/pull/${pullRequest.number}`
@@ -396,7 +398,7 @@ function Breadcrumbs({
           type="button"
           variant="outline"
         >
-          <Github className="size-3" />
+          <Github className="size-2.5" />
         </Button>
 
         {pullRequest.state !== 'MERGED' && (
