@@ -344,7 +344,15 @@ app.on('ready', async () => {
   }
 })
 
+let pullRequestSyncInFlight = false
+
 async function runPullRequestSync(token: string): Promise<void> {
+  if (pullRequestSyncInFlight) {
+    return
+  }
+
+  pullRequestSyncInFlight = true
+
   const syncTask = taskManager.createTask('syncPullRequests', {
     message: 'Synchronizing pull requests...'
   })
@@ -397,6 +405,9 @@ async function runPullRequestSync(token: string): Promise<void> {
       )
       console.error('Failed to sync pull requests:', error)
     })
+    .finally(() => {
+      pullRequestSyncInFlight = false
+    })
 }
 
 // Save database periodically (every 30 seconds)
@@ -404,8 +415,8 @@ setInterval(() => {
   saveDatabase()
 }, 30000)
 
-// Re-sync pull requests periodically (every 5 minutes)
-const pullRequestSyncInterval = 5 * 60 * 1000
+// Re-sync pull requests periodically (every 5 seconds)
+const pullRequestSyncInterval = 5 * 1000
 
 setInterval(() => {
   const token = loadToken()
