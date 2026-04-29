@@ -31,6 +31,7 @@ import {
 import { mergePullRequest } from '@/app/lib/api'
 import type { MergeOptions, MergeRequirement } from '@/app/lib/api'
 import { cn } from '@/app/lib/utils'
+import { BranchSyncActions } from '@/app/pull-requests/components/BranchSyncActions'
 import { useAppDispatch, useAppSelector } from '@/app/store/hooks'
 import { pullRequestsActions } from '@/app/store/pull-requests-slice'
 import type { Check, Review } from '@/types/pull-request-details'
@@ -154,11 +155,7 @@ export const MergeDrawer = memo(function MergeDrawer({
 
       setSelectedMethod(initial as MergeMethod | null)
     },
-    [
-      mergeOptions,
-      pullRequest.repositoryName,
-      pullRequest.repositoryOwner
-    ]
+    [mergeOptions, pullRequest.repositoryName, pullRequest.repositoryOwner]
   )
 
   const allowedMethods: MergeMethod[] = mergeOptions
@@ -312,10 +309,12 @@ export const MergeDrawer = memo(function MergeDrawer({
               {mergeOptions !== null &&
                 mergeOptions.mergeable !== null &&
                 mergeOptions.requirements.length > 0 && (
-                <MergeRequirementsChecklist
-                  requirements={mergeOptions.requirements}
-                />
-              )}
+                  <MergeRequirementsChecklist
+                    requirements={mergeOptions.requirements}
+                  />
+                )}
+
+              <BranchSyncActions pullRequest={pullRequest} />
 
               {!mergeOptions && (
                 <div className="flex items-center gap-2 text-sm text-muted-foreground">
@@ -675,9 +674,7 @@ function MergeRequirementsChecklist({
               <span
                 className={cn(
                   'truncate',
-                  requirement.satisfied
-                    ? 'text-foreground'
-                    : 'text-red-500'
+                  requirement.satisfied ? 'text-foreground' : 'text-red-500'
                 )}
               >
                 {requirement.label}
@@ -696,20 +693,14 @@ function MergeRequirementsChecklist({
   )
 }
 
-function RequirementIcon({
-  satisfied
-}: {
-  satisfied: boolean
-}): ReactElement {
+function RequirementIcon({ satisfied }: { satisfied: boolean }): ReactElement {
   if (satisfied) {
     return (
       <CheckCircle2 className="size-4 text-status-success-foreground shrink-0 mt-0.5" />
     )
   }
 
-  return (
-    <XCircle className="size-4 text-red-500 shrink-0 mt-0.5" />
-  )
+  return <XCircle className="size-4 text-red-500 shrink-0 mt-0.5" />
 }
 
 interface SquashCommitSectionProps {

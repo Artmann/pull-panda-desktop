@@ -60,7 +60,7 @@ if (typeof window !== 'undefined') {
       } catch {
         // Best effort — fall through to direct assignment.
         try {
-          (target as Record<string, unknown>)[name] = storage
+          ;(target as Record<string, unknown>)[name] = storage
         } catch {
           // Ignore.
         }

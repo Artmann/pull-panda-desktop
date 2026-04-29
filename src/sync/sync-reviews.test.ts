@@ -8,7 +8,12 @@ import {
   mockRestReviewCommentsResponse
 } from './test-helpers'
 import { getDatabase } from '../database'
-import { reviews, comments, commentReactions } from '../database/schema'
+import {
+  reviews,
+  reviewThreads,
+  comments,
+  commentReactions
+} from '../database/schema'
 import { syncReviews } from './sync-reviews'
 
 const mockRequest = vi.fn()
@@ -344,6 +349,182 @@ describe('syncReviews', () => {
 
     expect(savedComments[0].line).toEqual(10)
     expect(savedComments[0].originalLine).toBeNull()
+  })
+
+  it('should not soft-delete review comments when only review-comments endpoint returned 304', async () => {
+    const db = getDatabase()
+
+    // Seed an existing review comment that should survive the sync
+    await db.insert(comments).values({
+      id: 'existing-review-comment',
+      gitHubId: 'review-comment-existing',
+      gitHubNumericId: 999,
+      pullRequestId: 'pr-123',
+      reviewId: null,
+      body: 'Pre-existing review comment',
+      bodyHtml: null,
+      path: 'src/file.ts',
+      line: 10,
+      originalLine: null,
+      diffHunk: '@@ -1 +1 @@',
+      commitId: 'abc',
+      originalCommitId: 'def',
+      gitHubReviewId: null,
+      gitHubReviewThreadId: null,
+      parentCommentGitHubId: null,
+      userLogin: 'reviewer',
+      userAvatarUrl: null,
+      url: 'https://github.com/owner/repo/pull/1#discussion_r999',
+      gitHubCreatedAt: '2024-01-01T11:00:00Z',
+      gitHubUpdatedAt: '2024-01-01T11:00:00Z',
+      syncedAt: new Date().toISOString()
+    })
+
+    mockRequest.mockImplementation((route: string) => {
+      // Reviews returned new data
+      if (route.includes('/reviews')) {
+        return Promise.resolve({
+          data: mockRestReviewsResponse,
+          notModified: false,
+          etag: 'reviews-etag-new',
+          lastModified: null
+        })
+      }
+
+      // Review comments returned 304 (unchanged)
+      if (route.includes('/comments')) {
+        return Promise.resolve({
+          data: null,
+          notModified: true,
+          etag: 'comments-etag',
+          lastModified: null
+        })
+      }
+
+      return Promise.resolve({
+        data: null,
+        notModified: false,
+        etag: null,
+        lastModified: null
+      })
+    })
+
+    await syncReviews({
+      token: 'test-token',
+      pullRequestId: 'pr-123',
+      owner: 'testowner',
+      repositoryName: 'testrepo',
+      pullNumber: 1
+    })
+
+    const reviewComment = await db
+      .select()
+      .from(comments)
+      .where(eq(comments.id, 'existing-review-comment'))
+
+    expect(reviewComment[0].deletedAt).toBeNull()
+  })
+
+  it('should invalidate the review-comments etag when the PR has orphan reviews', async () => {
+    const db = getDatabase()
+    const { etagManager } = await import('./etag-manager')
+
+    // Cache a stale etag for review_comments — would normally yield 304
+    etagManager.set(
+      { endpointType: 'review_comments', resourceId: 'pr-123' },
+      'stale-etag'
+    )
+    // Also cache the reviews etag so the orphan-recovery condition can fire
+    etagManager.set(
+      { endpointType: 'reviews', resourceId: 'pr-123' },
+      'stale-reviews-etag'
+    )
+
+    // Seed a review and a review_thread but zero review comments — the
+    // signature of the previous bug that soft-deleted comments while leaving
+    // their threads behind.
+    await db.insert(reviews).values({
+      id: 'orphan-review',
+      gitHubId: 'orphan-review-gh',
+      gitHubNumericId: 42,
+      pullRequestId: 'pr-123',
+      state: 'APPROVED',
+      body: 'lgtm',
+      syncedAt: new Date().toISOString()
+    })
+
+    await db.insert(reviewThreads).values({
+      id: 'orphan-thread',
+      gitHubId: 'orphan-thread-gh',
+      pullRequestId: 'pr-123',
+      isResolved: false,
+      syncedAt: new Date().toISOString()
+    })
+
+    let receivedCommentsEtag: string | undefined = 'unset'
+
+    mockRequest.mockImplementation(
+      (route: string, _params: unknown, options?: { etag?: string }) => {
+        if (route.includes('/reviews')) {
+          return Promise.resolve({
+            data: mockRestReviewsResponse,
+            notModified: false,
+            etag: 'reviews-etag-fresh',
+            lastModified: null
+          })
+        }
+
+        if (route.includes('/pulls/comments/{comment_id}/reactions')) {
+          return Promise.resolve({
+            data: [],
+            notModified: false,
+            etag: null,
+            lastModified: null
+          })
+        }
+
+        if (route.includes('/comments')) {
+          receivedCommentsEtag = options?.etag
+
+          return Promise.resolve({
+            data: mockRestReviewCommentsResponse,
+            notModified: false,
+            etag: 'comments-etag-fresh',
+            lastModified: null
+          })
+        }
+
+        return Promise.resolve({
+          data: null,
+          notModified: false,
+          etag: null,
+          lastModified: null
+        })
+      }
+    )
+
+    await syncReviews({
+      token: 'test-token',
+      pullRequestId: 'pr-123',
+      owner: 'testowner',
+      repositoryName: 'testrepo',
+      pullNumber: 1
+    })
+
+    // Stale etag should have been cleared before the comments request
+    expect(receivedCommentsEtag).toBeUndefined()
+
+    // Review comments should now be in the DB
+    const restoredComments = await db
+      .select()
+      .from(comments)
+      .where(
+        and(eq(comments.pullRequestId, 'pr-123'), isNull(comments.deletedAt))
+      )
+
+    expect(
+      restoredComments.find((c) => c.path === 'src/index.ts')
+    ).toBeDefined()
   })
 
   it('should skip processing on 304 Not Modified for both endpoints', async () => {

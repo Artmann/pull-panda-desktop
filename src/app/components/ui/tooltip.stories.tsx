@@ -29,7 +29,10 @@ export const Sides: Story = {
   render: () => (
     <div className="grid grid-cols-2 gap-8">
       {(['top', 'right', 'bottom', 'left'] as const).map((side) => (
-        <Tooltip key={side} defaultOpen>
+        <Tooltip
+          key={side}
+          defaultOpen
+        >
           <TooltipTrigger asChild>
             <Button variant="outline">{side}</Button>
           </TooltipTrigger>

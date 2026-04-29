@@ -8,6 +8,7 @@ import {
 } from './test-helpers'
 import { getDatabase } from '../database'
 import { checks } from '../database/schema'
+import { etagManager } from './etag-manager'
 import { syncChecks } from './sync-checks'
 
 const mockRequest = vi.fn()
@@ -338,5 +339,70 @@ describe('syncChecks', () => {
       .where(eq(checks.id, 'existing-1'))
 
     expect(existingCheck[0].deletedAt).toBeNull()
+  })
+
+  it('should refetch the PR when its etag is cached but the head SHA cache is empty', async () => {
+    // Simulate a cold start: persisted etag exists but the in-memory headSha
+    // cache hasn't been populated yet. The previous behaviour bailed out with
+    // "Could not get PR" and skipped check sync entirely.
+    etagManager.set(
+      { endpointType: 'pr-head-sha', resourceId: 'pr-cold' },
+      'stale-pr-etag'
+    )
+
+    let pullRequestCallCount = 0
+
+    mockRequest.mockImplementation((route: string, _params, options) => {
+      if (route.includes('/pulls/')) {
+        pullRequestCallCount += 1
+
+        if (options?.etag === 'stale-pr-etag') {
+          return Promise.resolve({
+            data: null,
+            notModified: true,
+            etag: 'stale-pr-etag',
+            lastModified: null
+          })
+        }
+
+        return Promise.resolve(mockPullRequestResponse)
+      }
+
+      if (route.includes('/check-runs')) {
+        return Promise.resolve({
+          data: mockRestCheckRunsResponse,
+          notModified: false,
+          etag: 'checks-etag',
+          lastModified: null
+        })
+      }
+
+      return Promise.resolve({
+        data: null,
+        notModified: false,
+        etag: null,
+        lastModified: null
+      })
+    })
+
+    await syncChecks({
+      token: 'test-token',
+      pullRequestId: 'pr-cold',
+      owner: 'testowner',
+      repositoryName: 'testrepo',
+      pullNumber: 99
+    })
+
+    // First call hit the 304 fast-path; the recovery path made a second
+    // unconditional fetch to reseed the cache.
+    expect(pullRequestCallCount).toEqual(2)
+
+    const db = getDatabase()
+    const savedChecks = await db
+      .select()
+      .from(checks)
+      .where(eq(checks.pullRequestId, 'pr-cold'))
+
+    expect(savedChecks.length).toBeGreaterThan(0)
   })
 })

@@ -6,17 +6,21 @@ import { Provider } from 'react-redux'
 import { configureStore } from '@reduxjs/toolkit'
 import { describe, it, expect, vi, beforeEach, beforeAll } from 'vitest'
 
-import type { Comment } from '@/types/pull-request-details'
+import type { Comment, ReviewThread } from '@/types/pull-request-details'
 import type { PullRequest } from '@/types/pull-request'
 
-import { createComment } from '@/app/lib/api'
+import {
+  createComment,
+  resolveReviewThread,
+  unresolveReviewThread
+} from '@/app/lib/api'
 import { AuthProvider } from '@/app/lib/store/authContext'
 import { ThemeProvider } from '@/app/lib/store/themeContext'
 import commentsReducer from '@/app/store/comments-slice'
 import draftsReducer, { getDraftKeyForReply } from '@/app/store/drafts-slice'
 import reviewThreadsReducer from '@/app/store/review-threads-slice'
 
-import { FileCommentThreadCard } from './CommentThread'
+import { CommentThreadCard, FileCommentThreadCard } from './CommentThread'
 
 // Mock browser APIs not available in jsdom
 beforeAll(() => {
@@ -35,7 +39,9 @@ beforeAll(() => {
 
 vi.mock('@/app/lib/api', () => ({
   createComment: vi.fn(),
-  syncPullRequestDetails: vi.fn()
+  resolveReviewThread: vi.fn(),
+  syncPullRequestDetails: vi.fn(),
+  unresolveReviewThread: vi.fn()
 }))
 
 vi.mock('@/app/components/MarkdownBlock', () => ({
@@ -124,7 +130,10 @@ function createMockPullRequest(
   }
 }
 
-function createTestStore(preloadedState?: { drafts?: Record<string, string> }) {
+function createTestStore(preloadedState?: {
+  drafts?: Record<string, string>
+  reviewThreads?: ReviewThread[]
+}) {
   return configureStore({
     reducer: {
       comments: commentsReducer,
@@ -132,9 +141,9 @@ function createTestStore(preloadedState?: { drafts?: Record<string, string> }) {
       reviewThreads: reviewThreadsReducer
     },
     preloadedState: {
-      ...preloadedState,
+      drafts: preloadedState?.drafts,
       comments: { items: [] },
-      reviewThreads: { items: [] }
+      reviewThreads: { items: preloadedState?.reviewThreads ?? [] }
     }
   })
 }
@@ -300,5 +309,323 @@ describe('CommentReply', () => {
         reviewCommentId: undefined
       })
     })
+  })
+})
+
+function createMockThread(overrides: Partial<ReviewThread> = {}): ReviewThread {
+  return {
+    id: 'thread-1',
+    gitHubId: 'PRRT_kwDOExample',
+    pullRequestId: 'pr-1',
+    isResolved: false,
+    resolvedByLogin: null,
+    syncedAt: '2024-01-01T00:00:00Z',
+    ...overrides
+  }
+}
+
+describe('CopyAsPromptButton', () => {
+  let writeText: ReturnType<typeof vi.fn>
+
+  beforeEach(() => {
+    vi.clearAllMocks()
+    writeText = vi.fn().mockResolvedValue(undefined)
+    Object.defineProperty(navigator, 'clipboard', {
+      configurable: true,
+      value: { writeText }
+    })
+  })
+
+  it('renders the AI prompt button when showPromptButton is true', async () => {
+    const comment = createMockComment()
+    const pullRequest = createMockPullRequest()
+
+    await act(async () => {
+      renderWithProviders(
+        <FileCommentThreadCard
+          allComments={[comment]}
+          comment={comment}
+          pullRequest={pullRequest}
+          showPromptButton
+        />
+      )
+    })
+
+    expect(screen.getByLabelText('Copy as AI prompt')).toBeInTheDocument()
+  })
+
+  it('does not render the AI prompt button by default', async () => {
+    const comment = createMockComment()
+    const pullRequest = createMockPullRequest()
+
+    await act(async () => {
+      renderWithProviders(
+        <FileCommentThreadCard
+          allComments={[comment]}
+          comment={comment}
+          pullRequest={pullRequest}
+        />
+      )
+    })
+
+    expect(screen.queryByLabelText('Copy as AI prompt')).not.toBeInTheDocument()
+  })
+
+  it('copies a formatted prompt to the clipboard when clicked', async () => {
+    const comment = createMockComment({
+      body: 'Please fix this',
+      diffHunk: '@@ -1,2 +1,2 @@\n-old\n+new',
+      line: 10,
+      path: 'src/example.ts',
+      userLogin: 'reviewer'
+    })
+    const pullRequest = createMockPullRequest()
+
+    await act(async () => {
+      renderWithProviders(
+        <FileCommentThreadCard
+          allComments={[comment]}
+          comment={comment}
+          pullRequest={pullRequest}
+          showPromptButton
+        />
+      )
+    })
+
+    await act(async () => {
+      fireEvent.click(screen.getByLabelText('Copy as AI prompt'))
+    })
+
+    expect(writeText).toHaveBeenCalledWith(
+      [
+        'File: src/example.ts:10',
+        '```',
+        '@@ -1,2 +1,2 @@\n-old\n+new',
+        '```',
+        '',
+        'reviewer said:',
+        '"Please fix this"',
+        '',
+        'Please address this review comment.'
+      ].join('\n')
+    )
+  })
+})
+
+describe('Outdated comments', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  it('shows an Outdated badge when a review comment has no current line but a preserved originalLine', async () => {
+    const comment = createMockComment({ line: null, originalLine: 32 })
+    const pullRequest = createMockPullRequest()
+
+    await act(async () => {
+      renderWithProviders(
+        <FileCommentThreadCard
+          allComments={[comment]}
+          comment={comment}
+          pullRequest={pullRequest}
+        />
+      )
+    })
+
+    expect(screen.getByText('Outdated')).toBeInTheDocument()
+  })
+
+  it('shows an Outdated badge when both line and originalLine are null', async () => {
+    const comment = createMockComment({ line: null, originalLine: null })
+    const pullRequest = createMockPullRequest()
+
+    await act(async () => {
+      renderWithProviders(
+        <FileCommentThreadCard
+          allComments={[comment]}
+          comment={comment}
+          pullRequest={pullRequest}
+        />
+      )
+    })
+
+    expect(screen.getByText('Outdated')).toBeInTheDocument()
+  })
+
+  it('does not show an Outdated badge when the comment still has a line', async () => {
+    const comment = createMockComment({ line: 32, originalLine: 32 })
+    const pullRequest = createMockPullRequest()
+
+    await act(async () => {
+      renderWithProviders(
+        <FileCommentThreadCard
+          allComments={[comment]}
+          comment={comment}
+          pullRequest={pullRequest}
+        />
+      )
+    })
+
+    expect(screen.queryByText('Outdated')).not.toBeInTheDocument()
+  })
+
+  it('does not show an Outdated badge for a fresh comment whose originalLine is null', async () => {
+    const comment = createMockComment({ line: 56, originalLine: null })
+    const pullRequest = createMockPullRequest()
+
+    await act(async () => {
+      renderWithProviders(
+        <FileCommentThreadCard
+          allComments={[comment]}
+          comment={comment}
+          pullRequest={pullRequest}
+        />
+      )
+    })
+
+    expect(screen.queryByText('Outdated')).not.toBeInTheDocument()
+  })
+
+  it('does not render the empty-range message for outdated comments', async () => {
+    const comment = createMockComment({ line: null, originalLine: null })
+    const pullRequest = createMockPullRequest()
+
+    await act(async () => {
+      renderWithProviders(
+        <FileCommentThreadCard
+          allComments={[comment]}
+          comment={comment}
+          pullRequest={pullRequest}
+        />
+      )
+    })
+
+    expect(
+      screen.queryByText('No lines found in the specified range')
+    ).not.toBeInTheDocument()
+  })
+})
+
+describe('ResolveThreadButton (icon)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    vi.mocked(resolveReviewThread).mockResolvedValue({
+      gitHubId: 'PRRT_kwDOExample',
+      isResolved: true,
+      resolvedByLogin: 'currentuser'
+    })
+    vi.mocked(unresolveReviewThread).mockResolvedValue({
+      gitHubId: 'PRRT_kwDOExample',
+      isResolved: false,
+      resolvedByLogin: null
+    })
+  })
+
+  it('renders the icon Resolve button in FileCommentThreadCard', async () => {
+    const comment = createMockComment()
+    const pullRequest = createMockPullRequest()
+    const store = createTestStore({ reviewThreads: [createMockThread()] })
+
+    await act(async () => {
+      renderWithProviders(
+        <FileCommentThreadCard
+          allComments={[comment]}
+          comment={comment}
+          pullRequest={pullRequest}
+        />,
+        { store }
+      )
+    })
+
+    const button = screen.getByRole('button', { name: 'Resolve' })
+
+    expect(button).toBeInTheDocument()
+    expect(button.textContent ?? '').toBe('')
+  })
+
+  it('renders the icon Resolve button in CommentThreadCard', async () => {
+    const comment = createMockComment()
+    const pullRequest = createMockPullRequest()
+    const store = createTestStore({ reviewThreads: [createMockThread()] })
+
+    await act(async () => {
+      renderWithProviders(
+        <CommentThreadCard
+          allComments={[comment]}
+          comment={comment}
+          pullRequest={pullRequest}
+        />,
+        { store }
+      )
+    })
+
+    expect(screen.getByRole('button', { name: 'Resolve' })).toBeInTheDocument()
+  })
+
+  it('calls resolveReviewThread when clicked on an unresolved thread', async () => {
+    const comment = createMockComment()
+    const pullRequest = createMockPullRequest()
+    const store = createTestStore({ reviewThreads: [createMockThread()] })
+
+    await act(async () => {
+      renderWithProviders(
+        <FileCommentThreadCard
+          allComments={[comment]}
+          comment={comment}
+          pullRequest={pullRequest}
+        />,
+        { store }
+      )
+    })
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Resolve' }))
+    })
+
+    await waitFor(() => {
+      expect(resolveReviewThread).toHaveBeenCalledWith({
+        owner: 'Artmann',
+        pullNumber: 7,
+        repo: 'teddy',
+        threadId: 'PRRT_kwDOExample'
+      })
+    })
+
+    expect(unresolveReviewThread).not.toHaveBeenCalled()
+  })
+
+  it('calls unresolveReviewThread when clicked on a resolved thread', async () => {
+    const comment = createMockComment()
+    const pullRequest = createMockPullRequest()
+    const store = createTestStore({
+      reviewThreads: [
+        createMockThread({ isResolved: true, resolvedByLogin: 'someone' })
+      ]
+    })
+
+    await act(async () => {
+      renderWithProviders(
+        <FileCommentThreadCard
+          allComments={[comment]}
+          comment={comment}
+          pullRequest={pullRequest}
+        />,
+        { store }
+      )
+    })
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Unresolve' }))
+    })
+
+    await waitFor(() => {
+      expect(unresolveReviewThread).toHaveBeenCalledWith({
+        owner: 'Artmann',
+        pullNumber: 7,
+        repo: 'teddy',
+        threadId: 'PRRT_kwDOExample'
+      })
+    })
+
+    expect(resolveReviewThread).not.toHaveBeenCalled()
   })
 })

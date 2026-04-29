@@ -23,7 +23,10 @@ function Interactive({ initial = '' }: { initial?: string }) {
 
   return (
     <div className="w-96">
-      <PullRequestFilter value={value} onChange={setValue} />
+      <PullRequestFilter
+        value={value}
+        onChange={setValue}
+      />
     </div>
   )
 }

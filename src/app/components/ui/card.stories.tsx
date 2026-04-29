@@ -37,7 +37,10 @@ export const Default: Story = {
       </CardContent>
       <CardFooter className="gap-2">
         <Button size="sm">Review</Button>
-        <Button size="sm" variant="outline">
+        <Button
+          size="sm"
+          variant="outline"
+        >
           Skip
         </Button>
       </CardFooter>
