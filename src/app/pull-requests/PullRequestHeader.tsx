@@ -165,7 +165,7 @@ export const PullRequestHeader = memo(function PullRequestHeader({
 
           {latestCommit?.message && (
             <>
-              <span className="opacity-30">·</span>
+              <span className="opacity-40">·</span>
 
               <span className="truncate font-mono flex-1">
                 {latestCommit.message.length > 80
@@ -196,7 +196,7 @@ function Title({
   return (
     <h1
       className={cn(
-        'font-semibold leading-tight text-foreground transition-all duration-200 ease-out',
+        'font-semibold leading-tight tracking-tight text-foreground transition-all duration-200 ease-out',
         size === 'sm' ? 'text-xl' : 'text-2xl'
       )}
     >
@@ -287,7 +287,7 @@ function InlineEditableTitle({
         'font-semibold leading-tight tracking-tight text-foreground transition-all duration-200 ease-out text-[26px]',
         !isMerged && 'cursor-text hover:opacity-80'
       )}
-      onClick={handleStartEdit}
+      onClick={isMerged ? undefined : handleStartEdit}
     >
       {pullRequest.title}
     </h1>
@@ -315,6 +315,7 @@ function BranchName({ name }: { name: string }): ReactElement {
         aria-label="Copy branch name"
         className="p-0.5 rounded text-muted-foreground hover:text-foreground hover:bg-muted transition-colors cursor-pointer shrink-0"
         onClick={handleCopy}
+        title="Copy branch name"
         type="button"
       >
         {copied ? (
