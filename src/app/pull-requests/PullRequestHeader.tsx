@@ -338,18 +338,18 @@ function Breadcrumbs({
     <div className="flex items-center gap-2 text-xs font-mono text-muted-foreground">
       <Button
         aria-label="Back to dashboard"
-        className="size-[22px]"
+        className="size-[18px]"
         onClick={() => navigate('/')}
         size="icon-xs"
         title="Back to dashboard"
         type="button"
         variant="outline"
       >
-        <ChevronLeft className="size-2.5" />
+        <ChevronLeft className="size-2" />
       </Button>
 
       <Breadcrumb>
-        <BreadcrumbList className="gap-2 sm:gap-2 text-xs font-mono">
+        <BreadcrumbList className="gap-1 sm:gap-1 text-xs font-mono">
           <BreadcrumbItem>
             <BreadcrumbPage>
               <span className="text-foreground/80">
@@ -387,7 +387,7 @@ function Breadcrumbs({
       <div className="ml-auto flex items-center gap-1.5">
         <Button
           aria-label="Open on GitHub"
-          className="size-[22px]"
+          className="size-[18px]"
           onClick={() => {
             window.electron.openUrl(
               `https://github.com/${pullRequest.repositoryOwner}/${pullRequest.repositoryName}/pull/${pullRequest.number}`
@@ -398,7 +398,7 @@ function Breadcrumbs({
           type="button"
           variant="outline"
         >
-          <Github className="size-2.5" />
+          <Github className="size-2" />
         </Button>
 
         {pullRequest.state !== 'MERGED' && (
