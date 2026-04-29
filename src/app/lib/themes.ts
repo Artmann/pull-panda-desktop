@@ -171,11 +171,139 @@ const catppuccinMochaPalette: ThemePalette = {
 }
 
 // ---------------------------------------------------------------------------
+// Pull Panda signature palettes — mirror :root and .dark in src/app/index.css.
+// ---------------------------------------------------------------------------
+
+const pullPandaPaperPalette: ThemePalette = {
+  accent: 'oklch(0.93 0.008 95)',
+  accentForeground: 'oklch(0.22 0.01 95)',
+  background: 'oklch(0.985 0.003 95)',
+  border: 'oklch(0.88 0.005 95)',
+  card: 'oklch(1 0 0)',
+  cardForeground: 'oklch(0.22 0.01 95)',
+  chart1: 'oklch(0.53 0.22 25)',
+  chart2: 'oklch(0.65 0.18 55)',
+  chart3: 'oklch(0.75 0.15 95)',
+  chart4: 'oklch(0.6 0.18 155)',
+  chart5: 'oklch(0.55 0.2 260)',
+  destructive: 'oklch(0.55 0.16 25)',
+  destructiveForeground: 'oklch(0.985 0.003 95)',
+  foreground: 'oklch(0.22 0.01 95)',
+  input: 'oklch(0.88 0.005 95)',
+  muted: 'oklch(0.955 0.005 95)',
+  mutedForeground: 'oklch(0.45 0.008 95)',
+  popover: 'oklch(1 0 0)',
+  popoverForeground: 'oklch(0.22 0.01 95)',
+  primary: 'oklch(0.55 0.14 260)',
+  primaryForeground: 'oklch(0.985 0.003 95)',
+  ring: 'oklch(0.55 0.14 260)',
+  secondary: 'oklch(0.955 0.005 95)',
+  secondaryForeground: 'oklch(0.22 0.01 95)',
+  sidebar: 'oklch(0.93 0.009 255)',
+  sidebarAccent: 'oklch(0.845 0.013 257)',
+  sidebarAccentForeground: 'oklch(0.395 0.026 266)',
+  sidebarBorder: 'oklch(0.876 0.017 268)',
+  sidebarForeground: 'oklch(0.395 0.026 266)',
+  sidebarPrimary: 'oklch(0.55 0.2 260)',
+  sidebarPrimaryForeground: 'oklch(0.955 0.007 255)',
+  sidebarRing: 'oklch(0.65 0.15 275)',
+  statusDanger: 'oklch(0.955 0.02 25)',
+  statusDangerBorder: 'oklch(0.88 0.05 25)',
+  statusDangerForeground: 'oklch(0.42 0.12 25)',
+  statusMerged: 'oklch(0.955 0.02 300)',
+  statusMergedBorder: 'oklch(0.88 0.05 300)',
+  statusMergedForeground: 'oklch(0.42 0.12 300)',
+  statusNeutral: 'oklch(0.955 0.007 255)',
+  statusNeutralBorder: 'oklch(0.88 0.013 255)',
+  statusNeutralForeground: 'oklch(0.45 0.02 264)',
+  statusSuccess: 'oklch(0.955 0.02 150)',
+  statusSuccessBorder: 'oklch(0.88 0.04 150)',
+  statusSuccessForeground: 'oklch(0.42 0.1 150)',
+  statusWarning: 'oklch(0.955 0.03 80)',
+  statusWarningBorder: 'oklch(0.88 0.05 80)',
+  statusWarningForeground: 'oklch(0.42 0.1 80)',
+  titlebar: 'oklch(0.965 0.004 95)'
+}
+
+const pullPandaMidnightPalette: ThemePalette = {
+  accent: 'oklch(0.26 0.008 240)',
+  accentForeground: 'oklch(0.96 0.005 240)',
+  background: 'oklch(0.18 0.008 240)',
+  border: 'oklch(0.3 0.008 240)',
+  card: 'oklch(0.21 0.008 240)',
+  cardForeground: 'oklch(0.96 0.005 240)',
+  chart1: 'oklch(0.72 0.14 10)',
+  chart2: 'oklch(0.75 0.14 55)',
+  chart3: 'oklch(0.85 0.12 95)',
+  chart4: 'oklch(0.7 0.16 155)',
+  chart5: 'oklch(0.77 0.12 255)',
+  destructive: 'oklch(0.68 0.16 25)',
+  destructiveForeground: 'oklch(0.18 0.008 240)',
+  foreground: 'oklch(0.96 0.005 240)',
+  input: 'oklch(0.3 0.008 240)',
+  muted: 'oklch(0.24 0.008 240)',
+  mutedForeground: 'oklch(0.75 0.008 240)',
+  popover: 'oklch(0.21 0.008 240)',
+  popoverForeground: 'oklch(0.96 0.005 240)',
+  primary: 'oklch(0.72 0.14 260)',
+  primaryForeground: 'oklch(0.1 0 0)',
+  ring: 'oklch(0.72 0.14 260)',
+  secondary: 'oklch(0.24 0.008 240)',
+  secondaryForeground: 'oklch(0.96 0.005 240)',
+  sidebar: 'oklch(0.19 0.02 280)',
+  sidebarAccent: 'oklch(0.29 0.02 275)',
+  sidebarAccentForeground: 'oklch(0.87 0.03 275)',
+  sidebarBorder: 'oklch(0.36 0.02 275)',
+  sidebarForeground: 'oklch(0.87 0.03 275)',
+  sidebarPrimary: 'oklch(0.77 0.12 255)',
+  sidebarPrimaryForeground: 'oklch(0.22 0.02 280)',
+  sidebarRing: 'oklch(0.8 0.1 275)',
+  statusDanger: 'oklch(0.27 0.03 25)',
+  statusDangerBorder: 'oklch(0.38 0.05 25)',
+  statusDangerForeground: 'oklch(0.82 0.08 25)',
+  statusMerged: 'oklch(0.27 0.03 300)',
+  statusMergedBorder: 'oklch(0.38 0.05 300)',
+  statusMergedForeground: 'oklch(0.82 0.08 300)',
+  statusNeutral: 'oklch(0.27 0.005 270)',
+  statusNeutralBorder: 'oklch(0.38 0.01 270)',
+  statusNeutralForeground: 'oklch(0.82 0.02 270)',
+  statusSuccess: 'oklch(0.27 0.03 150)',
+  statusSuccessBorder: 'oklch(0.38 0.04 150)',
+  statusSuccessForeground: 'oklch(0.82 0.08 150)',
+  statusWarning: 'oklch(0.27 0.03 80)',
+  statusWarningBorder: 'oklch(0.38 0.05 80)',
+  statusWarningForeground: 'oklch(0.82 0.08 80)',
+  titlebar: 'oklch(0.15 0.008 240)'
+}
+
+// ---------------------------------------------------------------------------
 // Theme definitions
 // ---------------------------------------------------------------------------
 
 export const appThemes: AppTheme[] = [
-  // --- Catppuccin Latte (light) - default light theme ---
+  // --- Paper Panda (light) - signature light theme matching index.css :root ---
+  {
+    dark: catppuccinMochaPalette,
+    darkShikiTheme: 'vitesse-light',
+    label: 'Paper Panda',
+    light: pullPandaPaperPalette,
+    lightShikiTheme: 'vitesse-light',
+    modes: 'light',
+    value: 'paper-panda'
+  },
+
+  // --- Midnight Panda (dark) - signature dark theme matching index.css .dark ---
+  {
+    dark: pullPandaMidnightPalette,
+    darkShikiTheme: 'vitesse-dark',
+    label: 'Midnight Panda',
+    light: catppuccinLattePalette,
+    lightShikiTheme: 'vitesse-dark',
+    modes: 'dark',
+    value: 'midnight-panda'
+  },
+
+  // --- Catppuccin Latte (light) ---
   {
     dark: catppuccinLattePalette,
     darkShikiTheme: 'catppuccin-latte',
@@ -186,7 +314,7 @@ export const appThemes: AppTheme[] = [
     value: 'catppuccin-latte'
   },
 
-  // --- Catppuccin Mocha (dark) - default dark theme ---
+  // --- Catppuccin Mocha (dark) ---
   {
     dark: catppuccinMochaPalette,
     darkShikiTheme: 'catppuccin-mocha',
@@ -914,8 +1042,8 @@ export const appThemes: AppTheme[] = [
   }
 ]
 
-export const defaultDarkThemeValue = 'catppuccin-mocha'
-export const defaultLightThemeValue = 'catppuccin-latte'
+export const defaultDarkThemeValue = 'midnight-panda'
+export const defaultLightThemeValue = 'paper-panda'
 
 export function getThemesForMode(mode: 'dark' | 'light'): AppTheme[] {
   return appThemes.filter((t) => t.modes === 'both' || t.modes === mode)
