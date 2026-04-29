@@ -387,7 +387,7 @@ function Breadcrumbs({
       <div className="ml-auto flex items-center gap-1.5">
         <Button
           aria-label="Open on GitHub"
-          className="size-[18px]"
+          className="size-[22px]"
           onClick={() => {
             window.electron.openUrl(
               `https://github.com/${pullRequest.repositoryOwner}/${pullRequest.repositoryName}/pull/${pullRequest.number}`
@@ -398,7 +398,7 @@ function Breadcrumbs({
           type="button"
           variant="outline"
         >
-          <Github className="size-2" />
+          <Github className="size-2.5" />
         </Button>
 
         {pullRequest.state !== 'MERGED' && (
