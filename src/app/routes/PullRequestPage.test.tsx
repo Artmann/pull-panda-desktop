@@ -20,6 +20,7 @@ import pendingReviewCommentsReducer from '@/app/store/pending-review-comments-sl
 import pendingReviewsReducer from '@/app/store/pending-reviews-slice'
 import pullRequestsReducer from '@/app/store/pull-requests-slice'
 import reactionsReducer from '@/app/store/reactions-slice'
+import reviewThreadsReducer from '@/app/store/review-threads-slice'
 import reviewsReducer from '@/app/store/reviews-slice'
 import tasksReducer from '@/app/store/tasks-slice'
 
@@ -145,6 +146,7 @@ function createTestStore(
       pendingReviews: pendingReviewsReducer,
       pullRequests: pullRequestsReducer,
       reactions: reactionsReducer,
+      reviewThreads: reviewThreadsReducer,
       reviews: reviewsReducer,
       tasks: tasksReducer
     },
@@ -162,6 +164,7 @@ function createTestStore(
         items: options.pullRequests ?? []
       },
       reactions: { items: [] },
+      reviewThreads: { items: [] },
       reviews: { items: [] },
       tasks: { items: [] }
     }
@@ -299,9 +302,11 @@ describe('PullRequestPage', () => {
         renderWithProviders('pr-1', { store })
       })
 
-      const zeroCounts = screen.getAllByText('0')
+      const checksTab = screen.getByRole('tab', { name: /checks/i })
+      const filesTab = screen.getByRole('tab', { name: /files/i })
 
-      expect(zeroCounts).toHaveLength(2)
+      expect(checksTab.querySelector('.bg-muted')?.textContent).toEqual('0')
+      expect(filesTab.querySelector('.bg-muted')?.textContent).toEqual('0')
     })
 
     it('does not display count badge for Overview tab', async () => {

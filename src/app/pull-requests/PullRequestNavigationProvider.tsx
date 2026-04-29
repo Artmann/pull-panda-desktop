@@ -204,9 +204,7 @@ export function PullRequestNavigationProvider({
 
     const next = sorted.find((element) => {
       const relativeTop =
-        element.getBoundingClientRect().top -
-        containerTop +
-        container.scrollTop
+        element.getBoundingClientRect().top - containerTop + container.scrollTop
 
       return relativeTop > container.scrollTop + landmarkJumpOffset + 1
     })
@@ -230,9 +228,7 @@ export function PullRequestNavigationProvider({
 
     for (const element of sorted) {
       const relativeTop =
-        element.getBoundingClientRect().top -
-        containerTop +
-        container.scrollTop
+        element.getBoundingClientRect().top - containerTop + container.scrollTop
 
       if (relativeTop < container.scrollTop + landmarkJumpOffset - 1) {
         previous = element
@@ -323,9 +319,7 @@ export function usePullRequestNavigation(): PullRequestNavigationApi {
   return context
 }
 
-export function useLandmark(
-  id: string
-): (element: HTMLElement | null) => void {
+export function useLandmark(id: string): (element: HTMLElement | null) => void {
   const navigation = useContext(PullRequestNavigationContext)
   const scopeKey = useContext(LandmarkScopeContext)
   const cleanupRef = useRef<(() => void) | null>(null)

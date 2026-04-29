@@ -32,7 +32,10 @@ export const Stack: Story = {
   args: { login: 'octocat' },
   render: () => (
     <div className="flex -space-x-2">
-      <UserAvatar login="octocat" avatarUrl="https://github.com/octocat.png" />
+      <UserAvatar
+        login="octocat"
+        avatarUrl="https://github.com/octocat.png"
+      />
       <UserAvatar login="Ada Lovelace" />
       <UserAvatar login="Grace Hopper" />
       <UserAvatar />

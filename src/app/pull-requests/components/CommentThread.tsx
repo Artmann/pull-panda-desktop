@@ -1,4 +1,11 @@
-import { Check, CircleCheck, Code2, Loader2 } from 'lucide-react'
+import {
+  Check,
+  CheckIcon,
+  CircleCheck,
+  Code2,
+  Loader2,
+  SparklesIcon
+} from 'lucide-react'
 import {
   Fragment,
   memo,
@@ -49,12 +56,14 @@ interface CommentThreadProps {
   comment: Comment
   allComments: Comment[]
   hideAuthor?: boolean
+  showPromptButton?: boolean
 }
 
 const CommentThread = memo(function CommentThread({
   comment,
   allComments,
-  hideAuthor = false
+  hideAuthor = false,
+  showPromptButton = false
 }: CommentThreadProps): ReactElement {
   const childComments = allComments.filter(
     (c) => c.parentCommentGitHubId === comment.gitHubId
@@ -65,6 +74,7 @@ const CommentThread = memo(function CommentThread({
       <CommentItem
         comment={comment}
         hideAuthor={hideAuthor}
+        showPromptButton={showPromptButton}
       />
 
       {childComments.length > 0 && (
@@ -75,6 +85,7 @@ const CommentThread = memo(function CommentThread({
               <CommentItem
                 comment={childComment}
                 hideAuthor={false}
+                showPromptButton={showPromptButton}
               />
             </Fragment>
           ))}
@@ -87,11 +98,13 @@ const CommentThread = memo(function CommentThread({
 interface CommentItemProps {
   comment: Comment
   hideAuthor?: boolean
+  showPromptButton?: boolean
 }
 
 const CommentItem = memo(function CommentItem({
   comment,
-  hideAuthor = false
+  hideAuthor = false,
+  showPromptButton = false
 }: CommentItemProps): ReactElement {
   return (
     <div className="flex flex-col w-full px-4 pt-4 pb-5 gap-1.5">
@@ -115,6 +128,8 @@ const CommentItem = memo(function CommentItem({
               )}
             </div>
           </div>
+
+          {showPromptButton && <CopyAsPromptButton comment={comment} />}
         </div>
       )}
 
@@ -127,6 +142,94 @@ const CommentItem = memo(function CommentItem({
     </div>
   )
 })
+
+interface CopyAsPromptButtonProps {
+  comment: Comment
+}
+
+const CopyAsPromptButton = memo(function CopyAsPromptButton({
+  comment
+}: CopyAsPromptButtonProps): ReactElement {
+  const [hasBeenClicked, setHasBeenClicked] = useState(false)
+
+  const handleClick = useCallback(() => {
+    const prompt = formatCommentAsPrompt(comment)
+
+    setHasBeenClicked(true)
+
+    navigator.clipboard
+      .writeText(prompt)
+      .then(() => {
+        setTimeout(() => {
+          setHasBeenClicked(false)
+        }, 1_400)
+      })
+      .catch((error: unknown) => {
+        console.error('Failed to copy prompt to clipboard:', error)
+        setHasBeenClicked(false)
+        toast.error('Failed to copy prompt to clipboard')
+      })
+  }, [comment])
+
+  return (
+    <Button
+      aria-label="Copy as AI prompt"
+      className="relative"
+      onClick={handleClick}
+      size="icon-sm"
+      title="Copy as AI prompt"
+      variant="ghost"
+    >
+      <div className="size-3">
+        <SparklesIcon
+          className={cn(
+            'absolute size-3 transition-all ease-in-out',
+            hasBeenClicked
+              ? 'scale-0 opacity-0 blur-sm'
+              : 'scale-100 opacity-100 blur-0'
+          )}
+        />
+        <CheckIcon
+          className={cn(
+            'absolute size-3 transition-all ease-in-out',
+            hasBeenClicked
+              ? 'scale-100 opacity-100 blur-0'
+              : 'scale-0 opacity-0 blur-sm'
+          )}
+        />
+      </div>
+    </Button>
+  )
+})
+
+function formatCommentAsPrompt(comment: Comment): string {
+  const lines: string[] = []
+
+  if (comment.path) {
+    const location = comment.line
+      ? `${comment.path}:${comment.line.toString()}`
+      : comment.path
+
+    lines.push(`File: ${location}`)
+  }
+
+  if (comment.diffHunk) {
+    lines.push('```')
+    lines.push(comment.diffHunk)
+    lines.push('```')
+    lines.push('')
+  }
+
+  const author = comment.userLogin ?? 'Reviewer'
+  const body = (comment.body ?? '').trim()
+
+  lines.push(`${author} said:`)
+  lines.push(`"${body}"`)
+  lines.push('')
+  lines.push('Please address this review comment.')
+
+  return lines.join('\n')
+}
 
 interface CommentReplyProps {
   comment: Comment
@@ -371,13 +474,15 @@ interface CommentThreadCardProps {
   allComments: Comment[]
   hideAuthor?: boolean
   pullRequest?: PullRequest
+  showPromptButton?: boolean
 }
 
 export const CommentThreadCard = memo(function CommentThreadCard({
   comment,
   allComments,
   hideAuthor = false,
-  pullRequest
+  pullRequest,
+  showPromptButton = false
 }: CommentThreadCardProps): ReactElement {
   const isReviewComment = comment.gitHubReviewThreadId !== null
   const thread = useReviewThread(comment.gitHubReviewThreadId)
@@ -394,6 +499,7 @@ export const CommentThreadCard = memo(function CommentThreadCard({
           comment={comment}
           allComments={allComments}
           hideAuthor={hideAuthor}
+          showPromptButton={showPromptButton}
         />
       </CardContent>
       {pullRequest && isReviewComment && (
@@ -422,13 +528,15 @@ interface FileCommentThreadCardProps {
   allComments: Comment[]
   hideAuthor?: boolean
   pullRequest?: PullRequest
+  showPromptButton?: boolean
 }
 
 export const FileCommentThreadCard = memo(function FileCommentThreadCard({
   comment,
   allComments,
   hideAuthor = false,
-  pullRequest
+  pullRequest,
+  showPromptButton = false
 }: FileCommentThreadCardProps): ReactElement {
   const numberOfLinesToShow = 3
   const line = comment.line ? comment.line : (comment.originalLine ?? 0)
@@ -463,6 +571,7 @@ export const FileCommentThreadCard = memo(function FileCommentThreadCard({
           comment={comment}
           allComments={allComments}
           hideAuthor={hideAuthor}
+          showPromptButton={showPromptButton}
         />
       </CardContent>
       {pullRequest && (

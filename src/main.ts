@@ -4,7 +4,12 @@ import path from 'node:path'
 
 import { initializeDatabase, closeDatabase, saveDatabase } from './database'
 import { ipcChannels } from './lib/ipc/channels'
-import { getApiPort, setApiMainWindow, startApiServer, stopApiServer } from './main/api'
+import {
+  getApiPort,
+  setApiMainWindow,
+  startApiServer,
+  stopApiServer
+} from './main/api'
 import { bootstrap, BootstrapData } from './main/bootstrap'
 import { sendPullRequestResourceEvents } from './main/send-resource-events'
 import { backgroundSyncer } from './main/background-syncer'

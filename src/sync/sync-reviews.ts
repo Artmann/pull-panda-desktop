@@ -1,8 +1,9 @@
-import { eq, and, isNull } from 'drizzle-orm'
+import { eq, and, isNotNull, isNull } from 'drizzle-orm'
 
 import { getDatabase } from '../database'
 import {
   reviews,
+  reviewThreads,
   comments,
   commentReactions,
   type NewReview,
@@ -127,7 +128,12 @@ function upsertReviews(
       (r) => r.gitHubId === reviewData.node_id
     )
 
-    const review = buildReview(reviewData, existingReview?.id, pullRequestId, now)
+    const review = buildReview(
+      reviewData,
+      existingReview?.id,
+      pullRequestId,
+      now
+    )
     reviewIdMap.set(reviewData.id, review.id)
 
     database
@@ -160,6 +166,66 @@ function upsertReviews(
         .where(eq(reviews.id, existingReview.id))
         .run()
     }
+  }
+
+  return reviewIdMap
+}
+
+function hasOrphanReviews(pullRequestId: string): boolean {
+  const database = getDatabase()
+
+  // GitHub creates a review_thread for every inline review comment, so a
+  // stored thread is a strong signal that at least one review comment must
+  // exist on GitHub. If we have threads but no local review comments, we lost
+  // them (e.g. via the previous review-comments soft-delete bug) and should
+  // refetch.
+  const localReviewThreadCount = database
+    .select()
+    .from(reviewThreads)
+    .where(
+      and(
+        eq(reviewThreads.pullRequestId, pullRequestId),
+        isNull(reviewThreads.deletedAt)
+      )
+    )
+    .all().length
+
+  if (localReviewThreadCount === 0) {
+    return false
+  }
+
+  const localReviewCommentCount = database
+    .select()
+    .from(comments)
+    .where(
+      and(
+        eq(comments.pullRequestId, pullRequestId),
+        isNull(comments.deletedAt),
+        isNotNull(comments.path)
+      )
+    )
+    .all().length
+
+  return localReviewCommentCount === 0
+}
+
+function buildReviewIdMapFromExisting(
+  pullRequestId: string
+): Map<number, string> {
+  const database = getDatabase()
+
+  const existingReviews = database
+    .select()
+    .from(reviews)
+    .where(
+      and(eq(reviews.pullRequestId, pullRequestId), isNull(reviews.deletedAt))
+    )
+    .all()
+
+  const reviewIdMap = new Map<number, string>()
+
+  for (const review of existingReviews) {
+    reviewIdMap.set(review.gitHubNumericId, review.id)
   }
 
   return reviewIdMap
@@ -320,10 +386,7 @@ async function upsertReviewComments(
     .select()
     .from(comments)
     .where(
-      and(
-        eq(comments.pullRequestId, pullRequestId),
-        isNull(comments.deletedAt)
-      )
+      and(eq(comments.pullRequestId, pullRequestId), isNull(comments.deletedAt))
     )
     .all()
 
@@ -441,6 +504,11 @@ export async function syncReviews({
       endpointType: 'review_comments',
       resourceId: pullRequestId
     }
+
+    if (cachedReviewsEtag !== null && hasOrphanReviews(pullRequestId)) {
+      etagManager.delete(commentsEtagKey)
+    }
+
     const cachedCommentsEtag = etagManager.get(commentsEtagKey)
 
     const commentsResult = await client.request<ReviewCommentData[]>(
@@ -461,24 +529,35 @@ export async function syncReviews({
       return
     }
 
-    const reviewsData = reviewsResult.data ?? []
-    const commentsData = commentsResult.data ?? []
+    let reviewIdMap = new Map<number, string>()
 
-    console.log(
-      `Syncing ${reviewsData.length} reviews for PR #${pullNumber} in ${owner}/${repositoryName}.`
-    )
+    if (!reviewsResult.notModified) {
+      const reviewsData = reviewsResult.data ?? []
 
-    const reviewIdMap = upsertReviews(reviewsData, pullRequestId, now)
+      console.log(
+        `Syncing ${reviewsData.length} reviews for PR #${pullNumber} in ${owner}/${repositoryName}.`
+      )
 
-    await upsertReviewComments(
-      client,
-      commentsData,
-      reviewIdMap,
-      pullRequestId,
-      owner,
-      repositoryName,
-      now
-    )
+      reviewIdMap = upsertReviews(reviewsData, pullRequestId, now)
+    }
+
+    if (!commentsResult.notModified) {
+      if (reviewsResult.notModified) {
+        reviewIdMap = buildReviewIdMapFromExisting(pullRequestId)
+      }
+
+      const commentsData = commentsResult.data ?? []
+
+      await upsertReviewComments(
+        client,
+        commentsData,
+        reviewIdMap,
+        pullRequestId,
+        owner,
+        repositoryName,
+        now
+      )
+    }
 
     if (reviewsResult.etag) {
       etagManager.set(

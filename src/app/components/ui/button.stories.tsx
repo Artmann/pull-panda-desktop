@@ -67,12 +67,19 @@ export const AllVariants: Story = {
   render: () => (
     <div className="flex flex-col gap-6 p-6">
       {variants.map((variant) => (
-        <div key={variant} className="flex items-center gap-3">
+        <div
+          key={variant}
+          className="flex items-center gap-3"
+        >
           <div className="text-muted-foreground w-24 text-xs font-medium">
             {variant}
           </div>
           {sizes.map((size) => (
-            <Button key={size} variant={variant} size={size}>
+            <Button
+              key={size}
+              variant={variant}
+              size={size}
+            >
               {variant} {size}
             </Button>
           ))}

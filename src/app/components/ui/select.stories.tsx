@@ -38,7 +38,10 @@ export const Default: Story = {
 export const Small: Story = {
   render: () => (
     <Select>
-      <SelectTrigger size="sm" className="w-48">
+      <SelectTrigger
+        size="sm"
+        className="w-48"
+      >
         <SelectValue placeholder="Filter" />
       </SelectTrigger>
       <SelectContent>

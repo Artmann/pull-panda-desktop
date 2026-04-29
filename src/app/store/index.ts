@@ -8,9 +8,7 @@ import draftsReducer, {
   loadDraftsFromStorage,
   saveDraftsToStorage
 } from './drafts-slice'
-import mergeOptionsReducer, {
-  MergeOptionsState
-} from './merge-options-slice'
+import mergeOptionsReducer, { MergeOptionsState } from './merge-options-slice'
 import modifiedFilesReducer, {
   ModifiedFilesState
 } from './modified-files-slice'

@@ -366,6 +366,44 @@ export async function mergePullRequest(
   return response.json()
 }
 
+interface UpdatePullRequestBranchRequest {
+  expectedHeadSha?: string
+  owner: string
+  pullNumber: number
+  pullRequestId: string
+  repo: string
+}
+
+export async function updatePullRequestBranch(
+  request: UpdatePullRequestBranchRequest
+): Promise<void> {
+  const baseUrl = await getApiBaseUrl()
+
+  const response = await fetch(
+    `${baseUrl}/api/pull-requests/${request.pullRequestId}/update-branch`,
+    {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        ...(request.expectedHeadSha !== undefined && {
+          expectedHeadSha: request.expectedHeadSha
+        }),
+        owner: request.owner,
+        pullNumber: request.pullNumber,
+        repo: request.repo
+      })
+    }
+  )
+
+  if (!response.ok) {
+    const error = await response.json()
+
+    throw new Error(error.error ?? 'Failed to update pull request branch')
+  }
+}
+
 interface UpdatePullRequestRequest {
   body?: string
   isDraft?: boolean

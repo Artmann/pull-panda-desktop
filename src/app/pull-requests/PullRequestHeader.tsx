@@ -143,9 +143,7 @@ export const PullRequestHeader = memo(function PullRequestHeader({
         </div>
       )}
 
-      {pullRequest.headRefName && (
-        <BranchName name={pullRequest.headRefName} />
-      )}
+      {pullRequest.headRefName && <BranchName name={pullRequest.headRefName} />}
 
       {latestReviews.length > 0 && (
         <div className="flex gap-2 overflow-x-auto">
@@ -312,7 +310,10 @@ function BranchName({ name }: { name: string }): ReactElement {
     <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
       <GitBranch className="size-3 shrink-0" />
 
-      <span className="truncate font-mono max-w-80" title={name}>
+      <span
+        className="truncate font-mono max-w-80"
+        title={name}
+      >
         {name}
       </span>
 
@@ -322,11 +323,7 @@ function BranchName({ name }: { name: string }): ReactElement {
         onClick={handleCopy}
         type="button"
       >
-        {copied ? (
-          <Check className="size-3" />
-        ) : (
-          <Copy className="size-3" />
-        )}
+        {copied ? <Check className="size-3" /> : <Copy className="size-3" />}
       </button>
     </div>
   )

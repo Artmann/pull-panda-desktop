@@ -67,9 +67,10 @@ describe('useLazyRender', () => {
     expect(screen.queryByText('Heavy content')).toEqual(null)
 
     act(() => {
-      intersectionCallback?.([
-        { isIntersecting: true } as IntersectionObserverEntry
-      ], {} as IntersectionObserver)
+      intersectionCallback?.(
+        [{ isIntersecting: true } as IntersectionObserverEntry],
+        {} as IntersectionObserver
+      )
     })
 
     expect(screen.queryByText('Heavy content')).toEqual(null)

@@ -28,8 +28,18 @@ const rows = [
     author: 'artgaard',
     status: 'Merged'
   },
-  { number: 40, title: 'Reduce header sizes', author: 'octocat', status: 'Merged' },
-  { number: 39, title: 'Add fallow script', author: 'octocat', status: 'Closed' }
+  {
+    number: 40,
+    title: 'Reduce header sizes',
+    author: 'octocat',
+    status: 'Merged'
+  },
+  {
+    number: 39,
+    title: 'Add fallow script',
+    author: 'octocat',
+    status: 'Closed'
+  }
 ]
 
 export const Default: Story = {

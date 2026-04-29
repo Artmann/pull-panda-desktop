@@ -189,7 +189,6 @@ function InlineEditableBody({
   return (
     <div className="group relative text-muted-foreground text-sm italic">
       No description provided.
-
       {!isMerged && (
         <button
           aria-label="Edit description"

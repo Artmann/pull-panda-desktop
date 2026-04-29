@@ -86,8 +86,7 @@ export function FileCardHeader({
               const cardRect = card.getBoundingClientRect()
               const containerRect = scrollContainer.getBoundingClientRect()
 
-              scrollContainer.scrollTop +=
-                cardRect.top - containerRect.top - 76
+              scrollContainer.scrollTop += cardRect.top - containerRect.top - 76
             }
           })
 

@@ -185,13 +185,49 @@ describe('parseDiffHunk', () => {
       newStartLine: 1,
       newLineCount: 6,
       lines: [
-        { content: 'line1', localLineNumber: 1, type: 'add', oldLineNumber: null, newLineNumber: 1 },
-        { content: 'line2', localLineNumber: 2, type: 'add', oldLineNumber: null, newLineNumber: 2 },
-        { content: 'line3', localLineNumber: 3, type: 'add', oldLineNumber: null, newLineNumber: 3 },
-        { content: 'line4', localLineNumber: 4, type: 'add', oldLineNumber: null, newLineNumber: 4 },
-        { content: 'line5', localLineNumber: 5, type: 'add', oldLineNumber: null, newLineNumber: 5 },
-        { content: 'line6', localLineNumber: 6, type: 'context', oldLineNumber: 1, newLineNumber: 6 },
-      ],
+        {
+          content: 'line1',
+          localLineNumber: 1,
+          type: 'add',
+          oldLineNumber: null,
+          newLineNumber: 1
+        },
+        {
+          content: 'line2',
+          localLineNumber: 2,
+          type: 'add',
+          oldLineNumber: null,
+          newLineNumber: 2
+        },
+        {
+          content: 'line3',
+          localLineNumber: 3,
+          type: 'add',
+          oldLineNumber: null,
+          newLineNumber: 3
+        },
+        {
+          content: 'line4',
+          localLineNumber: 4,
+          type: 'add',
+          oldLineNumber: null,
+          newLineNumber: 4
+        },
+        {
+          content: 'line5',
+          localLineNumber: 5,
+          type: 'add',
+          oldLineNumber: null,
+          newLineNumber: 5
+        },
+        {
+          content: 'line6',
+          localLineNumber: 6,
+          type: 'context',
+          oldLineNumber: 1,
+          newLineNumber: 6
+        }
+      ]
     })
   })
 
@@ -212,13 +248,49 @@ describe('parseDiffHunk', () => {
       newStartLine: 1,
       newLineCount: 1,
       lines: [
-        { content: 'line1', localLineNumber: 1, type: 'remove', oldLineNumber: 1, newLineNumber: null },
-        { content: 'line2', localLineNumber: 2, type: 'remove', oldLineNumber: 2, newLineNumber: null },
-        { content: 'line3', localLineNumber: 3, type: 'remove', oldLineNumber: 3, newLineNumber: null },
-        { content: 'line4', localLineNumber: 4, type: 'remove', oldLineNumber: 4, newLineNumber: null },
-        { content: 'line5', localLineNumber: 5, type: 'remove', oldLineNumber: 5, newLineNumber: null },
-        { content: 'line6', localLineNumber: 6, type: 'context', oldLineNumber: 6, newLineNumber: 1 },
-      ],
+        {
+          content: 'line1',
+          localLineNumber: 1,
+          type: 'remove',
+          oldLineNumber: 1,
+          newLineNumber: null
+        },
+        {
+          content: 'line2',
+          localLineNumber: 2,
+          type: 'remove',
+          oldLineNumber: 2,
+          newLineNumber: null
+        },
+        {
+          content: 'line3',
+          localLineNumber: 3,
+          type: 'remove',
+          oldLineNumber: 3,
+          newLineNumber: null
+        },
+        {
+          content: 'line4',
+          localLineNumber: 4,
+          type: 'remove',
+          oldLineNumber: 4,
+          newLineNumber: null
+        },
+        {
+          content: 'line5',
+          localLineNumber: 5,
+          type: 'remove',
+          oldLineNumber: 5,
+          newLineNumber: null
+        },
+        {
+          content: 'line6',
+          localLineNumber: 6,
+          type: 'context',
+          oldLineNumber: 6,
+          newLineNumber: 1
+        }
+      ]
     })
   })
 
@@ -235,9 +307,21 @@ describe('parseDiffHunk', () => {
       newStartLine: 1,
       newLineCount: 1,
       lines: [
-        { content: 'old', localLineNumber: 1, type: 'remove', oldLineNumber: 1, newLineNumber: null },
-        { content: 'new', localLineNumber: 2, type: 'add', oldLineNumber: null, newLineNumber: 1 },
-      ],
+        {
+          content: 'old',
+          localLineNumber: 1,
+          type: 'remove',
+          oldLineNumber: 1,
+          newLineNumber: null
+        },
+        {
+          content: 'new',
+          localLineNumber: 2,
+          type: 'add',
+          oldLineNumber: null,
+          newLineNumber: 1
+        }
+      ]
     })
   })
 

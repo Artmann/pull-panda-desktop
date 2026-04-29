@@ -101,4 +101,3 @@ export function getLanguageFromPath(path?: string): string | undefined {
       return
   }
 }
-

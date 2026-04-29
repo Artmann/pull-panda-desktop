@@ -74,7 +74,12 @@ reviewThreadsRoute.post('/resolve', async (context) => {
   const token = context.get('token')
   const request = await context.req.json<ResolveRequest>()
 
-  if (!request.threadId || !request.owner || !request.repo || !request.pullNumber) {
+  if (
+    !request.threadId ||
+    !request.owner ||
+    !request.repo ||
+    !request.pullNumber
+  ) {
     return context.json({ error: 'Missing required fields' }, 400)
   }
 
@@ -117,7 +122,12 @@ reviewThreadsRoute.post('/unresolve', async (context) => {
   const token = context.get('token')
   const request = await context.req.json<ResolveRequest>()
 
-  if (!request.threadId || !request.owner || !request.repo || !request.pullNumber) {
+  if (
+    !request.threadId ||
+    !request.owner ||
+    !request.repo ||
+    !request.pullNumber
+  ) {
     return context.json({ error: 'Missing required fields' }, 400)
   }
 

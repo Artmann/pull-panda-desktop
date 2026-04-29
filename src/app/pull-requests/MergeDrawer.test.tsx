@@ -470,9 +470,7 @@ describe('MergeDrawer', () => {
       screen.getByText('Waiting for required approving reviews.')
     ).toBeInTheDocument()
     expect(screen.getByText('Conversations resolved')).toBeInTheDocument()
-    expect(
-      screen.getByText('3 unresolved conversations.')
-    ).toBeInTheDocument()
+    expect(screen.getByText('3 unresolved conversations.')).toBeInTheDocument()
   })
 
   it('does not show requirements section when list is empty', async () => {
