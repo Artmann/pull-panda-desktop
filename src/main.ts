@@ -33,6 +33,8 @@ if (!app.isPackaged) {
   app.commandLine.appendSwitch('remote-debugging-port', '9222')
 }
 
+app.commandLine.appendSwitch('font-render-hinting', 'none')
+
 function setupIpcHandlers(): void {
   ipcMain.handle(ipcChannels.ApiGetPort, () => {
     return getApiPort()
