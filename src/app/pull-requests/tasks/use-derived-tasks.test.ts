@@ -84,6 +84,31 @@ describe('buildTaskGroups', () => {
     ])
   })
 
+  it('skips review threads whose anchor comment is outdated', () => {
+    const anchor = createComment({
+      gitHubReviewThreadId: 'gh-thread-1',
+      line: null,
+      path: 'src/app.ts',
+      userLogin: 'alice'
+    })
+
+    const thread = createThread({ gitHubId: 'gh-thread-1' })
+
+    const groups = buildTaskGroups({
+      checks: [],
+      comments: [anchor],
+      mergeOptions: null,
+      reviewThreads: [thread],
+      reviews: []
+    })
+
+    const reviewersGroup = groups.find((group) => group.key === 'reviewers')
+    const agentsGroup = groups.find((group) => group.key === 'agents')
+
+    expect(reviewersGroup?.tasks).toEqual([])
+    expect(agentsGroup?.tasks).toEqual([])
+  })
+
   it('skips resolved review threads', () => {
     const anchor = createComment({
       gitHubReviewThreadId: 'gh-thread-1',
