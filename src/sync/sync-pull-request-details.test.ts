@@ -258,4 +258,52 @@ describe('syncPullRequestDetails', () => {
     expect(result.success).toEqual(false)
     expect(result.errors[0]).toContain('Checks sync failed: String error')
   })
+
+  it('should dedupe concurrent syncs for the same pull request', async () => {
+    let resolveChecks: (() => void) | null = null
+
+    vi.mocked(syncChecks).mockImplementation(
+      () =>
+        new Promise<void>((resolve) => {
+          resolveChecks = resolve
+        })
+    )
+
+    const params = {
+      token: 'test-token',
+      pullRequestId: 'pr-123',
+      owner: 'testowner',
+      repositoryName: 'testrepo',
+      pullNumber: 1
+    }
+
+    const first = syncPullRequestDetails(params)
+    const second = syncPullRequestDetails(params)
+
+    resolveChecks?.()
+
+    await Promise.all([first, second])
+
+    expect(syncChecks).toHaveBeenCalledTimes(1)
+    expect(syncCommits).toHaveBeenCalledTimes(1)
+    expect(syncFiles).toHaveBeenCalledTimes(1)
+    expect(syncReviews).toHaveBeenCalledTimes(1)
+    expect(syncComments).toHaveBeenCalledTimes(1)
+    expect(syncReviewThreads).toHaveBeenCalledTimes(1)
+  })
+
+  it('should run a fresh sync after the previous one completes', async () => {
+    const params = {
+      token: 'test-token',
+      pullRequestId: 'pr-123',
+      owner: 'testowner',
+      repositoryName: 'testrepo',
+      pullNumber: 1
+    }
+
+    await syncPullRequestDetails(params)
+    await syncPullRequestDetails(params)
+
+    expect(syncChecks).toHaveBeenCalledTimes(2)
+  })
 })

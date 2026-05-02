@@ -63,58 +63,58 @@ export const ModifiedFileCard = memo(function ModifiedFileCard({
 
   return (
     <div ref={landmarkRef}>
-    <FileCard style={{ backgroundColor }}>
-      <FileCardHeader>
-        <div className="flex-1 flex items-center gap-2 font-mono text-xs">
-          <span className="truncate">{file.filePath}</span>
+      <FileCard style={{ backgroundColor }}>
+        <FileCardHeader>
+          <div className="flex-1 flex items-center gap-2 font-mono text-xs">
+            <span className="truncate">{file.filePath}</span>
 
-          <CopyToClipboardButton value={file.filePath} />
+            <CopyToClipboardButton value={file.filePath} />
 
-          {file.status === 'added' && (
-            <Badge className="bg-status-success text-status-success-foreground border-status-success-border uppercase text-[0.6rem]">
-              New
-            </Badge>
-          )}
+            {file.status === 'added' && (
+              <Badge className="bg-status-success text-status-success-foreground border-status-success-border uppercase text-[0.6rem]">
+                New
+              </Badge>
+            )}
 
-          {file.status === 'removed' && (
-            <Badge className="bg-status-danger text-status-danger-foreground border-status-danger-border uppercase text-[0.6rem]">
-              Deleted
-            </Badge>
-          )}
-        </div>
-
-        <button
-          className="text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
-          onClick={() => {
-            window.electron.openUrl(viewFileUrl)
-          }}
-          title="View file on GitHub"
-        >
-          <ExternalLinkIcon className="size-3" />
-        </button>
-      </FileCardHeader>
-
-      <FileCardBody
-        eager={eager}
-        fallback={<DiffQueuedFallback />}
-        lazy={Boolean(file.diffHunk)}
-      >
-        {file.diffHunk ? (
-          <SimpleDiff
-            diffHunk={file.diffHunk}
-            filePath={file.filePath}
-            pendingComments={filePendingComments}
-            pullRequest={pullRequest}
-            registerCommentLandmarks={true}
-            submittedComments={fileSubmittedComments}
-          />
-        ) : (
-          <div className="py-2 px-3 text-muted-foreground">
-            No changes to display.
+            {file.status === 'removed' && (
+              <Badge className="bg-status-danger text-status-danger-foreground border-status-danger-border uppercase text-[0.6rem]">
+                Deleted
+              </Badge>
+            )}
           </div>
-        )}
-      </FileCardBody>
-    </FileCard>
+
+          <button
+            className="text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+            onClick={() => {
+              window.electron.openUrl(viewFileUrl)
+            }}
+            title="View file on GitHub"
+          >
+            <ExternalLinkIcon className="size-3" />
+          </button>
+        </FileCardHeader>
+
+        <FileCardBody
+          eager={eager}
+          fallback={<DiffQueuedFallback />}
+          lazy={Boolean(file.diffHunk)}
+        >
+          {file.diffHunk ? (
+            <SimpleDiff
+              diffHunk={file.diffHunk}
+              filePath={file.filePath}
+              pendingComments={filePendingComments}
+              pullRequest={pullRequest}
+              registerCommentLandmarks={true}
+              submittedComments={fileSubmittedComments}
+            />
+          ) : (
+            <div className="py-2 px-3 text-muted-foreground">
+              No changes to display.
+            </div>
+          )}
+        </FileCardBody>
+      </FileCard>
     </div>
   )
 })

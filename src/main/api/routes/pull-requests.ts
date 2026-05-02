@@ -57,7 +57,13 @@ pullRequestsRoute.post('/:pullRequestId/activate', (context) => {
 
   if (pullRequest) {
     // Clear cached ETags so force pushes and amended commits are picked up.
-    for (const endpointType of ['checks', 'commits', 'files', 'reviews', 'comments']) {
+    for (const endpointType of [
+      'checks',
+      'commits',
+      'files',
+      'reviews',
+      'comments'
+    ]) {
       etagManager.delete({ endpointType, resourceId: pullRequestId })
     }
 
@@ -219,11 +225,12 @@ pullRequestsRoute.get('/:pullRequestId/merge-options', async (context) => {
       fetchBranchProtection(token, owner, repo, pullRequest.headRefName ?? '')
     ])
 
-    const mergeable = graphqlData.mergeable === 'MERGEABLE'
-      ? true
-      : graphqlData.mergeable === 'CONFLICTING'
-        ? false
-        : null
+    const mergeable =
+      graphqlData.mergeable === 'MERGEABLE'
+        ? true
+        : graphqlData.mergeable === 'CONFLICTING'
+          ? false
+          : null
 
     const mergeableState = graphqlData.mergeStateStatus.toLowerCase()
     const requirements = buildRequirements(graphqlData, protection)
@@ -441,10 +448,9 @@ async function fetchBranchProtection(
       requireConversationResolution:
         data.required_conversation_resolution?.enabled ?? false,
       requiredApprovingReviewCount:
-        data.required_pull_request_reviews
-          ?.required_approving_review_count ?? 0,
-      requiresStrictStatusChecks:
-        data.required_status_checks?.strict ?? false
+        data.required_pull_request_reviews?.required_approving_review_count ??
+        0,
+      requiresStrictStatusChecks: data.required_status_checks?.strict ?? false
     }
 
     branchProtectionCache.set(cacheKey, protection, cacheTtl)
@@ -497,9 +503,10 @@ function buildRequirements(
   if (protection && protection.requiredApprovingReviewCount > 0) {
     const approved = state.reviewDecision === 'APPROVED'
     const count = protection.requiredApprovingReviewCount
-    const label = count === 1
-      ? '1 approving review required'
-      : `${count} approving reviews required`
+    const label =
+      count === 1
+        ? '1 approving review required'
+        : `${count} approving reviews required`
 
     requirements.push({
       description: approved
@@ -638,6 +645,44 @@ pullRequestsRoute.post('/:pullRequestId/merge', async (context) => {
   }
 
   return context.json(updated)
+})
+
+interface UpdateBranchBody {
+  expectedHeadSha?: string
+  owner: string
+  pullNumber: number
+  repo: string
+}
+
+pullRequestsRoute.post('/:pullRequestId/update-branch', async (context) => {
+  const token = context.get('token')
+  const pullRequestId = context.req.param('pullRequestId')
+
+  if (!pullRequestId) {
+    return context.json({ error: 'Missing pull request ID' }, 400)
+  }
+
+  const request = await context.req.json<UpdateBranchBody>()
+  const octokit = new Octokit({ auth: token })
+
+  try {
+    await octokit.rest.pulls.updateBranch({
+      owner: request.owner,
+      pull_number: request.pullNumber,
+      repo: request.repo,
+      ...(request.expectedHeadSha !== undefined && {
+        expected_head_sha: request.expectedHeadSha
+      })
+    })
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Unknown error'
+
+    console.error('Failed to update pull request branch:', error)
+
+    return context.json({ error: message }, 500)
+  }
+
+  return context.json({ success: true })
 })
 
 pullRequestsRoute.post('/:pullRequestId/sync', async (context) => {

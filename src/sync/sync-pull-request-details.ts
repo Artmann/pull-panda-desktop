@@ -32,11 +32,31 @@ export interface SyncPullRequestDetailsResult {
   success: boolean
 }
 
+const inFlightSyncs = new Map<string, Promise<SyncPullRequestDetailsResult>>()
+
 /**
  * Sync all details (reviews, comments, checks, commits, files) for a single
  * pull request.
  */
-export async function syncPullRequestDetails({
+export async function syncPullRequestDetails(
+  params: SyncPullRequestDetailsParams
+): Promise<SyncPullRequestDetailsResult> {
+  const existing = inFlightSyncs.get(params.pullRequestId)
+
+  if (existing) {
+    return existing
+  }
+
+  const promise = runSyncPullRequestDetails(params).finally(() => {
+    inFlightSyncs.delete(params.pullRequestId)
+  })
+
+  inFlightSyncs.set(params.pullRequestId, promise)
+
+  return promise
+}
+
+async function runSyncPullRequestDetails({
   token,
   pullRequestId,
   owner,
@@ -44,7 +64,11 @@ export async function syncPullRequestDetails({
   pullNumber
 }: SyncPullRequestDetailsParams): Promise<SyncPullRequestDetailsResult> {
   if (!isDatabaseInitialized()) {
-    return { errors: ['Database not initialized'], notFound: false, success: false }
+    return {
+      errors: ['Database not initialized'],
+      notFound: false,
+      success: false
+    }
   }
 
   const errors: string[] = []

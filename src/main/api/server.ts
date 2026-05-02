@@ -128,7 +128,10 @@ export function startApiServer(getToken: () => string | null): Promise<number> {
         const address = server.address() as AddressInfo
         apiPort = address.port
 
-        const portFilePath = path.join(electronApp.getPath('userData'), 'api-port')
+        const portFilePath = path.join(
+          electronApp.getPath('userData'),
+          'api-port'
+        )
         fs.writeFileSync(portFilePath, String(apiPort))
 
         console.log(`API server started on port ${apiPort}`)

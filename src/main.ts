@@ -1,10 +1,15 @@
-import { app, BrowserWindow, ipcMain, shell } from 'electron'
+import { app, BrowserWindow, ipcMain, screen, shell } from 'electron'
 import started from 'electron-squirrel-startup'
 import path from 'node:path'
 
 import { initializeDatabase, closeDatabase, saveDatabase } from './database'
 import { ipcChannels } from './lib/ipc/channels'
-import { getApiPort, setApiMainWindow, startApiServer, stopApiServer } from './main/api'
+import {
+  getApiPort,
+  setApiMainWindow,
+  startApiServer,
+  stopApiServer
+} from './main/api'
 import { bootstrap, BootstrapData } from './main/bootstrap'
 import { sendPullRequestResourceEvents } from './main/send-resource-events'
 import { backgroundSyncer } from './main/background-syncer'
@@ -119,9 +124,14 @@ function setupIpcHandlers(): void {
 }
 
 const createWindow = () => {
+  const { workAreaSize } = screen.getPrimaryDisplay()
+  const margin = 80
+  const width = Math.min(1600, Math.max(1200, workAreaSize.width - margin))
+  const height = Math.min(1000, Math.max(700, workAreaSize.height - margin))
+
   mainWindow = new BrowserWindow({
     frame: false,
-    height: 700,
+    height,
     titleBarStyle: 'hidden',
     trafficLightPosition: { x: 12, y: 10 },
     webPreferences: {
@@ -129,7 +139,7 @@ const createWindow = () => {
       nodeIntegration: false,
       preload: path.join(__dirname, 'preload.js')
     },
-    width: 1200
+    width
   })
 
   taskManager.setMainWindow(mainWindow)

@@ -24,13 +24,19 @@ export const Default: Story = {
     <Breadcrumb>
       <BreadcrumbList>
         <BreadcrumbItem>
-          <a href="#" className="hover:text-foreground">
+          <a
+            href="#"
+            className="hover:text-foreground"
+          >
             Home
           </a>
         </BreadcrumbItem>
         <BreadcrumbSeparator />
         <BreadcrumbItem>
-          <a href="#" className="hover:text-foreground">
+          <a
+            href="#"
+            className="hover:text-foreground"
+          >
             Repositories
           </a>
         </BreadcrumbItem>

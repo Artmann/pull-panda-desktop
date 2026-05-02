@@ -222,11 +222,11 @@ function ActivityItemBody({
   if (isComment(item)) {
     const comment = item.data
 
-    if (!comment.body && !comment.diffHunk) {
+    if (!comment.body && !comment.diffHunk && !comment.path) {
       return null
     }
 
-    return comment.diffHunk ? (
+    return comment.path ? (
       <div data-testid={`comment-${comment.id}`}>
         <FileCommentThreadCard
           allComments={allComments}

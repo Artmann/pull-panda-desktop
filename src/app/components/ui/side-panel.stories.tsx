@@ -40,7 +40,10 @@ export const Default: Story = {
           </p>
         </SidePanelContent>
         <SidePanelFooter>
-          <Button size="sm" className="w-full">
+          <Button
+            size="sm"
+            className="w-full"
+          >
             Approve
           </Button>
         </SidePanelFooter>

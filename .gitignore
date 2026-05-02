@@ -98,3 +98,8 @@ bin/
 
 # Storybook
 storybook-static/
+
+# Local screenshots and scratch files
+.tmp-*.png
+_screen*.png
+_screenshot*.png

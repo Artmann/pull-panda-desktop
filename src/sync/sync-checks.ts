@@ -72,13 +72,42 @@ async function resolveCommitSha(
   if (prResult.notModified) {
     const cached = headShaCache.get(pullRequestId) ?? null
 
-    if (!cached) {
-      console.log(
-        `[syncChecks] PR returned 304 but no cached SHA for #${pullNumber}`
+    if (cached) {
+      return cached
+    }
+
+    // Cold start: persisted etag is valid but in-memory SHA cache is empty.
+    // Drop the etag and refetch so we can populate the cache.
+    console.log(
+      `[syncChecks] PR returned 304 but no cached SHA for #${pullNumber} — refetching`
+    )
+    etagManager.delete(prEtagKey)
+
+    const refreshed = await client.request<PullRequestData>(
+      'GET /repos/{owner}/{repo}/pulls/{pull_number}',
+      {
+        owner,
+        repo: repositoryName,
+        pull_number: pullNumber
+      }
+    )
+
+    if (!refreshed.data) {
+      return null
+    }
+
+    const refreshedSha = refreshed.data.head.sha
+    headShaCache.set(pullRequestId, refreshedSha)
+
+    if (refreshed.etag) {
+      etagManager.set(
+        prEtagKey,
+        refreshed.etag,
+        refreshed.lastModified ?? undefined
       )
     }
 
-    return cached
+    return refreshedSha
   }
 
   if (!prResult.data) {

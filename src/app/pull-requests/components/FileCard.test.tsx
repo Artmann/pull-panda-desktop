@@ -132,7 +132,14 @@ describe('FileCard scroll adjustment on collapse', () => {
       writable: true
     })
     scrollContainer.getBoundingClientRect = () =>
-      ({ top: 32, left: 0, right: 800, bottom: 600, width: 800, height: 568 }) as DOMRect
+      ({
+        top: 32,
+        left: 0,
+        right: 800,
+        bottom: 600,
+        width: 800,
+        height: 568
+      }) as DOMRect
     document.body.appendChild(scrollContainer)
 
     render(
@@ -147,7 +154,14 @@ describe('FileCard scroll adjustment on collapse', () => {
 
     const card = scrollContainer.firstElementChild as HTMLElement
     card.getBoundingClientRect = () =>
-      ({ top: -200, left: 0, right: 800, bottom: 108, width: 800, height: 308 }) as DOMRect
+      ({
+        top: -200,
+        left: 0,
+        right: 800,
+        bottom: 108,
+        width: 800,
+        height: 308
+      }) as DOMRect
 
     fireEvent.click(screen.getByRole('banner'))
     flushRaf()

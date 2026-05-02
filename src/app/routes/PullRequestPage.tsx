@@ -2,6 +2,7 @@ import {
   ArrowLeft,
   FileCodeIcon,
   ListCheckIcon,
+  ListTodoIcon,
   MessageSquareIcon
 } from 'lucide-react'
 import React, {
@@ -41,6 +42,11 @@ import {
 } from '../pull-requests/PullRequestHeader'
 import { PullRequestToolbar } from '../pull-requests/PullRequestToolbar'
 import { ReviewDrawer } from '../pull-requests/ReviewDrawer'
+import { TasksTab } from '../pull-requests/tasks/TasksTab'
+import {
+  countOpenBlockers,
+  useDerivedTaskGroups
+} from '../pull-requests/tasks/use-derived-tasks'
 
 export function PullRequestPage(): ReactElement {
   const containerRef = useRef<HTMLDivElement>(null)
@@ -65,8 +71,14 @@ export function PullRequestPage(): ReactElement {
       state.modifiedFiles.items.filter((f) => f.pullRequestId === id).length
   )
 
+  const taskGroups = useDerivedTaskGroups(id ?? '')
+  const openBlockerCount = useMemo(
+    () => countOpenBlockers(taskGroups),
+    [taskGroups]
+  )
+
   const tabFromUrl = searchParams.get('tab')
-  const validTabs = ['overview', 'checks', 'files']
+  const validTabs = ['overview', 'tasks', 'checks', 'files']
   const activeTab =
     tabFromUrl && validTabs.includes(tabFromUrl) ? tabFromUrl : 'overview'
 
@@ -149,6 +161,13 @@ export function PullRequestPage(): ReactElement {
         label: 'Overview'
       },
       {
+        content: TasksTab,
+        icon: ListTodoIcon,
+        id: 'tasks',
+        itemCount: openBlockerCount > 0 ? openBlockerCount : undefined,
+        label: 'Tasks'
+      },
+      {
         content: ChecksView,
         icon: ListCheckIcon,
         id: 'checks',
@@ -163,7 +182,7 @@ export function PullRequestPage(): ReactElement {
         label: 'Files'
       }
     ],
-    [checksCount, filesCount]
+    [checksCount, filesCount, openBlockerCount]
   )
 
   useEffect(

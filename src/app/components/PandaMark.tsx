@@ -25,11 +25,7 @@ export function PandaMark({
   )
 }
 
-export function Wordmark({
-  className
-}: {
-  className?: string
-}): ReactElement {
+export function Wordmark({ className }: { className?: string }): ReactElement {
   return (
     <div
       className={
