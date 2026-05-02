@@ -64,9 +64,13 @@ function buildCiGroup({
 }): TaskGroup {
   const dedupedChecks = dedupeChecksByName(checks)
 
-  const { passedCount, tasks } = buildCheckTasks(dedupedChecks)
+  const tasks: Task[] = []
 
   pushMergeRequirementTasks(tasks, mergeOptions)
+
+  const { passedCount, tasks: checkTasks } = buildCheckTasks(dedupedChecks)
+
+  tasks.push(...checkTasks)
 
   if (passedCount > 0 && !tasks.some((task) => task.severity === 'blocker')) {
     const doneTask: SimpleTask = {
@@ -143,7 +147,8 @@ function buildRunningCheckTask(check: Check): SimpleTask {
     id: `check-${check.id}`,
     kind: 'simple',
     meta: check.suiteName ? `${check.suiteName} · running` : 'Running',
-    severity: 'warning',
+    severity: 'info',
+    status: 'running',
     title: check.name
   }
 }
@@ -181,6 +186,10 @@ function pushMergeRequirementTasks(
 
   for (const requirement of mergeOptions.requirements) {
     if (requirement.satisfied) {
+      continue
+    }
+
+    if (requirement.key === 'required-checks') {
       continue
     }
 

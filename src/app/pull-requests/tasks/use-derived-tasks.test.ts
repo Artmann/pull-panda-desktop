@@ -267,7 +267,7 @@ describe('buildTaskGroups', () => {
     ])
   })
 
-  it('treats running checks as warnings without surfacing the all-passed summary', () => {
+  it('emits running checks as info-severity tasks with a running status', () => {
     const running = createCheck({
       conclusion: null,
       id: 'check-2',
@@ -291,9 +291,75 @@ describe('buildTaskGroups', () => {
         id: 'check-check-2',
         kind: 'simple',
         meta: 'CI · running',
-        severity: 'warning',
+        severity: 'info',
+        status: 'running',
         title: 'tests'
       }
+    ])
+  })
+
+  it('drops the required-checks requirement since the running checks already convey it', () => {
+    const running = createCheck({
+      conclusion: null,
+      id: 'check-2',
+      name: 'tests',
+      state: 'in_progress',
+      suiteName: 'CI'
+    })
+
+    const groups = buildTaskGroups({
+      checks: [running],
+      comments: [],
+      mergeOptions: createMergeOptions({
+        requirements: [
+          {
+            description: 'Required checks must pass before merging.',
+            key: 'required-checks',
+            label: 'Required checks',
+            satisfied: false
+          }
+        ]
+      }),
+      reviewThreads: [],
+      reviews: []
+    })
+
+    const ciGroup = groups.find((group) => group.key === 'ci')
+
+    expect(ciGroup?.tasks.map((task) => task.id)).toEqual(['check-check-2'])
+  })
+
+  it('orders other unsatisfied requirements above check tasks in the CI group', () => {
+    const running = createCheck({
+      conclusion: null,
+      id: 'check-2',
+      name: 'tests',
+      state: 'in_progress',
+      suiteName: 'CI'
+    })
+
+    const groups = buildTaskGroups({
+      checks: [running],
+      comments: [],
+      mergeOptions: createMergeOptions({
+        requirements: [
+          {
+            description: 'The branch must be up to date with the base branch.',
+            key: 'up-to-date',
+            label: 'Update branch',
+            satisfied: false
+          }
+        ]
+      }),
+      reviewThreads: [],
+      reviews: []
+    })
+
+    const ciGroup = groups.find((group) => group.key === 'ci')
+
+    expect(ciGroup?.tasks.map((task) => task.id)).toEqual([
+      'requirement-up-to-date',
+      'check-check-2'
     ])
   })
 

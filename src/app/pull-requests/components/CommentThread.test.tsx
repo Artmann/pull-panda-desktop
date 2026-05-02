@@ -24,17 +24,21 @@ import { CommentThreadCard, FileCommentThreadCard } from './CommentThread'
 
 // Mock browser APIs not available in jsdom
 beforeAll(() => {
-  global.IntersectionObserver = vi.fn().mockImplementation(() => ({
-    observe: vi.fn(),
-    unobserve: vi.fn(),
-    disconnect: vi.fn()
-  }))
+  global.IntersectionObserver = vi.fn(function MockIntersectionObserver() {
+    return {
+      observe: vi.fn(),
+      unobserve: vi.fn(),
+      disconnect: vi.fn()
+    }
+  }) as unknown as typeof IntersectionObserver
 
-  global.ResizeObserver = vi.fn().mockImplementation(() => ({
-    observe: vi.fn(),
-    unobserve: vi.fn(),
-    disconnect: vi.fn()
-  }))
+  global.ResizeObserver = vi.fn(function MockResizeObserver() {
+    return {
+      observe: vi.fn(),
+      unobserve: vi.fn(),
+      disconnect: vi.fn()
+    }
+  }) as unknown as typeof ResizeObserver
 })
 
 vi.mock('@/app/lib/api', () => ({

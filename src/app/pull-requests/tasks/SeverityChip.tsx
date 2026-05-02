@@ -34,7 +34,7 @@ export function SeverityChip({
   return (
     <span
       className={cn(
-        'inline-flex items-center gap-1 rounded px-1.5 py-0.5',
+        'inline-flex items-center gap-1 rounded px-1.5 py-0.5 -ml-px mr-0.5',
         'text-[10px] font-mono font-semibold uppercase tracking-wider',
         'border whitespace-nowrap shrink-0',
         severityClassNames[severity]

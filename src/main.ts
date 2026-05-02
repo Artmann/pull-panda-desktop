@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain, shell } from 'electron'
+import { app, BrowserWindow, ipcMain, screen, shell } from 'electron'
 import started from 'electron-squirrel-startup'
 import path from 'node:path'
 
@@ -124,9 +124,14 @@ function setupIpcHandlers(): void {
 }
 
 const createWindow = () => {
+  const { workAreaSize } = screen.getPrimaryDisplay()
+  const margin = 80
+  const width = Math.min(1600, Math.max(1200, workAreaSize.width - margin))
+  const height = Math.min(1000, Math.max(700, workAreaSize.height - margin))
+
   mainWindow = new BrowserWindow({
     frame: false,
-    height: 700,
+    height,
     titleBarStyle: 'hidden',
     trafficLightPosition: { x: 12, y: 10 },
     webPreferences: {
@@ -134,7 +139,7 @@ const createWindow = () => {
       nodeIntegration: false,
       preload: path.join(__dirname, 'preload.js')
     },
-    width: 1200
+    width
   })
 
   taskManager.setMainWindow(mainWindow)

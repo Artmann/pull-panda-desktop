@@ -14,6 +14,7 @@ interface BaseTask {
   kind: TaskKind
   meta?: string
   severity: Severity
+  status?: 'running'
   title: string
 }
 

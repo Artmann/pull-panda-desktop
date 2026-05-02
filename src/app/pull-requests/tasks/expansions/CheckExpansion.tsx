@@ -11,7 +11,7 @@ interface CheckExpansionProps {
 
 export function CheckExpansion({ task }: CheckExpansionProps): ReactElement {
   return (
-    <div className="flex flex-col gap-3 rounded-md border border-border bg-card p-3">
+    <div className="flex flex-col gap-3">
       {task.message ? (
         <pre className="overflow-x-auto rounded-sm bg-muted p-3 font-mono text-xs leading-relaxed text-foreground/80 whitespace-pre-wrap">
           {task.message}
@@ -30,7 +30,7 @@ export function CheckExpansion({ task }: CheckExpansionProps): ReactElement {
                 window.electron.openUrl(task.detailsUrl)
               }
             }}
-            size="sm"
+            size="xs"
             variant="outline"
           >
             <ExternalLinkIcon className="size-3" />

@@ -91,10 +91,6 @@ export function TasksTab({ pullRequest }: TasksTabProps): ReactElement {
           totalTasks={allTasks.length}
         />
       )}
-
-      <div className="pt-2 text-center font-mono text-[11px] text-muted-foreground">
-        Tasks update live as checks finish, reviews land, and threads resolve.
-      </div>
     </div>
   )
 }

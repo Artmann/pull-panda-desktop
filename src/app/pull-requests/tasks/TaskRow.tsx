@@ -1,4 +1,9 @@
-import { CheckIcon, ChevronDownIcon, ExternalLinkIcon } from 'lucide-react'
+import {
+  CheckIcon,
+  ChevronDownIcon,
+  ExternalLinkIcon,
+  Loader2Icon
+} from 'lucide-react'
 import {
   useCallback,
   useLayoutEffect,
@@ -19,7 +24,6 @@ import { CheckExpansion } from './expansions/CheckExpansion'
 import { RequirementExpansion } from './expansions/RequirementExpansion'
 import { ReviewStateExpansion } from './expansions/ReviewStateExpansion'
 import { ThreadExpansion } from './expansions/ThreadExpansion'
-import { SeverityChip } from './SeverityChip'
 import type { Severity, Task } from './task-types'
 
 interface TaskRowProps {
@@ -108,11 +112,18 @@ export function TaskRow({
 
       {renderAppendedExpansion && (
         <ExpandableSection isOpen={isOpen}>
-          <div className="px-3.5 pb-3 pl-[42px]">
-            <TaskExpansion
-              pullRequest={pullRequest}
-              task={task}
+          <div className="flex gap-3 px-3.5 pb-3 pt-1">
+            <div
+              aria-hidden
+              className="w-0.75 shrink-0"
             />
+
+            <div className="min-w-0 flex-1 pl-2">
+              <TaskExpansion
+                pullRequest={pullRequest}
+                task={task}
+              />
+            </div>
           </div>
         </ExpandableSection>
       )}
@@ -183,19 +194,19 @@ function CollapseButton({
   onToggle
 }: CollapseButtonProps): ReactElement {
   return (
-    <Button
+    <button
       aria-label={isOpen ? 'Collapse task' : 'Expand task'}
+      className="shrink-0 cursor-pointer text-muted-foreground transition-colors hover:text-foreground"
       onClick={(event) => {
         event.stopPropagation()
         onToggle()
       }}
-      size="icon-sm"
-      variant="ghost"
+      type="button"
     >
       <ChevronDownIcon
         className={cn('size-3.5 transition-transform', isOpen && 'rotate-180')}
       />
-    </Button>
+    </button>
   )
 }
 
@@ -219,13 +230,13 @@ function CollapsedRowBody({
       <div
         aria-hidden
         className={cn(
-          'w-[3px] self-stretch shrink-0 rounded-full',
+          'w-0.75 self-stretch shrink-0 rounded-full',
           severityBarClassNames[task.severity]
         )}
       />
 
       <div
-        className={cn('min-w-0 flex-1', bodyClickable && 'cursor-pointer')}
+        className={cn('min-w-0 flex-1 pl-2', bodyClickable && 'cursor-pointer')}
         onClick={bodyClickable ? onToggle : undefined}
       >
         <CollapsedHeader
@@ -234,7 +245,7 @@ function CollapsedRowBody({
         />
       </div>
 
-      <div className="flex shrink-0 items-center gap-1">
+      <div className="flex shrink-0 items-center gap-3">
         {task.action?.url && !isDone && <TaskActionButton task={task} />}
 
         {collapseButton}
@@ -259,7 +270,7 @@ function TaskActionButton({ task }: { task: Task }): ReactElement {
           window.electron.openUrl(task.action.url)
         }
       }}
-      size="sm"
+      size="xs"
       variant="outline"
     >
       <ExternalLinkIcon className="size-3" />
@@ -315,10 +326,14 @@ interface CollapsedHeaderProps {
 }
 
 function CollapsedHeader({ isDone, task }: CollapsedHeaderProps): ReactElement {
+  const isRunning = task.status === 'running'
+
   return (
     <>
       <div className="flex flex-wrap items-center gap-2">
-        <SeverityChip severity={task.severity} />
+        {isRunning ? (
+          <Loader2Icon className="size-3.5 shrink-0 animate-spin text-muted-foreground" />
+        ) : null}
 
         {task.authorLogin && (
           <Avatar className="size-4">
@@ -343,7 +358,7 @@ function CollapsedHeader({ isDone, task }: CollapsedHeaderProps): ReactElement {
       </div>
 
       {task.meta && (
-        <div className="mt-1 truncate font-mono text-[11px] text-muted-foreground">
+        <div className="mt-1 truncate font-mono text-[11px] text-muted-foreground pt-1">
           {task.meta}
         </div>
       )}

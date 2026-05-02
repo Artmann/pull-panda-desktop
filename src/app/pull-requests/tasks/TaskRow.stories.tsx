@@ -68,7 +68,8 @@ export const PendingCheck: Story = {
       id: 'check-2',
       kind: 'simple',
       meta: 'CI · running',
-      severity: 'warning',
+      severity: 'info',
+      status: 'running',
       title: 'preview-deploy still running'
     }
   }

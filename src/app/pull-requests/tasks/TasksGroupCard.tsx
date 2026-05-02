@@ -58,14 +58,6 @@ export function TasksGroupCard({
         }}
         type="button"
       >
-        <span className="text-muted-foreground">
-          {isCollapsed ? (
-            <ChevronRightIcon className="size-3.5" />
-          ) : (
-            <ChevronDownIcon className="size-3.5" />
-          )}
-        </span>
-
         <Icon className="size-3.5 text-muted-foreground" />
 
         <span className="text-sm font-semibold tracking-tight">
@@ -95,6 +87,14 @@ export function TasksGroupCard({
             {counts.done}/{group.tasks.length}
           </span>
         </div>
+
+        <span className="text-muted-foreground">
+          {isCollapsed ? (
+            <ChevronRightIcon className="size-3.5" />
+          ) : (
+            <ChevronDownIcon className="size-3.5" />
+          )}
+        </span>
       </button>
 
       {!isCollapsed && (
