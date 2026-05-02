@@ -21,7 +21,12 @@ export function RequirementExpansion({
         {task.description}
       </div>
 
-      <BranchSyncActions pullRequest={pullRequest} />
+      <div className="flex justify-end">
+        <BranchSyncActions
+          fullWidth={false}
+          pullRequest={pullRequest}
+        />
+      </div>
     </div>
   )
 }

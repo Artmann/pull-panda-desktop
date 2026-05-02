@@ -14,10 +14,12 @@ import { useAppDispatch, useAppSelector } from '@/app/store/hooks'
 import type { PullRequest } from '@/types/pull-request'
 
 interface BranchSyncActionsProps {
+  fullWidth?: boolean
   pullRequest: PullRequest
 }
 
 export function BranchSyncActions({
+  fullWidth = true,
   pullRequest
 }: BranchSyncActionsProps): ReactElement | null {
   const mergeOptions = useAppSelector(
@@ -29,21 +31,35 @@ export function BranchSyncActions({
   }
 
   if (mergeOptions.mergeableState === 'behind') {
-    return <UpdateBranchButton pullRequest={pullRequest} />
+    return (
+      <UpdateBranchButton
+        fullWidth={fullWidth}
+        pullRequest={pullRequest}
+      />
+    )
   }
 
   if (mergeOptions.mergeableState === 'dirty') {
-    return <CopyConflictPromptButton pullRequest={pullRequest} />
+    return (
+      <CopyConflictPromptButton
+        fullWidth={fullWidth}
+        pullRequest={pullRequest}
+      />
+    )
   }
 
   return null
 }
 
 interface ActionButtonProps {
+  fullWidth: boolean
   pullRequest: PullRequest
 }
 
-function UpdateBranchButton({ pullRequest }: ActionButtonProps): ReactElement {
+function UpdateBranchButton({
+  fullWidth,
+  pullRequest
+}: ActionButtonProps): ReactElement {
   const dispatch = useAppDispatch()
   const [isUpdating, setIsUpdating] = useState(false)
 
@@ -78,7 +94,7 @@ function UpdateBranchButton({ pullRequest }: ActionButtonProps): ReactElement {
 
   return (
     <Button
-      className="w-full"
+      className={fullWidth ? 'w-full' : undefined}
       disabled={isUpdating}
       onClick={handleClick}
       size="sm"
@@ -95,6 +111,7 @@ function UpdateBranchButton({ pullRequest }: ActionButtonProps): ReactElement {
 }
 
 function CopyConflictPromptButton({
+  fullWidth,
   pullRequest
 }: ActionButtonProps): ReactElement {
   const [hasBeenClicked, setHasBeenClicked] = useState(false)
@@ -120,7 +137,7 @@ function CopyConflictPromptButton({
 
   return (
     <Button
-      className="w-full"
+      className={fullWidth ? 'w-full' : undefined}
       onClick={handleClick}
       size="sm"
       variant="outline"
