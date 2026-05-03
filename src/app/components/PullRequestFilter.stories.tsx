@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { PullRequestFilter } from './PullRequestFilter'
 
 function noop(): void {
-  return undefined
+  return
 }
 
 const meta = {

@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { Pagination } from './Pagination'
 
 function noop(): void {
-  return undefined
+  return
 }
 
 const meta = {

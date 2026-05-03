@@ -424,7 +424,7 @@ const DiffLine = memo(function DiffLine({
       return diffColors?.diffRemove
     }
 
-    return undefined
+    return
   }
 
   const wasAdded = line.type === 'add'

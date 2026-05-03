@@ -3,7 +3,7 @@ import type { Meta, StoryObj } from '@storybook/react-vite'
 import { DeviceCodeCard } from './DeviceCodeCard'
 
 function noop(): void {
-  return undefined
+  return
 }
 
 const meta = {

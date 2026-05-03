@@ -21,7 +21,14 @@
         "varsIgnorePattern": "^_"
       }
     ],
-    "import/namespace": "off"
+    "import/namespace": "off",
+    "no-restricted-syntax": [
+      "error",
+      {
+        "selector": "ReturnStatement > Identifier.argument[name=\"undefined\"]",
+        "message": "Do not `return undefined` explicitly — use a bare `return` instead."
+      }
+    ]
   },
   "settings": {
     "import/resolver": {
