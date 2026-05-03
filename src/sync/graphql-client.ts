@@ -9,6 +9,8 @@ export interface GraphQLRateLimit {
   resetAt: string
 }
 
+const maxInlineSleepMs = 10_000
+
 export class GraphQLClient {
   private client: typeof graphql
 
@@ -27,6 +29,12 @@ export class GraphQLClient {
     // Check if we should pause before making the request
     if (rateLimitManager.shouldPause('graphql')) {
       const waitMs = rateLimitManager.getWaitTimeMs('graphql')
+
+      if (waitMs > maxInlineSleepMs) {
+        throw new Error(
+          `GraphQL rate limit too low; reset in ${Math.round(waitMs / 1000)}s`
+        )
+      }
 
       log.info(
         `[GraphQL] Rate limit low, waiting ${Math.round(waitMs / 1000)}s until reset`
@@ -55,6 +63,12 @@ export class GraphQLClient {
         const waitMs = resetAt
           ? (parseInt(resetAt, 10) - Math.floor(Date.now() / 1000) + 5) * 1000
           : 60000
+
+        if (waitMs > maxInlineSleepMs) {
+          throw new Error(
+            `GraphQL rate limited; reset in ${Math.round(waitMs / 1000)}s`
+          )
+        }
 
         log.info(
           `[GraphQL] Rate limited, waiting ${Math.round(waitMs / 1000)}s before retry`

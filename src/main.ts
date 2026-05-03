@@ -357,6 +357,18 @@ app.on('ready', async () => {
 })
 
 let pullRequestSyncInFlight = false
+let staleSyncInFlight = false
+let lastSearchSyncedIds: Set<string> = new Set()
+
+async function rebuildBootstrapAndNotify(): Promise<void> {
+  const userLogin = await getUserLogin()
+  bootstrapData = await bootstrap(userLogin)
+
+  mainWindow?.webContents.send(ipcChannels.ResourceUpdated, {
+    type: 'pull-requests',
+    data: bootstrapData.pullRequests
+  })
+}
 
 async function runPullRequestSync(token: string): Promise<void> {
   if (pullRequestSyncInFlight) {
@@ -381,30 +393,17 @@ async function runPullRequestSync(token: string): Promise<void> {
         console.warn('Sync warnings:', result.errors)
       }
 
-      // Update stale PRs that were merged/closed on GitHub
-      try {
-        const staleUpdated = await syncStalePullRequests(
-          token,
-          result.syncedIds
-        )
+      lastSearchSyncedIds = result.syncedIds
 
-        if (staleUpdated > 0) {
-          console.log(`Updated ${staleUpdated} stale pull requests`)
-        }
-      } catch (error) {
-        console.error('Failed to sync stale pull requests:', error)
-      }
+      await rebuildBootstrapAndNotify()
 
-      // Rebuild bootstrap data for future IPC GetBootstrapData calls
-      const postSyncUserLogin = await getUserLogin()
-      bootstrapData = await bootstrap(postSyncUserLogin)
-
-      // Send the fresh PR list to the renderer
-      mainWindow?.webContents.send(ipcChannels.ResourceUpdated, {
-        type: 'pull-requests',
-        data: bootstrapData.pullRequests
-      })
       mainWindow?.webContents.send(ipcChannels.SyncComplete)
+
+      // Stale handling can sleep on rate limits, so it runs on its own
+      // in-flight flag and never blocks the main poll cycle.
+      runStaleSync(token).catch((error) => {
+        console.error('Failed to run stale sync:', error)
+      })
 
       syncAllPullRequestDetails(token).catch((error) => {
         console.error('Failed to sync PR details:', error)
@@ -420,6 +419,28 @@ async function runPullRequestSync(token: string): Promise<void> {
     .finally(() => {
       pullRequestSyncInFlight = false
     })
+}
+
+async function runStaleSync(token: string): Promise<void> {
+  if (staleSyncInFlight) {
+    return
+  }
+
+  staleSyncInFlight = true
+
+  try {
+    const staleUpdated = await syncStalePullRequests(token, lastSearchSyncedIds)
+
+    if (staleUpdated > 0) {
+      console.log(`Updated ${staleUpdated} stale pull requests`)
+
+      await rebuildBootstrapAndNotify()
+    }
+  } catch (error) {
+    console.error('Failed to sync stale pull requests:', error)
+  } finally {
+    staleSyncInFlight = false
+  }
 }
 
 // Save database periodically (every 30 seconds)
