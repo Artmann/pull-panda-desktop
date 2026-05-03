@@ -45,7 +45,7 @@ export async function getSharedHighlighter(): Promise<Highlighter> {
 
 export function getLanguageFromPath(path?: string): string | undefined {
   if (!path) {
-    return undefined
+    return
   }
 
   const extension = path.split('.').pop()?.toLowerCase()

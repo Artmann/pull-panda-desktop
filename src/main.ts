@@ -317,7 +317,7 @@ async function getUserLogin(): Promise<string | undefined> {
   const token = loadToken()
 
   if (!token) {
-    return undefined
+    return
   }
 
   try {
@@ -325,7 +325,7 @@ async function getUserLogin(): Promise<string | undefined> {
 
     return user?.login
   } catch {
-    return undefined
+    return
   }
 }
 
