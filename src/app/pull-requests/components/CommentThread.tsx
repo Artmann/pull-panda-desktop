@@ -1,6 +1,7 @@
 import {
   Check,
   CheckIcon,
+  ChevronDown,
   CircleCheck,
   Code2,
   Loader2,
@@ -719,6 +720,7 @@ export const CommentThreadCard = memo(function CommentThreadCard({
 interface FileCommentThreadCardProps {
   comment: Comment
   allComments: Comment[]
+  collapseWhenOutdated?: boolean
   hideAuthor?: boolean
   pullRequest?: PullRequest
   showPromptButton?: boolean
@@ -728,6 +730,7 @@ interface FileCommentThreadCardProps {
 export const FileCommentThreadCard = memo(function FileCommentThreadCard({
   comment,
   allComments,
+  collapseWhenOutdated = false,
   hideAuthor = false,
   pullRequest,
   showPromptButton = false,
@@ -736,6 +739,9 @@ export const FileCommentThreadCard = memo(function FileCommentThreadCard({
   const thread = useReviewThread(comment.gitHubReviewThreadId)
   const isInline = variant === 'inline'
   const isOutdated = isCommentOutdated(comment)
+  const isCollapsible = collapseWhenOutdated && isOutdated && !isInline
+  const [isExpanded, setIsExpanded] = useState(false)
+  const showContent = !isCollapsible || isExpanded
   const diff = renderCommentDiff(comment, isInline, isOutdated)
 
   const resolveIconButton = pullRequest && thread && (
@@ -798,24 +804,27 @@ export const FileCommentThreadCard = memo(function FileCommentThreadCard({
         thread?.isResolved && 'opacity-70'
       )}
     >
-      <CardHeader className="px-4 py-3 pb-4! bg-muted border-b border-border flex items-center gap-3">
-        <Code2 className="w-4 h-4 text-muted-foreground shrink-0" />
-        <CardTitle className="min-w-0 flex-1 text-xs text-foreground/80 font-mono truncate">
-          {comment.path}
-        </CardTitle>
-        {isOutdated && <OutdatedBadge />}
-      </CardHeader>
-      <CardContent className="p-0 w-full">
-        {diff}
-        <CommentThread
-          anchorHeaderExtra={resolveIconButton}
-          comment={comment}
-          allComments={allComments}
-          hideAuthor={hideAuthor}
-          showPromptButton={showPromptButton}
-        />
-      </CardContent>
-      {cardFooter && (
+      <FileCommentHeader
+        comment={comment}
+        isCollapsible={isCollapsible}
+        isExpanded={isExpanded}
+        isOutdated={isOutdated}
+        onToggle={() => setIsExpanded((value) => !value)}
+      />
+
+      {showContent && (
+        <CardContent className="p-0 w-full">
+          {diff}
+          <CommentThread
+            anchorHeaderExtra={resolveIconButton}
+            comment={comment}
+            allComments={allComments}
+            hideAuthor={hideAuthor}
+            showPromptButton={showPromptButton}
+          />
+        </CardContent>
+      )}
+      {showContent && cardFooter && (
         <CardFooter className="px-3 pt-1! pb-2 border-t border-border flex flex-col items-stretch gap-2">
           {cardFooter}
         </CardFooter>
@@ -823,6 +832,64 @@ export const FileCommentThreadCard = memo(function FileCommentThreadCard({
     </Card>
   )
 })
+
+interface FileCommentHeaderProps {
+  comment: Comment
+  isCollapsible: boolean
+  isExpanded: boolean
+  isOutdated: boolean
+  onToggle: () => void
+}
+
+function FileCommentHeader({
+  comment,
+  isCollapsible,
+  isExpanded,
+  isOutdated,
+  onToggle
+}: FileCommentHeaderProps): ReactElement {
+  const inner = (
+    <>
+      <Code2 className="w-4 h-4 text-muted-foreground shrink-0" />
+      <CardTitle className="min-w-0 flex-1 text-xs text-foreground/80 font-mono truncate">
+        {comment.path}
+      </CardTitle>
+      {isOutdated && <OutdatedBadge />}
+      {isCollapsible && (
+        <ChevronDown
+          className={cn(
+            'size-4 shrink-0 text-muted-foreground transition-transform',
+            isExpanded && 'rotate-180'
+          )}
+        />
+      )}
+    </>
+  )
+
+  if (isCollapsible) {
+    return (
+      <button
+        type="button"
+        aria-expanded={isExpanded}
+        onClick={onToggle}
+        className={cn(
+          'w-full text-left',
+          'px-4 py-3 bg-muted flex items-center gap-3',
+          'cursor-pointer hover:bg-muted/70 transition-colors',
+          isExpanded && 'pb-4 border-b border-border'
+        )}
+      >
+        {inner}
+      </button>
+    )
+  }
+
+  return (
+    <CardHeader className="px-4 py-3 pb-4! bg-muted border-b border-border flex items-center gap-3">
+      {inner}
+    </CardHeader>
+  )
+}
 
 interface InlineFooterProps {
   comment: Comment
