@@ -308,11 +308,20 @@ function buildAuthorScopedThreadTask(
 ): ThreadTask | null {
   const anchor = findThreadAnchor(thread, comments)
 
-  if (!anchor || thread.isResolved || !matchesAuthor(anchor.userLogin)) {
+  if (
+    !anchor ||
+    thread.isResolved ||
+    isCommentOutdated(anchor) ||
+    !matchesAuthor(anchor.userLogin)
+  ) {
     return null
   }
 
   return buildThreadTask(thread, anchor, severity)
+}
+
+function isCommentOutdated(comment: Comment): boolean {
+  return comment.path !== null && comment.line === null
 }
 
 function buildApprovedSummary(approvedCount: number): SimpleTask {
