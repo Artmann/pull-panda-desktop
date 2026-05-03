@@ -230,6 +230,7 @@ function ActivityItemBody({
       <div data-testid={`comment-${comment.id}`}>
         <FileCommentThreadCard
           allComments={allComments}
+          collapseWhenOutdated={true}
           comment={comment}
           hideAuthor={true}
           pullRequest={pullRequest}
