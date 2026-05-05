@@ -4,16 +4,6 @@ import { ipcChannels } from './lib/ipc/channels'
 import type { BootstrapData } from './main/bootstrap'
 import type { DeviceCodeResponse, GitHubUser } from './types/auth'
 import type { ResourceUpdatedEvent } from './types/ipc-events'
-import type {
-  CheckoutPullRequestArgs,
-  CheckoutPullRequestResult,
-  CloneRepoArgs,
-  CloneRepoResult,
-  PickFolderResult,
-  SetConnectedRepoArgs,
-  VerifyRepoArgs,
-  VerifyRepoResult
-} from './types/repo-checkout'
 import type { MonitoringData } from './types/syncer-monitoring'
 import type { Task, TaskUpdateEvent } from './types/task'
 
@@ -81,29 +71,7 @@ const electronApi = {
     ipcRenderer.invoke(ipcChannels.OpenUrl, url),
 
   getSyncerStats: (): Promise<MonitoringData> =>
-    ipcRenderer.invoke(ipcChannels.GetSyncerStats),
-
-  repoCheckout: {
-    checkout: (
-      args: CheckoutPullRequestArgs
-    ): Promise<CheckoutPullRequestResult> =>
-      ipcRenderer.invoke(ipcChannels.RepoCheckoutCheckout, args),
-
-    clone: (args: CloneRepoArgs): Promise<CloneRepoResult> =>
-      ipcRenderer.invoke(ipcChannels.RepoCheckoutClone, args),
-
-    pickFolder: (): Promise<PickFolderResult> =>
-      ipcRenderer.invoke(ipcChannels.RepoCheckoutPickFolder),
-
-    remove: (fullName: string): Promise<void> =>
-      ipcRenderer.invoke(ipcChannels.RepoCheckoutRemove, fullName),
-
-    set: (args: SetConnectedRepoArgs): Promise<void> =>
-      ipcRenderer.invoke(ipcChannels.RepoCheckoutSet, args),
-
-    verify: (args: VerifyRepoArgs): Promise<VerifyRepoResult> =>
-      ipcRenderer.invoke(ipcChannels.RepoCheckoutVerify, args)
-  }
+    ipcRenderer.invoke(ipcChannels.GetSyncerStats)
 }
 
 const authApi = {

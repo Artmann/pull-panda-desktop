@@ -7,42 +7,12 @@ import type { PullRequest } from '@/types/pull-request'
 
 import { CheckoutBranchButton } from './CheckoutBranchButton'
 
-interface MockRepoCheckout {
-  checkout: (args: { pullRequestId: string }) => Promise<{
-    branch?: string
-    message?: string
-    ok: boolean
-  }>
-  clone: (args: {
-    fullName: string
-    parentDir: string
-  }) => Promise<{ message?: string; ok: boolean; path?: string }>
-  pickFolder: () => Promise<{ path: string | null }>
-  remove: (fullName: string) => Promise<void>
-  set: (args: { fullName: string; localPath: string }) => Promise<void>
-  verify: (args: {
-    fullName: string
-    localPath: string
-  }) => Promise<{ ok: boolean; reason?: string }>
-}
-
-const mockRepoCheckout: MockRepoCheckout = {
-  checkout: () => Promise.resolve({ branch: 'demo-branch', ok: true }),
-  clone: () => Promise.resolve({ ok: true, path: '/tmp/demo' }),
-  pickFolder: () => Promise.resolve({ path: null }),
-  remove: () => Promise.resolve(),
-  set: () => Promise.resolve(),
-  verify: () => Promise.resolve({ ok: true })
-}
-
 const win = window as unknown as {
-  electron?: { repoCheckout?: MockRepoCheckout }
+  electron?: { getApiPort: () => Promise<number | null> }
 }
 
 if (!win.electron) {
-  win.electron = { repoCheckout: mockRepoCheckout }
-} else if (!win.electron.repoCheckout) {
-  win.electron.repoCheckout = mockRepoCheckout
+  win.electron = { getApiPort: () => Promise.resolve(null) }
 }
 
 function buildStore(connectedFullName?: string) {

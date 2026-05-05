@@ -16,12 +16,17 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger
 } from '@/app/components/ui/dropdown-menu'
+import {
+  cloneConnectedRepo,
+  pickRepoFolder,
+  setConnectedRepo,
+  verifyConnectedRepo
+} from '@/app/lib/api'
 import { runPullRequestCheckout } from '@/app/lib/run-pr-checkout'
 import type { AppStore } from '@/app/store'
 import { connectedReposActions } from '@/app/store/connected-repos-slice'
 import { useAppDispatch, useAppSelector } from '@/app/store/hooks'
 import type { PullRequest } from '@/types/pull-request'
-import type { CloneRepoResult, VerifyRepoResult } from '@/types/repo-checkout'
 
 interface CheckoutBranchButtonProps {
   pullRequest: PullRequest
@@ -55,18 +60,16 @@ export function CheckoutBranchButton({
   const handlePickExisting = () => {
     setIsSettingUp(true)
 
-    window.electron.repoCheckout
-      .pickFolder()
+    pickRepoFolder()
       .then(async ({ path }) => {
         if (!path) {
           return null
         }
 
-        const verification: VerifyRepoResult =
-          await window.electron.repoCheckout.verify({
-            fullName,
-            localPath: path
-          })
+        const verification = await verifyConnectedRepo({
+          fullName,
+          localPath: path
+        })
 
         if (!verification.ok) {
           toast.error(
@@ -76,7 +79,7 @@ export function CheckoutBranchButton({
           return null
         }
 
-        await window.electron.repoCheckout.set({ fullName, localPath: path })
+        await setConnectedRepo({ fullName, localPath: path })
         dispatch(connectedReposActions.setRepo({ fullName, localPath: path }))
 
         return path
@@ -99,18 +102,16 @@ export function CheckoutBranchButton({
   const handleClone = () => {
     setIsSettingUp(true)
 
-    window.electron.repoCheckout
-      .pickFolder()
+    pickRepoFolder()
       .then(async ({ path: parentDir }) => {
         if (!parentDir) {
           return null
         }
 
-        const result: CloneRepoResult =
-          await window.electron.repoCheckout.clone({
-            fullName,
-            parentDir
-          })
+        const result = await cloneConnectedRepo({
+          fullName,
+          parentDir
+        })
 
         if (!result.ok || !result.path) {
           toast.error(result.message ?? `Failed to clone ${fullName}.`)
@@ -118,7 +119,7 @@ export function CheckoutBranchButton({
           return null
         }
 
-        await window.electron.repoCheckout.set({
+        await setConnectedRepo({
           fullName,
           localPath: result.path
         })

@@ -1,8 +1,8 @@
 import { toast } from 'sonner'
 
+import { checkoutPullRequestBranch } from '@/app/lib/api'
 import { connectedReposActions } from '@/app/store/connected-repos-slice'
 import type { AppStore } from '@/app/store'
-import type { CheckoutPullRequestResult } from '@/types/repo-checkout'
 
 export function runPullRequestCheckout(
   store: AppStore,
@@ -10,9 +10,8 @@ export function runPullRequestCheckout(
 ): Promise<void> {
   store.dispatch(connectedReposActions.setCheckoutInProgress({ pullRequestId }))
 
-  return window.electron.repoCheckout
-    .checkout({ pullRequestId })
-    .then((result: CheckoutPullRequestResult) => {
+  return checkoutPullRequestBranch(pullRequestId)
+    .then((result) => {
       if (result.ok) {
         toast.success(`Checked out ${result.branch ?? 'branch'} locally.`)
 
