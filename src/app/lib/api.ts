@@ -1,4 +1,10 @@
 import type { PullRequest } from '@/types/pull-request'
+import type {
+  CheckoutPullRequestResult,
+  CloneRepoResult,
+  PickFolderResult,
+  VerifyRepoResult
+} from '@/types/repo-checkout'
 
 let apiBaseUrl: string | null = null
 
@@ -443,6 +449,127 @@ export async function updatePullRequest(
     const error = await response.json()
 
     throw new Error(error.error ?? 'Failed to update pull request')
+  }
+
+  return response.json()
+}
+
+export async function pickRepoFolder(): Promise<PickFolderResult> {
+  const baseUrl = await getApiBaseUrl()
+
+  const response = await fetch(`${baseUrl}/api/repo-checkout/pick-folder`, {
+    method: 'POST'
+  })
+
+  if (!response.ok) {
+    throw new Error('Failed to open folder picker')
+  }
+
+  return response.json()
+}
+
+export async function verifyConnectedRepo(args: {
+  fullName: string
+  localPath: string
+}): Promise<VerifyRepoResult> {
+  const baseUrl = await getApiBaseUrl()
+
+  const response = await fetch(`${baseUrl}/api/repo-checkout/verify`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify(args)
+  })
+
+  if (!response.ok) {
+    const error = await response.json()
+
+    throw new Error(error.error ?? 'Failed to verify repository')
+  }
+
+  return response.json()
+}
+
+export async function cloneConnectedRepo(args: {
+  fullName: string
+  parentDir: string
+}): Promise<CloneRepoResult> {
+  const baseUrl = await getApiBaseUrl()
+
+  const response = await fetch(`${baseUrl}/api/repo-checkout/clone`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify(args)
+  })
+
+  if (!response.ok) {
+    const error = await response.json()
+
+    throw new Error(error.error ?? 'Failed to clone repository')
+  }
+
+  return response.json()
+}
+
+export async function setConnectedRepo(args: {
+  fullName: string
+  localPath: string
+}): Promise<void> {
+  const baseUrl = await getApiBaseUrl()
+
+  const response = await fetch(`${baseUrl}/api/repo-checkout/set`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify(args)
+  })
+
+  if (!response.ok) {
+    const error = await response.json()
+
+    throw new Error(error.error ?? 'Failed to save connected repository')
+  }
+}
+
+export async function removeConnectedRepo(fullName: string): Promise<void> {
+  const baseUrl = await getApiBaseUrl()
+
+  const response = await fetch(`${baseUrl}/api/repo-checkout/remove`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({ fullName })
+  })
+
+  if (!response.ok) {
+    const error = await response.json()
+
+    throw new Error(error.error ?? 'Failed to remove connected repository')
+  }
+}
+
+export async function checkoutPullRequestBranch(
+  pullRequestId: string
+): Promise<CheckoutPullRequestResult> {
+  const baseUrl = await getApiBaseUrl()
+
+  const response = await fetch(`${baseUrl}/api/repo-checkout/checkout`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({ pullRequestId })
+  })
+
+  if (!response.ok) {
+    const error = await response.json()
+
+    throw new Error(error.error ?? 'Failed to check out branch')
   }
 
   return response.json()

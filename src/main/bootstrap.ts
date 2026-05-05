@@ -11,6 +11,7 @@ import {
   commits,
   modifiedFiles
 } from '../database/schema'
+import { loadAll as loadConnectedRepos } from './connected-repos'
 import type {
   PullRequest,
   PullRequestLabel,
@@ -42,6 +43,7 @@ export interface BootstrapData {
   checks: Check[]
   comments: Comment[]
   commits: Commit[]
+  connectedRepos: Record<string, string>
   modifiedFiles: ModifiedFile[]
   pendingReviews: Record<string, PendingReview>
   pullRequests: PullRequest[]
@@ -184,6 +186,7 @@ export async function bootstrap(userLogin?: string): Promise<BootstrapData> {
     checks: allChecks,
     comments: allComments,
     commits: allCommits,
+    connectedRepos: loadConnectedRepos(),
     modifiedFiles: allModifiedFiles,
     pendingReviews,
     pullRequests: parsedPullRequests,

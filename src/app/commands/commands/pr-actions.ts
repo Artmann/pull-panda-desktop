@@ -1,7 +1,10 @@
 import { Copy, ExternalLink, GitBranch } from 'lucide-react'
 import { toast } from 'sonner'
 
+import { runPullRequestCheckout } from '@/app/lib/run-pr-checkout'
+
 import { commandRegistry } from '../registry'
+import { getStore } from '../store-accessor'
 
 // Open in GitHub command
 commandRegistry.register({
@@ -39,6 +42,40 @@ commandRegistry.register({
     } catch (error) {
       toast.error('Failed to copy link')
     }
+  }
+})
+
+// Check out branch command
+commandRegistry.register({
+  id: 'pr.checkout-branch',
+  label: 'Check Out Branch',
+  icon: GitBranch,
+  group: 'pull request',
+  shortcut: { key: 'b' },
+  isAvailable: (ctx) => {
+    const store = getStore()
+
+    if (ctx.view !== 'pr-detail' || !ctx.pullRequest || !store) {
+      return false
+    }
+
+    if (ctx.pullRequest.headRefName === null) {
+      return false
+    }
+
+    const fullName = `${ctx.pullRequest.repositoryOwner}/${ctx.pullRequest.repositoryName}`
+    const localPath = store.getState().connectedRepos.byFullName[fullName]
+
+    return Boolean(localPath)
+  },
+  execute: (ctx) => {
+    const store = getStore()
+
+    if (!ctx.pullRequest || !store) {
+      return
+    }
+
+    void runPullRequestCheckout(store, ctx.pullRequest.id)
   }
 })
 

@@ -43,8 +43,8 @@ review at the top, so you always know what to look at next.
 
 ### Context first, conversation second
 
-The activity feed is reorganized to put the summary, test plan, and check
-status right where you want them — at the top.
+The activity feed is reorganized to put the summary, test plan, and check status
+right where you want them — at the top.
 
 ![Activity feed](images/pull-request-overview.png)
 
@@ -72,8 +72,8 @@ one focused panel that stays out of your way until you need it.
 
 ### Bright as day, dark as night
 
-| Light                                              | Dark                                             |
-| -------------------------------------------------- | ------------------------------------------------ |
+| Light                                               | Dark                                              |
+| --------------------------------------------------- | ------------------------------------------------- |
 | ![Light theme](images/pull-request-light-theme.png) | ![Dark theme](images/pull-request-dark-theme.png) |
 
 ## Built With

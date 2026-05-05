@@ -123,6 +123,7 @@ function setupIpcHandlers(): void {
   ipcMain.handle(ipcChannels.GetSyncerStats, () => {
     return backgroundSyncer.getMonitoringData()
   })
+
 }
 
 const createWindow = () => {
