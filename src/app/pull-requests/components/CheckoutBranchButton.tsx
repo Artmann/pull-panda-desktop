@@ -57,44 +57,83 @@ export function CheckoutBranchButton({
     void runPullRequestCheckout(store, pullRequest.id)
   }
 
+  const connectExistingClone = async (): Promise<boolean> => {
+    try {
+      const { path } = await pickRepoFolder()
+
+      if (!path) {
+        return false
+      }
+
+      const verification = await verifyConnectedRepo({
+        fullName,
+        localPath: path
+      })
+
+      if (!verification.ok) {
+        toast.error(
+          verification.reason ?? `Folder is not a clone of ${fullName}.`
+        )
+
+        return false
+      }
+
+      await setConnectedRepo({ fullName, localPath: path })
+      dispatch(connectedReposActions.setRepo({ fullName, localPath: path }))
+
+      return true
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Unknown error'
+
+      toast.error(`Failed to connect repository: ${message}`)
+
+      return false
+    }
+  }
+
+  const cloneRepository = async (): Promise<boolean> => {
+    try {
+      const { path: parentDir } = await pickRepoFolder()
+
+      if (!parentDir) {
+        return false
+      }
+
+      const result = await cloneConnectedRepo({ fullName, parentDir })
+
+      if (!result.ok || !result.path) {
+        toast.error(result.message ?? `Failed to clone ${fullName}.`)
+
+        return false
+      }
+
+      await setConnectedRepo({ fullName, localPath: result.path })
+      dispatch(
+        connectedReposActions.setRepo({ fullName, localPath: result.path })
+      )
+
+      toast.success(`Cloned ${fullName} into ${result.path}.`)
+
+      return true
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Unknown error'
+
+      toast.error(`Failed to clone repository: ${message}`)
+
+      return false
+    }
+  }
+
   const handlePickExisting = () => {
     setIsSettingUp(true)
 
-    pickRepoFolder()
-      .then(async ({ path }) => {
-        if (!path) {
-          return null
-        }
-
-        const verification = await verifyConnectedRepo({
-          fullName,
-          localPath: path
-        })
-
-        if (!verification.ok) {
-          toast.error(
-            verification.reason ?? `Folder is not a clone of ${fullName}.`
-          )
-
-          return null
-        }
-
-        await setConnectedRepo({ fullName, localPath: path })
-        dispatch(connectedReposActions.setRepo({ fullName, localPath: path }))
-
-        return path
-      })
-      .then((path) => {
-        setIsSettingUp(false)
-
-        if (path) {
+    connectExistingClone()
+      .then((connected) => {
+        if (connected) {
           runCheckout()
         }
       })
-      .catch((error: unknown) => {
-        const message = error instanceof Error ? error.message : 'Unknown error'
-
-        toast.error(`Failed to connect repository: ${message}`)
+      .finally(() => {
         setIsSettingUp(false)
       })
   }
@@ -102,46 +141,13 @@ export function CheckoutBranchButton({
   const handleClone = () => {
     setIsSettingUp(true)
 
-    pickRepoFolder()
-      .then(async ({ path: parentDir }) => {
-        if (!parentDir) {
-          return null
-        }
-
-        const result = await cloneConnectedRepo({
-          fullName,
-          parentDir
-        })
-
-        if (!result.ok || !result.path) {
-          toast.error(result.message ?? `Failed to clone ${fullName}.`)
-
-          return null
-        }
-
-        await setConnectedRepo({
-          fullName,
-          localPath: result.path
-        })
-        dispatch(
-          connectedReposActions.setRepo({ fullName, localPath: result.path })
-        )
-
-        toast.success(`Cloned ${fullName} into ${result.path}.`)
-
-        return result.path
-      })
-      .then((path) => {
-        setIsSettingUp(false)
-
-        if (path) {
+    cloneRepository()
+      .then((connected) => {
+        if (connected) {
           runCheckout()
         }
       })
-      .catch((error: unknown) => {
-        const message = error instanceof Error ? error.message : 'Unknown error'
-
-        toast.error(`Failed to clone repository: ${message}`)
+      .finally(() => {
         setIsSettingUp(false)
       })
   }
