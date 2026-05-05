@@ -11,6 +11,7 @@ import type { ResourceUpdatedEvent } from '@/types/ipc-events'
 import checksReducer from '@/app/store/checks-slice'
 import commentsReducer from '@/app/store/comments-slice'
 import commitsReducer from '@/app/store/commits-slice'
+import connectedReposReducer from '@/app/store/connected-repos-slice'
 import draftsReducer from '@/app/store/drafts-slice'
 import mergeOptionsReducer from '@/app/store/merge-options-slice'
 import modifiedFilesReducer from '@/app/store/modified-files-slice'
@@ -76,6 +77,7 @@ function createTestStore() {
       checks: checksReducer,
       comments: commentsReducer,
       commits: commitsReducer,
+      connectedRepos: connectedReposReducer,
       drafts: draftsReducer,
       mergeOptions: mergeOptionsReducer,
       modifiedFiles: modifiedFilesReducer,
@@ -91,6 +93,7 @@ function createTestStore() {
       checks: { items: [] },
       comments: { items: [] },
       commits: { items: [] },
+      connectedRepos: { byFullName: {}, initialized: true },
       drafts: {},
       mergeOptions: {},
       modifiedFiles: { items: [] },

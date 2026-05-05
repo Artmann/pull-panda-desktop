@@ -42,6 +42,10 @@ async function main() {
     checks: { items: bootstrapData?.checks ?? [] },
     comments: { items: bootstrapData?.comments ?? [] },
     commits: { items: bootstrapData?.commits ?? [] },
+    connectedRepos: {
+      byFullName: bootstrapData?.connectedRepos ?? {},
+      initialized: true
+    },
     modifiedFiles: { items: bootstrapData?.modifiedFiles ?? [] },
     pendingReviews: bootstrapData?.pendingReviews ?? {},
     pullRequests: { initialized: true, items: readyPullRequests },

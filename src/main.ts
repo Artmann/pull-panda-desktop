@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain, screen, shell } from 'electron'
+import { app, BrowserWindow, dialog, ipcMain, screen, shell } from 'electron'
 import started from 'electron-squirrel-startup'
 import path from 'node:path'
 
@@ -10,13 +10,30 @@ import {
   startApiServer,
   stopApiServer
 } from './main/api'
-import { bootstrap, BootstrapData } from './main/bootstrap'
+import { bootstrap, BootstrapData, getPullRequest } from './main/bootstrap'
+import {
+  loadAll as loadConnectedRepos,
+  removeRepoPath,
+  setRepoPath
+} from './main/connected-repos'
+import {
+  checkoutPullRequestBranch,
+  cloneRepo,
+  verifyRepo
+} from './main/git'
 import { sendPullRequestResourceEvents } from './main/send-resource-events'
 import { backgroundSyncer } from './main/background-syncer'
 import { taskManager } from './main/task-manager'
 import { deletePullRequestData } from './sync/delete-pull-request'
 import { syncPullRequests, syncStalePullRequests } from './sync/pull-requests'
 import { syncPullRequestDetails } from './sync/sync-pull-request-details'
+import type {
+  CheckoutPullRequestArgs,
+  CheckoutPullRequestResult,
+  CloneRepoArgs,
+  SetConnectedRepoArgs,
+  VerifyRepoArgs
+} from './types/repo-checkout'
 import {
   clearToken,
   getGitHubUser,
@@ -123,6 +140,92 @@ function setupIpcHandlers(): void {
   ipcMain.handle(ipcChannels.GetSyncerStats, () => {
     return backgroundSyncer.getMonitoringData()
   })
+
+  ipcMain.handle(ipcChannels.RepoCheckoutPickFolder, async () => {
+    if (!mainWindow) {
+      return { path: null }
+    }
+
+    const result = await dialog.showOpenDialog(mainWindow, {
+      properties: ['openDirectory']
+    })
+
+    if (result.canceled || result.filePaths.length === 0) {
+      return { path: null }
+    }
+
+    return { path: result.filePaths[0] }
+  })
+
+  ipcMain.handle(
+    ipcChannels.RepoCheckoutVerify,
+    async (_event, args: VerifyRepoArgs) => {
+      return verifyRepo(args.localPath, args.fullName)
+    }
+  )
+
+  ipcMain.handle(
+    ipcChannels.RepoCheckoutClone,
+    async (_event, args: CloneRepoArgs) => {
+      const token = loadToken()
+
+      return cloneRepo({
+        fullName: args.fullName,
+        parentDir: args.parentDir,
+        token
+      })
+    }
+  )
+
+  ipcMain.handle(
+    ipcChannels.RepoCheckoutSet,
+    async (_event, args: SetConnectedRepoArgs) => {
+      setRepoPath(args.fullName, args.localPath)
+    }
+  )
+
+  ipcMain.handle(
+    ipcChannels.RepoCheckoutRemove,
+    async (_event, fullName: string) => {
+      removeRepoPath(fullName)
+    }
+  )
+
+  ipcMain.handle(
+    ipcChannels.RepoCheckoutCheckout,
+    async (
+      _event,
+      args: CheckoutPullRequestArgs
+    ): Promise<CheckoutPullRequestResult> => {
+      const pullRequest = await getPullRequest(args.pullRequestId)
+
+      if (!pullRequest) {
+        return {
+          code: 'pr-not-found',
+          message: 'Pull request not found in local database.',
+          ok: false
+        }
+      }
+
+      const fullName = `${pullRequest.repositoryOwner}/${pullRequest.repositoryName}`
+      const repos = loadConnectedRepos()
+      const localPath = repos[fullName]
+
+      if (!localPath) {
+        return {
+          code: 'not-connected',
+          message: `No local clone connected for ${fullName}.`,
+          ok: false
+        }
+      }
+
+      return checkoutPullRequestBranch({
+        headRefName: pullRequest.headRefName,
+        localPath,
+        pullNumber: pullRequest.number
+      })
+    }
+  )
 }
 
 const createWindow = () => {

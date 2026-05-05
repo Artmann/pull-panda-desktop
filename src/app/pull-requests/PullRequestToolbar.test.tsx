@@ -11,6 +11,7 @@ import { describe, it, expect, vi } from 'vitest'
 import type { MergeOptions } from '@/app/lib/api'
 import type { PullRequest } from '@/types/pull-request'
 
+import connectedReposReducer from '@/app/store/connected-repos-slice'
 import mergeOptionsReducer from '@/app/store/merge-options-slice'
 import pendingReviewCommentsReducer from '@/app/store/pending-review-comments-slice'
 import pendingReviewsReducer from '@/app/store/pending-reviews-slice'
@@ -64,12 +65,14 @@ function createTestStore(
 ) {
   return configureStore({
     reducer: {
+      connectedRepos: connectedReposReducer,
       mergeOptions: mergeOptionsReducer,
       pendingReviewComments: pendingReviewCommentsReducer,
       pendingReviews: pendingReviewsReducer,
       pullRequests: pullRequestsReducer
     },
     preloadedState: {
+      connectedRepos: { byFullName: {}, initialized: true },
       mergeOptions,
       pendingReviewComments: {},
       pendingReviews: {},

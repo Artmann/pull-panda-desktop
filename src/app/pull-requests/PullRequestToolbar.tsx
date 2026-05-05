@@ -6,6 +6,7 @@ import { Button } from '@/app/components/ui/button'
 import { Separator } from '@/app/components/ui/separator'
 import { createReview } from '@/app/lib/api'
 import type { MergeOptions } from '@/app/lib/api'
+import { CheckoutBranchButton } from '@/app/pull-requests/components/CheckoutBranchButton'
 import { usePullRequestNavigation } from '@/app/pull-requests/PullRequestNavigationProvider'
 import { useAppDispatch, useAppSelector } from '@/app/store/hooks'
 import {
@@ -113,6 +114,10 @@ export const PullRequestToolbar = memo(function PullRequestToolbar({
           <ChevronDown className="size-3" />
         </Button>
       </div>
+
+      <Separator orientation="vertical" />
+
+      <CheckoutBranchButton pullRequest={pullRequest} />
 
       {!pullRequest.isAuthor && (
         <>

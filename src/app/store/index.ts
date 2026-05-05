@@ -3,6 +3,9 @@ import { configureStore } from '@reduxjs/toolkit'
 import checksReducer, { ChecksState } from './checks-slice'
 import commentsReducer, { CommentsState } from './comments-slice'
 import commitsReducer, { CommitsState } from './commits-slice'
+import connectedReposReducer, {
+  ConnectedReposState
+} from './connected-repos-slice'
 import draftsReducer, {
   DraftsState,
   loadDraftsFromStorage,
@@ -32,6 +35,7 @@ export interface PreloadedState {
   checks: ChecksState
   comments: CommentsState
   commits: CommitsState
+  connectedRepos?: ConnectedReposState
   drafts?: DraftsState
   mergeOptions?: MergeOptionsState
   modifiedFiles: ModifiedFilesState
@@ -60,6 +64,7 @@ export function createStore(preloadedState?: PreloadedState) {
       checks: checksReducer,
       comments: commentsReducer,
       commits: commitsReducer,
+      connectedRepos: connectedReposReducer,
       drafts: draftsReducer,
       mergeOptions: mergeOptionsReducer,
       modifiedFiles: modifiedFilesReducer,
