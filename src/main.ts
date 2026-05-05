@@ -16,11 +16,7 @@ import {
   removeRepoPath,
   setRepoPath
 } from './main/connected-repos'
-import {
-  checkoutPullRequestBranch,
-  cloneRepo,
-  verifyRepo
-} from './main/git'
+import { checkoutPullRequestBranch, cloneRepo, verifyRepo } from './main/git'
 import { sendPullRequestResourceEvents } from './main/send-resource-events'
 import { backgroundSyncer } from './main/background-syncer'
 import { taskManager } from './main/task-manager'

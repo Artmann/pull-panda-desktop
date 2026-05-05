@@ -21,10 +21,7 @@ import type { AppStore } from '@/app/store'
 import { connectedReposActions } from '@/app/store/connected-repos-slice'
 import { useAppDispatch, useAppSelector } from '@/app/store/hooks'
 import type { PullRequest } from '@/types/pull-request'
-import type {
-  CloneRepoResult,
-  VerifyRepoResult
-} from '@/types/repo-checkout'
+import type { CloneRepoResult, VerifyRepoResult } from '@/types/repo-checkout'
 
 interface CheckoutBranchButtonProps {
   pullRequest: PullRequest
@@ -42,8 +39,7 @@ export function CheckoutBranchButton({
   )
 
   const isCheckoutInProgress = useAppSelector(
-    (state) =>
-      state.connectedRepos.checkoutsInProgress[pullRequest.id] ?? false
+    (state) => state.connectedRepos.checkoutsInProgress[pullRequest.id] ?? false
   )
 
   const [isSettingUp, setIsSettingUp] = useState(false)
@@ -74,8 +70,7 @@ export function CheckoutBranchButton({
 
         if (!verification.ok) {
           toast.error(
-            verification.reason ??
-              `Folder is not a clone of ${fullName}.`
+            verification.reason ?? `Folder is not a clone of ${fullName}.`
           )
 
           return null
@@ -178,7 +173,7 @@ export function CheckoutBranchButton({
         ) : (
           <GitBranchIcon className="size-3" />
         )}
-        {isWorking ? 'Checking out…' : 'Check out'}
+        {isWorking ? 'Checking out' : 'Check out'}
       </Button>
     )
   }
@@ -208,8 +203,8 @@ export function CheckoutBranchButton({
       >
         <div className="px-2 pt-2 pb-1.5 text-xs text-muted-foreground">
           Connect a local clone of{' '}
-          <span className="font-mono text-foreground">{fullName}</span> to
-          check out this branch.
+          <span className="font-mono text-foreground">{fullName}</span> to check
+          out this branch.
         </div>
 
         <DropdownMenuSeparator />
