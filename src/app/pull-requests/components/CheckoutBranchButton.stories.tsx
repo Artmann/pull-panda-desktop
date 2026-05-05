@@ -57,6 +57,7 @@ function buildStore(connectedFullName?: string) {
         byFullName: connectedFullName
           ? { [connectedFullName]: '/Users/me/code/demo' }
           : {},
+        checkoutsInProgress: {},
         initialized: true
       }
     },

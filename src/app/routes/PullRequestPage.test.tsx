@@ -156,7 +156,11 @@ function createTestStore(
       checks: { items: options.checks ?? [] },
       comments: { items: [] },
       commits: { items: options.commits ?? [] },
-      connectedRepos: { byFullName: {}, initialized: true },
+      connectedRepos: {
+        byFullName: {},
+        checkoutsInProgress: {},
+        initialized: true
+      },
       drafts: {},
       mergeOptions: {},
       modifiedFiles: { items: options.modifiedFiles ?? [] },

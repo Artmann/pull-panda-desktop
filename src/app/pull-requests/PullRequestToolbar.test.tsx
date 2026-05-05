@@ -72,7 +72,11 @@ function createTestStore(
       pullRequests: pullRequestsReducer
     },
     preloadedState: {
-      connectedRepos: { byFullName: {}, initialized: true },
+      connectedRepos: {
+        byFullName: {},
+        checkoutsInProgress: {},
+        initialized: true
+      },
       mergeOptions,
       pendingReviewComments: {},
       pendingReviews: {},

@@ -93,7 +93,11 @@ function createTestStore() {
       checks: { items: [] },
       comments: { items: [] },
       commits: { items: [] },
-      connectedRepos: { byFullName: {}, initialized: true },
+      connectedRepos: {
+        byFullName: {},
+        checkoutsInProgress: {},
+        initialized: true
+      },
       drafts: {},
       mergeOptions: {},
       modifiedFiles: { items: [] },

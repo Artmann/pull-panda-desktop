@@ -5,6 +5,7 @@ import {
   Loader2Icon
 } from 'lucide-react'
 import { ReactElement, useState } from 'react'
+import { useStore } from 'react-redux'
 import { toast } from 'sonner'
 
 import { Button } from '@/app/components/ui/button'
@@ -15,11 +16,12 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger
 } from '@/app/components/ui/dropdown-menu'
+import { runPullRequestCheckout } from '@/app/lib/run-pr-checkout'
+import type { AppStore } from '@/app/store'
 import { connectedReposActions } from '@/app/store/connected-repos-slice'
 import { useAppDispatch, useAppSelector } from '@/app/store/hooks'
 import type { PullRequest } from '@/types/pull-request'
 import type {
-  CheckoutPullRequestResult,
   CloneRepoResult,
   VerifyRepoResult
 } from '@/types/repo-checkout'
@@ -32,42 +34,30 @@ export function CheckoutBranchButton({
   pullRequest
 }: CheckoutBranchButtonProps): ReactElement | null {
   const dispatch = useAppDispatch()
+  const store = useStore() as AppStore
   const fullName = `${pullRequest.repositoryOwner}/${pullRequest.repositoryName}`
 
   const localPath = useAppSelector(
     (state) => state.connectedRepos.byFullName[fullName] ?? null
   )
 
-  const [isWorking, setIsWorking] = useState(false)
+  const isCheckoutInProgress = useAppSelector(
+    (state) =>
+      state.connectedRepos.checkoutsInProgress[pullRequest.id] ?? false
+  )
+
+  const [isSettingUp, setIsSettingUp] = useState(false)
+
+  const isWorking = isSettingUp || isCheckoutInProgress
 
   const headBranchMissing = pullRequest.headRefName === null
 
   const runCheckout = () => {
-    setIsWorking(true)
-
-    window.electron.repoCheckout
-      .checkout({ pullRequestId: pullRequest.id })
-      .then((result: CheckoutPullRequestResult) => {
-        if (result.ok) {
-          toast.success(`Checked out ${result.branch ?? 'branch'} locally.`)
-
-          return
-        }
-
-        toast.error(result.message ?? 'Failed to check out branch.')
-      })
-      .catch((error: unknown) => {
-        const message = error instanceof Error ? error.message : 'Unknown error'
-
-        toast.error(`Failed to check out branch: ${message}`)
-      })
-      .finally(() => {
-        setIsWorking(false)
-      })
+    void runPullRequestCheckout(store, pullRequest.id)
   }
 
   const handlePickExisting = () => {
-    setIsWorking(true)
+    setIsSettingUp(true)
 
     window.electron.repoCheckout
       .pickFolder()
@@ -97,22 +87,22 @@ export function CheckoutBranchButton({
         return path
       })
       .then((path) => {
+        setIsSettingUp(false)
+
         if (path) {
           runCheckout()
-        } else {
-          setIsWorking(false)
         }
       })
       .catch((error: unknown) => {
         const message = error instanceof Error ? error.message : 'Unknown error'
 
         toast.error(`Failed to connect repository: ${message}`)
-        setIsWorking(false)
+        setIsSettingUp(false)
       })
   }
 
   const handleClone = () => {
-    setIsWorking(true)
+    setIsSettingUp(true)
 
     window.electron.repoCheckout
       .pickFolder()
@@ -146,17 +136,17 @@ export function CheckoutBranchButton({
         return result.path
       })
       .then((path) => {
+        setIsSettingUp(false)
+
         if (path) {
           runCheckout()
-        } else {
-          setIsWorking(false)
         }
       })
       .catch((error: unknown) => {
         const message = error instanceof Error ? error.message : 'Unknown error'
 
         toast.error(`Failed to clone repository: ${message}`)
-        setIsWorking(false)
+        setIsSettingUp(false)
       })
   }
 

@@ -44,6 +44,7 @@ async function main() {
     commits: { items: bootstrapData?.commits ?? [] },
     connectedRepos: {
       byFullName: bootstrapData?.connectedRepos ?? {},
+      checkoutsInProgress: {},
       initialized: true
     },
     modifiedFiles: { items: bootstrapData?.modifiedFiles ?? [] },

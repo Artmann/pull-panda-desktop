@@ -1,7 +1,7 @@
 import { Copy, ExternalLink, GitBranch } from 'lucide-react'
 import { toast } from 'sonner'
 
-import type { CheckoutPullRequestResult } from '@/types/repo-checkout'
+import { runPullRequestCheckout } from '@/app/lib/run-pr-checkout'
 
 import { commandRegistry } from '../registry'
 import { getStore } from '../store-accessor'
@@ -69,28 +69,13 @@ commandRegistry.register({
     return Boolean(localPath)
   },
   execute: (ctx) => {
-    if (!ctx.pullRequest) {
+    const store = getStore()
+
+    if (!ctx.pullRequest || !store) {
       return
     }
 
-    const pullRequestId = ctx.pullRequest.id
-
-    window.electron.repoCheckout
-      .checkout({ pullRequestId })
-      .then((result: CheckoutPullRequestResult) => {
-        if (result.ok) {
-          toast.success(`Checked out ${result.branch ?? 'branch'} locally.`)
-
-          return
-        }
-
-        toast.error(result.message ?? 'Failed to check out branch.')
-      })
-      .catch((error: unknown) => {
-        const message = error instanceof Error ? error.message : 'Unknown error'
-
-        toast.error(`Failed to check out branch: ${message}`)
-      })
+    void runPullRequestCheckout(store, ctx.pullRequest.id)
   }
 })
 
