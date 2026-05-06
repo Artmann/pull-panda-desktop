@@ -302,6 +302,13 @@ export const MergeDrawer = memo(function MergeDrawer({
               {checks.length > 0 && (
                 <ChecksSection
                   checks={checks}
+                  requiredChecksPending={
+                    mergeOptions?.requirements.some(
+                      (requirement) =>
+                        requirement.key === 'required-checks' &&
+                        !requirement.satisfied
+                    ) ?? false
+                  }
                   summary={checksSummary}
                 />
               )}
@@ -572,10 +579,15 @@ function ReviewStateIcon({ state }: { state: string }): ReactElement {
 
 interface ChecksSectionProps {
   checks: Check[]
+  requiredChecksPending: boolean
   summary: ChecksSummary
 }
 
-function ChecksSection({ checks, summary }: ChecksSectionProps): ReactElement {
+function ChecksSection({
+  checks,
+  requiredChecksPending,
+  summary
+}: ChecksSectionProps): ReactElement {
   const failedChecks = checks.filter(
     (check) =>
       check.conclusion !== null &&
@@ -598,6 +610,9 @@ function ChecksSection({ checks, summary }: ChecksSectionProps): ReactElement {
       <Loader2 className="size-4 text-muted-foreground shrink-0 animate-spin" />
     )
     summaryText = `${summary.pending} checks running`
+  } else if (requiredChecksPending) {
+    summaryIcon = <Clock className="size-4 text-muted-foreground shrink-0" />
+    summaryText = 'Waiting on required checks'
   } else {
     summaryIcon = (
       <CheckCircle2 className="size-4 text-status-success-foreground shrink-0" />
