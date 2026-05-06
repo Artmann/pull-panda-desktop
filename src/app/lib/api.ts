@@ -264,6 +264,41 @@ export async function markPullRequestActive(
   }
 }
 
+export async function setFocusedPullRequest(
+  pullRequestId: string
+): Promise<void> {
+  const baseUrl = await getApiBaseUrl()
+
+  const response = await fetch(
+    `${baseUrl}/api/pull-requests/${pullRequestId}/focus`,
+    {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      }
+    }
+  )
+
+  if (!response.ok) {
+    throw new Error('Failed to set focused pull request')
+  }
+}
+
+export async function clearFocusedPullRequest(): Promise<void> {
+  const baseUrl = await getApiBaseUrl()
+
+  const response = await fetch(`${baseUrl}/api/pull-requests/focus/clear`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    }
+  })
+
+  if (!response.ok) {
+    throw new Error('Failed to clear focused pull request')
+  }
+}
+
 export async function syncPullRequestDetails(
   pullRequestId: string
 ): Promise<void> {

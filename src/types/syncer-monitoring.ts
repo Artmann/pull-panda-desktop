@@ -2,7 +2,7 @@ export interface SyncRecord {
   id: string
   timestamp: number
   duration: number
-  resourceType: 'checks' | 'commits' | 'comments'
+  resourceType: 'checks' | 'commits' | 'comments' | 'details'
   resourceId: string
   success: boolean
   error?: string

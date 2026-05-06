@@ -56,8 +56,6 @@ export async function syncComments({
   repositoryName,
   pullNumber
 }: SyncCommentsParams): Promise<void> {
-  console.time('syncComments')
-
   try {
     const client = createRestClient(token)
     const etagKey = {
@@ -83,7 +81,6 @@ export async function syncComments({
     // Skip processing on 304 Not Modified
     if (result.notModified) {
       console.log(`[syncComments] No changes for PR #${pullNumber} (304)`)
-      console.timeEnd('syncComments')
 
       return
     }
@@ -237,10 +234,7 @@ export async function syncComments({
     if (result.etag) {
       etagManager.set(etagKey, result.etag, result.lastModified ?? undefined)
     }
-
-    console.timeEnd('syncComments')
   } catch (error) {
-    console.timeEnd('syncComments')
     console.error('Error syncing pull request comments:', error)
     throw error
   }

@@ -31,8 +31,6 @@ export async function syncFiles({
   repositoryName,
   pullNumber
 }: SyncFilesParams): Promise<void> {
-  console.time('syncFiles')
-
   try {
     const client = createRestClient(token)
     const etagKey = { endpointType: 'files', resourceId: pullRequestId }
@@ -54,7 +52,6 @@ export async function syncFiles({
     // Skip processing on 304 Not Modified
     if (result.notModified) {
       console.log(`[syncFiles] No changes for PR #${pullNumber} (304)`)
-      console.timeEnd('syncFiles')
 
       return
     }
@@ -135,10 +132,7 @@ export async function syncFiles({
     if (result.etag) {
       etagManager.set(etagKey, result.etag, result.lastModified ?? undefined)
     }
-
-    console.timeEnd('syncFiles')
   } catch (error) {
-    console.timeEnd('syncFiles')
     console.error('Error syncing pull request files:', error)
 
     throw error

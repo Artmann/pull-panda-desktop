@@ -1,15 +1,16 @@
-import { eq } from 'drizzle-orm'
+import { eq, inArray } from 'drizzle-orm'
 import { log } from 'tiny-typescript-logger'
 
 import { getDatabase } from '../database'
 import { pullRequests, type NewPullRequest } from '../database/schema'
 import { deletePullRequestData } from './delete-pull-request'
-import { createGraphQLClient } from './graphql-client'
+import { createGraphQLClient, type GraphQLClient } from './graphql-client'
 
 export interface SyncResult {
   synced: number
   syncedIds: Set<string>
   errors: string[]
+  hasChanges: boolean
 }
 
 interface RelationFlags {
@@ -57,15 +58,23 @@ interface GraphQLPullRequestNode {
   }
 }
 
-interface SearchResult {
-  nodes: GraphQLPullRequestNode[]
+interface ProbeNode {
+  __typename: string
+  id: string
+  updatedAt: string
+  state: 'OPEN' | 'CLOSED' | 'MERGED'
 }
 
-interface GraphQLSearchResponse {
-  authored: SearchResult
-  assigned: SearchResult
-  reviewRequested: SearchResult
+interface ProbeBucket {
+  nodes: ProbeNode[]
+}
+
+interface ProbeResponse {
+  authored: ProbeBucket
+  assigned: ProbeBucket
+  reviewRequested: ProbeBucket
   rateLimit: {
+    cost: number
     limit: number
     remaining: number
     resetAt: string
@@ -93,6 +102,91 @@ interface GitHubPullRequest {
   labels: Array<{ name: string; color: string }>
   assignees: Array<{ login: string; avatarUrl: string }>
 }
+
+const hydrationBatchSize = 25
+
+const pullRequestNodeFields = `
+  id
+  number
+  title
+  body
+  bodyHTML
+  headRefName
+  state
+  isDraft
+  url
+  createdAt
+  updatedAt
+  closedAt
+  mergedAt
+  repository {
+    name
+    owner {
+      login
+    }
+  }
+  author {
+    login
+    avatarUrl
+  }
+  labels(first: 10) {
+    nodes {
+      name
+      color
+    }
+  }
+  assignees(first: 10) {
+    nodes {
+      login
+      avatarUrl
+    }
+  }
+`
+
+const probeQuery = `
+  query ProbePullRequests(
+    $authorQuery: String!
+    $assigneeQuery: String!
+    $reviewQuery: String!
+  ) {
+    authored: search(query: $authorQuery, type: ISSUE, first: 100) {
+      nodes {
+        __typename
+        ... on PullRequest {
+          id
+          updatedAt
+          state
+        }
+      }
+    }
+    assigned: search(query: $assigneeQuery, type: ISSUE, first: 100) {
+      nodes {
+        __typename
+        ... on PullRequest {
+          id
+          updatedAt
+          state
+        }
+      }
+    }
+    reviewRequested: search(query: $reviewQuery, type: ISSUE, first: 100) {
+      nodes {
+        __typename
+        ... on PullRequest {
+          id
+          updatedAt
+          state
+        }
+      }
+    }
+    rateLimit {
+      cost
+      limit
+      remaining
+      resetAt
+    }
+  }
+`
 
 function transformGraphQLNode(node: GraphQLPullRequestNode): GitHubPullRequest {
   return {
@@ -157,323 +251,271 @@ function transformPullRequest(
   }
 }
 
-const searchPullRequestsQuery = `
-  query SearchPullRequests($authorQuery: String!, $assigneeQuery: String!, $reviewQuery: String!) {
-    authored: search(query: $authorQuery, type: ISSUE, first: 100) {
-      nodes {
-        __typename
-        ... on PullRequest {
-          id
-          number
-          title
-          body
-          bodyHTML
-          headRefName
-          state
-          isDraft
-          url
-          createdAt
-          updatedAt
-          closedAt
-          mergedAt
-          repository {
-            name
-            owner {
-              login
-            }
-          }
-          author {
-            login
-            avatarUrl
-          }
-          labels(first: 10) {
-            nodes {
-              name
-              color
-            }
-          }
-          assignees(first: 10) {
-            nodes {
-              login
-              avatarUrl
-            }
-          }
-        }
-      }
+function buildMultiAliasQuery(idCount: number): string {
+  const aliases = Array.from({ length: idCount }, (_, index) => {
+    return `pr${index}: node(id: $id${index}) { ... on PullRequest { __typename ${pullRequestNodeFields} } }`
+  })
+  const variables = Array.from(
+    { length: idCount },
+    (_, index) => `$id${index}: ID!`
+  ).join(', ')
+
+  return `
+    query HydratePullRequests(${variables}) {
+      ${aliases.join('\n')}
+      rateLimit { cost limit remaining resetAt }
     }
-    assigned: search(query: $assigneeQuery, type: ISSUE, first: 100) {
-      nodes {
-        __typename
-        ... on PullRequest {
-          id
-          number
-          title
-          body
-          bodyHTML
-          headRefName
-          state
-          isDraft
-          url
-          createdAt
-          updatedAt
-          closedAt
-          mergedAt
-          repository {
-            name
-            owner {
-              login
-            }
-          }
-          author {
-            login
-            avatarUrl
-          }
-          labels(first: 10) {
-            nodes {
-              name
-              color
-            }
-          }
-          assignees(first: 10) {
-            nodes {
-              login
-              avatarUrl
-            }
-          }
-        }
-      }
+  `
+}
+
+interface MultiAliasResponse {
+  rateLimit: { cost: number; limit: number; remaining: number; resetAt: string }
+  [alias: string]: GraphQLPullRequestNode | null | MultiAliasResponse['rateLimit']
+}
+
+/**
+ * Fetch up to `hydrationBatchSize` PR nodes by id in a single GraphQL request.
+ * Returns a map from id to node (or `null` if the PR is no longer accessible).
+ */
+async function hydratePullRequestNodes(
+  client: GraphQLClient,
+  ids: string[]
+): Promise<Map<string, GraphQLPullRequestNode | null>> {
+  const result = new Map<string, GraphQLPullRequestNode | null>()
+
+  for (let offset = 0; offset < ids.length; offset += hydrationBatchSize) {
+    const chunk = ids.slice(offset, offset + hydrationBatchSize)
+    const query = buildMultiAliasQuery(chunk.length)
+    const variables: Record<string, unknown> = {}
+
+    for (let index = 0; index < chunk.length; index++) {
+      variables[`id${index}`] = chunk[index]
     }
-    reviewRequested: search(query: $reviewQuery, type: ISSUE, first: 100) {
-      nodes {
-        __typename
-        ... on PullRequest {
-          id
-          number
-          title
-          body
-          bodyHTML
-          headRefName
-          state
-          isDraft
-          url
-          createdAt
-          updatedAt
-          closedAt
-          mergedAt
-          repository {
-            name
-            owner {
-              login
-            }
-          }
-          author {
-            login
-            avatarUrl
-          }
-          labels(first: 10) {
-            nodes {
-              name
-              color
-            }
-          }
-          assignees(first: 10) {
-            nodes {
-              login
-              avatarUrl
-            }
-          }
-        }
-      }
-    }
-    rateLimit {
-      limit
-      remaining
-      resetAt
+
+    const response = await client.query<MultiAliasResponse>(query, variables)
+
+    for (let index = 0; index < chunk.length; index++) {
+      const alias = `pr${index}`
+      const node = response[alias] as GraphQLPullRequestNode | null
+
+      result.set(chunk[index], node ?? null)
     }
   }
-`
 
-function filterPullRequestNodes(
-  nodes: GraphQLPullRequestNode[]
-): GitHubPullRequest[] {
-  return nodes
-    .filter((node) => node.__typename === 'PullRequest')
-    .map(transformGraphQLNode)
+  return result
+}
+
+interface ProbeEntry {
+  id: string
+  updatedAt: string
+  isAuthor: boolean
+  isAssignee: boolean
+  isReviewer: boolean
+}
+
+function collectProbeEntries(response: ProbeResponse): Map<string, ProbeEntry> {
+  const entries = new Map<string, ProbeEntry>()
+
+  const ingest = (
+    nodes: ProbeNode[],
+    relation: keyof Omit<ProbeEntry, 'id' | 'updatedAt'>
+  ): void => {
+    for (const node of nodes) {
+      if (node.__typename !== 'PullRequest') {
+        continue
+      }
+
+      const existing = entries.get(node.id)
+
+      if (existing) {
+        existing[relation] = true
+        continue
+      }
+
+      entries.set(node.id, {
+        id: node.id,
+        updatedAt: node.updatedAt,
+        isAuthor: relation === 'isAuthor',
+        isAssignee: relation === 'isAssignee',
+        isReviewer: relation === 'isReviewer'
+      })
+    }
+  }
+
+  ingest(response.authored.nodes, 'isAuthor')
+  ingest(response.assigned.nodes, 'isAssignee')
+  ingest(response.reviewRequested.nodes, 'isReviewer')
+
+  return entries
+}
+
+function getKnownUpdatedAtMap(ids: string[]): Map<string, string> {
+  if (ids.length === 0) {
+    return new Map()
+  }
+
+  const database = getDatabase()
+  const rows = database
+    .select({ id: pullRequests.id, updatedAt: pullRequests.updatedAt })
+    .from(pullRequests)
+    .where(inArray(pullRequests.id, ids))
+    .all()
+
+  return new Map(rows.map((row) => [row.id, row.updatedAt]))
+}
+
+function updateRelationFlags(entry: ProbeEntry): void {
+  const database = getDatabase()
+  const now = new Date().toISOString()
+
+  database
+    .update(pullRequests)
+    .set({
+      isAuthor: entry.isAuthor,
+      isAssignee: entry.isAssignee,
+      isReviewer: entry.isReviewer,
+      syncedAt: now
+    })
+    .where(eq(pullRequests.id, entry.id))
+    .run()
+}
+
+function persistPullRequest(record: NewPullRequest): void {
+  const database = getDatabase()
+
+  database
+    .insert(pullRequests)
+    .values(record)
+    .onConflictDoUpdate({
+      target: pullRequests.id,
+      set: {
+        number: record.number,
+        title: record.title,
+        body: record.body,
+        bodyHtml: record.bodyHtml,
+        headRefName: record.headRefName,
+        state: record.state,
+        url: record.url,
+        repositoryOwner: record.repositoryOwner,
+        repositoryName: record.repositoryName,
+        authorLogin: record.authorLogin,
+        authorAvatarUrl: record.authorAvatarUrl,
+        createdAt: record.createdAt,
+        updatedAt: record.updatedAt,
+        closedAt: record.closedAt,
+        mergedAt: record.mergedAt,
+        isDraft: record.isDraft,
+        isAuthor: record.isAuthor,
+        isAssignee: record.isAssignee,
+        isReviewer: record.isReviewer,
+        labels: record.labels,
+        assignees: record.assignees,
+        syncedAt: record.syncedAt
+      }
+    })
+    .run()
 }
 
 export async function syncPullRequests(token: string): Promise<SyncResult> {
   const client = createGraphQLClient(token)
-  const database = getDatabase()
   const errors: string[] = []
-  const pullRequestMap = new Map<string, NewPullRequest>()
+  let syncedCount = 0
+  let hasChanges = false
+
+  let probe: ProbeResponse
 
   try {
-    const response = await client.query<GraphQLSearchResponse>(
-      searchPullRequestsQuery,
-      {
-        authorQuery: 'is:pr is:open author:@me',
-        assigneeQuery: 'is:pr is:open assignee:@me',
-        reviewQuery: 'is:pr is:open review-requested:@me'
-      }
-    )
-
-    // Process authored PRs
-    const authored = filterPullRequestNodes(response.authored.nodes)
-
-    for (const pullRequest of authored) {
-      const existing = pullRequestMap.get(pullRequest.id)
-
-      pullRequestMap.set(
-        pullRequest.id,
-        transformPullRequest(pullRequest, {
-          isAuthor: true,
-          isAssignee: existing?.isAssignee ?? false,
-          isReviewer: existing?.isReviewer ?? false
-        })
-      )
-    }
-
-    log.info(`Fetched ${authored.length} authored PRs`)
-
-    // Process assigned PRs
-    const assigned = filterPullRequestNodes(response.assigned.nodes)
-
-    for (const pullRequest of assigned) {
-      const existing = pullRequestMap.get(pullRequest.id)
-
-      pullRequestMap.set(
-        pullRequest.id,
-        transformPullRequest(pullRequest, {
-          isAuthor: existing?.isAuthor ?? false,
-          isAssignee: true,
-          isReviewer: existing?.isReviewer ?? false
-        })
-      )
-    }
-
-    log.info(`Fetched ${assigned.length} assigned PRs`)
-
-    // Process review-requested PRs
-    const reviewRequested = filterPullRequestNodes(
-      response.reviewRequested.nodes
-    )
-
-    for (const pullRequest of reviewRequested) {
-      const existing = pullRequestMap.get(pullRequest.id)
-
-      pullRequestMap.set(
-        pullRequest.id,
-        transformPullRequest(pullRequest, {
-          isAuthor: existing?.isAuthor ?? false,
-          isAssignee: existing?.isAssignee ?? false,
-          isReviewer: true
-        })
-      )
-    }
-
-    log.info(`Fetched ${reviewRequested.length} review-requested PRs`)
+    probe = await client.query<ProbeResponse>(probeQuery, {
+      authorQuery: 'is:pr is:open author:@me',
+      assigneeQuery: 'is:pr is:open assignee:@me',
+      reviewQuery: 'is:pr is:open review-requested:@me'
+    })
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Unknown error'
-    errors.push(`Failed to fetch PRs via GraphQL: ${message}`)
+
+    return {
+      synced: 0,
+      syncedIds: new Set(),
+      errors: [`Failed to probe PRs via GraphQL: ${message}`],
+      hasChanges: false
+    }
   }
 
-  const pullRequestsToSync = Array.from(pullRequestMap.values())
+  const entries = collectProbeEntries(probe)
+  const allIds = Array.from(entries.keys())
 
-  for (const pullRequest of pullRequestsToSync) {
-    database
-      .insert(pullRequests)
-      .values(pullRequest)
-      .onConflictDoUpdate({
-        target: pullRequests.id,
-        set: {
-          number: pullRequest.number,
-          title: pullRequest.title,
-          body: pullRequest.body,
-          bodyHtml: pullRequest.bodyHtml,
-          headRefName: pullRequest.headRefName,
-          state: pullRequest.state,
-          url: pullRequest.url,
-          repositoryOwner: pullRequest.repositoryOwner,
-          repositoryName: pullRequest.repositoryName,
-          authorLogin: pullRequest.authorLogin,
-          authorAvatarUrl: pullRequest.authorAvatarUrl,
-          createdAt: pullRequest.createdAt,
-          updatedAt: pullRequest.updatedAt,
-          closedAt: pullRequest.closedAt,
-          mergedAt: pullRequest.mergedAt,
-          isDraft: pullRequest.isDraft,
-          isAuthor: pullRequest.isAuthor,
-          isAssignee: pullRequest.isAssignee,
-          isReviewer: pullRequest.isReviewer,
-          labels: pullRequest.labels,
-          assignees: pullRequest.assignees,
-          syncedAt: pullRequest.syncedAt
+  log.info(
+    `[Sync] Probe returned ${allIds.length} PRs (cost=${probe.rateLimit.cost})`
+  )
+
+  const knownUpdatedAt = getKnownUpdatedAtMap(allIds)
+  const idsNeedingHydration: string[] = []
+
+  for (const entry of entries.values()) {
+    const known = knownUpdatedAt.get(entry.id)
+
+    if (!known || known !== entry.updatedAt) {
+      idsNeedingHydration.push(entry.id)
+    }
+  }
+
+  hasChanges = idsNeedingHydration.length > 0
+
+  if (idsNeedingHydration.length > 0) {
+    log.info(
+      `[Sync] Hydrating ${idsNeedingHydration.length}/${allIds.length} changed PRs`
+    )
+
+    try {
+      const hydrated = await hydratePullRequestNodes(client, idsNeedingHydration)
+
+      for (const id of idsNeedingHydration) {
+        const node = hydrated.get(id)
+
+        if (!node || node.__typename !== 'PullRequest') {
+          continue
         }
-      })
-      .run()
+
+        const entry = entries.get(id)
+
+        if (!entry) {
+          continue
+        }
+
+        const transformed = transformGraphQLNode(node)
+        const record = transformPullRequest(transformed, {
+          isAuthor: entry.isAuthor,
+          isAssignee: entry.isAssignee,
+          isReviewer: entry.isReviewer
+        })
+
+        persistPullRequest(record)
+        syncedCount++
+      }
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Unknown error'
+
+      errors.push(`Failed to hydrate PRs: ${message}`)
+    }
+  }
+
+  // Re-assert relation flags for unchanged PRs so assignment-only changes still
+  // propagate. The cost is local DB writes only.
+  for (const entry of entries.values()) {
+    if (idsNeedingHydration.includes(entry.id)) {
+      continue
+    }
+
+    if (knownUpdatedAt.has(entry.id)) {
+      updateRelationFlags(entry)
+    }
   }
 
   return {
-    synced: pullRequestsToSync.length,
-    syncedIds: new Set(pullRequestMap.keys()),
-    errors
-  }
-}
-
-const fetchPullRequestNodeQuery = `
-  query FetchPullRequestNode($id: ID!) {
-    node(id: $id) {
-      ... on PullRequest {
-        id
-        number
-        title
-        body
-        bodyHTML
-        state
-        isDraft
-        url
-        createdAt
-        updatedAt
-        closedAt
-        mergedAt
-        repository {
-          name
-          owner {
-            login
-          }
-        }
-        author {
-          login
-          avatarUrl
-        }
-        labels(first: 10) {
-          nodes {
-            name
-            color
-          }
-        }
-        assignees(first: 10) {
-          nodes {
-            login
-            avatarUrl
-          }
-        }
-      }
-    }
-    rateLimit {
-      limit
-      remaining
-      resetAt
-    }
-  }
-`
-
-interface FetchPullRequestNodeResponse {
-  node: GraphQLPullRequestNode | null
-  rateLimit: {
-    limit: number
-    remaining: number
-    resetAt: string
+    synced: syncedCount,
+    syncedIds: new Set(entries.keys()),
+    errors,
+    hasChanges
   }
 }
 
@@ -505,21 +547,20 @@ export async function syncStalePullRequests(
   let deleted = 0
   let updated = 0
 
-  for (const stalePullRequest of stalePullRequests) {
-    try {
-      const response = await client.query<FetchPullRequestNodeResponse>(
-        fetchPullRequestNodeQuery,
-        { id: stalePullRequest.id }
-      )
+  try {
+    const ids = stalePullRequests.map((pullRequest) => pullRequest.id)
+    const hydrated = await hydratePullRequestNodes(client, ids)
+    const now = new Date().toISOString()
 
-      if (!response.node) {
-        deletePullRequestData(stalePullRequest.id)
+    for (const id of ids) {
+      const node = hydrated.get(id)
+
+      if (!node || node.__typename !== 'PullRequest') {
+        deletePullRequestData(id)
         deleted++
+
         continue
       }
-
-      const now = new Date().toISOString()
-      const node = response.node
 
       database
         .update(pullRequests)
@@ -530,16 +571,16 @@ export async function syncStalePullRequests(
           updatedAt: node.updatedAt,
           syncedAt: now
         })
-        .where(eq(pullRequests.id, stalePullRequest.id))
+        .where(eq(pullRequests.id, id))
         .run()
 
-      log.info(`Updated stale PR ${stalePullRequest.id} to state ${node.state}`)
-
+      log.info(`Updated stale PR ${id} to state ${node.state}`)
       updated++
-    } catch (error) {
-      const message = error instanceof Error ? error.message : 'Unknown error'
-      log.error(`Failed to fetch stale PR ${stalePullRequest.id}: ${message}`)
     }
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Unknown error'
+
+    log.error(`Failed to hydrate stale PRs: ${message}`)
   }
 
   if (deleted > 0) {

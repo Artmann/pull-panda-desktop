@@ -23,7 +23,12 @@ import {
   TabsList,
   TabsTrigger
 } from '@/app/components/ui/tabs'
-import { getMergeOptions, markPullRequestActive } from '@/app/lib/api'
+import {
+  clearFocusedPullRequest,
+  getMergeOptions,
+  markPullRequestActive,
+  setFocusedPullRequest
+} from '@/app/lib/api'
 import {
   LandmarkScope,
   usePullRequestNavigation
@@ -86,6 +91,25 @@ export function PullRequestPage(): ReactElement {
     function activatePullRequest() {
       if (id) {
         markPullRequestActive(id)
+      }
+    },
+    [id]
+  )
+
+  useEffect(
+    function focusPullRequest() {
+      if (!id) {
+        return
+      }
+
+      setFocusedPullRequest(id).catch(() => {
+        // Best-effort focus signal; missing it just means slower refresh.
+      })
+
+      return () => {
+        clearFocusedPullRequest().catch(() => {
+          // Best-effort.
+        })
       }
     },
     [id]

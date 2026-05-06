@@ -32,8 +32,10 @@ import { PullRequestNavigationProvider } from '@/app/pull-requests/PullRequestNa
 import { PullRequestPage } from './PullRequestPage'
 
 vi.mock('@/app/lib/api', () => ({
+  clearFocusedPullRequest: vi.fn().mockResolvedValue(undefined),
   getMergeOptions: vi.fn().mockRejectedValue(new Error('not configured')),
-  markPullRequestActive: vi.fn().mockResolvedValue(undefined)
+  markPullRequestActive: vi.fn().mockResolvedValue(undefined),
+  setFocusedPullRequest: vi.fn().mockResolvedValue(undefined)
 }))
 
 beforeAll(() => {
