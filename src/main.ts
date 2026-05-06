@@ -370,9 +370,9 @@ async function rebuildBootstrapAndNotify(): Promise<void> {
   })
 }
 
-async function runPullRequestSync(token: string): Promise<void> {
+async function runPullRequestSync(token: string): Promise<boolean> {
   if (pullRequestSyncInFlight) {
-    return
+    return false
   }
 
   pullRequestSyncInFlight = true
@@ -383,42 +383,45 @@ async function runPullRequestSync(token: string): Promise<void> {
 
   taskManager.startTask(syncTask.id)
 
-  syncPullRequests(token)
-    .then(async (result) => {
-      taskManager.completeTask(syncTask.id)
+  try {
+    const result = await syncPullRequests(token)
 
-      console.log(`Synced ${result.synced} pull requests`)
+    taskManager.completeTask(syncTask.id)
 
-      if (result.errors.length > 0) {
-        console.warn('Sync warnings:', result.errors)
-      }
+    console.log(`Synced ${result.synced} pull requests`)
 
-      lastSearchSyncedIds = result.syncedIds
+    if (result.errors.length > 0) {
+      console.warn('Sync warnings:', result.errors)
+    }
 
-      await rebuildBootstrapAndNotify()
+    lastSearchSyncedIds = result.syncedIds
 
-      mainWindow?.webContents.send(ipcChannels.SyncComplete)
+    await rebuildBootstrapAndNotify()
 
-      // Stale handling can sleep on rate limits, so it runs on its own
-      // in-flight flag and never blocks the main poll cycle.
-      runStaleSync(token).catch((error) => {
-        console.error('Failed to run stale sync:', error)
-      })
+    mainWindow?.webContents.send(ipcChannels.SyncComplete)
 
-      syncAllPullRequestDetails(token).catch((error) => {
-        console.error('Failed to sync PR details:', error)
-      })
+    // Stale handling can sleep on rate limits, so it runs on its own
+    // in-flight flag and never blocks the main poll cycle.
+    runStaleSync(token).catch((error) => {
+      console.error('Failed to run stale sync:', error)
     })
-    .catch((error) => {
-      taskManager.failTask(
-        syncTask.id,
-        error instanceof Error ? error.message : 'Unknown error'
-      )
-      console.error('Failed to sync pull requests:', error)
+
+    syncAllPullRequestDetails(token).catch((error) => {
+      console.error('Failed to sync PR details:', error)
     })
-    .finally(() => {
-      pullRequestSyncInFlight = false
-    })
+
+    return result.hasChanges
+  } catch (error) {
+    taskManager.failTask(
+      syncTask.id,
+      error instanceof Error ? error.message : 'Unknown error'
+    )
+    console.error('Failed to sync pull requests:', error)
+
+    return false
+  } finally {
+    pullRequestSyncInFlight = false
+  }
 }
 
 async function runStaleSync(token: string): Promise<void> {
@@ -448,16 +451,53 @@ setInterval(() => {
   saveDatabase()
 }, 30000)
 
-// Re-sync pull requests periodically (every 5 seconds)
-const pullRequestSyncInterval = 5 * 1000
+// Adaptive cadence for the main PR search:
+// - Default cadence is 2 min.
+// - When the last run produced changes (or there is a focused PR), refresh
+//   sooner so the list stays responsive.
+// - Otherwise stretch the interval ×1.5 up to a 10 min ceiling.
+const minSyncDelayMs = 30 * 1000
+const baseSyncDelayMs = 2 * 60 * 1000
+const maxSyncDelayMs = 10 * 60 * 1000
+const focusedSyncDelayMs = 60 * 1000
 
-setInterval(() => {
-  const token = loadToken()
+let nextSyncDelayMs = baseSyncDelayMs
 
-  if (token) {
+function scheduleNextPullRequestSync(): void {
+  setTimeout(() => {
+    const token = loadToken()
+
+    if (!token) {
+      nextSyncDelayMs = baseSyncDelayMs
+      scheduleNextPullRequestSync()
+
+      return
+    }
+
     runPullRequestSync(token)
-  }
-}, pullRequestSyncInterval)
+      .then((hasChanges) => {
+        if (hasChanges) {
+          nextSyncDelayMs = minSyncDelayMs
+        } else if (backgroundSyncer.getFocusedPullRequestId()) {
+          nextSyncDelayMs = focusedSyncDelayMs
+        } else {
+          nextSyncDelayMs = Math.min(
+            maxSyncDelayMs,
+            Math.max(baseSyncDelayMs, Math.floor(nextSyncDelayMs * 1.5))
+          )
+        }
+      })
+      .catch((error) => {
+        console.error('Pull request sync iteration failed:', error)
+        nextSyncDelayMs = baseSyncDelayMs
+      })
+      .finally(() => {
+        scheduleNextPullRequestSync()
+      })
+  }, nextSyncDelayMs)
+}
+
+scheduleNextPullRequestSync()
 
 // Save database before quitting
 app.on('before-quit', () => {

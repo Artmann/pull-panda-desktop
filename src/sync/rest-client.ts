@@ -8,6 +8,12 @@ import {
   getRetryAfterMs,
   sleep
 } from './rate-limit-manager'
+import {
+  checkPrimaryRateLimit,
+  computeBackoffMs,
+  maxRetries,
+  requestBroker
+} from './request-broker'
 
 export interface ConditionalRequestOptions {
   etag?: string
@@ -33,16 +39,18 @@ export class RestClient {
     params?: Record<string, unknown>,
     options?: ConditionalRequestOptions
   ): Promise<ConditionalRequestResult<T>> {
-    // Check if we should pause before making the request
-    if (rateLimitManager.shouldPause('rest')) {
-      const waitMs = rateLimitManager.getWaitTimeMs('rest')
+    return this.runWithRetry(route, params, options, 0)
+  }
 
-      log.info(
-        `[REST] Rate limit low, waiting ${Math.round(waitMs / 1000)}s until reset.`
-      )
+  private async runWithRetry<T>(
+    route: string,
+    params: Record<string, unknown> | undefined,
+    options: ConditionalRequestOptions | undefined,
+    attempt: number
+  ): Promise<ConditionalRequestResult<T>> {
+    await checkPrimaryRateLimit('rest')
 
-      await sleep(waitMs)
-    }
+    const release = await requestBroker.acquire('rest')
 
     const headers: Record<string, string> = {}
 
@@ -60,11 +68,11 @@ export class RestClient {
         headers
       })
 
-      // Update rate limit state from response headers
       rateLimitManager.updateFromHeaders(
         'rest',
         response.headers as Record<string, string>
       )
+      requestBroker.recordCost('rest', 1)
 
       return {
         data: response.data as T,
@@ -73,8 +81,10 @@ export class RestClient {
         lastModified: (response.headers['last-modified'] as string) ?? null
       }
     } catch (error) {
-      // Handle 304 Not Modified - this is not an error, just no changes
       if (error instanceof RequestError && error.status === 304) {
+        // 304s do not consume primary quota but they do consume a request slot.
+        requestBroker.recordCost('rest', 1)
+
         return {
           data: null,
           notModified: true,
@@ -83,24 +93,39 @@ export class RestClient {
         }
       }
 
-      // Handle rate limit errors with retry
       if (isRateLimitError(error)) {
         const err = error as { response?: { headers?: Record<string, string> } }
-        const headers = err.response?.headers ?? {}
-        const waitMs = getRetryAfterMs(headers) ?? 60000
+        const responseHeaders = err.response?.headers ?? {}
+        const retryAfterMs = getRetryAfterMs(responseHeaders)
 
-        console.log(
-          `[REST] Rate limited, waiting ${Math.round(waitMs / 1000)}s before retry`
+        rateLimitManager.updateFromHeaders('rest', responseHeaders)
+
+        if (attempt >= maxRetries) {
+          log.error(
+            `[REST] Rate limited after ${maxRetries} retries; giving up`
+          )
+
+          throw error
+        }
+
+        const waitMs = computeBackoffMs(attempt, retryAfterMs)
+
+        log.info(
+          `[REST] Rate limited, sleeping ${Math.round(
+            waitMs / 1000
+          )}s (attempt ${attempt + 1}/${maxRetries})`
         )
 
-        rateLimitManager.updateFromHeaders('rest', headers)
+        // Release the slot before sleeping so other lanes can drain.
+        release()
         await sleep(waitMs)
 
-        // Retry the request
-        return this.request<T>(route, params, options)
+        return this.runWithRetry<T>(route, params, options, attempt + 1)
       }
 
       throw error
+    } finally {
+      release()
     }
   }
 }

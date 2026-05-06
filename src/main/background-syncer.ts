@@ -6,7 +6,9 @@ import { getDatabase, isDatabaseInitialized } from '../database'
 import { checks, pullRequests } from '../database/schema'
 import { ipcChannels } from '../lib/ipc/channels'
 import { getPullRequest, getPullRequestDetails } from './bootstrap'
+import { sendPullRequestResourceEvents } from './send-resource-events'
 import { syncChecks } from '../sync/sync-checks'
+import { syncPullRequestDetails } from '../sync/sync-pull-request-details'
 import { rateLimitManager } from '../sync/rate-limit-manager'
 import type {
   MonitoringData,
@@ -16,6 +18,7 @@ import type {
 
 const syncIntervalWithRunningChecks = 2000
 const syncIntervalWithoutRunningChecks = 10000
+const focusedPullRequestInterval = 2000
 const maxHistorySize = 1000
 
 interface ActivePullRequest {
@@ -24,9 +27,15 @@ interface ActivePullRequest {
   hasRunningChecks: boolean
 }
 
+interface FocusedPullRequest {
+  id: string
+  lastSyncedAt: number
+}
+
 class BackgroundSyncer {
   private isRunning = false
   private activePullRequests = new Map<string, ActivePullRequest>()
+  private focusedPullRequest: FocusedPullRequest | null = null
   private timeoutId: NodeJS.Timeout | null = null
   private getToken: (() => string | null) | null = null
   private syncHistory: SyncRecord[] = []
@@ -66,11 +75,40 @@ class BackgroundSyncer {
 
       console.log(`[BackgroundSyncer] PR ${pullRequestId} marked active`)
 
-      // Trigger immediate sync for newly active PR
       if (this.isRunning) {
         this.scheduleNextSync(0)
       }
     }
+  }
+
+  setFocusedPullRequest(pullRequestId: string | null): void {
+    if (pullRequestId === null) {
+      if (this.focusedPullRequest) {
+        console.log(
+          `[BackgroundSyncer] Cleared focused PR ${this.focusedPullRequest.id}`
+        )
+      }
+
+      this.focusedPullRequest = null
+
+      return
+    }
+
+    if (this.focusedPullRequest?.id === pullRequestId) {
+      return
+    }
+
+    this.focusedPullRequest = { id: pullRequestId, lastSyncedAt: 0 }
+
+    console.log(`[BackgroundSyncer] PR ${pullRequestId} marked focused`)
+
+    if (this.isRunning) {
+      this.scheduleNextSync(0)
+    }
+  }
+
+  getFocusedPullRequestId(): string | null {
+    return this.focusedPullRequest?.id ?? null
   }
 
   private scheduleNextSync(delay: number): void {
@@ -93,7 +131,6 @@ class BackgroundSyncer {
     const token = this.getToken()
 
     if (!token) {
-      // No token, try again later
       this.scheduleNextSync(5000)
 
       return
@@ -105,10 +142,97 @@ class BackgroundSyncer {
       return
     }
 
-    const now = Date.now()
     let nextSyncDelay = syncIntervalWithoutRunningChecks
 
-    // Collect PRs that are due for sync
+    await this.runFocusedSync(token)
+    await this.runActiveChecksSync(token)
+
+    if (this.focusedPullRequest) {
+      const sinceFocus = Date.now() - this.focusedPullRequest.lastSyncedAt
+      const remaining = Math.max(0, focusedPullRequestInterval - sinceFocus)
+
+      nextSyncDelay = Math.min(nextSyncDelay, remaining || 1)
+    }
+
+    for (const [, activePr] of this.activePullRequests) {
+      if (activePr.hasRunningChecks) {
+        nextSyncDelay = Math.min(nextSyncDelay, syncIntervalWithRunningChecks)
+      }
+    }
+
+    this.scheduleNextSync(nextSyncDelay)
+  }
+
+  private async runFocusedSync(token: string): Promise<void> {
+    const focused = this.focusedPullRequest
+
+    if (!focused) {
+      return
+    }
+
+    const now = Date.now()
+
+    if (now - focused.lastSyncedAt < focusedPullRequestInterval) {
+      return
+    }
+
+    const database = getDatabase()
+    const pullRequest = database
+      .select()
+      .from(pullRequests)
+      .where(eq(pullRequests.id, focused.id))
+      .get()
+
+    if (!pullRequest) {
+      this.focusedPullRequest = null
+
+      return
+    }
+
+    const syncStartTime = Date.now()
+    const syncId = `sync-${++this.syncIdCounter}`
+    let syncSuccess = true
+    let syncError: string | undefined
+
+    try {
+      await syncPullRequestDetails({
+        token,
+        pullRequestId: focused.id,
+        owner: pullRequest.repositoryOwner,
+        repositoryName: pullRequest.repositoryName,
+        pullNumber: pullRequest.number
+      })
+
+      focused.lastSyncedAt = Date.now()
+
+      for (const window of BrowserWindow.getAllWindows()) {
+        await sendPullRequestResourceEvents(window, focused.id)
+      }
+    } catch (error) {
+      syncSuccess = false
+      syncError = error instanceof Error ? error.message : 'Unknown error'
+      console.error(
+        `[BackgroundSyncer] Error syncing focused PR ${focused.id}:`,
+        error
+      )
+    }
+
+    const syncEndTime = Date.now()
+    this.recordSync({
+      id: syncId,
+      timestamp: syncStartTime,
+      duration: syncEndTime - syncStartTime,
+      resourceType: 'details',
+      resourceId: focused.id,
+      success: syncSuccess,
+      error: syncError
+    })
+
+    this.recordRateLimit()
+  }
+
+  private async runActiveChecksSync(token: string): Promise<void> {
+    const now = Date.now()
     const database = getDatabase()
 
     interface PrToSync {
@@ -129,9 +253,6 @@ class BackgroundSyncer {
       const timeSinceLastSync = now - activePr.lastSyncedAt
 
       if (timeSinceLastSync < interval) {
-        const remaining = interval - timeSinceLastSync
-        nextSyncDelay = Math.min(nextSyncDelay, remaining)
-
         continue
       }
 
@@ -156,7 +277,6 @@ class BackgroundSyncer {
       })
     }
 
-    // Sync up to 3 PRs concurrently
     await parallel(3, prsToSync, async (item) => {
       const syncStartTime = Date.now()
       const syncId = `sync-${++this.syncIdCounter}`
@@ -212,16 +332,6 @@ class BackgroundSyncer {
 
       this.recordRateLimit()
     })
-
-    // Compute next delay from updated active PR states
-    for (const [, activePr] of this.activePullRequests) {
-      if (activePr.hasRunningChecks) {
-        nextSyncDelay = Math.min(nextSyncDelay, syncIntervalWithRunningChecks)
-      }
-    }
-
-    // Schedule next sync
-    this.scheduleNextSync(nextSyncDelay)
   }
 
   private async notifyRenderer(pullRequestId: string): Promise<void> {
@@ -255,7 +365,6 @@ class BackgroundSyncer {
       `[BackgroundSyncer] Recorded sync: ${record.resourceType}:${record.resourceId} took ${record.duration}ms, success=${record.success}`
     )
 
-    // Keep history bounded
     if (this.syncHistory.length > maxHistorySize) {
       this.syncHistory.shift()
     }
@@ -264,7 +373,6 @@ class BackgroundSyncer {
   private recordRateLimit(): void {
     const now = Date.now()
 
-    // Record REST rate limit
     const restRemaining = rateLimitManager.getRemainingQuota('rest')
     const restState = rateLimitManager.rest
 
@@ -277,7 +385,6 @@ class BackgroundSyncer {
       })
     }
 
-    // Record GraphQL rate limit
     const graphqlRemaining = rateLimitManager.getRemainingQuota('graphql')
     const graphqlState = rateLimitManager.graphql
 
@@ -290,7 +397,6 @@ class BackgroundSyncer {
       })
     }
 
-    // Keep history bounded
     while (this.rateLimitHistory.length > maxHistorySize) {
       this.rateLimitHistory.shift()
     }

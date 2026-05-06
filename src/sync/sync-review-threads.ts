@@ -88,8 +88,6 @@ export async function syncReviewThreads({
   repositoryName,
   pullNumber
 }: SyncReviewThreadsParams): Promise<void> {
-  console.time('syncReviewThreads')
-
   try {
     const client = createGraphQLClient(token)
 
@@ -109,8 +107,6 @@ export async function syncReviewThreads({
       const pullRequest = response.repository?.pullRequest
 
       if (!pullRequest) {
-        console.timeEnd('syncReviewThreads')
-
         return
       }
 
@@ -192,10 +188,7 @@ export async function syncReviewThreads({
           .run()
       }
     }
-
-    console.timeEnd('syncReviewThreads')
   } catch (error) {
-    console.timeEnd('syncReviewThreads')
     console.error('Error syncing review threads:', error)
     throw error
   }

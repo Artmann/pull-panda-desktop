@@ -277,8 +277,6 @@ export async function syncChecks({
   repositoryName,
   pullNumber
 }: SyncChecksParams): Promise<void> {
-  console.time('syncChecks')
-
   try {
     const client = createRestClient(token)
     const commitSha = await resolveCommitSha(
@@ -291,7 +289,6 @@ export async function syncChecks({
 
     if (!commitSha) {
       console.log(`[syncChecks] Could not get PR #${pullNumber}`)
-      console.timeEnd('syncChecks')
 
       return
     }
@@ -312,7 +309,6 @@ export async function syncChecks({
 
     if (result.notModified) {
       console.log(`[syncChecks] No changes for PR #${pullNumber} (304)`)
-      console.timeEnd('syncChecks')
 
       return
     }
@@ -331,11 +327,7 @@ export async function syncChecks({
     if (result.etag) {
       etagManager.set(etagKey, result.etag, result.lastModified ?? undefined)
     }
-
-    console.timeEnd('syncChecks')
   } catch (error) {
-    console.timeEnd('syncChecks')
-
     if (isPermissionError(error)) {
       const errorMessage =
         error instanceof Error ? error.message : String(error)

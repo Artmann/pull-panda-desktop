@@ -38,8 +38,6 @@ export async function syncCommits({
   repositoryName,
   pullNumber
 }: SyncCommitsParams): Promise<void> {
-  console.time('syncCommits')
-
   try {
     const client = createRestClient(token)
     const etagKey = { endpointType: 'commits', resourceId: pullRequestId }
@@ -61,7 +59,6 @@ export async function syncCommits({
     // Skip processing on 304 Not Modified
     if (result.notModified) {
       console.log(`[syncCommits] No changes for PR #${pullNumber} (304)`)
-      console.timeEnd('syncCommits')
 
       return
     }
@@ -147,10 +144,7 @@ export async function syncCommits({
     if (result.etag) {
       etagManager.set(etagKey, result.etag, result.lastModified ?? undefined)
     }
-
-    console.timeEnd('syncCommits')
   } catch (error) {
-    console.timeEnd('syncCommits')
     console.error('Error syncing pull request commits:', error)
 
     throw error

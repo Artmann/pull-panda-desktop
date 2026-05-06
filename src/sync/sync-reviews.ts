@@ -477,8 +477,6 @@ export async function syncReviews({
   repositoryName,
   pullNumber
 }: SyncReviewsParams): Promise<void> {
-  console.time('syncReviews')
-
   try {
     const client = createRestClient(token)
     const now = new Date().toISOString()
@@ -524,7 +522,6 @@ export async function syncReviews({
 
     if (reviewsResult.notModified && commentsResult.notModified) {
       console.log(`[syncReviews] No changes for PR #${pullNumber} (304)`)
-      console.timeEnd('syncReviews')
 
       return
     }
@@ -574,10 +571,7 @@ export async function syncReviews({
         commentsResult.lastModified ?? undefined
       )
     }
-
-    console.timeEnd('syncReviews')
   } catch (error) {
-    console.timeEnd('syncReviews')
     console.error('Error syncing pull request reviews:', error)
     throw error
   }

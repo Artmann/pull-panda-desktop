@@ -36,6 +36,24 @@ const branchProtectionCache = new MemoryCache<BranchProtection | null>()
 
 export const pullRequestsRoute = new Hono<AppEnv>()
 
+pullRequestsRoute.post('/focus/clear', (context) => {
+  backgroundSyncer.setFocusedPullRequest(null)
+
+  return context.json({ success: true })
+})
+
+pullRequestsRoute.post('/:pullRequestId/focus', (context) => {
+  const pullRequestId = context.req.param('pullRequestId')
+
+  if (!pullRequestId) {
+    return context.json({ error: 'Missing pull request ID' }, 400)
+  }
+
+  backgroundSyncer.setFocusedPullRequest(pullRequestId)
+
+  return context.json({ success: true })
+})
+
 pullRequestsRoute.post('/:pullRequestId/activate', (context) => {
   const token = context.get('token')
   const pullRequestId = context.req.param('pullRequestId')

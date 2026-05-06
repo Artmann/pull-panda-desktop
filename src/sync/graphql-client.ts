@@ -2,14 +2,19 @@ import { graphql, GraphqlResponseError } from '@octokit/graphql'
 import { log } from 'tiny-typescript-logger'
 
 import { rateLimitManager, isRateLimitError, sleep } from './rate-limit-manager'
+import {
+  checkPrimaryRateLimit,
+  computeBackoffMs,
+  maxRetries,
+  requestBroker
+} from './request-broker'
 
 export interface GraphQLRateLimit {
   limit: number
   remaining: number
   resetAt: string
+  cost?: number
 }
-
-const maxInlineSleepMs = 10_000
 
 export class GraphQLClient {
   private client: typeof graphql
@@ -26,22 +31,17 @@ export class GraphQLClient {
     query: string,
     variables?: Record<string, unknown>
   ): Promise<T> {
-    // Check if we should pause before making the request
-    if (rateLimitManager.shouldPause('graphql')) {
-      const waitMs = rateLimitManager.getWaitTimeMs('graphql')
+    return this.runWithRetry<T>(query, variables, 0)
+  }
 
-      if (waitMs > maxInlineSleepMs) {
-        throw new Error(
-          `GraphQL rate limit too low; reset in ${Math.round(waitMs / 1000)}s`
-        )
-      }
+  private async runWithRetry<T>(
+    query: string,
+    variables: Record<string, unknown> | undefined,
+    attempt: number
+  ): Promise<T> {
+    await checkPrimaryRateLimit('graphql')
 
-      log.info(
-        `[GraphQL] Rate limit low, waiting ${Math.round(waitMs / 1000)}s until reset`
-      )
-
-      await sleep(waitMs)
-    }
+    const release = await requestBroker.acquire('graphql')
 
     try {
       const response = await this.client<T & { rateLimit?: GraphQLRateLimit }>(
@@ -49,38 +49,53 @@ export class GraphQLClient {
         variables
       )
 
-      // Update rate limit from response
       if (response.rateLimit) {
         rateLimitManager.updateFromGraphQL(response.rateLimit)
+        // GraphQL cost field is the points the request consumed.
+        const cost = response.rateLimit.cost ?? 1
+        requestBroker.recordCost('graphql', cost)
+      } else {
+        requestBroker.recordCost('graphql', 1)
       }
 
       return response
     } catch (error) {
-      // Handle rate limit errors with retry
       if (isRateLimitError(error)) {
         const graphqlError = error as GraphqlResponseError<unknown>
-        const resetAt = graphqlError.headers?.['x-ratelimit-reset']
-        const waitMs = resetAt
-          ? (parseInt(resetAt, 10) - Math.floor(Date.now() / 1000) + 5) * 1000
-          : 60000
+        const headers = graphqlError.headers ?? {}
+        const resetAt = headers['x-ratelimit-reset']
+        const retryAfterMs = resetAt
+          ? Math.max(
+              0,
+              (parseInt(resetAt, 10) - Math.floor(Date.now() / 1000) + 5) * 1000
+            )
+          : null
 
-        if (waitMs > maxInlineSleepMs) {
-          throw new Error(
-            `GraphQL rate limited; reset in ${Math.round(waitMs / 1000)}s`
+        if (attempt >= maxRetries) {
+          log.error(
+            `[GraphQL] Rate limited after ${maxRetries} retries; giving up`
           )
+
+          throw error
         }
 
+        const waitMs = computeBackoffMs(attempt, retryAfterMs)
+
         log.info(
-          `[GraphQL] Rate limited, waiting ${Math.round(waitMs / 1000)}s before retry`
+          `[GraphQL] Rate limited, sleeping ${Math.round(
+            waitMs / 1000
+          )}s (attempt ${attempt + 1}/${maxRetries})`
         )
 
+        release()
         await sleep(waitMs)
 
-        // Retry the request
-        return this.query<T>(query, variables)
+        return this.runWithRetry<T>(query, variables, attempt + 1)
       }
 
       throw error
+    } finally {
+      release()
     }
   }
 }
