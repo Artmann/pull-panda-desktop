@@ -1,4 +1,5 @@
 import { app, BrowserWindow, ipcMain, screen, shell } from 'electron'
+import { Effect } from 'effect'
 import started from 'electron-squirrel-startup'
 import path from 'node:path'
 
@@ -12,11 +13,19 @@ import {
 } from './main/api'
 import { bootstrap, BootstrapData } from './main/bootstrap'
 import { sendPullRequestResourceEvents } from './main/send-resource-events'
-import { backgroundSyncer } from './main/background-syncer'
 import { taskManager } from './main/task-manager'
-import { deletePullRequestData } from './sync/delete-pull-request'
-import { syncPullRequests, syncStalePullRequests } from './sync/pull-requests'
-import { syncPullRequestDetails } from './sync/sync-pull-request-details'
+import { deletePullRequestData } from './sync/operations/delete-pull-request'
+import {
+  syncPullRequests,
+  syncStalePullRequests
+} from './sync/operations/sync-pull-requests'
+import { syncPullRequestDetails } from './sync/operations/sync-pull-request-details'
+import {
+  disposeSyncRuntime,
+  getSyncRuntime,
+  initializeSyncRuntime
+} from './sync/runtime'
+import { BackgroundSyncer } from './sync/services/background-syncer'
 import {
   clearToken,
   getGitHubUser,
@@ -120,8 +129,12 @@ function setupIpcHandlers(): void {
     mainWindow?.minimize()
   })
 
-  ipcMain.handle(ipcChannels.GetSyncerStats, () => {
-    return backgroundSyncer.getMonitoringData()
+  ipcMain.handle(ipcChannels.GetSyncerStats, async () => {
+    const runtime = getSyncRuntime()
+
+    return runtime.runPromise(
+      Effect.flatMap(BackgroundSyncer, (syncer) => syncer.getMonitoringData)
+    )
   })
 
 }
@@ -205,13 +218,17 @@ function needsSync(
   return now - detailsSyncedAt > 5 * 60_000
 }
 
-async function syncAllPullRequestDetails(token: string): Promise<void> {
+async function syncAllPullRequestDetails(): Promise<void> {
   if (!bootstrapData) {
     return
   }
 
+  const runtime = getSyncRuntime()
+  const activePullRequestIds = await runtime.runPromise(
+    Effect.flatMap(BackgroundSyncer, (syncer) => syncer.getActivePullRequestIds)
+  )
+
   const allPullRequests = bootstrapData.pullRequests
-  const activePullRequestIds = backgroundSyncer.getActivePullRequestIds()
   const pullRequests = allPullRequests.filter((pr) =>
     needsSync(pr, activePullRequestIds)
   )
@@ -248,16 +265,17 @@ async function syncAllPullRequestDetails(token: string): Promise<void> {
     await Promise.allSettled(
       batch.map(async (pullRequest) => {
         try {
-          const result = await syncPullRequestDetails({
-            token,
-            pullRequestId: pullRequest.id,
-            owner: pullRequest.repositoryOwner,
-            repositoryName: pullRequest.repositoryName,
-            pullNumber: pullRequest.number
-          })
+          const result = await runtime.runPromise(
+            syncPullRequestDetails({
+              pullRequestId: pullRequest.id,
+              owner: pullRequest.repositoryOwner,
+              repositoryName: pullRequest.repositoryName,
+              pullNumber: pullRequest.number
+            })
+          )
 
           if (result.notFound) {
-            deletePullRequestData(pullRequest.id)
+            await runtime.runPromise(deletePullRequestData(pullRequest.id))
             deletedPullRequestIds.push(pullRequest.id)
           } else if (mainWindow) {
             await sendPullRequestResourceEvents(
@@ -336,6 +354,9 @@ app.on('ready', async () => {
   // Initialize database before anything else
   await initializeDatabase()
 
+  // Initialize the sync runtime now that the database is ready.
+  const runtime = initializeSyncRuntime(loadToken)
+
   await startApiServer(loadToken)
 
   const userLogin = await getUserLogin()
@@ -347,13 +368,21 @@ app.on('ready', async () => {
     setApiMainWindow(mainWindow)
   }
 
-  // Start background syncer
-  backgroundSyncer.start(loadToken)
+  // Start the background syncer fiber via the runtime.
+  await runtime.runPromise(
+    Effect.flatMap(BackgroundSyncer, (syncer) => syncer.start).pipe(
+      Effect.catchAll((error) => {
+        console.error('Failed to start background syncer:', error)
+
+        return Effect.void
+      })
+    )
+  )
 
   const token = loadToken()
 
   if (token) {
-    runPullRequestSync(token)
+    runPullRequestSync()
   }
 })
 
@@ -371,7 +400,7 @@ async function rebuildBootstrapAndNotify(): Promise<void> {
   })
 }
 
-async function runPullRequestSync(token: string): Promise<boolean> {
+async function runPullRequestSync(): Promise<boolean> {
   if (pullRequestSyncInFlight) {
     return false
   }
@@ -385,7 +414,8 @@ async function runPullRequestSync(token: string): Promise<boolean> {
   taskManager.startTask(syncTask.id)
 
   try {
-    const result = await syncPullRequests(token)
+    const runtime = getSyncRuntime()
+    const result = await runtime.runPromise(syncPullRequests)
 
     taskManager.completeTask(syncTask.id)
 
@@ -403,11 +433,11 @@ async function runPullRequestSync(token: string): Promise<boolean> {
 
     // Stale handling can sleep on rate limits, so it runs on its own
     // in-flight flag and never blocks the main poll cycle.
-    runStaleSync(token).catch((error) => {
+    runStaleSync().catch((error) => {
       console.error('Failed to run stale sync:', error)
     })
 
-    syncAllPullRequestDetails(token).catch((error) => {
+    syncAllPullRequestDetails().catch((error) => {
       console.error('Failed to sync PR details:', error)
     })
 
@@ -425,7 +455,7 @@ async function runPullRequestSync(token: string): Promise<boolean> {
   }
 }
 
-async function runStaleSync(token: string): Promise<void> {
+async function runStaleSync(): Promise<void> {
   if (staleSyncInFlight) {
     return
   }
@@ -433,7 +463,10 @@ async function runStaleSync(token: string): Promise<void> {
   staleSyncInFlight = true
 
   try {
-    const staleUpdated = await syncStalePullRequests(token, lastSearchSyncedIds)
+    const runtime = getSyncRuntime()
+    const staleUpdated = await runtime.runPromise(
+      syncStalePullRequests(lastSearchSyncedIds)
+    )
 
     if (staleUpdated > 0) {
       console.log(`Updated ${staleUpdated} stale pull requests`)
@@ -475,11 +508,23 @@ function scheduleNextPullRequestSync(): void {
       return
     }
 
-    runPullRequestSync(token)
-      .then((hasChanges) => {
+    runPullRequestSync()
+      .then(async (hasChanges) => {
         if (hasChanges) {
           nextSyncDelayMs = minSyncDelayMs
-        } else if (backgroundSyncer.getFocusedPullRequestId()) {
+
+          return
+        }
+
+        const runtime = getSyncRuntime()
+        const focusedId = await runtime.runPromise(
+          Effect.flatMap(
+            BackgroundSyncer,
+            (syncer) => syncer.getFocusedPullRequestId
+          )
+        )
+
+        if (focusedId) {
           nextSyncDelayMs = focusedSyncDelayMs
         } else {
           nextSyncDelayMs = Math.min(
@@ -502,7 +547,23 @@ scheduleNextPullRequestSync()
 
 // Save database before quitting
 app.on('before-quit', () => {
-  backgroundSyncer.stop()
+  const runtime = getSyncRuntime()
+
+  runtime
+    .runPromise(
+      Effect.flatMap(BackgroundSyncer, (syncer) => syncer.stop).pipe(
+        Effect.catchAll(() => Effect.void)
+      )
+    )
+    .catch((error) => {
+      console.error('Failed to stop background syncer:', error)
+    })
+    .finally(() => {
+      disposeSyncRuntime().catch((error) => {
+        console.error('Failed to dispose sync runtime:', error)
+      })
+    })
+
   stopApiServer()
   closeDatabase()
 })

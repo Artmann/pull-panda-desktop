@@ -1,10 +1,10 @@
 import { BrowserWindow } from 'electron'
+import { graphql } from '@octokit/graphql'
 import { Hono } from 'hono'
 import { and, eq } from 'drizzle-orm'
 
 import { getDatabase } from '../../../database'
 import { pullRequests, reviewThreads } from '../../../database/schema'
-import { createGraphQLClient } from '../../../sync/graphql-client'
 import { sendPullRequestResourceEvents } from '../../send-resource-events'
 
 import type { AppEnv } from './comments'
@@ -84,9 +84,11 @@ reviewThreadsRoute.post('/resolve', async (context) => {
   }
 
   try {
-    const client = createGraphQLClient(token)
+    const client = graphql.defaults({
+      headers: { authorization: `token ${token}` }
+    })
 
-    const response = await client.query<ResolveMutationResponse>(
+    const response = await client<ResolveMutationResponse>(
       resolveMutation,
       { threadId: request.threadId }
     )
@@ -132,9 +134,11 @@ reviewThreadsRoute.post('/unresolve', async (context) => {
   }
 
   try {
-    const client = createGraphQLClient(token)
+    const client = graphql.defaults({
+      headers: { authorization: `token ${token}` }
+    })
 
-    const response = await client.query<UnresolveMutationResponse>(
+    const response = await client<UnresolveMutationResponse>(
       unresolveMutation,
       { threadId: request.threadId }
     )

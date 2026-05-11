@@ -1,4 +1,5 @@
 import { BrowserWindow } from 'electron'
+import { Effect } from 'effect'
 import { Hono } from 'hono'
 import { and, eq } from 'drizzle-orm'
 import { graphql } from '@octokit/graphql'
@@ -8,12 +9,13 @@ import { getDatabase } from '../../../database'
 import { pullRequests } from '../../../database/schema'
 import { ipcChannels } from '../../../lib/ipc/channels'
 import { BackendError } from '../errors'
-import { backgroundSyncer } from '../../background-syncer'
 import { getPullRequest, getPullRequestDetails } from '../../bootstrap'
 import { MemoryCache } from '../../memory-cache'
 import { sendPullRequestResourceEvents } from '../../send-resource-events'
-import { etagManager } from '../../../sync/etag-manager'
-import { syncPullRequestDetails } from '../../../sync/sync-pull-request-details'
+import { syncPullRequestDetails } from '../../../sync/operations/sync-pull-request-details'
+import { getSyncRuntime } from '../../../sync/runtime'
+import { BackgroundSyncer } from '../../../sync/services/background-syncer'
+import { EtagStore } from '../../../sync/services/etag-store'
 import type { MergeRequirement } from '../../../types/merge-requirements'
 import type { PullRequest } from '../../../types/pull-request'
 
@@ -39,7 +41,17 @@ const branchProtectionCache = new MemoryCache<BranchProtection | null>()
 export const pullRequestsRoute = new Hono<AppEnv>()
 
 pullRequestsRoute.post('/focus/clear', (context) => {
-  backgroundSyncer.setFocusedPullRequest(null)
+  const runtime = getSyncRuntime()
+
+  runtime
+    .runPromise(
+      Effect.flatMap(BackgroundSyncer, (syncer) =>
+        syncer.setFocusedPullRequest(null)
+      )
+    )
+    .catch((error) => {
+      console.error('Failed to clear focused PR:', error)
+    })
 
   return context.json({ success: true })
 })
@@ -51,22 +63,28 @@ pullRequestsRoute.post('/:pullRequestId/focus', (context) => {
     return context.json({ error: 'Missing pull request ID' }, 400)
   }
 
-  backgroundSyncer.setFocusedPullRequest(pullRequestId)
+  const runtime = getSyncRuntime()
+
+  runtime
+    .runPromise(
+      Effect.flatMap(BackgroundSyncer, (syncer) =>
+        syncer.setFocusedPullRequest(pullRequestId)
+      )
+    )
+    .catch((error) => {
+      console.error('Failed to set focused PR:', error)
+    })
 
   return context.json({ success: true })
 })
 
 pullRequestsRoute.post('/:pullRequestId/activate', (context) => {
-  const token = context.get('token')
   const pullRequestId = context.req.param('pullRequestId')
 
   if (!pullRequestId) {
     return context.json({ error: 'Missing pull request ID' }, 400)
   }
 
-  backgroundSyncer.markPullRequestActive(pullRequestId)
-
-  // Fire-and-forget detail sync so the user gets fresh data immediately
   const database = getDatabase()
 
   const pullRequest = database
@@ -75,8 +93,19 @@ pullRequestsRoute.post('/:pullRequestId/activate', (context) => {
     .where(eq(pullRequests.id, pullRequestId))
     .get()
 
-  if (pullRequest) {
-    // Clear cached ETags so force pushes and amended commits are picked up.
+  const runtime = getSyncRuntime()
+
+  const program = Effect.gen(function* () {
+    const syncer = yield* BackgroundSyncer
+
+    yield* syncer.markPullRequestActive(pullRequestId)
+
+    if (!pullRequest) {
+      return
+    }
+
+    const etagStore = yield* EtagStore
+
     for (const endpointType of [
       'checks',
       'commits',
@@ -84,28 +113,32 @@ pullRequestsRoute.post('/:pullRequestId/activate', (context) => {
       'reviews',
       'comments'
     ]) {
-      etagManager.delete({ endpointType, resourceId: pullRequestId })
+      yield* etagStore
+        .remove({ endpointType, resourceId: pullRequestId })
+        .pipe(Effect.catchAll(() => Effect.void))
     }
 
-    syncPullRequestDetails({
-      token,
+    yield* syncPullRequestDetails({
       pullRequestId,
       owner: pullRequest.repositoryOwner,
       repositoryName: pullRequest.repositoryName,
       pullNumber: pullRequest.number
     })
-      .then(() => {
-        for (const window of BrowserWindow.getAllWindows()) {
-          sendPullRequestResourceEvents(window, pullRequestId)
-        }
-      })
-      .catch((error) => {
-        console.error(
-          `Failed to sync details for activated PR ${pullRequestId}:`,
-          error
-        )
-      })
-  }
+
+    for (const window of BrowserWindow.getAllWindows()) {
+      yield* Effect.tryPromise({
+        try: () => sendPullRequestResourceEvents(window, pullRequestId),
+        catch: (error) => error
+      }).pipe(Effect.catchAll(() => Effect.void))
+    }
+  })
+
+  runtime.runPromise(program).catch((error) => {
+    console.error(
+      `Failed to sync details for activated PR ${pullRequestId}:`,
+      error
+    )
+  })
 
   return context.json({ success: true })
 })
@@ -1096,7 +1129,6 @@ pullRequestsRoute.delete('/:pullRequestId/reviewers', async (context) => {
 })
 
 pullRequestsRoute.post('/:pullRequestId/sync', async (context) => {
-  const token = context.get('token')
   const pullRequestId = context.req.param('pullRequestId')
 
   if (!pullRequestId) {
@@ -1115,15 +1147,17 @@ pullRequestsRoute.post('/:pullRequestId/sync', async (context) => {
     return context.json({ error: 'Pull request not found' }, 404)
   }
 
-  const result = await syncPullRequestDetails({
-    token,
-    pullRequestId,
-    owner: pullRequest.repositoryOwner,
-    repositoryName: pullRequest.repositoryName,
-    pullNumber: pullRequest.number
-  })
+  const runtime = getSyncRuntime()
 
-  // Send resource events to all windows
+  const result = await runtime.runPromise(
+    syncPullRequestDetails({
+      pullRequestId,
+      owner: pullRequest.repositoryOwner,
+      repositoryName: pullRequest.repositoryName,
+      pullNumber: pullRequest.number
+    })
+  )
+
   for (const window of BrowserWindow.getAllWindows()) {
     await sendPullRequestResourceEvents(window, pullRequestId)
   }

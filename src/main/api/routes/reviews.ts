@@ -6,8 +6,9 @@ import { and, eq } from 'drizzle-orm'
 import { getDatabase } from '../../../database'
 import { pullRequests } from '../../../database/schema'
 import { sendPullRequestResourceEvents } from '../../send-resource-events'
-import { syncPullRequestDetails } from '../../../sync/sync-pull-request-details'
-import { generateId } from '../../../sync/utils'
+import { syncPullRequestDetails } from '../../../sync/operations/sync-pull-request-details'
+import { getSyncRuntime } from '../../../sync/runtime'
+import { generateId } from '../../../sync/shared/utils'
 
 import type { AppEnv } from './comments'
 
@@ -262,19 +263,28 @@ reviewsRoute.post('/:reviewId/submit', async (context) => {
       .get()
 
     if (pullRequest) {
-      // Sync in the background - don't block the response
-      syncPullRequestDetails({
-        token,
-        pullRequestId: pullRequest.id,
-        owner: request.owner,
-        repositoryName: request.repo,
-        pullNumber: request.pullNumber
-      }).then(() => {
-        // Notify frontend with individual resource events
-        for (const window of BrowserWindow.getAllWindows()) {
-          sendPullRequestResourceEvents(window, pullRequest.id)
-        }
-      })
+      const runtime = getSyncRuntime()
+
+      runtime
+        .runPromise(
+          syncPullRequestDetails({
+            pullRequestId: pullRequest.id,
+            owner: request.owner,
+            repositoryName: request.repo,
+            pullNumber: request.pullNumber
+          })
+        )
+        .then(() => {
+          for (const window of BrowserWindow.getAllWindows()) {
+            sendPullRequestResourceEvents(window, pullRequest.id)
+          }
+        })
+        .catch((error) => {
+          console.error(
+            `Failed to sync details after review submit for PR ${pullRequest.id}:`,
+            error
+          )
+        })
     }
 
     return context.json({ success: true })
