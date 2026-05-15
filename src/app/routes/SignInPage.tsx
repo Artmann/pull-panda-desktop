@@ -1,4 +1,5 @@
 import { AlertCircleIcon, Github, Loader2 } from 'lucide-react'
+import { usePostHog } from '@posthog/react'
 
 import logo from '@/assets/logo-transparent.png'
 import { DeviceCodeCard } from '@/app/components/auth/DeviceCodeCard'
@@ -7,6 +8,7 @@ import { Button } from '@/app/components/ui/button'
 import { useAuth } from '@/app/lib/store/authContext'
 
 export function SignInPage() {
+  const posthog = usePostHog()
   const {
     status,
     userCode,
@@ -18,6 +20,13 @@ export function SignInPage() {
 
   const isLoading = status === 'requesting'
   const isPolling = status === 'polling' && userCode && verificationUri
+
+  const handleSignIn = () => {
+    posthog?.capture('sign_in_started')
+    startLogin().catch(() => {
+      // error handled in authContext
+    })
+  }
 
   return (
     <div className="w-full h-full flex flex-col justify-center items-center p-8">
@@ -59,7 +68,7 @@ export function SignInPage() {
                 className="gap-2"
                 disabled={isLoading}
                 size="lg"
-                onClick={startLogin}
+                onClick={handleSignIn}
               >
                 {isLoading ? (
                   <Loader2 className="h-5 w-5 animate-spin" />

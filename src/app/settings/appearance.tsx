@@ -1,5 +1,6 @@
 import { useTheme } from 'next-themes'
 import { type ReactElement, type ReactNode, useEffect, useState } from 'react'
+import { usePostHog } from '@posthog/react'
 
 import { Card, CardContent } from '../components/ui/card'
 import {
@@ -23,10 +24,21 @@ const sampleCode = `function greet(name: string): string {
 }`
 
 export function AppearanceSettings(): ReactElement {
+  const posthog = usePostHog()
   const { resolvedTheme, theme, setTheme } = useTheme()
   const { appTheme, setAppTheme } = useAppTheme()
   const mode = resolvedTheme === 'dark' ? 'dark' : 'light'
   const availableThemes = getThemesForMode(mode)
+
+  const handleThemeChange = (value: string) => {
+    posthog?.capture('theme_changed', { theme: value })
+    setAppTheme(value)
+  }
+
+  const handleAppearanceModeChange = (value: string) => {
+    posthog?.capture('appearance_mode_changed', { mode: value })
+    setTheme(value)
+  }
 
   return (
     <div>
@@ -40,7 +52,7 @@ export function AppearanceSettings(): ReactElement {
           >
             <Select
               value={appTheme.value}
-              onValueChange={setAppTheme}
+              onValueChange={handleThemeChange}
             >
               <SelectTrigger className="w-52">
                 <SelectValue placeholder="Theme" />
@@ -64,7 +76,7 @@ export function AppearanceSettings(): ReactElement {
           >
             <Select
               value={theme}
-              onValueChange={setTheme}
+              onValueChange={handleAppearanceModeChange}
             >
               <SelectTrigger className="w-52">
                 <SelectValue placeholder="Appearance" />

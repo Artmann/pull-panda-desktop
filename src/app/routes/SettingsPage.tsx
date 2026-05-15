@@ -1,6 +1,7 @@
 import { type ReactElement } from 'react'
 import { AccountSettings } from '../settings/account'
 import { AppearanceSettings } from '../settings/appearance'
+import { PrivacySettings } from '../settings/privacy'
 
 export function SettingsPage(): ReactElement {
   return (
@@ -11,6 +12,7 @@ export function SettingsPage(): ReactElement {
 
           <AccountSettings />
           <AppearanceSettings />
+          <PrivacySettings />
         </section>
       </div>
     </div>

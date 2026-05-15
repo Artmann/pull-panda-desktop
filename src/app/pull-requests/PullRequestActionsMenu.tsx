@@ -1,5 +1,6 @@
 import { MoreVerticalIcon } from 'lucide-react'
 import { ReactElement } from 'react'
+import { usePostHog } from '@posthog/react'
 import { toast } from 'sonner'
 
 import {
@@ -21,10 +22,16 @@ interface PullRequestActionsMenuProps {
 export function PullRequestActionsMenu({
   pullRequest
 }: PullRequestActionsMenuProps): ReactElement {
+  const posthog = usePostHog()
   const dispatch = useAppDispatch()
 
   const handleClose = () => {
     const originalPr = pullRequest
+
+    posthog?.capture('pull_request_closed', {
+      pull_request_id: pullRequest.id,
+      repository: `${pullRequest.repositoryOwner}/${pullRequest.repositoryName}`
+    })
 
     dispatch(
       pullRequestsActions.upsertItem({ ...pullRequest, state: 'CLOSED' })
@@ -55,6 +62,11 @@ export function PullRequestActionsMenu({
   const handleReopen = () => {
     const originalPr = pullRequest
 
+    posthog?.capture('pull_request_reopened', {
+      pull_request_id: pullRequest.id,
+      repository: `${pullRequest.repositoryOwner}/${pullRequest.repositoryName}`
+    })
+
     dispatch(pullRequestsActions.upsertItem({ ...pullRequest, state: 'OPEN' }))
 
     updatePullRequest({
@@ -82,6 +94,12 @@ export function PullRequestActionsMenu({
   const handleToggleDraft = () => {
     const originalPr = pullRequest
     const newIsDraft = !pullRequest.isDraft
+
+    posthog?.capture('pull_request_draft_toggled', {
+      pull_request_id: pullRequest.id,
+      repository: `${pullRequest.repositoryOwner}/${pullRequest.repositoryName}`,
+      is_draft: newIsDraft
+    })
 
     dispatch(
       pullRequestsActions.upsertItem({ ...pullRequest, isDraft: newIsDraft })

@@ -28,11 +28,24 @@
 
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
+// eslint-disable-next-line import/no-named-as-default
+import posthog from 'posthog-js'
+import { PostHogErrorBoundary, PostHogProvider } from '@posthog/react'
 
 import { App } from './app/App'
+import { getStoredAnalyticsEnabled } from './app/lib/analytics'
 import { filterReadyPullRequests } from './app/lib/pull-requests'
 import { createStore } from './app/store'
 import './app/index.css'
+
+posthog.init(import.meta.env.VITE_PUBLIC_POSTHOG_PROJECT_TOKEN, {
+  api_host: import.meta.env.VITE_PUBLIC_POSTHOG_HOST,
+  capture_pageview: false,
+  defaults: '2026-01-30',
+  disable_session_recording: true,
+  opt_out_capturing_by_default: !getStoredAnalyticsEnabled(),
+  persistence: 'localStorage'
+})
 
 async function main() {
   const bootstrapData = await window.electron.getBootstrapData()
@@ -63,7 +76,11 @@ async function main() {
 
   createRoot(root).render(
     <StrictMode>
-      <App store={store} />
+      <PostHogProvider client={posthog}>
+        <PostHogErrorBoundary>
+          <App store={store} />
+        </PostHogErrorBoundary>
+      </PostHogProvider>
     </StrictMode>
   )
 }

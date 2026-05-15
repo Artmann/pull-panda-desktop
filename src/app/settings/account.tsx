@@ -1,4 +1,5 @@
 import { type ReactElement } from 'react'
+import { usePostHog } from '@posthog/react'
 
 import { UserAvatar } from '../components/UserAvatar'
 import { Button } from '../components/ui/button'
@@ -6,9 +7,12 @@ import { Card, CardContent } from '../components/ui/card'
 import { useAuth } from '../lib/store/authContext'
 
 export function AccountSettings(): ReactElement {
+  const posthog = usePostHog()
   const { logout, user } = useAuth()
 
   function handleSignOut() {
+    posthog?.capture('user_signed_out')
+    posthog?.reset()
     logout().catch((error: unknown) => {
       console.error('Failed to sign out:', error)
     })

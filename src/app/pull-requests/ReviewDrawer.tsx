@@ -1,5 +1,6 @@
 import { ChevronLeftIcon, ChevronRightIcon, Trash2 } from 'lucide-react'
 import { memo, ReactElement, useState } from 'react'
+import { usePostHog } from '@posthog/react'
 import { shallowEqual } from 'react-redux'
 import { toast } from 'sonner'
 
@@ -32,6 +33,7 @@ interface ReviewDrawerProps {
 export const ReviewDrawer = memo(function ReviewDrawer({
   pullRequest
 }: ReviewDrawerProps): ReactElement {
+  const posthog = usePostHog()
   const [isCollapsed, setIsCollapsed] = useState(false)
 
   const dispatch = useAppDispatch()
@@ -74,6 +76,13 @@ export const ReviewDrawer = memo(function ReviewDrawer({
     const previousReview = { ...pendingReview }
     const previousBody = reviewBody
     const previousComments = [...pendingComments]
+
+    posthog?.capture('review_submitted', {
+      review_event: event,
+      pull_request_id: pullRequest.id,
+      repository: `${pullRequest.repositoryOwner}/${pullRequest.repositoryName}`,
+      pending_comments_count: pendingComments.length
+    })
 
     // Optimistically update UI
     setIsSubmitting(true)
@@ -157,6 +166,11 @@ export const ReviewDrawer = memo(function ReviewDrawer({
 
       return
     }
+
+    posthog?.capture('review_cancelled', {
+      pull_request_id: pullRequest.id,
+      repository: `${pullRequest.repositoryOwner}/${pullRequest.repositoryName}`
+    })
 
     // Store previous state for rollback
     const previousReview = { ...pendingReview }

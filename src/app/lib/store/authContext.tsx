@@ -6,6 +6,8 @@ import {
   useCallback,
   type ReactNode
 } from 'react'
+// eslint-disable-next-line import/no-named-as-default
+import posthog from 'posthog-js'
 import type { AuthStatus, GitHubUser } from '@/types/auth'
 
 interface AuthContextValue {
@@ -65,6 +67,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         // Token received, get user info
         const authenticatedUser = await window.auth.getUser()
         if (cancelled) return
+
+        if (authenticatedUser) {
+          posthog.identify(authenticatedUser.login, {
+            name: authenticatedUser.name,
+            avatar_url: authenticatedUser.avatar_url
+          })
+          posthog.capture('user_signed_in')
+        }
 
         setUser(authenticatedUser)
         setStatus('authenticated')
