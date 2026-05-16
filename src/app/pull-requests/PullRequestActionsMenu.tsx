@@ -9,8 +9,13 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger
 } from '@/app/components/ui/dropdown-menu'
-import { updatePullRequest } from '@/app/lib/api'
-import { useAppDispatch } from '@/app/store/hooks'
+import {
+  getMergeOptions,
+  updatePullRequest,
+  type MergeOptions
+} from '@/app/lib/api'
+import { useAppDispatch, useAppSelector } from '@/app/store/hooks'
+import { mergeOptionsActions } from '@/app/store/merge-options-slice'
 import { pullRequestsActions } from '@/app/store/pull-requests-slice'
 import type { PullRequest } from '@/types/pull-request'
 
@@ -22,6 +27,10 @@ export function PullRequestActionsMenu({
   pullRequest
 }: PullRequestActionsMenuProps): ReactElement {
   const dispatch = useAppDispatch()
+
+  const mergeOptions = useAppSelector(
+    (state) => state.mergeOptions[pullRequest.id] ?? null
+  )
 
   const handleClose = () => {
     const originalPr = pullRequest
@@ -81,11 +90,26 @@ export function PullRequestActionsMenu({
 
   const handleToggleDraft = () => {
     const originalPr = pullRequest
+    const originalMergeOptions = mergeOptions
     const newIsDraft = !pullRequest.isDraft
 
     dispatch(
       pullRequestsActions.upsertItem({ ...pullRequest, isDraft: newIsDraft })
     )
+
+    const optimisticMergeOptions = buildOptimisticMergeOptions(
+      mergeOptions,
+      newIsDraft
+    )
+
+    if (optimisticMergeOptions) {
+      dispatch(
+        mergeOptionsActions.setForPullRequest({
+          options: optimisticMergeOptions,
+          pullRequestId: pullRequest.id
+        })
+      )
+    }
 
     updatePullRequest({
       isDraft: newIsDraft,
@@ -96,9 +120,32 @@ export function PullRequestActionsMenu({
     })
       .then((updated) => {
         dispatch(pullRequestsActions.upsertItem(updated))
+
+        getMergeOptions(pullRequest.id)
+          .then((options) => {
+            dispatch(
+              mergeOptionsActions.setForPullRequest({
+                options,
+                pullRequestId: pullRequest.id
+              })
+            )
+          })
+          .catch(() => {
+            // The optimistic update already reflects the new draft state;
+            // the next page mount or merge-drawer open will reconcile.
+          })
       })
       .catch((error) => {
         dispatch(pullRequestsActions.upsertItem(originalPr))
+
+        if (originalMergeOptions) {
+          dispatch(
+            mergeOptionsActions.setForPullRequest({
+              options: originalMergeOptions,
+              pullRequestId: pullRequest.id
+            })
+          )
+        }
 
         const message =
           error instanceof Error
@@ -149,4 +196,36 @@ export function PullRequestActionsMenu({
       </DropdownMenuContent>
     </DropdownMenu>
   )
+}
+
+function buildOptimisticMergeOptions(
+  options: MergeOptions | null,
+  newIsDraft: boolean
+): MergeOptions | null {
+  if (!options) {
+    return null
+  }
+
+  const index = options.requirements.findIndex(
+    (requirement) => requirement.key === 'not-draft'
+  )
+
+  if (index === -1) {
+    return null
+  }
+
+  const nextRequirements = options.requirements.slice()
+
+  nextRequirements[index] = {
+    ...nextRequirements[index],
+    description: newIsDraft
+      ? 'This pull request is still a draft.'
+      : 'Pull request is ready for review.',
+    satisfied: !newIsDraft
+  }
+
+  return {
+    ...options,
+    requirements: nextRequirements
+  }
 }
