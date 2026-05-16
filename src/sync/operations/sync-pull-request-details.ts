@@ -22,7 +22,7 @@ export interface SyncPullRequestDetailsParams {
   pullNumber: number
 }
 
-interface NamedOperation {
+export interface NamedOperation {
   name: string
   effect: Effect.Effect<
     void,
@@ -50,8 +50,12 @@ const isNotFoundCause = (cause: unknown): boolean => {
   return (cause as { _tag?: string })._tag === 'NotFoundError'
 }
 
-const runDetails = (
-  params: SyncPullRequestDetailsParams
+// Exported for tests so they can inject a fixed list of named operations and
+// exercise orchestration (not-found short-circuit, partial-error collection)
+// without standing up the full transport stack.
+export const runDetailsWithOperations = (
+  params: SyncPullRequestDetailsParams,
+  operations: ReadonlyArray<NamedOperation>
 ): Effect.Effect<
   SyncPullRequestDetailsResult,
   never,
@@ -66,7 +70,7 @@ const runDetails = (
       `Starting detail sync for PR #${params.pullNumber} in ${params.owner}/${params.repositoryName}`
     )
 
-    for (const operation of buildOperations(params)) {
+    for (const operation of operations) {
       const outcome = yield* Effect.either(operation.effect)
 
       if (outcome._tag === 'Right') {
@@ -122,9 +126,23 @@ const runDetails = (
     }
   })
 
+const runDetails = (
+  params: SyncPullRequestDetailsParams
+): Effect.Effect<
+  SyncPullRequestDetailsResult,
+  never,
+  Database | GitHubRest | GitHubGraphQL | EtagStore
+> => runDetailsWithOperations(params, buildOperations(params))
+
 type DetailsFiber = Fiber.RuntimeFiber<SyncPullRequestDetailsResult, never>
 
 const inFlight = new Map<string, DetailsFiber>()
+
+// Exposed for tests that need to assert in-flight de-duplication semantics
+// across invocations.
+export const __testing = {
+  inFlight
+}
 
 export const syncPullRequestDetails = (
   params: SyncPullRequestDetailsParams

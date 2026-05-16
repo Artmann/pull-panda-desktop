@@ -11,6 +11,7 @@ import {
 import { Database } from '../services/database'
 import { EtagStore } from '../services/etag-store'
 import { GitHubRest } from '../services/github-rest'
+import { paginateRestField } from '../shared/paginate'
 import { generateId } from '../shared/utils'
 
 export interface SyncChecksParams {
@@ -140,7 +141,6 @@ export const syncChecks = (
   params: SyncChecksParams
 ): Effect.Effect<void, SyncError, Database | GitHubRest | EtagStore> =>
   Effect.gen(function* () {
-    const rest = yield* GitHubRest
     const database = yield* Database
 
     const commitSha = yield* resolveCommitSha(params)
@@ -149,44 +149,37 @@ export const syncChecks = (
       return
     }
 
-    const result = yield* rest
-      .request(
-        'GET /repos/{owner}/{repo}/commits/{ref}/check-runs',
-        {
-          owner: params.owner,
-          repo: params.repositoryName,
-          ref: commitSha,
-          per_page: 100
-        },
-        CheckRunsResponseSchema,
-        {
-          etagKey: { endpointType: 'checks', resourceId: params.pullRequestId }
-        }
+    const result = yield* paginateRestField(
+      'GET /repos/{owner}/{repo}/commits/{ref}/check-runs',
+      {
+        owner: params.owner,
+        repo: params.repositoryName,
+        ref: commitSha
+      },
+      CheckRunsResponseSchema,
+      (response) => response.check_runs,
+      {
+        etagKey: { endpointType: 'checks', resourceId: params.pullRequestId }
+      }
+    ).pipe(
+      Effect.catchTag('PermissionError', () =>
+        Effect.succeed(Option.none<ReadonlyArray<CheckRun>>())
+      ),
+      Effect.mapError(
+        (cause) =>
+          new SyncDetailFailedError({
+            operation: 'checks',
+            pullRequestId: params.pullRequestId,
+            cause
+          }) as SyncError
       )
-      .pipe(
-        Effect.catchTag('PermissionError', () =>
-          Effect.succeed(
-            Option.none<{
-              total_count: number
-              check_runs: ReadonlyArray<CheckRun>
-            }>()
-          )
-        ),
-        Effect.mapError(
-          (cause) =>
-            new SyncDetailFailedError({
-              operation: 'checks',
-              pullRequestId: params.pullRequestId,
-              cause
-            }) as SyncError
-        )
-      )
+    )
 
     if (Option.isNone(result)) {
       return
     }
 
-    const checkRuns = result.value.check_runs as ReadonlyArray<CheckRun>
+    const checkRuns = result.value
     const now = new Date().toISOString()
 
     yield* database.use('syncChecks.upsert', (db) => {

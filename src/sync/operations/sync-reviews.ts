@@ -22,6 +22,7 @@ import {
 import { Database } from '../services/database'
 import { EtagStore } from '../services/etag-store'
 import { GitHubRest } from '../services/github-rest'
+import { paginateRest } from '../shared/paginate'
 import {
   generateId,
   getLineTypeFromDiffHunk,
@@ -134,105 +135,82 @@ const buildComment = (
 }
 
 const fetchReviews = (params: SyncReviewsParams) =>
-  Effect.gen(function* () {
-    const rest = yield* GitHubRest
-
-    return yield* rest
-      .request(
-        'GET /repos/{owner}/{repo}/pulls/{pull_number}/reviews',
-        {
-          owner: params.owner,
-          repo: params.repositoryName,
-          pull_number: params.pullNumber,
-          per_page: 100
-        },
-        ReviewsResponseSchema,
-        {
-          etagKey: {
-            endpointType: reviewsEndpointType,
-            resourceId: params.pullRequestId
-          }
-        }
-      )
-      .pipe(
-        Effect.mapError(
-          (cause) =>
-            new SyncDetailFailedError({
-              operation: 'reviews',
-              pullRequestId: params.pullRequestId,
-              cause
-            }) as SyncError
-        )
-      )
-  })
+  paginateRest(
+    'GET /repos/{owner}/{repo}/pulls/{pull_number}/reviews',
+    {
+      owner: params.owner,
+      repo: params.repositoryName,
+      pull_number: params.pullNumber
+    },
+    ReviewsResponseSchema,
+    {
+      etagKey: {
+        endpointType: reviewsEndpointType,
+        resourceId: params.pullRequestId
+      }
+    }
+  ).pipe(
+    Effect.mapError(
+      (cause) =>
+        new SyncDetailFailedError({
+          operation: 'reviews',
+          pullRequestId: params.pullRequestId,
+          cause
+        }) as SyncError
+    )
+  )
 
 const fetchReviewComments = (params: SyncReviewsParams) =>
-  Effect.gen(function* () {
-    const rest = yield* GitHubRest
-
-    return yield* rest
-      .request(
-        'GET /repos/{owner}/{repo}/pulls/{pull_number}/comments',
-        {
-          owner: params.owner,
-          repo: params.repositoryName,
-          pull_number: params.pullNumber,
-          per_page: 100
-        },
-        ReviewCommentsResponseSchema,
-        {
-          etagKey: {
-            endpointType: reviewCommentsEndpointType,
-            resourceId: params.pullRequestId
-          }
-        }
-      )
-      .pipe(
-        Effect.mapError(
-          (cause) =>
-            new SyncDetailFailedError({
-              operation: 'review_comments',
-              pullRequestId: params.pullRequestId,
-              cause
-            }) as SyncError
-        )
-      )
-  })
+  paginateRest(
+    'GET /repos/{owner}/{repo}/pulls/{pull_number}/comments',
+    {
+      owner: params.owner,
+      repo: params.repositoryName,
+      pull_number: params.pullNumber
+    },
+    ReviewCommentsResponseSchema,
+    {
+      etagKey: {
+        endpointType: reviewCommentsEndpointType,
+        resourceId: params.pullRequestId
+      }
+    }
+  ).pipe(
+    Effect.mapError(
+      (cause) =>
+        new SyncDetailFailedError({
+          operation: 'review_comments',
+          pullRequestId: params.pullRequestId,
+          cause
+        }) as SyncError
+    )
+  )
 
 const fetchReviewCommentReactions = (
   params: SyncReviewsParams,
   commentNumericId: number
 ) =>
-  Effect.gen(function* () {
-    const rest = yield* GitHubRest
-
-    const result = yield* rest
-      .request(
-        'GET /repos/{owner}/{repo}/pulls/comments/{comment_id}/reactions',
-        {
-          owner: params.owner,
-          repo: params.repositoryName,
-          comment_id: commentNumericId
-        },
-        ReactionsResponseSchema
-      )
-      .pipe(
-        Effect.mapError(
-          (cause) =>
-            new SyncDetailFailedError({
-              operation: 'review_comment_reactions',
-              pullRequestId: params.pullRequestId,
-              cause
-            }) as SyncError
-        )
-      )
-
-    if (Option.isNone(result)) {
-      return [] as ReadonlyArray<Reaction>
-    }
-
-    return result.value as ReadonlyArray<Reaction>
-  })
+  paginateRest(
+    'GET /repos/{owner}/{repo}/pulls/comments/{comment_id}/reactions',
+    {
+      owner: params.owner,
+      repo: params.repositoryName,
+      comment_id: commentNumericId
+    },
+    ReactionsResponseSchema
+  ).pipe(
+    Effect.mapError(
+      (cause) =>
+        new SyncDetailFailedError({
+          operation: 'review_comment_reactions',
+          pullRequestId: params.pullRequestId,
+          cause
+        }) as SyncError
+    ),
+    Effect.map((result) =>
+      Option.isNone(result) ? [] : (result.value as ReadonlyArray<Reaction>)
+    )
+  )
 
 const hasOrphanReviews = (pullRequestId: string) =>
   Effect.gen(function* () {
@@ -466,29 +444,37 @@ const upsertReviewComments = (
     )
 
     for (const entry of commentEntries) {
-      if (
-        !entry.comment.reactions ||
-        entry.comment.reactions.total_count === 0
-      ) {
-        continue
-      }
-
-      const reactionsData = yield* fetchReviewCommentReactions(
-        params,
-        entry.comment.id
-      )
+      // Always reconcile reactions against the server, even when total_count is
+      // zero — otherwise removed reactions stay around locally forever.
+      const reactionsData =
+        entry.comment.reactions && entry.comment.reactions.total_count > 0
+          ? yield* fetchReviewCommentReactions(params, entry.comment.id)
+          : ([] as ReadonlyArray<Reaction>)
 
       yield* database.use('syncReviews.reactions', (db) => {
+        const existingReactions = db
+          .select()
+          .from(commentReactions)
+          .where(
+            and(
+              eq(commentReactions.commentId, entry.commentId),
+              isNull(commentReactions.deletedAt)
+            )
+          )
+          .all()
+
+        const syncedGitHubIds: string[] = []
+
         for (const reactionData of reactionsData) {
           if (!reactionData.user) {
             continue
           }
 
-          const existingReaction = db
-            .select()
-            .from(commentReactions)
-            .where(eq(commentReactions.gitHubId, reactionData.node_id))
-            .get()
+          syncedGitHubIds.push(reactionData.node_id)
+
+          const existingReaction = existingReactions.find(
+            (row) => row.gitHubId === reactionData.node_id
+          )
 
           const reaction: NewCommentReaction = {
             id: existingReaction?.id ?? generateId(),
@@ -515,6 +501,15 @@ const upsertReviewComments = (
               }
             })
             .run()
+        }
+
+        for (const existingReaction of existingReactions) {
+          if (!syncedGitHubIds.includes(existingReaction.gitHubId)) {
+            db.update(commentReactions)
+              .set({ deletedAt: now })
+              .where(eq(commentReactions.id, existingReaction.id))
+              .run()
+          }
         }
       })
     }

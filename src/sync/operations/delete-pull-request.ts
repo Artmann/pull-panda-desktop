@@ -9,6 +9,7 @@ import {
   etags,
   modifiedFiles,
   pullRequests,
+  reviewThreads,
   reviews
 } from '../../database/schema'
 import { Database } from '../services/database'
@@ -22,6 +23,9 @@ export const deletePullRequestData = (pullRequestId: string) =>
         .where(eq(commentReactions.pullRequestId, pullRequestId))
         .run()
       db.delete(comments).where(eq(comments.pullRequestId, pullRequestId)).run()
+      db.delete(reviewThreads)
+        .where(eq(reviewThreads.pullRequestId, pullRequestId))
+        .run()
       db.delete(reviews).where(eq(reviews.pullRequestId, pullRequestId)).run()
       db.delete(checks).where(eq(checks.pullRequestId, pullRequestId)).run()
       db.delete(commits).where(eq(commits.pullRequestId, pullRequestId)).run()

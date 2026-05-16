@@ -6,6 +6,7 @@ import { SyncDetailFailedError, type SyncError } from '../errors'
 import { FilesResponseSchema, type ModifiedFile } from '../schemas/github-rest'
 import { Database } from '../services/database'
 import { GitHubRest } from '../services/github-rest'
+import { paginateRest } from '../shared/paginate'
 import { generateId } from '../shared/utils'
 
 export interface SyncFilesParams {
@@ -19,33 +20,29 @@ export const syncFiles = (
   params: SyncFilesParams
 ): Effect.Effect<void, SyncError, Database | GitHubRest> =>
   Effect.gen(function* () {
-    const rest = yield* GitHubRest
     const database = yield* Database
 
-    const result = yield* rest
-      .request(
-        'GET /repos/{owner}/{repo}/pulls/{pull_number}/files',
-        {
-          owner: params.owner,
-          repo: params.repositoryName,
-          pull_number: params.pullNumber,
-          per_page: 100
-        },
-        FilesResponseSchema,
-        {
-          etagKey: { endpointType: 'files', resourceId: params.pullRequestId }
-        }
+    const result = yield* paginateRest(
+      'GET /repos/{owner}/{repo}/pulls/{pull_number}/files',
+      {
+        owner: params.owner,
+        repo: params.repositoryName,
+        pull_number: params.pullNumber
+      },
+      FilesResponseSchema,
+      {
+        etagKey: { endpointType: 'files', resourceId: params.pullRequestId }
+      }
+    ).pipe(
+      Effect.mapError(
+        (cause) =>
+          new SyncDetailFailedError({
+            operation: 'files',
+            pullRequestId: params.pullRequestId,
+            cause
+          }) as SyncError
       )
-      .pipe(
-        Effect.mapError(
-          (cause) =>
-            new SyncDetailFailedError({
-              operation: 'files',
-              pullRequestId: params.pullRequestId,
-              cause
-            }) as SyncError
-        )
-      )
+    )
 
     if (Option.isNone(result)) {
       return

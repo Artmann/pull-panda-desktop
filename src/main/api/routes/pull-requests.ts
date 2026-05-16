@@ -111,7 +111,9 @@ pullRequestsRoute.post('/:pullRequestId/activate', (context) => {
       'commits',
       'files',
       'reviews',
-      'comments'
+      'review_comments',
+      'issue_comments',
+      'pr-head-sha'
     ]) {
       yield* etagStore
         .remove({ endpointType, resourceId: pullRequestId })

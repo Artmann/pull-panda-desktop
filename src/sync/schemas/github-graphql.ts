@@ -75,16 +75,24 @@ const ProbeNodeSchema = Schema.Struct({
   state: PullRequestStateSchema
 })
 
+const ProbePageInfoSchema = Schema.Struct({
+  hasNextPage: Schema.Boolean,
+  endCursor: Schema.NullOr(Schema.String)
+})
+
 const ProbeBucketSchema = Schema.Struct({
+  pageInfo: ProbePageInfoSchema,
   nodes: Schema.Array(ProbeNodeSchema)
 })
 
-export const ProbeResponseSchema = Schema.Struct({
-  authored: ProbeBucketSchema,
-  assigned: ProbeBucketSchema,
-  reviewRequested: ProbeBucketSchema,
+export const ProbePageResponseSchema = Schema.Struct({
+  search: ProbeBucketSchema,
   rateLimit: RateLimitSchema
 })
+
+export type ProbePageResponse = Schema.Schema.Type<
+  typeof ProbePageResponseSchema
+>
 
 export const MultiAliasResponseSchema = Schema.Struct({
   rateLimit: RateLimitSchema
@@ -112,6 +120,20 @@ const ReviewThreadNodeSchema = Schema.Struct({
 })
 
 export type ReviewThreadNode = Schema.Schema.Type<typeof ReviewThreadNodeSchema>
+
+const ResolvedThreadSchema = Schema.Struct({
+  id: Schema.String,
+  isResolved: Schema.Boolean,
+  resolvedBy: Schema.NullOr(Schema.Struct({ login: Schema.String }))
+})
+
+export const ResolveThreadResponseSchema = Schema.Struct({
+  resolveReviewThread: Schema.Struct({ thread: ResolvedThreadSchema })
+})
+
+export const UnresolveThreadResponseSchema = Schema.Struct({
+  unresolveReviewThread: Schema.Struct({ thread: ResolvedThreadSchema })
+})
 
 export const ReviewThreadsResponseSchema = Schema.Struct({
   repository: Schema.NullOr(

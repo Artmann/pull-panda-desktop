@@ -6,6 +6,7 @@ import { SyncDetailFailedError, type SyncError } from '../errors'
 import { CommitsResponseSchema, type Commit } from '../schemas/github-rest'
 import { Database } from '../services/database'
 import { GitHubRest } from '../services/github-rest'
+import { paginateRest } from '../shared/paginate'
 import { generateId, normalizeCommentBody } from '../shared/utils'
 
 export interface SyncCommitsParams {
@@ -19,33 +20,29 @@ export const syncCommits = (
   params: SyncCommitsParams
 ): Effect.Effect<void, SyncError, Database | GitHubRest> =>
   Effect.gen(function* () {
-    const rest = yield* GitHubRest
     const database = yield* Database
 
-    const result = yield* rest
-      .request(
-        'GET /repos/{owner}/{repo}/pulls/{pull_number}/commits',
-        {
-          owner: params.owner,
-          repo: params.repositoryName,
-          pull_number: params.pullNumber,
-          per_page: 100
-        },
-        CommitsResponseSchema,
-        {
-          etagKey: { endpointType: 'commits', resourceId: params.pullRequestId }
-        }
+    const result = yield* paginateRest(
+      'GET /repos/{owner}/{repo}/pulls/{pull_number}/commits',
+      {
+        owner: params.owner,
+        repo: params.repositoryName,
+        pull_number: params.pullNumber
+      },
+      CommitsResponseSchema,
+      {
+        etagKey: { endpointType: 'commits', resourceId: params.pullRequestId }
+      }
+    ).pipe(
+      Effect.mapError(
+        (cause) =>
+          new SyncDetailFailedError({
+            operation: 'commits',
+            pullRequestId: params.pullRequestId,
+            cause
+          }) as SyncError
       )
-      .pipe(
-        Effect.mapError(
-          (cause) =>
-            new SyncDetailFailedError({
-              operation: 'commits',
-              pullRequestId: params.pullRequestId,
-              cause
-            }) as SyncError
-        )
-      )
+    )
 
     if (Option.isNone(result)) {
       return

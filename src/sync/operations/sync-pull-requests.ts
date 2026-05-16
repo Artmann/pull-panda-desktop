@@ -1,4 +1,4 @@
-import { Effect, Schema } from 'effect'
+import { Effect } from 'effect'
 import { eq, inArray } from 'drizzle-orm'
 
 import { pullRequests, type NewPullRequest } from '../../database/schema'
@@ -9,7 +9,7 @@ import {
 } from '../errors'
 import {
   MultiAliasResponseSchema,
-  ProbeResponseSchema,
+  ProbePageResponseSchema,
   type PullRequestNode
 } from '../schemas/github-graphql'
 import type { ProbeEntry, RelationFlags, SyncResult } from '../schemas/domain'
@@ -41,10 +41,10 @@ const pullRequestNodeFields = `
     login
     avatarUrl
   }
-  labels(first: 10) {
+  labels(first: 50) {
     nodes { name color }
   }
-  assignees(first: 10) {
+  assignees(first: 50) {
     nodes { login avatarUrl }
   }
   reviewRequests(first: 20) {
@@ -58,25 +58,10 @@ const pullRequestNodeFields = `
   }
 `
 
-const probeQuery = `
-  query ProbePullRequests(
-    $authorQuery: String!
-    $assigneeQuery: String!
-    $reviewQuery: String!
-  ) {
-    authored: search(query: $authorQuery, type: ISSUE, first: 100) {
-      nodes {
-        __typename
-        ... on PullRequest { id updatedAt state }
-      }
-    }
-    assigned: search(query: $assigneeQuery, type: ISSUE, first: 100) {
-      nodes {
-        __typename
-        ... on PullRequest { id updatedAt state }
-      }
-    }
-    reviewRequested: search(query: $reviewQuery, type: ISSUE, first: 100) {
+const probePageQuery = `
+  query ProbePullRequests($query: String!, $cursor: String) {
+    search(query: $query, type: ISSUE, first: 100, after: $cursor) {
+      pageInfo { hasNextPage endCursor }
       nodes {
         __typename
         ... on PullRequest { id updatedAt state }
@@ -105,47 +90,72 @@ function buildMultiAliasQuery(idCount: number): string {
   `
 }
 
-function collectProbeEntries(
-  response: Schema.Schema.Type<typeof ProbeResponseSchema>
-): Map<string, ProbeEntry> {
-  const entries = new Map<string, ProbeEntry>()
-
-  const ingest = (
-    nodes: ReadonlyArray<{
-      __typename: string
-      id: string
-      updatedAt: string
-    }>,
-    relation: keyof RelationFlags
-  ): void => {
-    for (const node of nodes) {
-      if (node.__typename !== 'PullRequest') {
-        continue
-      }
-
-      const existing = entries.get(node.id)
-
-      if (existing) {
-        existing[relation] = true
-        continue
-      }
-
-      entries.set(node.id, {
-        id: node.id,
-        updatedAt: node.updatedAt,
-        isAuthor: relation === 'isAuthor',
-        isAssignee: relation === 'isAssignee',
-        isReviewer: relation === 'isReviewer'
-      })
+function ingestProbeNodes(
+  entries: Map<string, ProbeEntry>,
+  nodes: ReadonlyArray<{
+    __typename: string
+    id: string
+    updatedAt: string
+  }>,
+  relation: keyof RelationFlags
+): void {
+  for (const node of nodes) {
+    if (node.__typename !== 'PullRequest') {
+      continue
     }
+
+    const existing = entries.get(node.id)
+
+    if (existing) {
+      existing[relation] = true
+      continue
+    }
+
+    entries.set(node.id, {
+      id: node.id,
+      updatedAt: node.updatedAt,
+      isAuthor: relation === 'isAuthor',
+      isAssignee: relation === 'isAssignee',
+      isReviewer: relation === 'isReviewer'
+    })
   }
-
-  ingest(response.authored.nodes, 'isAuthor')
-  ingest(response.assigned.nodes, 'isAssignee')
-  ingest(response.reviewRequested.nodes, 'isReviewer')
-
-  return entries
 }
+
+const probeSearch = (
+  searchQuery: string,
+  entries: Map<string, ProbeEntry>,
+  relation: keyof RelationFlags
+): Effect.Effect<number, SyncError, GitHubGraphQL> =>
+  Effect.gen(function* () {
+    const graphql = yield* GitHubGraphQL
+    let cursor: string | null = null
+    let totalCost = 0
+
+    while (true) {
+      const response = yield* graphql
+        .query(
+          probePageQuery,
+          { query: searchQuery, cursor },
+          ProbePageResponseSchema
+        )
+        .pipe(
+          Effect.mapError(
+            (cause) => new SyncProbeFailedError({ cause }) as SyncError
+          )
+        )
+
+      ingestProbeNodes(entries, response.search.nodes, relation)
+      totalCost += response.rateLimit.cost
+
+      if (!response.search.pageInfo.hasNextPage) {
+        break
+      }
+
+      cursor = response.search.pageInfo.endCursor
+    }
+
+    return totalCost
+  })
 
 function transformNode(
   node: PullRequestNode,
@@ -329,30 +339,31 @@ export const syncPullRequests: Effect.Effect<
   SyncError,
   Database | GitHubGraphQL
 > = Effect.gen(function* () {
-  const graphql = yield* GitHubGraphQL
   const now = new Date().toISOString()
 
-  const probe = yield* graphql
-    .query(
-      probeQuery,
-      {
-        authorQuery: 'is:pr is:open author:@me',
-        assigneeQuery: 'is:pr is:open assignee:@me',
-        reviewQuery: 'is:pr is:open review-requested:@me'
-      },
-      ProbeResponseSchema
-    )
-    .pipe(
-      Effect.mapError(
-        (cause) => new SyncProbeFailedError({ cause }) as SyncError
-      )
-    )
+  const entries = new Map<string, ProbeEntry>()
 
-  const entries = collectProbeEntries(probe)
+  const authoredCost = yield* probeSearch(
+    'is:pr is:open author:@me',
+    entries,
+    'isAuthor'
+  )
+  const assignedCost = yield* probeSearch(
+    'is:pr is:open assignee:@me',
+    entries,
+    'isAssignee'
+  )
+  const reviewerCost = yield* probeSearch(
+    'is:pr is:open review-requested:@me',
+    entries,
+    'isReviewer'
+  )
+
   const allIds = Array.from(entries.keys())
+  const totalProbeCost = authoredCost + assignedCost + reviewerCost
 
   yield* Effect.logInfo(
-    `[Sync] Probe returned ${allIds.length} PRs (cost=${probe.rateLimit.cost})`
+    `[Sync] Probe returned ${allIds.length} PRs (cost=${totalProbeCost})`
   )
 
   const knownUpdatedAt = yield* getKnownUpdatedAtMap(allIds)

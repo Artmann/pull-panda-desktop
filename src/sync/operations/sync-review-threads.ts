@@ -37,7 +37,7 @@ const reviewThreadsQuery = `
             resolvedBy {
               login
             }
-            comments(first: 100) {
+            comments(first: 250) {
               nodes {
                 id
                 databaseId

@@ -4,6 +4,7 @@ import { and, eq, inArray, isNull } from 'drizzle-orm'
 import { checks, pullRequests } from '../../database/schema'
 import { SyncerAlreadyRunningError, SyncerNotStartedError } from '../errors'
 import type { MonitoringData } from '../../types/syncer-monitoring'
+import { deletePullRequestData } from '../operations/delete-pull-request'
 import { syncChecks } from '../operations/sync-checks'
 import { syncPullRequestDetails } from '../operations/sync-pull-request-details'
 import { Database } from './database'
@@ -135,6 +136,40 @@ export const BackgroundSyncerLive: Layer.Layer<
         pullNumber: row.number
       })
 
+      if (result.notFound) {
+        yield* deletePullRequestData(focused.id).pipe(
+          Effect.catchAll((error) =>
+            Effect.logError(
+              `[BackgroundSyncer] Failed to delete inaccessible PR ${focused.id}: ${String(error)}`
+            )
+          )
+        )
+
+        yield* Ref.update(
+          stateRef,
+          (current): SyncerState => ({
+            ...current,
+            focusedPullRequest: null
+          })
+        )
+
+        yield* eventBus.emitPullRequestUpdates(focused.id)
+
+        yield* recorder.recordSync({
+          id: syncId,
+          timestamp: syncStart,
+          duration: Date.now() - syncStart,
+          resourceType: 'details',
+          resourceId: focused.id,
+          success: false,
+          error: 'PR not found on GitHub'
+        })
+
+        yield* recorder.recordRateLimitSnapshot
+
+        return
+      }
+
       const success = result.errors.length === 0
       const errorText = success ? undefined : result.errors[0]
 
@@ -187,6 +222,8 @@ export const BackgroundSyncerLive: Layer.Layer<
           })
         )
 
+        let hasRunning: boolean | null = null
+
         if (outcome._tag === 'Right') {
           const runningChecks = yield* database
             .use('backgroundSyncer.runningChecks', (db) =>
@@ -204,25 +241,29 @@ export const BackgroundSyncerLive: Layer.Layer<
             )
             .pipe(Effect.catchAll(() => Effect.succeed([])))
 
-          const hasRunning = runningChecks.length > 0
-
-          yield* Ref.update(stateRef, (current) => {
-            const next = new Map(current.activePullRequests)
-            const existing = next.get(item.pullRequestId)
-
-            if (existing) {
-              next.set(item.pullRequestId, {
-                ...existing,
-                lastSyncedAt: Date.now(),
-                hasRunningChecks: hasRunning
-              })
-            }
-
-            return { ...current, activePullRequests: next }
-          })
+          hasRunning = runningChecks.length > 0
 
           yield* eventBus.emitChecksUpdate(item.pullRequestId)
         }
+
+        // Always advance lastSyncedAt — including on failure — so the next
+        // attempt respects the normal active-PR interval rather than retrying
+        // every idle tick.
+        yield* Ref.update(stateRef, (current) => {
+          const next = new Map(current.activePullRequests)
+          const existing = next.get(item.pullRequestId)
+
+          if (existing) {
+            next.set(item.pullRequestId, {
+              ...existing,
+              lastSyncedAt: Date.now(),
+              hasRunningChecks:
+                hasRunning === null ? existing.hasRunningChecks : hasRunning
+            })
+          }
+
+          return { ...current, activePullRequests: next }
+        })
 
         const success = outcome._tag === 'Right'
         const errorText =
