@@ -614,3 +614,33 @@ app.on('activate', () => {
     createWindow()
   }
 })
+
+// Quit when the parent process (e.g. `electron-forge start`) is killed so
+// the Electron window doesn't stay open after Ctrl+C in dev. `app.quit()`
+// runs the graceful `before-quit` cleanup; the timeout is a hard fallback
+// in case shutdown stalls (e.g. renderer hung after the dev server died).
+const handleTerminationSignal = () => {
+  app.quit()
+
+  setTimeout(() => {
+    process.exit(0)
+  }, 2000).unref()
+}
+
+process.on('SIGINT', handleTerminationSignal)
+process.on('SIGTERM', handleTerminationSignal)
+process.on('SIGHUP', handleTerminationSignal)
+
+// In dev, Ctrl+C on `electron-forge start` doesn't always deliver SIGINT to
+// the spawned Electron binary, so the window outlives the dev server. Watch
+// for the parent process going away (the OS reparents us to PID 1) and exit
+// when that happens.
+if (!app.isPackaged) {
+  const originalParentPid = process.ppid
+
+  setInterval(() => {
+    if (process.ppid !== originalParentPid || process.ppid === 1) {
+      handleTerminationSignal()
+    }
+  }, 1000).unref()
+}
