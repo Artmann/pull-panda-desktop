@@ -1,4 +1,5 @@
 import { app, BrowserWindow, ipcMain, screen, shell } from 'electron'
+import { Effect } from 'effect'
 import started from 'electron-squirrel-startup'
 import path from 'node:path'
 
@@ -12,11 +13,20 @@ import {
 } from './main/api'
 import { bootstrap, BootstrapData } from './main/bootstrap'
 import { sendPullRequestResourceEvents } from './main/send-resource-events'
-import { backgroundSyncer } from './main/background-syncer'
 import { taskManager } from './main/task-manager'
-import { deletePullRequestData } from './sync/delete-pull-request'
-import { syncPullRequests, syncStalePullRequests } from './sync/pull-requests'
-import { syncPullRequestDetails } from './sync/sync-pull-request-details'
+import { deletePullRequestData } from './sync/operations/delete-pull-request'
+import {
+  syncPullRequests,
+  syncStalePullRequests
+} from './sync/operations/sync-pull-requests'
+import { syncPullRequestDetails } from './sync/operations/sync-pull-request-details'
+import {
+  disposeSyncRuntime,
+  getSyncRuntime,
+  initializeSyncRuntime,
+  tryGetSyncRuntime
+} from './sync/runtime'
+import { BackgroundSyncer } from './sync/services/background-syncer'
 import {
   clearToken,
   getGitHubUser,
@@ -120,10 +130,13 @@ function setupIpcHandlers(): void {
     mainWindow?.minimize()
   })
 
-  ipcMain.handle(ipcChannels.GetSyncerStats, () => {
-    return backgroundSyncer.getMonitoringData()
-  })
+  ipcMain.handle(ipcChannels.GetSyncerStats, async () => {
+    const runtime = getSyncRuntime()
 
+    return runtime.runPromise(
+      Effect.flatMap(BackgroundSyncer, (syncer) => syncer.getMonitoringData)
+    )
+  })
 }
 
 const createWindow = () => {
@@ -146,6 +159,15 @@ const createWindow = () => {
   })
 
   taskManager.setMainWindow(mainWindow)
+
+  // Clear the module-level reference and TaskManager handle when the window
+  // closes. Otherwise late-firing timers (e.g. the periodic PR sync) keep
+  // dereferencing a destroyed BrowserWindow and crash with "Object has been
+  // destroyed" on the next `.webContents.send`.
+  mainWindow.on('closed', () => {
+    mainWindow = null
+    taskManager.setMainWindow(null)
+  })
 
   // and load the index.html of the app.
   if (MAIN_WINDOW_VITE_DEV_SERVER_URL) {
@@ -205,13 +227,17 @@ function needsSync(
   return now - detailsSyncedAt > 5 * 60_000
 }
 
-async function syncAllPullRequestDetails(token: string): Promise<void> {
+async function syncAllPullRequestDetails(): Promise<void> {
   if (!bootstrapData) {
     return
   }
 
+  const runtime = getSyncRuntime()
+  const activePullRequestIds = await runtime.runPromise(
+    Effect.flatMap(BackgroundSyncer, (syncer) => syncer.getActivePullRequestIds)
+  )
+
   const allPullRequests = bootstrapData.pullRequests
-  const activePullRequestIds = backgroundSyncer.getActivePullRequestIds()
   const pullRequests = allPullRequests.filter((pr) =>
     needsSync(pr, activePullRequestIds)
   )
@@ -248,16 +274,17 @@ async function syncAllPullRequestDetails(token: string): Promise<void> {
     await Promise.allSettled(
       batch.map(async (pullRequest) => {
         try {
-          const result = await syncPullRequestDetails({
-            token,
-            pullRequestId: pullRequest.id,
-            owner: pullRequest.repositoryOwner,
-            repositoryName: pullRequest.repositoryName,
-            pullNumber: pullRequest.number
-          })
+          const result = await runtime.runPromise(
+            syncPullRequestDetails({
+              pullRequestId: pullRequest.id,
+              owner: pullRequest.repositoryOwner,
+              repositoryName: pullRequest.repositoryName,
+              pullNumber: pullRequest.number
+            })
+          )
 
           if (result.notFound) {
-            deletePullRequestData(pullRequest.id)
+            await runtime.runPromise(deletePullRequestData(pullRequest.id))
             deletedPullRequestIds.push(pullRequest.id)
           } else if (mainWindow) {
             await sendPullRequestResourceEvents(
@@ -336,6 +363,9 @@ app.on('ready', async () => {
   // Initialize database before anything else
   await initializeDatabase()
 
+  // Initialize the sync runtime now that the database is ready.
+  const runtime = initializeSyncRuntime(loadToken)
+
   await startApiServer(loadToken)
 
   const userLogin = await getUserLogin()
@@ -347,13 +377,21 @@ app.on('ready', async () => {
     setApiMainWindow(mainWindow)
   }
 
-  // Start background syncer
-  backgroundSyncer.start(loadToken)
+  // Start the background syncer fiber via the runtime.
+  await runtime.runPromise(
+    Effect.flatMap(BackgroundSyncer, (syncer) => syncer.start).pipe(
+      Effect.catchAll((error) => {
+        console.error('Failed to start background syncer:', error)
+
+        return Effect.void
+      })
+    )
+  )
 
   const token = loadToken()
 
   if (token) {
-    runPullRequestSync(token)
+    runPullRequestSync()
   }
 })
 
@@ -371,7 +409,7 @@ async function rebuildBootstrapAndNotify(): Promise<void> {
   })
 }
 
-async function runPullRequestSync(token: string): Promise<boolean> {
+async function runPullRequestSync(): Promise<boolean> {
   if (pullRequestSyncInFlight) {
     return false
   }
@@ -385,7 +423,8 @@ async function runPullRequestSync(token: string): Promise<boolean> {
   taskManager.startTask(syncTask.id)
 
   try {
-    const result = await syncPullRequests(token)
+    const runtime = getSyncRuntime()
+    const result = await runtime.runPromise(syncPullRequests)
 
     taskManager.completeTask(syncTask.id)
 
@@ -403,11 +442,11 @@ async function runPullRequestSync(token: string): Promise<boolean> {
 
     // Stale handling can sleep on rate limits, so it runs on its own
     // in-flight flag and never blocks the main poll cycle.
-    runStaleSync(token).catch((error) => {
+    runStaleSync().catch((error) => {
       console.error('Failed to run stale sync:', error)
     })
 
-    syncAllPullRequestDetails(token).catch((error) => {
+    syncAllPullRequestDetails().catch((error) => {
       console.error('Failed to sync PR details:', error)
     })
 
@@ -425,7 +464,7 @@ async function runPullRequestSync(token: string): Promise<boolean> {
   }
 }
 
-async function runStaleSync(token: string): Promise<void> {
+async function runStaleSync(): Promise<void> {
   if (staleSyncInFlight) {
     return
   }
@@ -433,7 +472,10 @@ async function runStaleSync(token: string): Promise<void> {
   staleSyncInFlight = true
 
   try {
-    const staleUpdated = await syncStalePullRequests(token, lastSearchSyncedIds)
+    const runtime = getSyncRuntime()
+    const staleUpdated = await runtime.runPromise(
+      syncStalePullRequests(lastSearchSyncedIds)
+    )
 
     if (staleUpdated > 0) {
       console.log(`Updated ${staleUpdated} stale pull requests`)
@@ -475,11 +517,23 @@ function scheduleNextPullRequestSync(): void {
       return
     }
 
-    runPullRequestSync(token)
-      .then((hasChanges) => {
+    runPullRequestSync()
+      .then(async (hasChanges) => {
         if (hasChanges) {
           nextSyncDelayMs = minSyncDelayMs
-        } else if (backgroundSyncer.getFocusedPullRequestId()) {
+
+          return
+        }
+
+        const runtime = getSyncRuntime()
+        const focusedId = await runtime.runPromise(
+          Effect.flatMap(
+            BackgroundSyncer,
+            (syncer) => syncer.getFocusedPullRequestId
+          )
+        )
+
+        if (focusedId) {
           nextSyncDelayMs = focusedSyncDelayMs
         } else {
           nextSyncDelayMs = Math.min(
@@ -500,11 +554,48 @@ function scheduleNextPullRequestSync(): void {
 
 scheduleNextPullRequestSync()
 
-// Save database before quitting
-app.on('before-quit', () => {
-  backgroundSyncer.stop()
-  stopApiServer()
-  closeDatabase()
+// Save database before quitting. The shutdown is async because we need to let
+// background sync fibers finish before the database is closed, otherwise an
+// in-flight Database.use call can fail or corrupt data on the way out.
+let isShuttingDown = false
+
+app.on('before-quit', (event) => {
+  if (isShuttingDown) {
+    return
+  }
+
+  event.preventDefault()
+  isShuttingDown = true
+
+  const runtime = tryGetSyncRuntime()
+
+  if (!runtime) {
+    stopApiServer()
+    closeDatabase()
+    app.quit()
+
+    return
+  }
+
+  runtime
+    .runPromise(
+      Effect.flatMap(BackgroundSyncer, (syncer) => syncer.stop).pipe(
+        Effect.catchAll(() => Effect.void)
+      )
+    )
+    .catch((error) => {
+      console.error('Failed to stop background syncer:', error)
+    })
+    .then(() =>
+      disposeSyncRuntime().catch((error) => {
+        console.error('Failed to dispose sync runtime:', error)
+      })
+    )
+    .finally(() => {
+      stopApiServer()
+      closeDatabase()
+      app.quit()
+    })
 })
 
 // Quit when all windows are closed, except on macOS. There, it's common
@@ -523,3 +614,33 @@ app.on('activate', () => {
     createWindow()
   }
 })
+
+// Quit when the parent process (e.g. `electron-forge start`) is killed so
+// the Electron window doesn't stay open after Ctrl+C in dev. `app.quit()`
+// runs the graceful `before-quit` cleanup; the timeout is a hard fallback
+// in case shutdown stalls (e.g. renderer hung after the dev server died).
+const handleTerminationSignal = () => {
+  app.quit()
+
+  setTimeout(() => {
+    process.exit(0)
+  }, 2000).unref()
+}
+
+process.on('SIGINT', handleTerminationSignal)
+process.on('SIGTERM', handleTerminationSignal)
+process.on('SIGHUP', handleTerminationSignal)
+
+// In dev, Ctrl+C on `electron-forge start` doesn't always deliver SIGINT to
+// the spawned Electron binary, so the window outlives the dev server. Watch
+// for the parent process going away (the OS reparents us to PID 1) and exit
+// when that happens.
+if (!app.isPackaged) {
+  const originalParentPid = process.ppid
+
+  setInterval(() => {
+    if (process.ppid !== originalParentPid || process.ppid === 1) {
+      handleTerminationSignal()
+    }
+  }, 1000).unref()
+}

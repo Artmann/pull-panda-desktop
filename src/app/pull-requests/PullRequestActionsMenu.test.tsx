@@ -8,12 +8,18 @@ import { Provider } from 'react-redux'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import type { PullRequest } from '@/types/pull-request'
-import { updatePullRequest } from '@/app/lib/api'
+import {
+  getMergeOptions,
+  updatePullRequest,
+  type MergeOptions
+} from '@/app/lib/api'
+import mergeOptionsReducer from '@/app/store/merge-options-slice'
 import pullRequestsReducer from '@/app/store/pull-requests-slice'
 
 import { PullRequestActionsMenu } from './PullRequestActionsMenu'
 
 vi.mock('@/app/lib/api', () => ({
+  getMergeOptions: vi.fn(),
   updatePullRequest: vi.fn()
 }))
 
@@ -53,17 +59,50 @@ function createMockPullRequest(
   }
 }
 
-function createTestStore(pullRequest: PullRequest) {
+function createMockMergeOptions(
+  overrides: Partial<MergeOptions> = {}
+): MergeOptions {
+  return {
+    allowMergeCommit: true,
+    allowRebaseMerge: true,
+    allowSquashMerge: true,
+    mergeable: true,
+    mergeableState: 'clean',
+    requirements: [
+      {
+        description: 'This pull request is still a draft.',
+        key: 'not-draft',
+        label: 'Not a draft',
+        satisfied: false
+      }
+    ],
+    ...overrides
+  }
+}
+
+function createTestStore(
+  pullRequest: PullRequest,
+  mergeOptions: MergeOptions | null = null
+) {
   return configureStore({
     middleware: (getDefaultMiddleware) =>
       getDefaultMiddleware({ immutableCheck: false, serializableCheck: false }),
-    reducer: { pullRequests: pullRequestsReducer },
-    preloadedState: { pullRequests: { items: [pullRequest] } }
+    reducer: {
+      mergeOptions: mergeOptionsReducer,
+      pullRequests: pullRequestsReducer
+    },
+    preloadedState: {
+      mergeOptions: mergeOptions ? { [pullRequest.id]: mergeOptions } : {},
+      pullRequests: { items: [pullRequest] }
+    }
   })
 }
 
-function renderMenu(pullRequest: PullRequest) {
-  const store = createTestStore(pullRequest)
+function renderMenu(
+  pullRequest: PullRequest,
+  mergeOptions: MergeOptions | null = null
+) {
+  const store = createTestStore(pullRequest, mergeOptions)
   const user = userEvent.setup()
 
   render(
@@ -78,6 +117,7 @@ function renderMenu(pullRequest: PullRequest) {
 describe('PullRequestActionsMenu', () => {
   beforeEach(() => {
     vi.mocked(updatePullRequest).mockResolvedValue(createMockPullRequest())
+    vi.mocked(getMergeOptions).mockResolvedValue(createMockMergeOptions())
   })
 
   describe('OPEN PR (not draft)', () => {
@@ -186,6 +226,52 @@ describe('PullRequestActionsMenu', () => {
           .getState()
           .pullRequests.items.find((pr) => pr.id === pullRequest.id)
       ).toEqual(expect.objectContaining({ isDraft: false }))
+    })
+
+    it('flips the not-draft merge requirement optimistically so the Tasks tab updates', async () => {
+      // Hold the merge-options refresh so we can observe the optimistic state
+      // before the post-success fetch overwrites it.
+      vi.mocked(getMergeOptions).mockReturnValue(new Promise(() => undefined))
+
+      const pullRequest = createMockPullRequest({ isDraft: true })
+      const mergeOptions = createMockMergeOptions({
+        mergeable: false,
+        mergeableState: 'draft'
+      })
+
+      const { store, user } = renderMenu(pullRequest, mergeOptions)
+
+      await user.click(screen.getByTitle('More actions'))
+      await user.click(screen.getByText('Mark as ready for review'))
+
+      const optimistic = store.getState().mergeOptions[pullRequest.id]
+
+      expect(optimistic?.requirements).toEqual([
+        {
+          description: 'Pull request is ready for review.',
+          key: 'not-draft',
+          label: 'Not a draft',
+          satisfied: true
+        }
+      ])
+    })
+
+    it('rolls back the merge requirement when the draft toggle fails', async () => {
+      vi.mocked(updatePullRequest).mockRejectedValue(new Error('Network error'))
+
+      const pullRequest = createMockPullRequest({ isDraft: true })
+      const mergeOptions = createMockMergeOptions()
+
+      const { store, user } = renderMenu(pullRequest, mergeOptions)
+
+      await user.click(screen.getByTitle('More actions'))
+      await user.click(screen.getByText('Mark as ready for review'))
+
+      await waitFor(() => {
+        expect(store.getState().mergeOptions[pullRequest.id]).toEqual(
+          mergeOptions
+        )
+      })
     })
   })
 

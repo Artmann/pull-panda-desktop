@@ -1,10 +1,16 @@
 import { BrowserWindow } from 'electron'
+import { Effect } from 'effect'
 import { Hono } from 'hono'
 import { and, eq } from 'drizzle-orm'
 
 import { getDatabase } from '../../../database'
 import { pullRequests, reviewThreads } from '../../../database/schema'
-import { createGraphQLClient } from '../../../sync/graphql-client'
+import {
+  ResolveThreadResponseSchema,
+  UnresolveThreadResponseSchema
+} from '../../../sync/schemas/github-graphql'
+import { getSyncRuntime } from '../../../sync/runtime'
+import { GitHubGraphQL } from '../../../sync/services/github-graphql'
 import { sendPullRequestResourceEvents } from '../../send-resource-events'
 
 import type { AppEnv } from './comments'
@@ -14,30 +20,6 @@ interface ResolveRequest {
   pullNumber: number
   repo: string
   threadId: string
-}
-
-interface ResolveMutationResponse {
-  resolveReviewThread: {
-    thread: {
-      id: string
-      isResolved: boolean
-      resolvedBy: {
-        login: string
-      } | null
-    }
-  }
-}
-
-interface UnresolveMutationResponse {
-  unresolveReviewThread: {
-    thread: {
-      id: string
-      isResolved: boolean
-      resolvedBy: {
-        login: string
-      } | null
-    }
-  }
 }
 
 const resolveMutation = `
@@ -71,7 +53,6 @@ const unresolveMutation = `
 export const reviewThreadsRoute = new Hono<AppEnv>()
 
 reviewThreadsRoute.post('/resolve', async (context) => {
-  const token = context.get('token')
   const request = await context.req.json<ResolveRequest>()
 
   if (
@@ -83,18 +64,24 @@ reviewThreadsRoute.post('/resolve', async (context) => {
     return context.json({ error: 'Missing required fields' }, 400)
   }
 
-  try {
-    const client = createGraphQLClient(token)
+  const runtime = getSyncRuntime()
 
-    const response = await client.query<ResolveMutationResponse>(
+  const program = Effect.gen(function* () {
+    const graphql = yield* GitHubGraphQL
+
+    return yield* graphql.query(
       resolveMutation,
-      { threadId: request.threadId }
+      { threadId: request.threadId },
+      ResolveThreadResponseSchema
     )
+  })
 
+  try {
+    const response = await runtime.runPromise(program)
     const thread = response.resolveReviewThread.thread
     const now = new Date().toISOString()
 
-    updateThreadLocally(request, {
+    updateThreadLocally({
       gitHubId: thread.id,
       isResolved: thread.isResolved,
       resolvedByLogin: thread.resolvedBy?.login ?? null,
@@ -119,7 +106,6 @@ reviewThreadsRoute.post('/resolve', async (context) => {
 })
 
 reviewThreadsRoute.post('/unresolve', async (context) => {
-  const token = context.get('token')
   const request = await context.req.json<ResolveRequest>()
 
   if (
@@ -131,18 +117,24 @@ reviewThreadsRoute.post('/unresolve', async (context) => {
     return context.json({ error: 'Missing required fields' }, 400)
   }
 
-  try {
-    const client = createGraphQLClient(token)
+  const runtime = getSyncRuntime()
 
-    const response = await client.query<UnresolveMutationResponse>(
+  const program = Effect.gen(function* () {
+    const graphql = yield* GitHubGraphQL
+
+    return yield* graphql.query(
       unresolveMutation,
-      { threadId: request.threadId }
+      { threadId: request.threadId },
+      UnresolveThreadResponseSchema
     )
+  })
 
+  try {
+    const response = await runtime.runPromise(program)
     const thread = response.unresolveReviewThread.thread
     const now = new Date().toISOString()
 
-    updateThreadLocally(request, {
+    updateThreadLocally({
       gitHubId: thread.id,
       isResolved: thread.isResolved,
       resolvedByLogin: thread.resolvedBy?.login ?? null,
@@ -175,10 +167,7 @@ interface ThreadUpdate {
   syncedAt: string
 }
 
-function updateThreadLocally(
-  request: ResolveRequest,
-  update: ThreadUpdate
-): void {
+function updateThreadLocally(update: ThreadUpdate): void {
   const database = getDatabase()
 
   database

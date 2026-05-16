@@ -64,6 +64,7 @@
     "dayjs": "^1.11.19",
     "diff": "^8.0.2",
     "drizzle-orm": "^0.45.1",
+    "effect": "^3.21.2",
     "electron": "39.2.7",
     "electron-squirrel-startup": "^1.0.1",
     "hast": "^1.0.0",

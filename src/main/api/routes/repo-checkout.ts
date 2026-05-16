@@ -8,11 +8,7 @@ import {
   removeRepoPath,
   setRepoPath
 } from '../../connected-repos'
-import {
-  checkoutPullRequestBranch,
-  cloneRepo,
-  verifyRepo
-} from '../../git'
+import { checkoutPullRequestBranch, cloneRepo, verifyRepo } from '../../git'
 import { getApiMainWindow } from '../main-window-ref'
 
 import type { AppEnv } from './comments'

@@ -53,14 +53,25 @@ export function ReviewerStatusIndicator({
         style.background
       )}
     >
-      {status === 'approved' && <Check className="size-2.5" strokeWidth={3} />}
+      {status === 'approved' && (
+        <Check
+          className="size-2.5"
+          strokeWidth={3}
+        />
+      )}
 
       {status === 'changes-requested' && (
-        <X className="size-2.5" strokeWidth={3} />
+        <X
+          className="size-2.5"
+          strokeWidth={3}
+        />
       )}
 
       {status === 'commented' && (
-        <MoreHorizontal className="size-2.5" strokeWidth={3} />
+        <MoreHorizontal
+          className="size-2.5"
+          strokeWidth={3}
+        />
       )}
     </span>
   )

@@ -9,7 +9,7 @@ import {
   type Comment,
   type NewComment
 } from '../../../database/schema'
-import { generateId, normalizeCommentBody } from '../../../sync/utils'
+import { generateId, normalizeCommentBody } from '../../../sync/shared/utils'
 
 export type AppEnv = {
   Variables: {

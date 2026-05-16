@@ -60,8 +60,7 @@ export function buildReviewerCandidates({
     return {
       avatarUrl: builtIn?.avatarUrl ?? source.avatarUrl,
       description: source.description ?? builtIn?.description ?? null,
-      displayName:
-        source.displayName ?? builtIn?.displayName ?? source.login,
+      displayName: source.displayName ?? builtIn?.displayName ?? source.login,
       isOwner: codeownerLogins.has(source.login),
       login: source.login,
       ownerPatterns: codeownerPatternsByLogin.get(source.login) ?? [],

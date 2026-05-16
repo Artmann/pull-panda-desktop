@@ -102,7 +102,13 @@ class TaskManager {
   }
 
   private broadcastTaskUpdate(task: Task): void {
-    this.mainWindow?.webContents.send(ipcChannels.TaskUpdate, { task })
+    const window = this.mainWindow
+
+    if (!window || window.isDestroyed() || window.webContents.isDestroyed()) {
+      return
+    }
+
+    window.webContents.send(ipcChannels.TaskUpdate, { task })
   }
 
   private scheduleTaskCleanup(taskId: string, delayMs = 30000): void {
