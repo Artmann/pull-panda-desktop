@@ -199,16 +199,50 @@ pullRequestsRoute.patch('/:pullRequestId', async (context) => {
 
   const octokit = new Octokit({ auth: token })
 
+  const hasRestUpdate =
+    request.title !== undefined ||
+    request.body !== undefined ||
+    request.state !== undefined
+
   try {
-    await octokit.rest.pulls.update({
-      owner: request.owner,
-      repo: request.repo,
-      pull_number: request.pullNumber,
-      ...(request.title !== undefined && { title: request.title }),
-      ...(request.body !== undefined && { body: request.body }),
-      ...(request.state !== undefined && { state: request.state }),
-      ...(request.isDraft !== undefined && { draft: request.isDraft })
-    })
+    if (hasRestUpdate) {
+      await octokit.rest.pulls.update({
+        owner: request.owner,
+        repo: request.repo,
+        pull_number: request.pullNumber,
+        ...(request.title !== undefined && { title: request.title }),
+        ...(request.body !== undefined && { body: request.body }),
+        ...(request.state !== undefined && { state: request.state })
+      })
+    }
+
+    if (request.isDraft !== undefined) {
+      // GitHub's REST API silently ignores `draft` on PATCH; the draft state
+      // can only be changed via these GraphQL mutations.
+      const client = graphql.defaults({
+        headers: { authorization: `token ${token}` }
+      })
+
+      if (request.isDraft) {
+        await client(
+          `mutation ConvertPullRequestToDraft($id: ID!) {
+            convertPullRequestToDraft(input: { pullRequestId: $id }) {
+              pullRequest { id isDraft }
+            }
+          }`,
+          { id: pullRequestId }
+        )
+      } else {
+        await client(
+          `mutation MarkPullRequestReadyForReview($id: ID!) {
+            markPullRequestReadyForReview(input: { pullRequestId: $id }) {
+              pullRequest { id isDraft }
+            }
+          }`,
+          { id: pullRequestId }
+        )
+      }
+    }
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Unknown error'
 
