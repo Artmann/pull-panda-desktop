@@ -31,6 +31,13 @@ export function getSyncRuntime(): SyncRuntime {
   return runtime
 }
 
+// Non-throwing accessor for shutdown paths that may run before the runtime is
+// initialized (e.g. the `electron-squirrel-startup` early-quit flow). All
+// other call sites should keep using `getSyncRuntime()` so misuse stays loud.
+export function tryGetSyncRuntime(): SyncRuntime | null {
+  return runtime
+}
+
 export async function disposeSyncRuntime(): Promise<void> {
   if (runtime) {
     await runtime.dispose()

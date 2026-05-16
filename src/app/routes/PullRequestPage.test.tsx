@@ -181,7 +181,10 @@ function createTestStore(
       },
       reactions: { items: [] },
       recentReviewers: { byRepo: {} },
-      reviewerSuggestions: { collaboratorsByRepo: {}, codeownersByPullRequest: {} },
+      reviewerSuggestions: {
+        collaboratorsByRepo: {},
+        codeownersByPullRequest: {}
+      },
       reviewThreads: { items: [] },
       reviews: { items: [] },
       tasks: { items: [] }

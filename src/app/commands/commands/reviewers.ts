@@ -21,7 +21,10 @@ const sectionDescriptions: Record<ReviewerSection, string> = {
 }
 
 function describeCandidate(candidate: ReviewerCandidate): string {
-  if (candidate.section === 'code-owner' && candidate.ownerPatterns.length > 0) {
+  if (
+    candidate.section === 'code-owner' &&
+    candidate.ownerPatterns.length > 0
+  ) {
     return `Code owner · ${candidate.ownerPatterns.slice(0, 2).join(', ')}`
   }
 
@@ -59,9 +62,7 @@ commandRegistry.register<ReviewerCandidate>({
         ] ?? []
 
       const excludeLogins = new Set(
-        context.pullRequest.requestedReviewers.map(
-          (reviewer) => reviewer.login
-        )
+        context.pullRequest.requestedReviewers.map((reviewer) => reviewer.login)
       )
 
       if (context.pullRequest.authorLogin) {

@@ -1,4 +1,4 @@
-import { Effect, Fiber } from 'effect'
+import { Effect, Fiber, Ref } from 'effect'
 import { eq } from 'drizzle-orm'
 
 import { pullRequests } from '../../database/schema'
@@ -136,13 +136,28 @@ const runDetails = (
 
 type DetailsFiber = Fiber.RuntimeFiber<SyncPullRequestDetailsResult, never>
 
-const inFlight = new Map<string, DetailsFiber>()
+const inFlightRef = Ref.unsafeMake(new Map<string, DetailsFiber>())
 
 // Exposed for tests that need to assert in-flight de-duplication semantics
 // across invocations.
 export const __testing = {
-  inFlight
+  inFlightRef
 }
+
+// Interrupts every detail-sync fiber currently registered in the in-flight map
+// and clears the map. Used by BackgroundSyncer.stop so daemon fibers don't
+// outlive runtime disposal and touch the database after it closes.
+export const interruptAllInFlightDetails: Effect.Effect<void> = Effect.gen(
+  function* () {
+    const map = yield* Ref.getAndSet(inFlightRef, new Map())
+
+    yield* Effect.forEach(
+      Array.from(map.values()),
+      (fiber) => Fiber.interrupt(fiber),
+      { discard: true }
+    )
+  }
+)
 
 export const syncPullRequestDetails = (
   params: SyncPullRequestDetailsParams
@@ -152,20 +167,50 @@ export const syncPullRequestDetails = (
   Database | GitHubRest | GitHubGraphQL | EtagStore
 > =>
   Effect.gen(function* () {
-    const existing = inFlight.get(params.pullRequestId)
+    const id = params.pullRequestId
+
+    const existing = yield* Ref.modify(inFlightRef, (map) => {
+      const fiber = map.get(id)
+
+      return [fiber, map] as const
+    })
 
     if (existing) {
       return yield* Fiber.join(existing)
     }
 
-    const fiber = yield* Effect.forkDaemon(runDetails(params))
+    const candidate = yield* Effect.forkDaemon(runDetails(params))
 
-    inFlight.set(params.pullRequestId, fiber)
+    const winner = yield* Ref.modify(inFlightRef, (map) => {
+      const found = map.get(id)
 
-    return yield* Fiber.join(fiber).pipe(
+      if (found) {
+        return [found, map] as const
+      }
+
+      const next = new Map(map)
+      next.set(id, candidate)
+
+      return [candidate, next] as const
+    })
+
+    if (winner !== candidate) {
+      yield* Fiber.interrupt(candidate)
+
+      return yield* Fiber.join(winner)
+    }
+
+    return yield* Fiber.join(candidate).pipe(
       Effect.ensuring(
-        Effect.sync(() => {
-          inFlight.delete(params.pullRequestId)
+        Ref.update(inFlightRef, (map) => {
+          if (map.get(id) !== candidate) {
+            return map
+          }
+
+          const next = new Map(map)
+          next.delete(id)
+
+          return next
         })
       )
     )

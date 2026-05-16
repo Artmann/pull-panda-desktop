@@ -15,11 +15,7 @@ export interface CodeownerMatch {
 const rulesCache = new MemoryCache<CodeownerRule[]>()
 const cacheTtl = 10 * 60 * 1000
 
-const candidatePaths = [
-  '.github/CODEOWNERS',
-  'CODEOWNERS',
-  'docs/CODEOWNERS'
-]
+const candidatePaths = ['.github/CODEOWNERS', 'CODEOWNERS', 'docs/CODEOWNERS']
 
 interface GitHubContentResponse {
   content?: string

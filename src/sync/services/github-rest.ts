@@ -43,6 +43,20 @@ function classifyRestError(
     const headers = (error.response?.headers ?? {}) as Record<string, string>
     const messageLower = error.message?.toLowerCase() ?? ''
 
+    // Order matters: 'rate limit' is a substring of 'secondary rate limit',
+    // so the secondary-specific branch must be checked first. Otherwise a
+    // secondary-rate-limit 403 carrying a retry-after header would be
+    // misclassified as primary and the retry would wait until the primary
+    // window resets (potentially hours) instead of the secondary's retry-after.
+    if (error.status === 403 && messageLower.includes('secondary rate limit')) {
+      const retryAfter = headers['retry-after']
+
+      return new SecondaryRateLimitError({
+        kind: 'rest',
+        retryAfterMs: retryAfter ? parseInt(retryAfter, 10) * 1000 : 30_000
+      })
+    }
+
     if (
       error.status === 403 &&
       (messageLower.includes('rate limit') ||

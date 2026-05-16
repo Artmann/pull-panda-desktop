@@ -42,14 +42,9 @@ web/* @web-team
   it('treats trailing slash as the directory and everything inside', () => {
     const rules = parseCodeowners('api/ @backend-team')
 
-    const owners = matchOwners(rules, [
-      'api/users.ts',
-      'api/internal/auth.ts'
-    ])
+    const owners = matchOwners(rules, ['api/users.ts', 'api/internal/auth.ts'])
 
-    expect(owners).toEqual([
-      { login: 'backend-team', patterns: ['api/'] }
-    ])
+    expect(owners).toEqual([{ login: 'backend-team', patterns: ['api/'] }])
   })
 
   it('matches filename-only patterns at any depth', () => {

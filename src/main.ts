@@ -23,7 +23,8 @@ import { syncPullRequestDetails } from './sync/operations/sync-pull-request-deta
 import {
   disposeSyncRuntime,
   getSyncRuntime,
-  initializeSyncRuntime
+  initializeSyncRuntime,
+  tryGetSyncRuntime
 } from './sync/runtime'
 import { BackgroundSyncer } from './sync/services/background-syncer'
 import {
@@ -158,6 +159,15 @@ const createWindow = () => {
   })
 
   taskManager.setMainWindow(mainWindow)
+
+  // Clear the module-level reference and TaskManager handle when the window
+  // closes. Otherwise late-firing timers (e.g. the periodic PR sync) keep
+  // dereferencing a destroyed BrowserWindow and crash with "Object has been
+  // destroyed" on the next `.webContents.send`.
+  mainWindow.on('closed', () => {
+    mainWindow = null
+    taskManager.setMainWindow(null)
+  })
 
   // and load the index.html of the app.
   if (MAIN_WINDOW_VITE_DEV_SERVER_URL) {
@@ -557,7 +567,15 @@ app.on('before-quit', (event) => {
   event.preventDefault()
   isShuttingDown = true
 
-  const runtime = getSyncRuntime()
+  const runtime = tryGetSyncRuntime()
+
+  if (!runtime) {
+    stopApiServer()
+    closeDatabase()
+    app.quit()
+
+    return
+  }
 
   runtime
     .runPromise(

@@ -23,6 +23,14 @@ export interface SyncChecksParams {
 
 const headShaCache = new Map<string, string>()
 
+// Exposed for tests so they can clear the module-global head-SHA cache
+// between cases instead of relying on cross-test state.
+export const __checksTesting = {
+  clearHeadShaCache: () => {
+    headShaCache.clear()
+  }
+}
+
 const fetchHeadSha = (
   params: SyncChecksParams
 ): Effect.Effect<

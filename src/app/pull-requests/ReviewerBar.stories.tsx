@@ -66,7 +66,9 @@ export const PendingReviewers: Story = {
   decorators: [
     (Story, context) => (
       <Provider
-        store={buildReviewerStoryStore({ pullRequest: context.args.pullRequest })}
+        store={buildReviewerStoryStore({
+          pullRequest: context.args.pullRequest
+        })}
       >
         <Story />
       </Provider>

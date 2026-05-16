@@ -58,9 +58,13 @@ const pullRequestNodeFields = `
   }
 `
 
+// NB: the variable is named $searchQuery rather than $query because
+// @octokit/graphql reserves the `query` key on its variables bag for the
+// GraphQL document itself and rejects any caller that passes `query` as a
+// variable name.
 const probePageQuery = `
-  query ProbePullRequests($query: String!, $cursor: String) {
-    search(query: $query, type: ISSUE, first: 100, after: $cursor) {
+  query ProbePullRequests($searchQuery: String!, $cursor: String) {
+    search(query: $searchQuery, type: ISSUE, first: 100, after: $cursor) {
       pageInfo { hasNextPage endCursor }
       nodes {
         __typename
@@ -133,11 +137,7 @@ const probeSearch = (
 
     while (true) {
       const response = yield* graphql
-        .query(
-          probePageQuery,
-          { query: searchQuery, cursor },
-          ProbePageResponseSchema
-        )
+        .query(probePageQuery, { searchQuery, cursor }, ProbePageResponseSchema)
         .pipe(
           Effect.mapError(
             (cause) => new SyncProbeFailedError({ cause }) as SyncError
@@ -479,6 +479,14 @@ export const syncStalePullRequests = (
             closedAt: node.closedAt,
             mergedAt: node.mergedAt,
             updatedAt: node.updatedAt,
+            // A stale-but-still-open PR did not appear in any of the three
+            // viewer-scoped search probes (author/assignee/review-requested),
+            // so by definition the viewer is no longer in any of those
+            // relations. Reset the flags so the PR drops out of those filters
+            // instead of lingering with outdated relation state.
+            isAuthor: false,
+            isAssignee: false,
+            isReviewer: false,
             syncedAt: now
           })
           .where(eq(pullRequests.id, id))

@@ -6,7 +6,10 @@ import { SyncerAlreadyRunningError, SyncerNotStartedError } from '../errors'
 import type { MonitoringData } from '../../types/syncer-monitoring'
 import { deletePullRequestData } from '../operations/delete-pull-request'
 import { syncChecks } from '../operations/sync-checks'
-import { syncPullRequestDetails } from '../operations/sync-pull-request-details'
+import {
+  interruptAllInFlightDetails,
+  syncPullRequestDetails
+} from '../operations/sync-pull-request-details'
 import { Database } from './database'
 import { EtagStore } from './etag-store'
 import { GitHubGraphQL } from './github-graphql'
@@ -383,6 +386,7 @@ export const BackgroundSyncerLive: Layer.Layer<
         }
 
         yield* Fiber.interrupt(existing)
+        yield* interruptAllInFlightDetails
         yield* Ref.set(fiberRef, null)
         yield* Effect.logInfo('[BackgroundSyncer] Stopped')
       }),

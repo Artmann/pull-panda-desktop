@@ -1,4 +1,4 @@
-import { Duration, Effect, Layer, Option, Ref } from 'effect'
+import { Duration, Effect, Fiber, Layer, Option, Ref } from 'effect'
 import { describe, expect, it } from 'vitest'
 
 import { NotFoundError, SyncDetailFailedError } from '../errors'
@@ -155,7 +155,24 @@ describe('sync-pull-request-details orchestration', () => {
 
   it('de-duplicates concurrent syncPullRequestDetails calls on the same PR', async () => {
     // Ensure no prior test left a fiber pinned to this id.
-    __testing.inFlight.delete(params.pullRequestId)
+    await Effect.runPromise(
+      Effect.gen(function* () {
+        const map = yield* Ref.get(__testing.inFlightRef)
+
+        yield* Effect.forEach(
+          Array.from(map.values()),
+          (fiber) => Fiber.interrupt(fiber),
+          { discard: true }
+        )
+
+        yield* Ref.update(__testing.inFlightRef, (current) => {
+          const next = new Map(current)
+          next.clear()
+
+          return next
+        })
+      })
+    )
 
     const restCalls = Ref.unsafeMake(0)
     const graphqlCalls = Ref.unsafeMake(0)
