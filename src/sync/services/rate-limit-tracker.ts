@@ -35,9 +35,7 @@ export class RateLimitTracker extends Context.Tag('sync/RateLimitTracker')<
   }
 >() {}
 
-function parseHeaders(
-  headers: Record<string, string>
-): RateLimitState | null {
+function parseHeaders(headers: Record<string, string>): RateLimitState | null {
   const remaining = headers['x-ratelimit-remaining']
   const limit = headers['x-ratelimit-limit']
   const resetAt = headers['x-ratelimit-reset']

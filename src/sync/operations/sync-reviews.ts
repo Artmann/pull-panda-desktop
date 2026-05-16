@@ -10,10 +10,7 @@ import {
   type NewCommentReaction,
   type NewReview
 } from '../../database/schema'
-import {
-  SyncDetailFailedError,
-  type SyncError
-} from '../errors'
+import { SyncDetailFailedError, type SyncError } from '../errors'
 import {
   ReactionsResponseSchema,
   ReviewCommentsResponseSchema,
@@ -555,11 +552,7 @@ export const syncReviews = (
 
     if (Option.isSome(reviewsResult)) {
       const reviewsData = reviewsResult.value as ReadonlyArray<Review>
-      reviewIdMap = yield* upsertReviews(
-        reviewsData,
-        params.pullRequestId,
-        now
-      )
+      reviewIdMap = yield* upsertReviews(reviewsData, params.pullRequestId, now)
     }
 
     if (Option.isSome(commentsResult)) {

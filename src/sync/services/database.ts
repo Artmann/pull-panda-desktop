@@ -1,13 +1,7 @@
 import { Context, Effect, Layer } from 'effect'
 
-import {
-  getDatabase,
-  isDatabaseInitialized
-} from '../../database'
-import {
-  DatabaseNotInitializedError,
-  DatabaseQueryError
-} from '../errors'
+import { getDatabase, isDatabaseInitialized } from '../../database'
+import { DatabaseNotInitializedError, DatabaseQueryError } from '../errors'
 
 type DrizzleDb = ReturnType<typeof getDatabase>
 
@@ -24,11 +18,12 @@ export class Database extends Context.Tag('sync/Database')<
 export const DatabaseLive: Layer.Layer<Database> = Layer.succeed(Database, {
   use: <A>(operation: string, fn: (db: DrizzleDb) => A) =>
     Effect.suspend(
-      (): Effect.Effect<A, DatabaseQueryError | DatabaseNotInitializedError> => {
+      (): Effect.Effect<
+        A,
+        DatabaseQueryError | DatabaseNotInitializedError
+      > => {
         if (!isDatabaseInitialized()) {
-          return Effect.fail(
-            new DatabaseNotInitializedError({ operation })
-          )
+          return Effect.fail(new DatabaseNotInitializedError({ operation }))
         }
 
         return Effect.try({

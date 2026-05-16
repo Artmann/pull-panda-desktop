@@ -136,7 +136,6 @@ function setupIpcHandlers(): void {
       Effect.flatMap(BackgroundSyncer, (syncer) => syncer.getMonitoringData)
     )
   })
-
 }
 
 const createWindow = () => {
@@ -545,8 +544,19 @@ function scheduleNextPullRequestSync(): void {
 
 scheduleNextPullRequestSync()
 
-// Save database before quitting
-app.on('before-quit', () => {
+// Save database before quitting. The shutdown is async because we need to let
+// background sync fibers finish before the database is closed, otherwise an
+// in-flight Database.use call can fail or corrupt data on the way out.
+let isShuttingDown = false
+
+app.on('before-quit', (event) => {
+  if (isShuttingDown) {
+    return
+  }
+
+  event.preventDefault()
+  isShuttingDown = true
+
   const runtime = getSyncRuntime()
 
   runtime
@@ -558,14 +568,16 @@ app.on('before-quit', () => {
     .catch((error) => {
       console.error('Failed to stop background syncer:', error)
     })
-    .finally(() => {
+    .then(() =>
       disposeSyncRuntime().catch((error) => {
         console.error('Failed to dispose sync runtime:', error)
       })
+    )
+    .finally(() => {
+      stopApiServer()
+      closeDatabase()
+      app.quit()
     })
-
-  stopApiServer()
-  closeDatabase()
 })
 
 // Quit when all windows are closed, except on macOS. There, it's common

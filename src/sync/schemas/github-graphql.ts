@@ -9,7 +9,6 @@ export const RateLimitSchema = Schema.Struct({
   resetAt: Schema.String
 })
 
-
 const LabelSchema = Schema.Struct({
   name: Schema.String,
   color: Schema.String
@@ -93,11 +92,7 @@ export const MultiAliasResponseSchema = Schema.Struct({
   Schema.extend(
     Schema.Record({
       key: Schema.String,
-      value: Schema.Union(
-        PullRequestNodeSchema,
-        RateLimitSchema,
-        Schema.Null
-      )
+      value: Schema.Union(PullRequestNodeSchema, RateLimitSchema, Schema.Null)
     })
   )
 )

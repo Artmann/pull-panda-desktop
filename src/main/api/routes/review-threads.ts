@@ -88,10 +88,9 @@ reviewThreadsRoute.post('/resolve', async (context) => {
       headers: { authorization: `token ${token}` }
     })
 
-    const response = await client<ResolveMutationResponse>(
-      resolveMutation,
-      { threadId: request.threadId }
-    )
+    const response = await client<ResolveMutationResponse>(resolveMutation, {
+      threadId: request.threadId
+    })
 
     const thread = response.resolveReviewThread.thread
     const now = new Date().toISOString()

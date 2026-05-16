@@ -13,7 +13,7 @@ import {
   SecondaryRateLimitError,
   type GitHubTransportError
 } from '../errors'
-import { shouldRetry, transportRetrySchedule } from '../retry'
+import { retryTransport } from '../retry'
 import type { ETagKey } from '../schemas/domain'
 import { EtagStore } from './etag-store'
 import { RateLimitTracker } from './rate-limit-tracker'
@@ -45,7 +45,8 @@ function classifyRestError(
 
     if (
       error.status === 403 &&
-      (messageLower.includes('rate limit') || headers['x-ratelimit-remaining'] === '0')
+      (messageLower.includes('rate limit') ||
+        headers['x-ratelimit-remaining'] === '0')
     ) {
       const resetAt = headers['x-ratelimit-reset']
       const resetSeconds = resetAt
@@ -171,8 +172,7 @@ export const GitHubRestLive: Layer.Layer<
           const client = getClient(token)
 
           const response = yield* Effect.tryPromise({
-            try: () =>
-              client.request(route, { ...params, headers }),
+            try: () => client.request(route, { ...params, headers }),
             catch: (cause) => {
               if (cause instanceof RequestError && cause.status === 304) {
                 return null as unknown as GitHubTransportError
@@ -200,6 +200,14 @@ export const GitHubRestLive: Layer.Layer<
 
           yield* tracker.updateFromHeaders('rest', responseHeaders)
 
+          const decoded = yield* Effect.mapError(
+            decodeBody(response.data),
+            (issue: ParseResult.ParseError) =>
+              new SchemaDecodeError({ route, issue: issue.issue })
+          )
+
+          // Persist ETag only after a successful decode — otherwise a failure
+          // here can cause the next run to get a 304 for data we never stored.
           const etagHeader = responseHeaders['etag']
           const lastModifiedHeader = responseHeaders['last-modified']
 
@@ -213,23 +221,10 @@ export const GitHubRestLive: Layer.Layer<
             )
           }
 
-          const decoded = yield* Effect.mapError(
-            decodeBody(response.data),
-            (issue: ParseResult.ParseError) =>
-              new SchemaDecodeError({ route, issue: issue.issue })
-          )
-
           return Option.some(decoded)
         })
 
-        return broker
-          .withSlot('rest', performRequest)
-          .pipe(
-            Effect.retry({
-              schedule: transportRetrySchedule,
-              while: shouldRetry
-            })
-          )
+        return retryTransport(broker.withSlot('rest', performRequest))
       }
     }
   })

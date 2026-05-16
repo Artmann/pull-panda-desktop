@@ -1,10 +1,7 @@
 import { Effect, Schema } from 'effect'
 import { eq, inArray } from 'drizzle-orm'
 
-import {
-  pullRequests,
-  type NewPullRequest
-} from '../../database/schema'
+import { pullRequests, type NewPullRequest } from '../../database/schema'
 import {
   SyncHydrationFailedError,
   SyncProbeFailedError,
@@ -15,11 +12,7 @@ import {
   ProbeResponseSchema,
   type PullRequestNode
 } from '../schemas/github-graphql'
-import type {
-  ProbeEntry,
-  RelationFlags,
-  SyncResult
-} from '../schemas/domain'
+import type { ProbeEntry, RelationFlags, SyncResult } from '../schemas/domain'
 import { Database } from '../services/database'
 import { GitHubGraphQL } from '../services/github-graphql'
 import { deletePullRequestData } from './delete-pull-request'
@@ -453,11 +446,7 @@ export const syncStalePullRequests = (
       `Found ${stale.length} stale PRs still marked OPEN locally`
     )
 
-    const hydrated = yield* hydratePullRequestNodes(stale).pipe(
-      Effect.catchTag('SyncHydrationFailedError', () =>
-        Effect.succeed(new Map<string, PullRequestNode | null>())
-      )
-    )
+    const hydrated = yield* hydratePullRequestNodes(stale)
 
     const now = new Date().toISOString()
     let deleted = 0

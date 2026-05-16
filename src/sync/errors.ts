@@ -109,9 +109,7 @@ export type GitHubTransportError =
   | SchemaDecodeError
   | MissingTokenError
 
-export type DatabaseError =
-  | DatabaseNotInitializedError
-  | DatabaseQueryError
+export type DatabaseError = DatabaseNotInitializedError | DatabaseQueryError
 
 export type SyncError =
   | GitHubTransportError

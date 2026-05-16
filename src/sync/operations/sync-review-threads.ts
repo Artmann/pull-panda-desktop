@@ -6,10 +6,7 @@ import {
   reviewThreads,
   type NewReviewThread
 } from '../../database/schema'
-import {
-  SyncDetailFailedError,
-  type SyncError
-} from '../errors'
+import { SyncDetailFailedError, type SyncError } from '../errors'
 import {
   ReviewThreadsResponseSchema,
   type ReviewThreadNode

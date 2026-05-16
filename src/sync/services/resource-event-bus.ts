@@ -12,21 +12,22 @@ export class ResourceEventBus extends Context.Tag('sync/ResourceEventBus')<
       pullRequestId: string,
       userLogin?: string
     ) => Effect.Effect<void>
-    readonly emitChecksUpdate: (
-      pullRequestId: string
-    ) => Effect.Effect<void>
+    readonly emitChecksUpdate: (pullRequestId: string) => Effect.Effect<void>
     readonly emitSyncComplete: Effect.Effect<void>
   }
 >() {}
 
-export const ResourceEventBusLive: Layer.Layer<ResourceEventBus> = Layer.succeed(
-  ResourceEventBus,
-  {
+export const ResourceEventBusLive: Layer.Layer<ResourceEventBus> =
+  Layer.succeed(ResourceEventBus, {
     emitPullRequestUpdates: (pullRequestId, userLogin) =>
       Effect.tryPromise({
         try: async () => {
           for (const window of BrowserWindow.getAllWindows()) {
-            await sendPullRequestResourceEvents(window, pullRequestId, userLogin)
+            await sendPullRequestResourceEvents(
+              window,
+              pullRequestId,
+              userLogin
+            )
           }
         },
         catch: (error) => error
@@ -66,5 +67,4 @@ export const ResourceEventBusLive: Layer.Layer<ResourceEventBus> = Layer.succeed
         })
       }
     })
-  }
-)
+  })

@@ -2,14 +2,8 @@ import { Effect, Option } from 'effect'
 import { and, eq, isNull } from 'drizzle-orm'
 
 import { modifiedFiles, type NewModifiedFile } from '../../database/schema'
-import {
-  SyncDetailFailedError,
-  type SyncError
-} from '../errors'
-import {
-  FilesResponseSchema,
-  type ModifiedFile
-} from '../schemas/github-rest'
+import { SyncDetailFailedError, type SyncError } from '../errors'
+import { FilesResponseSchema, type ModifiedFile } from '../schemas/github-rest'
 import { Database } from '../services/database'
 import { GitHubRest } from '../services/github-rest'
 import { generateId } from '../shared/utils'

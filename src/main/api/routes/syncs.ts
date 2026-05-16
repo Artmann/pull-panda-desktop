@@ -17,23 +17,20 @@ syncsRoute.post('/', (context) => {
 
   const program = Effect.gen(function* () {
     const eventBus = yield* ResourceEventBus
-    const result = yield* syncPullRequests.pipe(
-      Effect.catchAll((error) => {
-        console.error(
-          'Manual sync: failed to fetch pull requests:',
-          error
-        )
 
-        return Effect.succeed({
-          synced: 0,
-          syncedIds: new Set<string>(),
-          errors: [String(error)],
-          hasChanges: false
-        })
-      })
-    )
+    const probeResult = yield* Effect.either(syncPullRequests)
 
-    yield* syncStalePullRequests(result.syncedIds).pipe(
+    if (probeResult._tag === 'Left') {
+      console.error(
+        'Manual sync: failed to fetch pull requests:',
+        probeResult.left
+      )
+      yield* eventBus.emitSyncComplete
+
+      return
+    }
+
+    yield* syncStalePullRequests(probeResult.right.syncedIds).pipe(
       Effect.catchAll((error) => {
         console.error('Manual sync: failed to reconcile stale PRs:', error)
 

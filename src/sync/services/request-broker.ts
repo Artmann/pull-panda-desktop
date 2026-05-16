@@ -25,7 +25,10 @@ function windowCost(window: PointEntry[]): number {
 export class RequestBroker extends Context.Tag('sync/RequestBroker')<
   RequestBroker,
   {
-    readonly recordCost: (kind: RequestKind, cost: number) => Effect.Effect<void>
+    readonly recordCost: (
+      kind: RequestKind,
+      cost: number
+    ) => Effect.Effect<void>
     readonly withSlot: <A, E, R>(
       kind: RequestKind,
       effect: Effect.Effect<A, E, R>
@@ -80,10 +83,7 @@ export const RequestBrokerLive: Layer.Layer<RequestBroker> = Layer.effect(
             ),
 
       withSlot: (kind, effect) =>
-        Effect.zipRight(
-          waitForWindow(kind),
-          semaphore.withPermits(1)(effect)
-        )
+        Effect.zipRight(waitForWindow(kind), semaphore.withPermits(1)(effect))
     }
   })
 )

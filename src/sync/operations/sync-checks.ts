@@ -2,10 +2,7 @@ import { Effect, Option } from 'effect'
 import { and, eq, isNull } from 'drizzle-orm'
 
 import { checks, type NewCheck } from '../../database/schema'
-import {
-  SyncDetailFailedError,
-  type SyncError
-} from '../errors'
+import { SyncDetailFailedError, type SyncError } from '../errors'
 import {
   CheckRunsResponseSchema,
   PullRequestHeadShaSchema,
@@ -27,7 +24,11 @@ const headShaCache = new Map<string, string>()
 
 const fetchHeadSha = (
   params: SyncChecksParams
-): Effect.Effect<Option.Option<{ head: { sha: string } }>, SyncError, GitHubRest> =>
+): Effect.Effect<
+  Option.Option<{ head: { sha: string } }>,
+  SyncError,
+  GitHubRest
+> =>
   Effect.gen(function* () {
     const rest = yield* GitHubRest
 
@@ -86,9 +87,7 @@ const resolveCommitSha = (
       return cached
     }
 
-    yield* etagStore
-      .remove(etagKey)
-      .pipe(Effect.catchAll(() => Effect.void))
+    yield* etagStore.remove(etagKey).pipe(Effect.catchAll(() => Effect.void))
 
     const refreshed = yield* fetchHeadSha(params)
 
@@ -264,20 +263,38 @@ export const syncChecks = (
         )
         .all()
 
-      for (const check of activeChecks) {
-        const duplicates = activeChecks.filter(
-          (other) =>
-            check.commitSha === other.commitSha &&
-            check.name === other.name &&
-            check.id !== other.id
-        )
+      const keepByGroup = new Map<string, (typeof activeChecks)[number]>()
 
-        for (const duplicate of duplicates) {
-          db.update(checks)
-            .set({ deletedAt: now })
-            .where(eq(checks.id, duplicate.id))
-            .run()
+      for (const check of activeChecks) {
+        const groupKey = `${check.commitSha}::${check.name}`
+        const incumbent = keepByGroup.get(groupKey)
+
+        if (!incumbent) {
+          keepByGroup.set(groupKey, check)
+          continue
         }
+
+        const incumbentUpdatedAt = incumbent.gitHubUpdatedAt ?? ''
+        const challengerUpdatedAt = check.gitHubUpdatedAt ?? ''
+
+        if (challengerUpdatedAt > incumbentUpdatedAt) {
+          keepByGroup.set(groupKey, check)
+        }
+      }
+
+      const keepIds = new Set(
+        Array.from(keepByGroup.values()).map((check) => check.id)
+      )
+
+      for (const check of activeChecks) {
+        if (keepIds.has(check.id)) {
+          continue
+        }
+
+        db.update(checks)
+          .set({ deletedAt: now })
+          .where(eq(checks.id, check.id))
+          .run()
       }
     })
   })

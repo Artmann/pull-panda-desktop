@@ -7,10 +7,7 @@ import {
   type NewComment,
   type NewCommentReaction
 } from '../../database/schema'
-import {
-  SyncDetailFailedError,
-  type SyncError
-} from '../errors'
+import { SyncDetailFailedError, type SyncError } from '../errors'
 import {
   IssueCommentsResponseSchema,
   ReactionsResponseSchema,
@@ -28,10 +25,7 @@ export interface SyncCommentsParams {
   pullNumber: number
 }
 
-const fetchReactions = (
-  params: SyncCommentsParams,
-  commentNumericId: number
-) =>
+const fetchReactions = (params: SyncCommentsParams, commentNumericId: number) =>
   Effect.gen(function* () {
     const rest = yield* GitHubRest
 
@@ -191,7 +185,10 @@ export const syncComments = (
     })
 
     for (const entry of commentEntries) {
-      if (!entry.comment.reactions || entry.comment.reactions.total_count === 0) {
+      if (
+        !entry.comment.reactions ||
+        entry.comment.reactions.total_count === 0
+      ) {
         continue
       }
 

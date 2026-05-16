@@ -2,10 +2,7 @@ import { Context, Effect, Fiber, Layer, Ref, Schedule } from 'effect'
 import { and, eq, inArray, isNull } from 'drizzle-orm'
 
 import { checks, pullRequests } from '../../database/schema'
-import {
-  SyncerAlreadyRunningError,
-  SyncerNotStartedError
-} from '../errors'
+import { SyncerAlreadyRunningError, SyncerNotStartedError } from '../errors'
 import type { MonitoringData } from '../../types/syncer-monitoring'
 import { syncChecks } from '../operations/sync-checks'
 import { syncPullRequestDetails } from '../operations/sync-pull-request-details'
@@ -117,10 +114,13 @@ export const BackgroundSyncerLive: Layer.Layer<
         .pipe(Effect.catchAll(() => Effect.succeed(undefined)))
 
       if (!row) {
-        yield* Ref.update(stateRef, (current): SyncerState => ({
-          ...current,
-          focusedPullRequest: null
-        }))
+        yield* Ref.update(
+          stateRef,
+          (current): SyncerState => ({
+            ...current,
+            focusedPullRequest: null
+          })
+        )
 
         return
       }

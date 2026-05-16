@@ -10,7 +10,7 @@ import {
   SecondaryRateLimitError,
   type GitHubTransportError
 } from '../errors'
-import { shouldRetry, transportRetrySchedule } from '../retry'
+import { retryTransport } from '../retry'
 import { RateLimitSchema } from '../schemas/github-graphql'
 import { RateLimitTracker } from './rate-limit-tracker'
 import { RequestBroker } from './request-broker'
@@ -179,14 +179,7 @@ export const GitHubGraphQLLive: Layer.Layer<
           )
         })
 
-        return broker
-          .withSlot('graphql', performRequest)
-          .pipe(
-            Effect.retry({
-              schedule: transportRetrySchedule,
-              while: shouldRetry
-            })
-          )
+        return retryTransport(broker.withSlot('graphql', performRequest))
       }
     }
   })
