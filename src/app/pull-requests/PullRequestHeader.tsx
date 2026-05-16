@@ -16,8 +16,7 @@ import { updatePullRequest } from '@/app/lib/api'
 import { useAppDispatch, useAppSelector } from '@/app/store/hooks'
 import { pullRequestsActions } from '@/app/store/pull-requests-slice'
 import { PullRequest } from '@/types/pull-request'
-import type { Commit, Review } from '@/types/pull-request-details'
-import { ReviewBadge } from '../components/ReviewBadge'
+import type { Commit } from '@/types/pull-request-details'
 import { TimeAgo } from '../components/TimeAgo'
 import {
   Breadcrumb,
@@ -29,8 +28,8 @@ import {
 import { Badge } from '../components/ui/badge'
 import { Button } from '../components/ui/button'
 import { cn } from '../lib/utils'
-import { getLatestReviews } from './get-latest-reviews'
 import { PullRequestActionsMenu } from './PullRequestActionsMenu'
+import { ReviewerBar } from './ReviewerBar'
 
 export const StickyPullRequestHeader = memo(function StickyPullRequestHeader({
   pullRequest,
@@ -58,15 +57,23 @@ export const StickyPullRequestHeader = memo(function StickyPullRequestHeader({
       style={{
         display: transitionProgress === 0 ? 'none' : 'flex',
         opacity: transitionProgress,
-        pointerEvents: transitionProgress === 1 ? 'auto' : 'none',
+        pointerEvents: transitionProgress > 0.5 ? 'auto' : 'none',
         transform: `translateY(${(1 - transitionProgress) * -6}px)`
       }}
     >
       <div className="w-full max-w-240 mx-auto px-3 py-3">
         <Breadcrumbs pullRequest={pullRequest} />
 
-        <div>
-          <Title size="sm">{pullRequest.title}</Title>
+        <div className="flex items-center gap-3 min-w-0">
+          <div className="min-w-0 flex-1 truncate">
+            <Title size="sm">{pullRequest.title}</Title>
+          </div>
+
+          {pullRequest.headRefName && (
+            <div className="shrink-0">
+              <BranchName name={pullRequest.headRefName} />
+            </div>
+          )}
         </div>
       </div>
     </header>
@@ -86,12 +93,6 @@ export const PullRequestHeader = memo(function PullRequestHeader({
     shallowEqual
   )
 
-  const reviews: Review[] = useAppSelector(
-    (state) =>
-      state.reviews.items.filter((r) => r.pullRequestId === pullRequest.id),
-    shallowEqual
-  )
-
   const latestCommit = useMemo(() => {
     if (commits.length === 0) {
       return null
@@ -104,8 +105,6 @@ export const PullRequestHeader = memo(function PullRequestHeader({
       return dateB.localeCompare(dateA)
     })[0]
   }, [commits])
-
-  const latestReviews = useMemo(() => getLatestReviews(reviews), [reviews])
 
   return (
     <header className="flex flex-col gap-4 p-6">
@@ -144,17 +143,6 @@ export const PullRequestHeader = memo(function PullRequestHeader({
         )}
       </div>
 
-      {latestReviews.length > 0 && (
-        <div className="flex gap-2 overflow-x-auto">
-          {latestReviews.map((review) => (
-            <ReviewBadge
-              key={review.authorLogin}
-              review={review}
-            />
-          ))}
-        </div>
-      )}
-
       {commits.length > 0 && (
         <div className="flex items-center gap-2.5 rounded-lg border border-border bg-muted/30 px-3.5 py-2.5 text-xs text-muted-foreground">
           <GitCommitIcon className="size-3.5 shrink-0" />
@@ -182,6 +170,8 @@ export const PullRequestHeader = memo(function PullRequestHeader({
           )}
         </div>
       )}
+
+      <ReviewerBar pullRequest={pullRequest} />
     </header>
   )
 })
@@ -298,9 +288,18 @@ function BranchName({ name }: { name: string }): ReactElement {
   const [copied, setCopied] = useState(false)
 
   const handleCopy = () => {
-    navigator.clipboard.writeText(name)
-    setCopied(true)
-    setTimeout(() => setCopied(false), 2000)
+    navigator.clipboard
+      .writeText(name)
+      .then(() => {
+        setCopied(true)
+        setTimeout(() => setCopied(false), 2000)
+      })
+      .catch((error: unknown) => {
+        const message =
+          error instanceof Error ? error.message : 'Failed to copy branch name'
+
+        toast.error(message)
+      })
   }
 
   return (

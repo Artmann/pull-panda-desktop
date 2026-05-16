@@ -28,6 +28,7 @@ const basePullRequest: PullRequest = {
   isReviewer: false,
   labels: [],
   assignees: [],
+  requestedReviewers: [],
   syncedAt: new Date().toISOString(),
   detailsSyncedAt: null,
   commentCount: 4,

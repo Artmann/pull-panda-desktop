@@ -30,6 +30,7 @@ function createMockPullRequest(
     isReviewer: false,
     labels: [],
     assignees: [],
+    requestedReviewers: [],
     syncedAt: '2024-01-01T00:00:00Z',
     detailsSyncedAt: '2024-01-01T00:01:00Z',
     commentCount: 0,

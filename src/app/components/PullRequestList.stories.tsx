@@ -30,6 +30,7 @@ const basePullRequest: PullRequest = {
     { name: 'design-system', color: '0066cc' }
   ],
   assignees: [],
+  requestedReviewers: [],
   syncedAt: new Date().toISOString(),
   detailsSyncedAt: null,
   commentCount: 4,

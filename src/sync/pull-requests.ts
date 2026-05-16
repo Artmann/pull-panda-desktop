@@ -56,6 +56,20 @@ interface GraphQLPullRequestNode {
       avatarUrl: string
     }>
   }
+  reviewRequests: {
+    nodes: Array<{
+      requestedReviewer:
+        | {
+            __typename: 'User' | 'Bot'
+            login: string
+            avatarUrl: string
+          }
+        | {
+            __typename: string
+          }
+        | null
+    }>
+  }
 }
 
 interface ProbeNode {
@@ -101,6 +115,7 @@ interface GitHubPullRequest {
   isDraft: boolean
   labels: Array<{ name: string; color: string }>
   assignees: Array<{ login: string; avatarUrl: string }>
+  requestedReviewers: Array<{ login: string; avatarUrl: string }>
 }
 
 const hydrationBatchSize = 25
@@ -139,6 +154,21 @@ const pullRequestNodeFields = `
     nodes {
       login
       avatarUrl
+    }
+  }
+  reviewRequests(first: 20) {
+    nodes {
+      requestedReviewer {
+        __typename
+        ... on User {
+          login
+          avatarUrl
+        }
+        ... on Bot {
+          login
+          avatarUrl
+        }
+      }
     }
   }
 `
@@ -214,7 +244,21 @@ function transformGraphQLNode(node: GraphQLPullRequestNode): GitHubPullRequest {
     assignees: node.assignees.nodes.map((assignee) => ({
       login: assignee.login,
       avatarUrl: assignee.avatarUrl
-    }))
+    })),
+    requestedReviewers: node.reviewRequests.nodes.flatMap((entry) => {
+      const reviewer = entry.requestedReviewer
+
+      if (
+        !reviewer ||
+        (reviewer.__typename !== 'User' && reviewer.__typename !== 'Bot')
+      ) {
+        return []
+      }
+
+      const user = reviewer as { login: string; avatarUrl: string }
+
+      return [{ login: user.login, avatarUrl: user.avatarUrl }]
+    })
   }
 }
 
@@ -247,6 +291,7 @@ function transformPullRequest(
     isReviewer: relation.isReviewer,
     labels: JSON.stringify(pullRequest.labels),
     assignees: JSON.stringify(pullRequest.assignees),
+    requestedReviewers: JSON.stringify(pullRequest.requestedReviewers),
     syncedAt: now
   }
 }
@@ -410,6 +455,7 @@ function persistPullRequest(record: NewPullRequest): void {
         isReviewer: record.isReviewer,
         labels: record.labels,
         assignees: record.assignees,
+        requestedReviewers: record.requestedReviewers,
         syncedAt: record.syncedAt
       }
     })

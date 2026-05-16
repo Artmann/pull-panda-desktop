@@ -7,6 +7,7 @@ import { Octokit } from '@octokit/rest'
 import { getDatabase } from '../../../database'
 import { pullRequests } from '../../../database/schema'
 import { ipcChannels } from '../../../lib/ipc/channels'
+import { BackendError } from '../errors'
 import { backgroundSyncer } from '../../background-syncer'
 import { getPullRequest, getPullRequestDetails } from '../../bootstrap'
 import { MemoryCache } from '../../memory-cache'
@@ -14,6 +15,7 @@ import { sendPullRequestResourceEvents } from '../../send-resource-events'
 import { etagManager } from '../../../sync/etag-manager'
 import { syncPullRequestDetails } from '../../../sync/sync-pull-request-details'
 import type { MergeRequirement } from '../../../types/merge-requirements'
+import type { PullRequest } from '../../../types/pull-request'
 
 import type { AppEnv } from './comments'
 
@@ -701,6 +703,396 @@ pullRequestsRoute.post('/:pullRequestId/update-branch', async (context) => {
   }
 
   return context.json({ success: true })
+})
+
+interface ReviewerMutationBody {
+  logins: string[]
+}
+
+// Map of bot logins to their GraphQL node IDs. Bots can't be requested via REST
+// (the API rejects them with "Reviews may only be requested from collaborators")
+// — they must go through the GraphQL requestReviews mutation with `botIds`.
+const knownBotIds: Record<string, string> = {
+  'copilot-pull-request-reviewer': 'BOT_kgDOCnlnWA'
+}
+
+function partitionLogins(logins: string[]): {
+  botIds: string[]
+  userLogins: string[]
+} {
+  const botIds: string[] = []
+  const userLogins: string[] = []
+
+  for (const login of logins) {
+    const botId = knownBotIds[login]
+
+    if (botId) {
+      botIds.push(botId)
+    } else {
+      userLogins.push(login)
+    }
+  }
+
+  return { botIds, userLogins }
+}
+
+interface RequestedReviewer {
+  avatarUrl: string
+  login: string
+}
+
+interface ReviewRequestsResponse {
+  node: {
+    reviewRequests: {
+      nodes: Array<{
+        requestedReviewer:
+          | { __typename: 'User' | 'Bot'; avatarUrl: string; login: string }
+          | { __typename: string }
+          | null
+      }>
+    }
+  } | null
+}
+
+async function fetchRequestedReviewers(
+  token: string,
+  pullRequestNodeId: string
+): Promise<RequestedReviewer[]> {
+  const client = graphql.defaults({
+    headers: { authorization: `token ${token}` }
+  })
+
+  const response = await client<ReviewRequestsResponse>(
+    `query GetReviewRequests($id: ID!) {
+      node(id: $id) {
+        ... on PullRequest {
+          reviewRequests(first: 20) {
+            nodes {
+              requestedReviewer {
+                __typename
+                ... on User { login avatarUrl }
+                ... on Bot { login avatarUrl }
+              }
+            }
+          }
+        }
+      }
+    }`,
+    { id: pullRequestNodeId }
+  )
+
+  const nodes = response.node?.reviewRequests.nodes ?? []
+
+  return nodes.flatMap((entry) => {
+    const reviewer = entry.requestedReviewer
+
+    if (
+      !reviewer ||
+      (reviewer.__typename !== 'User' && reviewer.__typename !== 'Bot')
+    ) {
+      return []
+    }
+
+    const typed = reviewer as { avatarUrl: string; login: string }
+
+    return [{ avatarUrl: typed.avatarUrl, login: typed.login }]
+  })
+}
+
+interface RequestReviewsMutationResponse {
+  requestReviews: {
+    pullRequest: {
+      reviewRequests: {
+        nodes: Array<{
+          requestedReviewer:
+            | { __typename: 'User' | 'Bot'; avatarUrl: string; login: string }
+            | { __typename: string }
+            | null
+        }>
+      }
+    }
+  }
+}
+
+function extractReviewers(
+  response: RequestReviewsMutationResponse
+): RequestedReviewer[] {
+  const nodes = response.requestReviews.pullRequest.reviewRequests.nodes
+
+  return nodes.flatMap((entry) => {
+    const reviewer = entry.requestedReviewer
+
+    if (
+      !reviewer ||
+      (reviewer.__typename !== 'User' && reviewer.__typename !== 'Bot')
+    ) {
+      return []
+    }
+
+    const typed = reviewer as { avatarUrl: string; login: string }
+
+    return [{ avatarUrl: typed.avatarUrl, login: typed.login }]
+  })
+}
+
+const reviewerFragment = `
+  reviewRequests(first: 20) {
+    nodes {
+      requestedReviewer {
+        __typename
+        ... on User { login avatarUrl }
+        ... on Bot { login avatarUrl }
+      }
+    }
+  }
+`
+
+async function requestBotReviewers(
+  token: string,
+  pullRequestNodeId: string,
+  botIds: string[]
+): Promise<RequestedReviewer[]> {
+  const client = graphql.defaults({
+    headers: { authorization: `token ${token}` }
+  })
+
+  const response = await client<RequestReviewsMutationResponse>(
+    `mutation RequestBotReviewers($pullRequestId: ID!, $botIds: [ID!]) {
+      requestReviews(input: {
+        pullRequestId: $pullRequestId,
+        botIds: $botIds,
+        union: true
+      }) {
+        pullRequest {
+          ${reviewerFragment}
+        }
+      }
+    }`,
+    { pullRequestId: pullRequestNodeId, botIds }
+  )
+
+  return extractReviewers(response)
+}
+
+async function removeBotReviewers(
+  token: string,
+  pullRequestNodeId: string,
+  botIdsToRemove: string[]
+): Promise<RequestedReviewer[]> {
+  const current = await fetchRequestedReviewers(token, pullRequestNodeId)
+  const removeSet = new Set(
+    botIdsToRemove
+      .map((id) =>
+        Object.keys(knownBotIds).find((login) => knownBotIds[login] === id)
+      )
+      .filter((login): login is string => Boolean(login))
+  )
+
+  const kept = current.filter((reviewer) => !removeSet.has(reviewer.login))
+  const keptUserLogins = kept
+    .map((reviewer) => reviewer.login)
+    .filter((login) => !knownBotIds[login])
+  const keptBotIds = kept
+    .map((reviewer) => knownBotIds[reviewer.login])
+    .filter((id): id is string => Boolean(id))
+
+  const client = graphql.defaults({
+    headers: { authorization: `token ${token}` }
+  })
+
+  const response = await client<RequestReviewsMutationResponse>(
+    `mutation ReplaceReviewers(
+      $pullRequestId: ID!,
+      $userLogins: [String!],
+      $botIds: [ID!]
+    ) {
+      requestReviews(input: {
+        pullRequestId: $pullRequestId,
+        userLogins: $userLogins,
+        botIds: $botIds,
+        union: false
+      }) {
+        pullRequest {
+          ${reviewerFragment}
+        }
+      }
+    }`,
+    {
+      botIds: keptBotIds,
+      pullRequestId: pullRequestNodeId,
+      userLogins: keptUserLogins
+    }
+  )
+
+  return extractReviewers(response)
+}
+
+type RestReviewerMutation = (
+  octokit: Octokit,
+  params: {
+    owner: string
+    pull_number: number
+    repo: string
+    reviewers: string[]
+  }
+) => Promise<unknown>
+
+async function applyReviewerMutation(
+  pullRequestId: string,
+  request: ReviewerMutationBody,
+  mode: 'add' | 'remove',
+  restMutation: RestReviewerMutation,
+  token: string
+): Promise<PullRequest | null> {
+  const database = getDatabase()
+
+  const pullRequest = database
+    .select()
+    .from(pullRequests)
+    .where(eq(pullRequests.id, pullRequestId))
+    .get()
+
+  if (!pullRequest) {
+    throw new BackendError('Pull request not found', 404)
+  }
+
+  const logins = request.logins.filter((login) => login.length > 0)
+
+  if (logins.length === 0) {
+    throw new BackendError('No logins provided', 400)
+  }
+
+  const { botIds, userLogins } = partitionLogins(logins)
+  const octokit = new Octokit({ auth: token })
+
+  if (userLogins.length > 0) {
+    await restMutation(octokit, {
+      owner: pullRequest.repositoryOwner,
+      pull_number: pullRequest.number,
+      repo: pullRequest.repositoryName,
+      reviewers: userLogins
+    })
+  }
+
+  // Use the mutation's own response when bots are involved so we don't race
+  // against GitHub's eventual consistency. Otherwise refetch via GraphQL.
+  let updatedReviewers: RequestedReviewer[] = []
+
+  try {
+    if (botIds.length > 0) {
+      updatedReviewers =
+        mode === 'add'
+          ? await requestBotReviewers(token, pullRequest.id, botIds)
+          : await removeBotReviewers(token, pullRequest.id, botIds)
+    } else {
+      updatedReviewers = await fetchRequestedReviewers(token, pullRequest.id)
+    }
+  } catch (error) {
+    console.error('Failed to refresh reviewers after mutation:', error)
+  }
+
+  database
+    .update(pullRequests)
+    .set({
+      requestedReviewers: JSON.stringify(updatedReviewers),
+      syncedAt: new Date().toISOString()
+    })
+    .where(eq(pullRequests.id, pullRequestId))
+    .run()
+
+  return getPullRequest(pullRequestId)
+}
+
+pullRequestsRoute.post('/:pullRequestId/reviewers', async (context) => {
+  const token = context.get('token')
+  const pullRequestId = context.req.param('pullRequestId')
+
+  if (!pullRequestId) {
+    return context.json({ error: 'Missing pull request ID' }, 400)
+  }
+
+  const request = await context.req.json<ReviewerMutationBody>()
+
+  try {
+    const updated = await applyReviewerMutation(
+      pullRequestId,
+      request,
+      'add',
+      (octokit, params) => octokit.rest.pulls.requestReviewers(params),
+      token
+    )
+
+    if (updated) {
+      for (const window of BrowserWindow.getAllWindows()) {
+        window.webContents.send(ipcChannels.ResourceUpdated, {
+          data: updated,
+          pullRequestId,
+          type: 'pull-request'
+        })
+      }
+    }
+
+    return context.json(updated)
+  } catch (error) {
+    if (error instanceof BackendError) {
+      return context.json(
+        { error: error.message },
+        error.statusCode as 400 | 404 | 500
+      )
+    }
+
+    const message = error instanceof Error ? error.message : 'Unknown error'
+
+    console.error('Failed to request reviewers:', error)
+
+    return context.json({ error: message }, 500)
+  }
+})
+
+pullRequestsRoute.delete('/:pullRequestId/reviewers', async (context) => {
+  const token = context.get('token')
+  const pullRequestId = context.req.param('pullRequestId')
+
+  if (!pullRequestId) {
+    return context.json({ error: 'Missing pull request ID' }, 400)
+  }
+
+  const request = await context.req.json<ReviewerMutationBody>()
+
+  try {
+    const updated = await applyReviewerMutation(
+      pullRequestId,
+      request,
+      'remove',
+      (octokit, params) => octokit.rest.pulls.removeRequestedReviewers(params),
+      token
+    )
+
+    if (updated) {
+      for (const window of BrowserWindow.getAllWindows()) {
+        window.webContents.send(ipcChannels.ResourceUpdated, {
+          data: updated,
+          pullRequestId,
+          type: 'pull-request'
+        })
+      }
+    }
+
+    return context.json(updated)
+  } catch (error) {
+    if (error instanceof BackendError) {
+      return context.json(
+        { error: error.message },
+        error.statusCode as 400 | 404 | 500
+      )
+    }
+
+    const message = error instanceof Error ? error.message : 'Unknown error'
+
+    console.error('Failed to remove reviewers:', error)
+
+    return context.json({ error: message }, 500)
+  }
 })
 
 pullRequestsRoute.post('/:pullRequestId/sync', async (context) => {

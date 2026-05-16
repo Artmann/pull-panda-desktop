@@ -19,6 +19,8 @@ import pendingReviewCommentsReducer from '@/app/store/pending-review-comments-sl
 import pendingReviewsReducer from '@/app/store/pending-reviews-slice'
 import pullRequestsReducer from '@/app/store/pull-requests-slice'
 import reactionsReducer from '@/app/store/reactions-slice'
+import recentReviewersReducer from '@/app/store/recent-reviewers-slice'
+import reviewerSuggestionsReducer from '@/app/store/reviewer-suggestions-slice'
 import reviewsReducer from '@/app/store/reviews-slice'
 import reviewThreadsReducer from '@/app/store/review-threads-slice'
 import tasksReducer from '@/app/store/tasks-slice'
@@ -85,6 +87,8 @@ function createTestStore() {
       pendingReviews: pendingReviewsReducer,
       pullRequests: pullRequestsReducer,
       reactions: reactionsReducer,
+      recentReviewers: recentReviewersReducer,
+      reviewerSuggestions: reviewerSuggestionsReducer,
       reviews: reviewsReducer,
       reviewThreads: reviewThreadsReducer,
       tasks: tasksReducer
@@ -108,6 +112,8 @@ function createTestStore() {
         items: []
       },
       reactions: { items: [] },
+      recentReviewers: { byRepo: {} },
+      reviewerSuggestions: { collaboratorsByRepo: {}, codeownersByPullRequest: {} },
       reviews: { items: [] },
       reviewThreads: { items: [] },
       tasks: { items: [] }
@@ -141,6 +147,7 @@ function createMockPullRequest(
     isReviewer: false,
     labels: [],
     assignees: [],
+    requestedReviewers: [],
     syncedAt: '2024-01-01T00:00:00Z',
     detailsSyncedAt: '2024-01-01T00:01:00Z',
     commentCount: 0,

@@ -23,6 +23,7 @@ function createMockPullRequest(
   return {
     approvalCount: 0,
     assignees: [],
+    requestedReviewers: [],
     authorAvatarUrl: 'https://example.com/avatar.png',
     authorLogin: 'testuser',
     body: 'Test PR body',

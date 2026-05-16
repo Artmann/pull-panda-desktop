@@ -610,6 +610,111 @@ export async function checkoutPullRequestBranch(
   return response.json()
 }
 
+interface ReviewerMutationRequest {
+  logins: string[]
+  pullRequestId: string
+}
+
+export async function requestReviewers(
+  request: ReviewerMutationRequest
+): Promise<PullRequest> {
+  const baseUrl = await getApiBaseUrl()
+
+  const response = await fetch(
+    `${baseUrl}/api/pull-requests/${request.pullRequestId}/reviewers`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ logins: request.logins })
+    }
+  )
+
+  if (!response.ok) {
+    const error = await response.json()
+
+    throw new Error(error.error ?? 'Failed to request reviewers')
+  }
+
+  return response.json()
+}
+
+export async function removeReviewers(
+  request: ReviewerMutationRequest
+): Promise<PullRequest> {
+  const baseUrl = await getApiBaseUrl()
+
+  const response = await fetch(
+    `${baseUrl}/api/pull-requests/${request.pullRequestId}/reviewers`,
+    {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ logins: request.logins })
+    }
+  )
+
+  if (!response.ok) {
+    const error = await response.json()
+
+    throw new Error(error.error ?? 'Failed to remove reviewers')
+  }
+
+  return response.json()
+}
+
+export interface Collaborator {
+  avatarUrl: string
+  login: string
+}
+
+export async function fetchCollaborators(args: {
+  owner: string
+  repo: string
+}): Promise<Collaborator[]> {
+  const baseUrl = await getApiBaseUrl()
+
+  const response = await fetch(
+    `${baseUrl}/api/repos/${args.owner}/${args.repo}/collaborators`
+  )
+
+  if (!response.ok) {
+    const error = await response.json()
+
+    throw new Error(error.error ?? 'Failed to load collaborators')
+  }
+
+  const data = (await response.json()) as { collaborators: Collaborator[] }
+
+  return data.collaborators
+}
+
+export interface CodeownerEntry {
+  login: string
+  patterns: string[]
+}
+
+export async function fetchCodeowners(args: {
+  owner: string
+  pullRequestId: string
+  repo: string
+}): Promise<CodeownerEntry[]> {
+  const baseUrl = await getApiBaseUrl()
+
+  const params = new URLSearchParams({ pullRequestId: args.pullRequestId })
+  const response = await fetch(
+    `${baseUrl}/api/repos/${args.owner}/${args.repo}/codeowners?${params}`
+  )
+
+  if (!response.ok) {
+    const error = await response.json()
+
+    throw new Error(error.error ?? 'Failed to load code owners')
+  }
+
+  const data = (await response.json()) as { owners: CodeownerEntry[] }
+
+  return data.owners
+}
+
 export async function triggerSync(): Promise<void> {
   const baseUrl = await getApiBaseUrl()
 

@@ -117,6 +117,7 @@ export function createPullRequest(
   return {
     approvalCount: 0,
     assignees: [],
+    requestedReviewers: [],
     authorAvatarUrl: 'https://example.com/avatar.png',
     authorLogin: 'alice',
     body: null,

@@ -15,7 +15,8 @@ import { loadAll as loadConnectedRepos } from './connected-repos'
 import type {
   PullRequest,
   PullRequestLabel,
-  PullRequestAssignee
+  PullRequestAssignee,
+  PullRequestRequestedReviewer
 } from '../types/pull-request'
 import type {
   Review,
@@ -86,6 +87,9 @@ function buildPullRequest(
     isReviewer: row.isReviewer,
     labels: row.labels ? (JSON.parse(row.labels) as PullRequestLabel[]) : [],
     mergedAt: row.mergedAt,
+    requestedReviewers: row.requestedReviewers
+      ? (JSON.parse(row.requestedReviewers) as PullRequestRequestedReviewer[])
+      : [],
     number: row.number,
     repositoryName: row.repositoryName,
     repositoryOwner: row.repositoryOwner,

@@ -8,6 +8,11 @@ export interface PullRequestAssignee {
   avatarUrl: string
 }
 
+export interface PullRequestRequestedReviewer {
+  login: string
+  avatarUrl: string
+}
+
 export interface PullRequest {
   id: string
   number: number
@@ -31,6 +36,7 @@ export interface PullRequest {
   isReviewer: boolean
   labels: PullRequestLabel[]
   assignees: PullRequestAssignee[]
+  requestedReviewers: PullRequestRequestedReviewer[]
   syncedAt: string
   detailsSyncedAt: string | null
   commentCount: number

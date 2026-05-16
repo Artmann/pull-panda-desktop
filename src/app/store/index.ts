@@ -25,6 +25,14 @@ import pendingReviewsReducer, {
 } from './pending-reviews-slice'
 import pullRequestsReducer, { PullRequestsState } from './pull-requests-slice'
 import reactionsReducer, { ReactionsState } from './reactions-slice'
+import recentReviewersReducer, {
+  loadRecentReviewersFromStorage,
+  RecentReviewersState,
+  saveRecentReviewersToStorage
+} from './recent-reviewers-slice'
+import reviewerSuggestionsReducer, {
+  ReviewerSuggestionsState
+} from './reviewer-suggestions-slice'
 import reviewsReducer, { ReviewsState } from './reviews-slice'
 import reviewThreadsReducer, {
   ReviewThreadsState
@@ -43,6 +51,8 @@ export interface PreloadedState {
   pendingReviews?: PendingReviewsState
   pullRequests?: PullRequestsState
   reactions: ReactionsState
+  recentReviewers?: RecentReviewersState
+  reviewerSuggestions?: ReviewerSuggestionsState
   reviews: ReviewsState
   reviewThreads: ReviewThreadsState
   tasks?: TasksState
@@ -58,7 +68,8 @@ export function createStore(preloadedState?: PreloadedState) {
     preloadedState: {
       ...preloadedState,
       drafts: loadDraftsFromStorage(),
-      pendingReviewComments: loadPendingReviewCommentsFromStorage()
+      pendingReviewComments: loadPendingReviewCommentsFromStorage(),
+      recentReviewers: loadRecentReviewersFromStorage()
     },
     reducer: {
       checks: checksReducer,
@@ -72,6 +83,8 @@ export function createStore(preloadedState?: PreloadedState) {
       pendingReviews: pendingReviewsReducer,
       pullRequests: pullRequestsReducer,
       reactions: reactionsReducer,
+      recentReviewers: recentReviewersReducer,
+      reviewerSuggestions: reviewerSuggestionsReducer,
       reviews: reviewsReducer,
       reviewThreads: reviewThreadsReducer,
       tasks: tasksReducer
@@ -99,6 +112,18 @@ export function createStore(preloadedState?: PreloadedState) {
     if (currentPendingReviewComments !== previousPendingReviewComments) {
       previousPendingReviewComments = currentPendingReviewComments
       savePendingReviewCommentsToStorage(currentPendingReviewComments)
+    }
+  })
+
+  // Sync recent reviewers to localStorage on every change
+  let previousRecentReviewers = store.getState().recentReviewers
+
+  store.subscribe(() => {
+    const currentRecentReviewers = store.getState().recentReviewers
+
+    if (currentRecentReviewers !== previousRecentReviewers) {
+      previousRecentReviewers = currentRecentReviewers
+      saveRecentReviewersToStorage(currentRecentReviewers)
     }
   })
 

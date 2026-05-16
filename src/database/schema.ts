@@ -34,6 +34,7 @@ export const pullRequests = sqliteTable('pull_requests', {
 
   labels: text('labels'),
   assignees: text('assignees'),
+  requestedReviewers: text('requested_reviewers'),
 
   syncedAt: text('synced_at').notNull(),
   detailsSyncedAt: text('details_synced_at')

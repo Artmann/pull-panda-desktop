@@ -26,6 +26,7 @@ const basePullRequest: PullRequest = {
   isReviewer: false,
   labels: [],
   assignees: [],
+  requestedReviewers: [],
   syncedAt: '2026-04-23T09:00:00Z',
   detailsSyncedAt: null,
   commentCount: 0,

@@ -18,6 +18,7 @@ type Story = StoryObj<typeof meta>
 const mockPullRequest: PullRequest = {
   approvalCount: 0,
   assignees: [],
+  requestedReviewers: [],
   authorAvatarUrl: null,
   authorLogin: 'octocat',
   body: null,

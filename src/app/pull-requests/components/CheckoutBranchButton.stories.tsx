@@ -40,6 +40,7 @@ function buildStore(connectedFullName?: string) {
 const mockPullRequest: PullRequest = {
   approvalCount: 0,
   assignees: [],
+  requestedReviewers: [],
   authorAvatarUrl: null,
   authorLogin: 'octocat',
   body: null,

@@ -21,6 +21,8 @@ import pendingReviewCommentsReducer from '@/app/store/pending-review-comments-sl
 import pendingReviewsReducer from '@/app/store/pending-reviews-slice'
 import pullRequestsReducer from '@/app/store/pull-requests-slice'
 import reactionsReducer from '@/app/store/reactions-slice'
+import recentReviewersReducer from '@/app/store/recent-reviewers-slice'
+import reviewerSuggestionsReducer from '@/app/store/reviewer-suggestions-slice'
 import reviewThreadsReducer from '@/app/store/review-threads-slice'
 import reviewsReducer from '@/app/store/reviews-slice'
 import tasksReducer from '@/app/store/tasks-slice'
@@ -33,6 +35,8 @@ import { PullRequestPage } from './PullRequestPage'
 
 vi.mock('@/app/lib/api', () => ({
   clearFocusedPullRequest: vi.fn().mockResolvedValue(undefined),
+  fetchCodeowners: vi.fn().mockResolvedValue([]),
+  fetchCollaborators: vi.fn().mockResolvedValue([]),
   getMergeOptions: vi.fn().mockRejectedValue(new Error('not configured')),
   markPullRequestActive: vi.fn().mockResolvedValue(undefined),
   setFocusedPullRequest: vi.fn().mockResolvedValue(undefined)
@@ -120,6 +124,7 @@ function createMockPullRequest(
     isReviewer: false,
     labels: [],
     assignees: [],
+    requestedReviewers: [],
     syncedAt: '2024-01-01T00:00:00Z',
     detailsSyncedAt: null,
     commentCount: 0,
@@ -150,6 +155,8 @@ function createTestStore(
       pendingReviews: pendingReviewsReducer,
       pullRequests: pullRequestsReducer,
       reactions: reactionsReducer,
+      recentReviewers: recentReviewersReducer,
+      reviewerSuggestions: reviewerSuggestionsReducer,
       reviewThreads: reviewThreadsReducer,
       reviews: reviewsReducer,
       tasks: tasksReducer
@@ -173,6 +180,8 @@ function createTestStore(
         items: options.pullRequests ?? []
       },
       reactions: { items: [] },
+      recentReviewers: { byRepo: {} },
+      reviewerSuggestions: { collaboratorsByRepo: {}, codeownersByPullRequest: {} },
       reviewThreads: { items: [] },
       reviews: { items: [] },
       tasks: { items: [] }
