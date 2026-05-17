@@ -2,7 +2,7 @@ import { Hono } from 'hono'
 
 import { ipcChannels } from '../../../lib/ipc/channels'
 import { getApiMainWindow } from '../main-window-ref'
-import type { AppEnv } from './comments'
+import type { AppEnv } from '../effect-handler'
 
 export const navigateRoute = new Hono<AppEnv>()
 

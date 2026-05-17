@@ -8,6 +8,24 @@ import type {
 
 let apiBaseUrl: string | null = null
 
+function extractErrorMessage(payload: unknown, fallback: string): string {
+  if (typeof payload === 'string' && payload.length > 0) {
+    return payload
+  }
+
+  if (
+    typeof payload === 'object' &&
+    payload !== null &&
+    'message' in payload &&
+    typeof (payload as { message: unknown }).message === 'string' &&
+    (payload as { message: string }).message.length > 0
+  ) {
+    return (payload as { message: string }).message
+  }
+
+  return fallback
+}
+
 async function getApiBaseUrl(): Promise<string> {
   if (apiBaseUrl) {
     return apiBaseUrl
@@ -93,7 +111,7 @@ export async function createReview(
   if (!response.ok) {
     const error = await response.json()
 
-    throw new Error(error.error ?? 'Failed to create review')
+    throw new Error(extractErrorMessage(error.error, 'Failed to create review'))
   }
 
   return response.json()
@@ -125,7 +143,7 @@ export async function submitReview(
   if (!response.ok) {
     const error = await response.json()
 
-    throw new Error(error.error ?? 'Failed to submit review')
+    throw new Error(extractErrorMessage(error.error, 'Failed to submit review'))
   }
 }
 
@@ -152,7 +170,7 @@ export async function deleteReview(
   if (!response.ok) {
     const error = await response.json()
 
-    throw new Error(error.error ?? 'Failed to delete review')
+    throw new Error(extractErrorMessage(error.error, 'Failed to delete review'))
   }
 }
 
@@ -185,7 +203,9 @@ export async function resolveReviewThread(
   if (!response.ok) {
     const error = await response.json()
 
-    throw new Error(error.error ?? 'Failed to resolve review thread')
+    throw new Error(
+      extractErrorMessage(error.error, 'Failed to resolve review thread')
+    )
   }
 
   return response.json()
@@ -207,7 +227,9 @@ export async function unresolveReviewThread(
   if (!response.ok) {
     const error = await response.json()
 
-    throw new Error(error.error ?? 'Failed to unresolve review thread')
+    throw new Error(
+      extractErrorMessage(error.error, 'Failed to unresolve review thread')
+    )
   }
 
   return response.json()
@@ -229,7 +251,9 @@ export async function createComment(
   if (!response.ok) {
     const error = await response.json()
 
-    throw new Error(error.error ?? 'Failed to create comment')
+    throw new Error(
+      extractErrorMessage(error.error, 'Failed to create comment')
+    )
   }
 
   return response.json()
@@ -255,7 +279,7 @@ export async function markPullRequestActive(
 
     try {
       const error = await response.json()
-      message = error.error ?? message
+      message = extractErrorMessage(error.error, message)
     } catch {
       // Response wasn't JSON
     }
@@ -317,7 +341,9 @@ export async function syncPullRequestDetails(
   if (!response.ok) {
     const error = await response.json()
 
-    throw new Error(error.error ?? 'Failed to sync pull request details')
+    throw new Error(
+      extractErrorMessage(error.error, 'Failed to sync pull request details')
+    )
   }
 }
 
@@ -355,7 +381,9 @@ export async function getMergeOptions(
   if (!response.ok) {
     const error = await response.json()
 
-    throw new Error(error.error ?? 'Failed to fetch merge options')
+    throw new Error(
+      extractErrorMessage(error.error, 'Failed to fetch merge options')
+    )
   }
 
   return response.json()
@@ -401,7 +429,9 @@ export async function mergePullRequest(
   if (!response.ok) {
     const error = await response.json()
 
-    throw new Error(error.error ?? 'Failed to merge pull request')
+    throw new Error(
+      extractErrorMessage(error.error, 'Failed to merge pull request')
+    )
   }
 
   return response.json()
@@ -441,7 +471,9 @@ export async function updatePullRequestBranch(
   if (!response.ok) {
     const error = await response.json()
 
-    throw new Error(error.error ?? 'Failed to update pull request branch')
+    throw new Error(
+      extractErrorMessage(error.error, 'Failed to update pull request branch')
+    )
   }
 }
 
@@ -483,7 +515,9 @@ export async function updatePullRequest(
   if (!response.ok) {
     const error = await response.json()
 
-    throw new Error(error.error ?? 'Failed to update pull request')
+    throw new Error(
+      extractErrorMessage(error.error, 'Failed to update pull request')
+    )
   }
 
   return response.json()
@@ -520,7 +554,9 @@ export async function verifyConnectedRepo(args: {
   if (!response.ok) {
     const error = await response.json()
 
-    throw new Error(error.error ?? 'Failed to verify repository')
+    throw new Error(
+      extractErrorMessage(error.error, 'Failed to verify repository')
+    )
   }
 
   return response.json()
@@ -543,7 +579,9 @@ export async function cloneConnectedRepo(args: {
   if (!response.ok) {
     const error = await response.json()
 
-    throw new Error(error.error ?? 'Failed to clone repository')
+    throw new Error(
+      extractErrorMessage(error.error, 'Failed to clone repository')
+    )
   }
 
   return response.json()
@@ -566,7 +604,9 @@ export async function setConnectedRepo(args: {
   if (!response.ok) {
     const error = await response.json()
 
-    throw new Error(error.error ?? 'Failed to save connected repository')
+    throw new Error(
+      extractErrorMessage(error.error, 'Failed to save connected repository')
+    )
   }
 }
 
@@ -584,7 +624,9 @@ export async function removeConnectedRepo(fullName: string): Promise<void> {
   if (!response.ok) {
     const error = await response.json()
 
-    throw new Error(error.error ?? 'Failed to remove connected repository')
+    throw new Error(
+      extractErrorMessage(error.error, 'Failed to remove connected repository')
+    )
   }
 }
 
@@ -604,7 +646,9 @@ export async function checkoutPullRequestBranch(
   if (!response.ok) {
     const error = await response.json()
 
-    throw new Error(error.error ?? 'Failed to check out branch')
+    throw new Error(
+      extractErrorMessage(error.error, 'Failed to check out branch')
+    )
   }
 
   return response.json()
@@ -632,7 +676,9 @@ export async function requestReviewers(
   if (!response.ok) {
     const error = await response.json()
 
-    throw new Error(error.error ?? 'Failed to request reviewers')
+    throw new Error(
+      extractErrorMessage(error.error, 'Failed to request reviewers')
+    )
   }
 
   return response.json()
@@ -655,7 +701,9 @@ export async function removeReviewers(
   if (!response.ok) {
     const error = await response.json()
 
-    throw new Error(error.error ?? 'Failed to remove reviewers')
+    throw new Error(
+      extractErrorMessage(error.error, 'Failed to remove reviewers')
+    )
   }
 
   return response.json()
@@ -679,7 +727,9 @@ export async function fetchCollaborators(args: {
   if (!response.ok) {
     const error = await response.json()
 
-    throw new Error(error.error ?? 'Failed to load collaborators')
+    throw new Error(
+      extractErrorMessage(error.error, 'Failed to load collaborators')
+    )
   }
 
   const data = (await response.json()) as { collaborators: Collaborator[] }
@@ -707,7 +757,9 @@ export async function fetchCodeowners(args: {
   if (!response.ok) {
     const error = await response.json()
 
-    throw new Error(error.error ?? 'Failed to load code owners')
+    throw new Error(
+      extractErrorMessage(error.error, 'Failed to load code owners')
+    )
   }
 
   const data = (await response.json()) as { owners: CodeownerEntry[] }

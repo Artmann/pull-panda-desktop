@@ -86,24 +86,42 @@ Replace `<branch-name>` with the current branch name.
 
 ## 8. Create PR
 
-Use the GitHub CLI to create a pull request:
+Use the GitHub CLI to create a pull request. Write the body following the "Pull
+request descriptions" rules in `CLAUDE.md`: a plain-language `Summary`, a prose
+`Technical details` section, a manual `Test plan` (no `yarn` commands — those
+are gates from earlier steps, not review steps), and the optional
+`Breaking changes` / `Out of scope` sections only when they apply. Omit optional
+sections entirely when there's nothing to put under them — never emit a "None"
+placeholder.
 
 ```bash
 "/c/Program Files/GitHub CLI/gh.exe" pr create --title "<concise title>" --body "$(cat <<'EOF'
 ## Summary
 
-- <bullet point describing change>
-- <bullet point describing change>
+<1–3 plain-language sentences describing what the PR does and why it matters.
+Lead with the user-visible effect, not the implementation.>
+
+## Technical details
+
+<Prose paragraph(s) describing what changed, which components are affected,
+and any notable implementation decisions. Reference paths and symbols
+inline.>
 
 ## Test plan
 
-- <how to verify the changes>
+- [ ] <Imperative manual step a reviewer runs in the app>
+- [ ] <…>
 EOF
 )"
 ```
 
-Keep the PR title short (under 70 characters). The body must include a
-`## Summary` section with bullet points and a `## Test plan` section.
+Keep the PR title short (under 70 characters).
+
+When the PR genuinely has breaking changes / migration notes, append a
+`## Breaking changes` section with bullets describing what a reviewer or
+existing user must do. When there are related items deliberately left out of
+this PR that a reviewer might ask about, append a `## Out of scope` section with
+1–3 bullets.
 
 If `gh pr create` fails because a PR already exists for this branch, find and
 report the existing PR URL instead:

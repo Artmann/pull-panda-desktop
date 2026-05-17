@@ -1,5 +1,12 @@
 import { Layer } from 'effect'
 
+import { AuthStoreLive } from '../main/services/auth-store'
+import { CodeownersLive } from '../main/services/codeowners'
+import { GitLive } from '../main/services/git'
+import { GitHubAuthLive } from '../main/services/github-auth'
+import { MainWindowLive } from '../main/services/main-window'
+import { RepositoryLive } from '../main/services/repository'
+import { TaskManagerLive } from '../main/services/task-manager'
 import { BackgroundSyncerLive } from './services/background-syncer'
 import { DatabaseLive } from './services/database'
 import { EtagStoreLive } from './services/etag-store'
@@ -11,7 +18,7 @@ import { ResourceEventBusLive } from './services/resource-event-bus'
 import { SyncRecorderLive } from './services/sync-recorder'
 import { makeTokenProviderLayer } from './services/token-provider'
 
-export const makeSyncLayer = (getToken: () => string | null) => {
+export const makeAppLayer = (getToken: () => string | null) => {
   const TokenLive = makeTokenProviderLayer(getToken)
 
   const baseServices = Layer.mergeAll(
@@ -39,7 +46,18 @@ export const makeSyncLayer = (getToken: () => string | null) => {
 
   const scheduler = BackgroundSyncerLive.pipe(Layer.provide(supportServices))
 
-  return Layer.mergeAll(supportServices, scheduler)
+  const repository = RepositoryLive.pipe(Layer.provide(baseServices))
+
+  const apiServices = Layer.mergeAll(
+    AuthStoreLive,
+    CodeownersLive,
+    GitLive,
+    GitHubAuthLive,
+    MainWindowLive,
+    TaskManagerLive
+  )
+
+  return Layer.mergeAll(supportServices, scheduler, repository, apiServices)
 }
 
-export type SyncLayer = ReturnType<typeof makeSyncLayer>
+export type AppLayer = ReturnType<typeof makeAppLayer>

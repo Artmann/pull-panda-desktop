@@ -21,20 +21,20 @@ import {
 } from './sync/operations/sync-pull-requests'
 import { syncPullRequestDetails } from './sync/operations/sync-pull-request-details'
 import {
-  disposeSyncRuntime,
-  getSyncRuntime,
-  initializeSyncRuntime,
-  tryGetSyncRuntime
+  disposeAppRuntime,
+  getAppRuntime,
+  initializeAppRuntime,
+  tryGetAppRuntime
 } from './sync/runtime'
 import { BackgroundSyncer } from './sync/services/background-syncer'
+import { loadToken } from './auth'
 import {
-  clearToken,
-  getGitHubUser,
-  loadToken,
-  pollForToken,
-  requestDeviceCode,
-  saveToken
-} from './auth'
+  clearStoredToken,
+  getCurrentUser,
+  loadStoredToken,
+  pollForTokenOperation,
+  requestDeviceCodeOperation
+} from './main/api/operations/auth'
 
 let bootstrapData: BootstrapData | null = null
 let mainWindow: BrowserWindow | null = null
@@ -63,29 +63,31 @@ function setupIpcHandlers(): void {
     return taskManager.getTasks()
   })
 
-  ipcMain.handle(ipcChannels.AuthRequestDeviceCode, async () => {
-    return requestDeviceCode()
+  ipcMain.handle(ipcChannels.AuthRequestDeviceCode, () => {
+    const runtime = getAppRuntime()
+
+    return runtime.runPromise(requestDeviceCodeOperation)
   })
 
   ipcMain.handle(
     ipcChannels.AuthPollToken,
-    async (_event, deviceCode: string, interval: number) => {
-      const tokenResponse = await pollForToken(deviceCode, interval)
+    (_event, deviceCode: string, interval: number) => {
+      const runtime = getAppRuntime()
 
-      saveToken(tokenResponse.access_token)
-
-      return { success: true }
+      return runtime.runPromise(pollForTokenOperation({ deviceCode, interval }))
     }
   )
 
-  ipcMain.handle(ipcChannels.AuthGetToken, async () => {
-    return loadToken()
+  ipcMain.handle(ipcChannels.AuthGetToken, () => {
+    const runtime = getAppRuntime()
+
+    return runtime.runPromise(loadStoredToken)
   })
 
-  ipcMain.handle(ipcChannels.AuthClearToken, async () => {
-    clearToken()
+  ipcMain.handle(ipcChannels.AuthClearToken, () => {
+    const runtime = getAppRuntime()
 
-    return { success: true }
+    return runtime.runPromise(clearStoredToken)
   })
 
   ipcMain.handle(ipcChannels.AuthOpenUrl, async (_event, url: string) => {
@@ -100,18 +102,10 @@ function setupIpcHandlers(): void {
     return { success: true }
   })
 
-  ipcMain.handle(ipcChannels.AuthGetUser, async () => {
-    const token = loadToken()
+  ipcMain.handle(ipcChannels.AuthGetUser, () => {
+    const runtime = getAppRuntime()
 
-    if (!token) {
-      return null
-    }
-
-    try {
-      return await getGitHubUser(token)
-    } catch {
-      return null
-    }
+    return runtime.runPromise(getCurrentUser)
   })
 
   ipcMain.handle(ipcChannels.WindowClose, () => {
@@ -130,8 +124,8 @@ function setupIpcHandlers(): void {
     mainWindow?.minimize()
   })
 
-  ipcMain.handle(ipcChannels.GetSyncerStats, async () => {
-    const runtime = getSyncRuntime()
+  ipcMain.handle(ipcChannels.GetSyncerStats, () => {
+    const runtime = getAppRuntime()
 
     return runtime.runPromise(
       Effect.flatMap(BackgroundSyncer, (syncer) => syncer.getMonitoringData)
@@ -232,7 +226,7 @@ async function syncAllPullRequestDetails(): Promise<void> {
     return
   }
 
-  const runtime = getSyncRuntime()
+  const runtime = getAppRuntime()
   const activePullRequestIds = await runtime.runPromise(
     Effect.flatMap(BackgroundSyncer, (syncer) => syncer.getActivePullRequestIds)
   )
@@ -342,19 +336,15 @@ async function syncAllPullRequestDetails(): Promise<void> {
 }
 
 async function getUserLogin(): Promise<string | undefined> {
-  const token = loadToken()
+  const runtime = tryGetAppRuntime()
 
-  if (!token) {
+  if (!runtime) {
     return
   }
 
-  try {
-    const user = await getGitHubUser(token)
+  const user = await runtime.runPromise(getCurrentUser)
 
-    return user?.login
-  } catch {
-    return
-  }
+  return user?.login ?? undefined
 }
 
 app.on('ready', async () => {
@@ -364,7 +354,7 @@ app.on('ready', async () => {
   await initializeDatabase()
 
   // Initialize the sync runtime now that the database is ready.
-  const runtime = initializeSyncRuntime(loadToken)
+  const runtime = initializeAppRuntime(loadToken)
 
   await startApiServer(loadToken)
 
@@ -423,7 +413,7 @@ async function runPullRequestSync(): Promise<boolean> {
   taskManager.startTask(syncTask.id)
 
   try {
-    const runtime = getSyncRuntime()
+    const runtime = getAppRuntime()
     const result = await runtime.runPromise(syncPullRequests)
 
     taskManager.completeTask(syncTask.id)
@@ -472,7 +462,7 @@ async function runStaleSync(): Promise<void> {
   staleSyncInFlight = true
 
   try {
-    const runtime = getSyncRuntime()
+    const runtime = getAppRuntime()
     const staleUpdated = await runtime.runPromise(
       syncStalePullRequests(lastSearchSyncedIds)
     )
@@ -525,7 +515,7 @@ function scheduleNextPullRequestSync(): void {
           return
         }
 
-        const runtime = getSyncRuntime()
+        const runtime = getAppRuntime()
         const focusedId = await runtime.runPromise(
           Effect.flatMap(
             BackgroundSyncer,
@@ -567,7 +557,7 @@ app.on('before-quit', (event) => {
   event.preventDefault()
   isShuttingDown = true
 
-  const runtime = tryGetSyncRuntime()
+  const runtime = tryGetAppRuntime()
 
   if (!runtime) {
     stopApiServer()
@@ -587,7 +577,7 @@ app.on('before-quit', (event) => {
       console.error('Failed to stop background syncer:', error)
     })
     .then(() =>
-      disposeSyncRuntime().catch((error) => {
+      disposeAppRuntime().catch((error) => {
         console.error('Failed to dispose sync runtime:', error)
       })
     )

@@ -4,7 +4,7 @@ import path from 'node:path'
 import { Hono } from 'hono'
 
 import { getApiMainWindow } from '../main-window-ref'
-import type { AppEnv } from './comments'
+import type { AppEnv } from '../effect-handler'
 
 export const screenshotRoute = new Hono<AppEnv>()
 

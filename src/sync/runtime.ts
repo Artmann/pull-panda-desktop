@@ -1,30 +1,30 @@
 import { Layer, ManagedRuntime } from 'effect'
 
-import { makeSyncLayer, type SyncLayer } from './layer'
+import { makeAppLayer, type AppLayer } from './layer'
 
-export type SyncRuntime = ManagedRuntime.ManagedRuntime<
-  Layer.Layer.Success<SyncLayer>,
+export type AppRuntime = ManagedRuntime.ManagedRuntime<
+  Layer.Layer.Success<AppLayer>,
   never
 >
 
-let runtime: SyncRuntime | null = null
+let runtime: AppRuntime | null = null
 
-export function initializeSyncRuntime(
+export function initializeAppRuntime(
   getToken: () => string | null
-): SyncRuntime {
+): AppRuntime {
   if (runtime) {
     return runtime
   }
 
-  runtime = ManagedRuntime.make(makeSyncLayer(getToken))
+  runtime = ManagedRuntime.make(makeAppLayer(getToken))
 
   return runtime
 }
 
-export function getSyncRuntime(): SyncRuntime {
+export function getAppRuntime(): AppRuntime {
   if (!runtime) {
     throw new Error(
-      'Sync runtime not initialized. Call initializeSyncRuntime() first.'
+      'App runtime not initialized. Call initializeAppRuntime() first.'
     )
   }
 
@@ -33,12 +33,12 @@ export function getSyncRuntime(): SyncRuntime {
 
 // Non-throwing accessor for shutdown paths that may run before the runtime is
 // initialized (e.g. the `electron-squirrel-startup` early-quit flow). All
-// other call sites should keep using `getSyncRuntime()` so misuse stays loud.
-export function tryGetSyncRuntime(): SyncRuntime | null {
+// other call sites should keep using `getAppRuntime()` so misuse stays loud.
+export function tryGetAppRuntime(): AppRuntime | null {
   return runtime
 }
 
-export async function disposeSyncRuntime(): Promise<void> {
+export async function disposeAppRuntime(): Promise<void> {
   if (runtime) {
     await runtime.dispose()
     runtime = null

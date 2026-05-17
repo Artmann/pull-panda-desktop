@@ -28,6 +28,38 @@ Vite.
   4. On error: rollback the Redux changes and show an error toast with a
      descriptive, helpful error message.
 
+## Pull request descriptions
+
+When opening a PR, write the description in this order. Section names and
+ordering are fixed; omit optional sections entirely when they don't apply (don't
+write "None").
+
+1. **Summary** (required) — 1–3 sentences in plain language. No jargon, no file
+   paths, no acronyms a non-engineer wouldn't know. Tells the reader what the PR
+   does and why it matters. Lead with the user-visible effect, not the
+   implementation. Someone with zero prior context should finish this section
+   knowing what changes for them.
+2. **Technical details** (required) — Prose paragraph(s). What changed, which
+   components/areas of the codebase are affected, and any notable implementation
+   decisions. Reference files and symbols inline (`src/main/api/operations/`,
+   `Repository.findPullRequestById`) rather than as a bullet list. A skim should
+   reveal scope; a deep read should reveal intent.
+3. **Test plan** (required) — A checkbox list of _manual_ steps a reviewer can
+   run after checking out the branch. Phrase as imperative actions on the
+   running app, e.g. "Open a PR you have permission to merge", "Click the
+   three-dots menu and select 'Mark as ready for review'", "Confirm the PR row
+   in the list updates within a few seconds". Do **not** list `yarn test:run`,
+   `yarn typecheck`, or `yarn lint` — those are gates that already ran before
+   the PR was opened, not review steps.
+4. **Breaking changes** (only when relevant) — Anything that forces a reviewer
+   to take an extra step to test, or that affects existing users on `main` after
+   merge. Examples: "Sign out and sign back in to pick up the new token format",
+   "Delete `pull-panda.db` before running", "Adds a `FOO` variable that needs to
+   be set". Omit the section when there are none.
+5. **Out of scope** (optional) — 1–3 bullets naming related things deliberately
+   _not_ in this PR that a reviewer might otherwise ask about. Link to a
+   follow-up issue or branch if one exists.
+
 ## Commands
 
 - `yarn start` - Start development server
