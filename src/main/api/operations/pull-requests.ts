@@ -1,14 +1,15 @@
-import { BrowserWindow } from 'electron'
 import { Effect } from 'effect'
 import { eq } from 'drizzle-orm'
 import { graphql } from '@octokit/graphql'
 import { Octokit } from '@octokit/rest'
 
 import { pullRequests } from '../../../database/schema'
-import { ipcChannels } from '../../../lib/ipc/channels'
 import { getPullRequest, getPullRequestDetails } from '../../bootstrap'
 import { MemoryCache } from '../../memory-cache'
-import { sendPullRequestResourceEvents } from '../../send-resource-events'
+import {
+  broadcastPullRequestResourceEvents,
+  broadcastResourceUpdated
+} from '../../send-resource-events'
 import { syncPullRequestDetails } from '../../../sync/operations/sync-pull-request-details'
 import { BackgroundSyncer } from '../../../sync/services/background-syncer'
 import { Database } from '../../../sync/services/database'
@@ -57,21 +58,15 @@ const broadcastPullRequestUpdate = (
   data: PullRequest | null
 ) =>
   Effect.sync(() => {
-    for (const window of BrowserWindow.getAllWindows()) {
-      window.webContents.send(ipcChannels.ResourceUpdated, {
-        data,
-        pullRequestId,
-        type: 'pull-request'
-      })
-    }
+    broadcastResourceUpdated({
+      data,
+      pullRequestId,
+      type: 'pull-request'
+    })
   })
 
 const broadcastResourceEvents = (pullRequestId: string) =>
-  Effect.promise(async () => {
-    for (const window of BrowserWindow.getAllWindows()) {
-      await sendPullRequestResourceEvents(window, pullRequestId)
-    }
-  })
+  Effect.promise(() => broadcastPullRequestResourceEvents(pullRequestId))
 
 export const clearFocusedPullRequest = Effect.gen(function* () {
   const syncer = yield* BackgroundSyncer

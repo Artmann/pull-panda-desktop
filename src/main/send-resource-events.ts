@@ -1,8 +1,30 @@
-import type { BrowserWindow } from 'electron'
+import { BrowserWindow } from 'electron'
 
 import { ipcChannels } from '../lib/ipc/channels'
 import { getPullRequest, getPullRequestDetails } from './bootstrap'
 import type { ResourceUpdatedEvent } from '../types/ipc-events'
+
+export async function broadcastPullRequestResourceEvents(
+  pullRequestId: string,
+  userLogin?: string
+): Promise<void> {
+  for (const window of BrowserWindow.getAllWindows()) {
+    try {
+      await sendPullRequestResourceEvents(window, pullRequestId, userLogin)
+    } catch (error) {
+      console.warn(
+        'Failed to send pull request resource events to window:',
+        error
+      )
+    }
+  }
+}
+
+export function broadcastResourceUpdated(event: ResourceUpdatedEvent): void {
+  for (const window of BrowserWindow.getAllWindows()) {
+    sendEvent(window, event)
+  }
+}
 
 export async function sendPullRequestResourceEvents(
   window: BrowserWindow,
@@ -73,5 +95,13 @@ export async function sendPullRequestResourceEvents(
 }
 
 function sendEvent(window: BrowserWindow, event: ResourceUpdatedEvent): void {
-  window.webContents.send(ipcChannels.ResourceUpdated, event)
+  if (window.isDestroyed() || window.webContents.isDestroyed()) {
+    return
+  }
+
+  try {
+    window.webContents.send(ipcChannels.ResourceUpdated, event)
+  } catch (error) {
+    console.warn('Failed to send ResourceUpdated event to window:', error)
+  }
 }

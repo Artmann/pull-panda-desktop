@@ -1,4 +1,3 @@
-import { BrowserWindow } from 'electron'
 import { Effect } from 'effect'
 import { eq } from 'drizzle-orm'
 
@@ -10,7 +9,7 @@ import {
 import { Database } from '../../../sync/services/database'
 import { GitHubGraphQL } from '../../../sync/services/github-graphql'
 import { Repository } from '../../services/repository'
-import { sendPullRequestResourceEvents } from '../../send-resource-events'
+import { broadcastPullRequestResourceEvents } from '../../send-resource-events'
 
 export interface ToggleReviewThreadInput {
   readonly owner: string
@@ -66,11 +65,9 @@ const notifyRenderer = (input: ToggleReviewThreadInput) =>
       return
     }
 
-    yield* Effect.promise(async () => {
-      for (const window of BrowserWindow.getAllWindows()) {
-        await sendPullRequestResourceEvents(window, pullRequest.id)
-      }
-    })
+    yield* Effect.promise(() =>
+      broadcastPullRequestResourceEvents(pullRequest.id)
+    )
   })
 
 export const resolveReviewThread = (input: ToggleReviewThreadInput) =>

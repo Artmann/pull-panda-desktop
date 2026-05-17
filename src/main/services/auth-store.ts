@@ -59,6 +59,12 @@ export const AuthStoreLive: Layer.Layer<AuthStore> = Layer.succeed(AuthStore, {
 
           fs.writeFileSync(getEncryptedPath(), encrypted)
 
+          const plainPath = getPlainPath()
+
+          if (fs.existsSync(plainPath)) {
+            fs.unlinkSync(plainPath)
+          }
+
           return
         }
 

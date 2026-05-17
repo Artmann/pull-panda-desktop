@@ -1,11 +1,10 @@
-import { BrowserWindow } from 'electron'
 import { Octokit } from '@octokit/rest'
 import { Effect } from 'effect'
 
 import { syncPullRequestDetails } from '../../../sync/operations/sync-pull-request-details'
 import { generateId } from '../../../sync/shared/utils'
 import { Repository } from '../../services/repository'
-import { sendPullRequestResourceEvents } from '../../send-resource-events'
+import { broadcastPullRequestResourceEvents } from '../../send-resource-events'
 import { OctokitError } from '../errors'
 
 export interface CreateReviewInput {
@@ -155,11 +154,9 @@ const triggerDetailSync = (input: {
         return
       }
 
-      yield* Effect.promise(async () => {
-        for (const window of BrowserWindow.getAllWindows()) {
-          await sendPullRequestResourceEvents(window, input.pullRequestId)
-        }
-      })
+      yield* Effect.promise(() =>
+        broadcastPullRequestResourceEvents(input.pullRequestId)
+      )
     })
   )
 
