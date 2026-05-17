@@ -1,4 +1,3 @@
-import { Octokit } from '@octokit/rest'
 import { app, safeStorage } from 'electron'
 import fs from 'node:fs'
 import path from 'node:path'
@@ -25,21 +24,6 @@ export interface GitHubUser {
   name: string | null
 }
 
-interface TokenErrorResponse {
-  error: string
-  error_description: string
-  error_uri?: string
-}
-
-interface TokenResponse {
-  access_token: string
-  token_type: string
-  scope: string
-}
-
-const gitHubClientId = 'Ov23liTdCH6GSo575kz2'
-const gitHubScopes = 'repo read:user'
-
 function getTokenPath(): string {
   return path.join(app.getPath('userData'), 'github-token.enc')
 }
@@ -48,32 +32,11 @@ function getPlainTokenPath(): string {
   return path.join(app.getPath('userData'), 'github-token.txt')
 }
 
-export function clearToken(): void {
-  const tokenPath = getTokenPath()
-  const plainPath = getPlainTokenPath()
-
-  if (fs.existsSync(tokenPath)) {
-    fs.unlinkSync(tokenPath)
-  }
-
-  if (fs.existsSync(plainPath)) {
-    fs.unlinkSync(plainPath)
-  }
-}
-
-export async function getGitHubUser(token: string) {
-  const octokit = new Octokit({ auth: token })
-  const { data } = await octokit.users.getAuthenticated()
-
-  return {
-    avatar_url: data.avatar_url,
-    login: data.login,
-    name: data.name
-  }
-}
-
+// Synchronous token reader used as the runtime's TokenProvider callback. The
+// runtime needs a non-Effect source, so this stays a plain function. All
+// other auth concerns (device flow, token persistence, user lookup) live in
+// the AuthStore / GitHubAuth services.
 export function loadToken(): string | null {
-  // Try encrypted storage first
   if (safeStorage.isEncryptionAvailable()) {
     const tokenPath = getTokenPath()
 
@@ -88,7 +51,6 @@ export function loadToken(): string | null {
     }
   }
 
-  // Fallback to plain text storage (for unsigned builds)
   const plainPath = getPlainTokenPath()
 
   if (fs.existsSync(plainPath)) {
@@ -100,87 +62,4 @@ export function loadToken(): string | null {
   }
 
   return null
-}
-
-export async function pollForToken(
-  deviceCode: string,
-  interval: number
-): Promise<TokenResponse> {
-  const poll = async (): Promise<TokenResponse> => {
-    const response = await fetch(
-      'https://github.com/login/oauth/access_token',
-      {
-        body: JSON.stringify({
-          client_id: gitHubClientId,
-          device_code: deviceCode,
-          grant_type: 'urn:ietf:params:oauth:grant-type:device_code'
-        }),
-        headers: {
-          Accept: 'application/json',
-          'Content-Type': 'application/json'
-        },
-        method: 'POST'
-      }
-    )
-
-    const data = (await response.json()) as TokenResponse | TokenErrorResponse
-
-    if ('error' in data) {
-      if (data.error === 'authorization_pending') {
-        // User hasn't authorized yet, wait and retry
-        await new Promise((resolve) => setTimeout(resolve, interval * 1000))
-
-        return poll()
-      } else if (data.error === 'slow_down') {
-        // Rate limited, increase interval
-        await new Promise((resolve) =>
-          setTimeout(resolve, (interval + 5) * 1000)
-        )
-
-        return poll()
-      } else if (data.error === 'expired_token') {
-        throw new Error('Device code expired. Please try again.')
-      } else if (data.error === 'access_denied') {
-        throw new Error('Access denied by user.')
-      } else {
-        throw new Error(data.error_description || data.error)
-      }
-    }
-
-    return data
-  }
-
-  return poll()
-}
-
-export async function requestDeviceCode(): Promise<DeviceCodeResponse> {
-  const response = await fetch('https://github.com/login/device/code', {
-    body: JSON.stringify({
-      client_id: gitHubClientId,
-      scope: gitHubScopes
-    }),
-    headers: {
-      Accept: 'application/json',
-      'Content-Type': 'application/json'
-    },
-    method: 'POST'
-  })
-
-  if (!response.ok) {
-    throw new Error(`Failed to request device code: ${response.statusText}`)
-  }
-
-  return response.json()
-}
-
-export function saveToken(token: string): void {
-  if (safeStorage.isEncryptionAvailable()) {
-    const encrypted = safeStorage.encryptString(token)
-
-    fs.writeFileSync(getTokenPath(), encrypted)
-  } else {
-    // Fallback: store in plain text (less secure, but works for unsigned builds)
-    console.warn('safeStorage not available, storing token in plain text')
-    fs.writeFileSync(getPlainTokenPath(), token, 'utf-8')
-  }
 }

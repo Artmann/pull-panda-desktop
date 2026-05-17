@@ -1,148 +1,119 @@
-import { dialog } from 'electron'
+import { Effect } from 'effect'
 import { Hono } from 'hono'
 
-import { loadToken } from '../../../auth'
-import { getPullRequest } from '../../bootstrap'
 import {
-  loadAll as loadConnectedRepos,
-  removeRepoPath,
-  setRepoPath
-} from '../../connected-repos'
-import { checkoutPullRequestBranch, cloneRepo, verifyRepo } from '../../git'
-import { getApiMainWindow } from '../main-window-ref'
-
-import type { AppEnv } from './comments'
-
-interface CheckoutBody {
-  pullRequestId: string
-}
-
-interface CloneBody {
-  fullName: string
-  parentDir: string
-}
-
-interface SetBody {
-  fullName: string
-  localPath: string
-}
-
-interface VerifyBody {
-  fullName: string
-  localPath: string
-}
-
-interface RemoveBody {
-  fullName: string
-}
+  effectHandler,
+  parseJson,
+  requireString,
+  type AppEnv
+} from '../effect-handler'
+import {
+  checkoutPullRequest,
+  cloneRepository,
+  pickFolder,
+  removeConnectedRepo,
+  setConnectedRepo,
+  verifyConnectedRepo
+} from '../operations/repo-checkout'
 
 export const repoCheckoutRoute = new Hono<AppEnv>()
 
-repoCheckoutRoute.post('/pick-folder', async (context) => {
-  const window = getApiMainWindow()
+repoCheckoutRoute.post(
+  '/pick-folder',
+  effectHandler(() => pickFolder)
+)
 
-  if (!window) {
-    return context.json({ path: null })
-  }
+repoCheckoutRoute.post(
+  '/verify',
+  effectHandler((context) =>
+    Effect.gen(function* () {
+      const body = yield* parseJson(context, (raw) => {
+        const record = (raw ?? {}) as Record<string, unknown>
 
-  const result = await dialog.showOpenDialog(window, {
-    properties: ['openDirectory']
-  })
+        return {
+          fullName: record.fullName,
+          localPath: record.localPath
+        }
+      })
+      const fullName = yield* requireString(body.fullName, 'fullName')
+      const localPath = yield* requireString(body.localPath, 'localPath')
 
-  if (result.canceled || result.filePaths.length === 0) {
-    return context.json({ path: null })
-  }
-
-  return context.json({ path: result.filePaths[0] })
-})
-
-repoCheckoutRoute.post('/verify', async (context) => {
-  const body = await context.req.json<VerifyBody>()
-
-  if (!body.fullName || !body.localPath) {
-    return context.json({ error: 'Missing required fields' }, 400)
-  }
-
-  const result = await verifyRepo(body.localPath, body.fullName)
-
-  return context.json(result)
-})
-
-repoCheckoutRoute.post('/clone', async (context) => {
-  const body = await context.req.json<CloneBody>()
-
-  if (!body.fullName || !body.parentDir) {
-    return context.json({ error: 'Missing required fields' }, 400)
-  }
-
-  const token = loadToken()
-  const result = await cloneRepo({
-    fullName: body.fullName,
-    parentDir: body.parentDir,
-    token
-  })
-
-  return context.json(result)
-})
-
-repoCheckoutRoute.post('/set', async (context) => {
-  const body = await context.req.json<SetBody>()
-
-  if (!body.fullName || !body.localPath) {
-    return context.json({ error: 'Missing required fields' }, 400)
-  }
-
-  setRepoPath(body.fullName, body.localPath)
-
-  return context.json({ success: true })
-})
-
-repoCheckoutRoute.post('/remove', async (context) => {
-  const body = await context.req.json<RemoveBody>()
-
-  if (!body.fullName) {
-    return context.json({ error: 'Missing required fields' }, 400)
-  }
-
-  removeRepoPath(body.fullName)
-
-  return context.json({ success: true })
-})
-
-repoCheckoutRoute.post('/checkout', async (context) => {
-  const body = await context.req.json<CheckoutBody>()
-
-  if (!body.pullRequestId) {
-    return context.json({ error: 'Missing required fields' }, 400)
-  }
-
-  const pullRequest = await getPullRequest(body.pullRequestId)
-
-  if (!pullRequest) {
-    return context.json({
-      code: 'pr-not-found',
-      message: 'Pull request not found in local database.',
-      ok: false
+      return yield* verifyConnectedRepo({ fullName, localPath })
     })
-  }
+  )
+)
 
-  const fullName = `${pullRequest.repositoryOwner}/${pullRequest.repositoryName}`
-  const repos = loadConnectedRepos()
-  const localPath = repos[fullName]
+repoCheckoutRoute.post(
+  '/clone',
+  effectHandler((context) =>
+    Effect.gen(function* () {
+      const body = yield* parseJson(context, (raw) => {
+        const record = (raw ?? {}) as Record<string, unknown>
 
-  if (!localPath) {
-    return context.json({
-      code: 'not-connected',
-      message: `No local clone connected for ${fullName}.`,
-      ok: false
+        return {
+          fullName: record.fullName,
+          parentDir: record.parentDir
+        }
+      })
+      const fullName = yield* requireString(body.fullName, 'fullName')
+      const parentDir = yield* requireString(body.parentDir, 'parentDir')
+
+      return yield* cloneRepository({ fullName, parentDir })
     })
-  }
+  )
+)
 
-  const result = await checkoutPullRequestBranch({
-    headRefName: pullRequest.headRefName,
-    localPath,
-    pullNumber: pullRequest.number
-  })
+repoCheckoutRoute.post(
+  '/set',
+  effectHandler((context) =>
+    Effect.gen(function* () {
+      const body = yield* parseJson(context, (raw) => {
+        const record = (raw ?? {}) as Record<string, unknown>
 
-  return context.json(result)
-})
+        return {
+          fullName: record.fullName,
+          localPath: record.localPath
+        }
+      })
+      const fullName = yield* requireString(body.fullName, 'fullName')
+      const localPath = yield* requireString(body.localPath, 'localPath')
+
+      return yield* setConnectedRepo({ fullName, localPath })
+    })
+  )
+)
+
+repoCheckoutRoute.post(
+  '/remove',
+  effectHandler((context) =>
+    Effect.gen(function* () {
+      const body = yield* parseJson(context, (raw) => {
+        const record = (raw ?? {}) as Record<string, unknown>
+
+        return { fullName: record.fullName }
+      })
+      const fullName = yield* requireString(body.fullName, 'fullName')
+
+      return yield* removeConnectedRepo({ fullName })
+    })
+  )
+)
+
+repoCheckoutRoute.post(
+  '/checkout',
+  effectHandler((context) =>
+    Effect.gen(function* () {
+      const body = yield* parseJson(context, (raw) => {
+        const record = (raw ?? {}) as Record<string, unknown>
+
+        return { pullRequestId: record.pullRequestId }
+      })
+      const pullRequestId = yield* requireString(
+        body.pullRequestId,
+        'pullRequestId'
+      )
+
+      return yield* checkoutPullRequest(pullRequestId)
+    })
+  )
+)
