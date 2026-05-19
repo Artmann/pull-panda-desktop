@@ -81,13 +81,41 @@ export const createPendingReview = (input: CreateReviewInput) =>
 
     const data = yield* Effect.tryPromise({
       try: async () => {
-        const response = await octokit.rest.pulls.createReview({
-          owner: input.owner,
-          pull_number: input.pullNumber,
-          repo: input.repo
-        })
+        try {
+          const response = await octokit.rest.pulls.createReview({
+            owner: input.owner,
+            pull_number: input.pullNumber,
+            repo: input.repo
+          })
 
-        return response.data
+          return response.data
+        } catch (error) {
+          const message = error instanceof Error ? error.message : ''
+
+          if (!message.includes('one pending review per pull request')) {
+            throw error
+          }
+
+          const { data: authenticatedUser } =
+            await octokit.rest.users.getAuthenticated()
+          const { data: reviews } = await octokit.rest.pulls.listReviews({
+            owner: input.owner,
+            pull_number: input.pullNumber,
+            repo: input.repo
+          })
+
+          const existing = reviews.find(
+            (review) =>
+              review.state === 'PENDING' &&
+              review.user?.login === authenticatedUser.login
+          )
+
+          if (!existing) {
+            throw error
+          }
+
+          return existing
+        }
       },
       catch: octokitErrorOf('pulls.createReview', (message) =>
         message.includes('one pending review per pull request')
