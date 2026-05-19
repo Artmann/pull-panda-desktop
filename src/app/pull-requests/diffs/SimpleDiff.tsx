@@ -9,6 +9,7 @@ import {
   useState,
   type ReactElement
 } from 'react'
+import { shallowEqual } from 'react-redux'
 
 import {
   getLanguageFromPath,
@@ -18,6 +19,7 @@ import { scheduleIdleTask } from '@/app/lib/idle-scheduler'
 import { useAppTheme } from '@/app/lib/store/themeContext'
 import { getDiffColors } from '@/app/lib/themes'
 import { cn, escapeHtml } from '@/app/lib/utils'
+import { useAppSelector } from '@/app/store/hooks'
 import type { PendingReviewComment } from '@/app/store/pending-review-comments-slice'
 import type { Comment } from '@/types/pull-request-details'
 import type { PullRequest } from '@/types/pull-request'
@@ -28,7 +30,10 @@ import { applyIntraLineDiffHighlighting } from './intra-line-diff'
 import { PendingComment } from './PendingComment'
 import { SubmittedComment } from './SubmittedComment'
 import { Button } from '@/app/components/ui/button'
+import { CommentReply } from '@/app/pull-requests/components/CommentReply'
 import { useLandmark } from '@/app/pull-requests/PullRequestNavigationProvider'
+
+const emptyComments: Comment[] = []
 
 async function highlightLines(
   lines: DiffHunkLine[],
@@ -109,6 +114,64 @@ export const SimpleDiff = memo(function SimpleDiff({
   const [activeCommentLineIndex, setActiveCommentLineIndex] = useState<
     number | null
   >(null)
+  const [expandedReplyThreads, setExpandedReplyThreads] = useState<Set<string>>(
+    new Set()
+  )
+
+  const pullRequestId = pullRequest?.id ?? null
+
+  const allPullRequestComments = useAppSelector((state) => {
+    if (!pullRequestId) {
+      return emptyComments
+    }
+
+    return state.comments.items.filter((c) => c.pullRequestId === pullRequestId)
+  }, shallowEqual)
+
+  const childrenByParentGitHubId = useMemo(() => {
+    const map = new Map<string, Comment[]>()
+
+    for (const comment of allPullRequestComments) {
+      const parentId = comment.parentCommentGitHubId
+
+      if (!parentId) {
+        continue
+      }
+
+      const existing = map.get(parentId)
+
+      if (existing) {
+        existing.push(comment)
+      } else {
+        map.set(parentId, [comment])
+      }
+    }
+
+    for (const replies of map.values()) {
+      replies.sort((a, b) => {
+        const aTime = new Date(a.gitHubCreatedAt ?? a.syncedAt).getTime()
+        const bTime = new Date(b.gitHubCreatedAt ?? b.syncedAt).getTime()
+
+        return aTime - bTime
+      })
+    }
+
+    return map
+  }, [allPullRequestComments])
+
+  const toggleReplyForm = useCallback((threadKey: string) => {
+    setExpandedReplyThreads((previous) => {
+      const next = new Set(previous)
+
+      if (next.has(threadKey)) {
+        next.delete(threadKey)
+      } else {
+        next.add(threadKey)
+      }
+
+      return next
+    })
+  }, [])
   const { appTheme } = useAppTheme()
   const { resolvedTheme } = useTheme()
   const isDark = resolvedTheme === 'dark'
@@ -333,21 +396,64 @@ export const SimpleDiff = memo(function SimpleDiff({
               onClick={() => handleLineClick(index)}
             />
 
-            {lineSubmittedComments.map((comment) =>
-              registerCommentLandmarks ? (
+            {lineSubmittedComments.map((rootComment) => {
+              const replies =
+                childrenByParentGitHubId.get(rootComment.gitHubId) ?? []
+              const threadKey =
+                rootComment.gitHubReviewThreadId ?? rootComment.gitHubId
+              const isReplyOpen = expandedReplyThreads.has(threadKey)
+              const canReply =
+                Boolean(pullRequest) &&
+                rootComment.gitHubReviewThreadId !== null
+
+              const rootElement = registerCommentLandmarks ? (
                 <LandmarkWrapper
-                  key={comment.id}
-                  id={`file-comment-${comment.id}`}
+                  key={rootComment.id}
+                  id={`file-comment-${rootComment.id}`}
                 >
-                  <SubmittedComment comment={comment} />
+                  <SubmittedComment comment={rootComment} />
                 </LandmarkWrapper>
               ) : (
                 <SubmittedComment
-                  key={comment.id}
-                  comment={comment}
+                  key={rootComment.id}
+                  comment={rootComment}
                 />
               )
-            )}
+
+              return (
+                <div key={rootComment.id}>
+                  {rootElement}
+
+                  {replies.map((reply) => (
+                    <div
+                      key={reply.id}
+                      className="ml-6 border-l border-border pl-3"
+                    >
+                      <SubmittedComment comment={reply} />
+                    </div>
+                  ))}
+
+                  {canReply && pullRequest && (
+                    <div className="border-l-3 border-l-blue-500 border-border border-y bg-background px-3 py-2 font-sans">
+                      {isReplyOpen ? (
+                        <CommentReply
+                          comment={rootComment}
+                          pullRequest={pullRequest}
+                        />
+                      ) : (
+                        <Button
+                          onClick={() => toggleReplyForm(threadKey)}
+                          size="xs"
+                          variant="ghost"
+                        >
+                          Reply
+                        </Button>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )
+            })}
 
             {linePendingComments.map((comment) =>
               registerCommentLandmarks ? (

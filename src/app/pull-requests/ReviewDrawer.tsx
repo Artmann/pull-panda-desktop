@@ -32,14 +32,23 @@ interface ReviewDrawerProps {
 export const ReviewDrawer = memo(function ReviewDrawer({
   pullRequest
 }: ReviewDrawerProps): ReactElement {
-  const [isCollapsed, setIsCollapsed] = useState(false)
-
   const dispatch = useAppDispatch()
 
   const pendingReview = useAppSelector(
     (state) => state.pendingReviews[pullRequest.id],
     shallowEqual
   )
+
+  const isCollapsed = pendingReview?.isCollapsed ?? false
+
+  const handleToggleCollapsed = () => {
+    dispatch(
+      pendingReviewsActions.setCollapsed({
+        collapsed: !isCollapsed,
+        pullRequestId: pullRequest.id
+      })
+    )
+  }
 
   const pendingComments: PendingReviewComment[] = useAppSelector(
     (state) =>
@@ -204,7 +213,7 @@ export const ReviewDrawer = memo(function ReviewDrawer({
         <Button
           size="icon-xs"
           variant="outline"
-          onClick={() => setIsCollapsed(!isCollapsed)}
+          onClick={handleToggleCollapsed}
         >
           {isCollapsed ? (
             <ChevronLeftIcon className="size-3" />

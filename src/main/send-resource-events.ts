@@ -87,7 +87,9 @@ export async function sendPullRequestResourceEvents(
     })
 
     sendEvent(window, {
-      data: details.pendingReview ?? null,
+      data: details.pendingReview
+        ? { ...details.pendingReview, isCollapsed: false, pullRequestId }
+        : null,
       pullRequestId,
       type: 'pending-review'
     })

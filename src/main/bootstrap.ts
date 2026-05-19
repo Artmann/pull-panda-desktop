@@ -36,6 +36,7 @@ export interface PendingReview {
   gitHubId: string
   gitHubNumericId: number | null
   id: string
+  isCollapsed: boolean
   pullRequestId: string
   state: string
 }
@@ -150,6 +151,7 @@ export async function bootstrap(userLogin?: string): Promise<BootstrapData> {
         gitHubId: review.gitHubId,
         gitHubNumericId: review.gitHubNumericId,
         id: review.id,
+        isCollapsed: false,
         pullRequestId: review.pullRequestId,
         state: review.state
       }

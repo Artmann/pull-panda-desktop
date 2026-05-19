@@ -93,9 +93,9 @@ export const NewCommentForm = memo(function NewCommentForm({
   return (
     <div className="w-full flex flex-col gap-2 py-2">
       <Textarea
-        className="h-16 text-sm resize-none border-muted"
+        className="h-20 text-sm resize-none border-muted"
         disabled={isSubmitting}
-        placeholder="Say something"
+        placeholder="Leave a comment..."
         value={body}
         onChange={(event) => setBody(event.target.value)}
         onKeyDown={handleKeyDown}
