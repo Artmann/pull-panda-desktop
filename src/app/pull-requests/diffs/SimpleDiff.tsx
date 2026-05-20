@@ -396,7 +396,9 @@ export const SimpleDiff = memo(function SimpleDiff({
               onClick={() => handleLineClick(index)}
             />
 
-            {lineSubmittedComments.map((rootComment) => {
+            {lineSubmittedComments
+              .filter((comment) => !comment.parentCommentGitHubId)
+              .map((rootComment) => {
               const replies =
                 childrenByParentGitHubId.get(rootComment.gitHubId) ?? []
               const threadKey =

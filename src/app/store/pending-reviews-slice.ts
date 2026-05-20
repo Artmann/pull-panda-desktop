@@ -63,7 +63,14 @@ const pendingReviewsSlice = createSlice({
       state,
       action: PayloadAction<{ pullRequestId: string; review: PendingReview }>
     ) {
-      state[action.payload.pullRequestId] = action.payload.review
+      const existing = state[action.payload.pullRequestId]
+
+      state[action.payload.pullRequestId] = {
+        ...action.payload.review,
+        isCollapsed: existing
+          ? existing.isCollapsed
+          : action.payload.review.isCollapsed
+      }
     }
   }
 })
