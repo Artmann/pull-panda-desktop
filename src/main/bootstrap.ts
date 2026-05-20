@@ -141,8 +141,7 @@ export async function bootstrap(userLogin?: string): Promise<BootstrapData> {
       changesRequestedCountByPrId.set(review.pullRequestId, count + 1)
     } else if (
       review.state === 'PENDING' &&
-      userLogin &&
-      review.authorLogin === userLogin
+      (!userLogin || review.authorLogin === userLogin)
     ) {
       pendingReviews[review.pullRequestId] = {
         authorAvatarUrl: review.authorAvatarUrl,
@@ -380,12 +379,12 @@ export async function getPullRequestDetails(
     syncedAt: row.syncedAt
   }))
 
-  const pendingReview = userLogin
-    ? (parsedReviews.find(
-        (review) =>
-          review.state === 'PENDING' && review.authorLogin === userLogin
-      ) ?? null)
-    : null
+  const pendingReview =
+    parsedReviews.find(
+      (review) =>
+        review.state === 'PENDING' &&
+        (!userLogin || review.authorLogin === userLogin)
+    ) ?? null
 
   return {
     checks: parsedChecks,

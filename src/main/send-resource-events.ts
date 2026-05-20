@@ -93,13 +93,15 @@ export async function sendPullRequestResourceEvents(
       type: 'review-threads'
     })
 
-    sendEvent(window, {
-      data: details.pendingReview
-        ? { ...details.pendingReview, isCollapsed: false, pullRequestId }
-        : null,
-      pullRequestId,
-      type: 'pending-review'
-    })
+    if (effectiveUserLogin) {
+      sendEvent(window, {
+        data: details.pendingReview
+          ? { ...details.pendingReview, isCollapsed: false, pullRequestId }
+          : null,
+        pullRequestId,
+        type: 'pending-review'
+      })
+    }
   }
 }
 
