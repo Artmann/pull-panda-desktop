@@ -26,6 +26,7 @@ import {
 import {
   clearFocusedPullRequest,
   getMergeOptions,
+  getPendingReview,
   markPullRequestActive,
   setFocusedPullRequest
 } from '@/app/lib/api'
@@ -35,6 +36,7 @@ import {
 } from '@/app/pull-requests/PullRequestNavigationProvider'
 import { useAppDispatch, useAppSelector } from '@/app/store/hooks'
 import { mergeOptionsActions } from '@/app/store/merge-options-slice'
+import { pendingReviewsActions } from '@/app/store/pending-reviews-slice'
 import { clamp01 } from '@/math'
 
 import { ChecksView } from '../pull-requests/ChecksView'
@@ -113,6 +115,52 @@ export function PullRequestPage(): ReactElement {
       }
     },
     [id]
+  )
+
+  useEffect(
+    function hydratePendingReview() {
+      if (!pullRequest) {
+        return
+      }
+
+      let cancelled = false
+
+      getPendingReview({
+        owner: pullRequest.repositoryOwner,
+        pullNumber: pullRequest.number,
+        repo: pullRequest.repositoryName
+      })
+        .then((review) => {
+          if (cancelled || !review) {
+            return
+          }
+
+          dispatch(
+            pendingReviewsActions.setReview({
+              pullRequestId: pullRequest.id,
+              review: {
+                ...review,
+                isCollapsed: false,
+                pullRequestId: pullRequest.id
+              }
+            })
+          )
+        })
+        .catch(() => {
+          // Best-effort hydration; the focused sync will reconcile state.
+        })
+
+      return () => {
+        cancelled = true
+      }
+    },
+    [
+      dispatch,
+      pullRequest?.id,
+      pullRequest?.number,
+      pullRequest?.repositoryName,
+      pullRequest?.repositoryOwner
+    ]
   )
 
   const [fetchGeneration, setFetchGeneration] = useState(0)

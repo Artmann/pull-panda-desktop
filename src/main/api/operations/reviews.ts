@@ -2,7 +2,6 @@ import { Octokit } from '@octokit/rest'
 import { Effect } from 'effect'
 
 import { syncPullRequestDetails } from '../../../sync/operations/sync-pull-request-details'
-import { generateId } from '../../../sync/shared/utils'
 import { Repository } from '../../services/repository'
 import { broadcastPullRequestResourceEvents } from '../../send-resource-events'
 import { OctokitError } from '../errors'
@@ -22,6 +21,13 @@ export interface CreateReviewResult {
   readonly gitHubNumericId: number
   readonly id: string
   readonly state: string
+}
+
+export interface GetPendingReviewInput {
+  readonly owner: string
+  readonly pullNumber: number
+  readonly repo: string
+  readonly token: string
 }
 
 export interface DeleteReviewInput {
@@ -71,7 +77,7 @@ export const createPendingReview = (input: CreateReviewInput) =>
   Effect.gen(function* () {
     const repository = yield* Repository
 
-    yield* repository.requirePullRequestByCoords({
+    const pullRequest = yield* repository.requirePullRequestByCoords({
       number: input.pullNumber,
       owner: input.owner,
       repo: input.repo
@@ -124,14 +130,104 @@ export const createPendingReview = (input: CreateReviewInput) =>
       )
     })
 
+    const persisted = yield* repository.upsertReview({
+      pullRequestId: pullRequest.id,
+      review: {
+        authorAvatarUrl: data.user?.avatar_url ?? null,
+        authorLogin: data.user?.login ?? null,
+        body: data.body ?? null,
+        bodyHtml: data.body_html ?? null,
+        gitHubCreatedAt: data.submitted_at ?? null,
+        gitHubId: data.node_id,
+        gitHubNumericId: data.id,
+        gitHubSubmittedAt: data.submitted_at ?? null,
+        state: data.state,
+        url: data.html_url ?? null
+      }
+    })
+
+    yield* Effect.promise(() =>
+      broadcastPullRequestResourceEvents(pullRequest.id)
+    )
+
     const result: CreateReviewResult = {
-      authorAvatarUrl: data.user?.avatar_url ?? null,
-      authorLogin: data.user?.login ?? null,
-      body: data.body ?? null,
-      gitHubId: data.node_id,
-      gitHubNumericId: data.id,
-      id: generateId(),
-      state: data.state
+      authorAvatarUrl: persisted.authorAvatarUrl,
+      authorLogin: persisted.authorLogin,
+      body: persisted.body,
+      gitHubId: persisted.gitHubId,
+      gitHubNumericId: persisted.gitHubNumericId ?? data.id,
+      id: persisted.id,
+      state: persisted.state
+    }
+
+    return result
+  })
+
+export const getOrSyncPendingReview = (input: GetPendingReviewInput) =>
+  Effect.gen(function* () {
+    const repository = yield* Repository
+
+    const pullRequest = yield* repository.requirePullRequestByCoords({
+      number: input.pullNumber,
+      owner: input.owner,
+      repo: input.repo
+    })
+
+    const octokit = new Octokit({ auth: input.token })
+
+    const existing = yield* Effect.tryPromise({
+      try: async () => {
+        const { data: authenticatedUser } =
+          await octokit.rest.users.getAuthenticated()
+        const { data: reviews } = await octokit.rest.pulls.listReviews({
+          owner: input.owner,
+          pull_number: input.pullNumber,
+          repo: input.repo
+        })
+
+        return (
+          reviews.find(
+            (review) =>
+              review.state === 'PENDING' &&
+              review.user?.login === authenticatedUser.login
+          ) ?? null
+        )
+      },
+      catch: octokitErrorOf('pulls.listReviews (pending)')
+    })
+
+    if (!existing) {
+      return null
+    }
+
+    const persisted = yield* repository.upsertReview({
+      pullRequestId: pullRequest.id,
+      review: {
+        authorAvatarUrl: existing.user?.avatar_url ?? null,
+        authorLogin: existing.user?.login ?? null,
+        body: existing.body ?? null,
+        bodyHtml: existing.body_html ?? null,
+        gitHubCreatedAt: existing.submitted_at ?? null,
+        gitHubId: existing.node_id,
+        gitHubNumericId: existing.id,
+        gitHubSubmittedAt: existing.submitted_at ?? null,
+        state: existing.state,
+        url: existing.html_url ?? null
+      }
+    })
+
+    yield* Effect.promise(() =>
+      broadcastPullRequestResourceEvents(pullRequest.id)
+    )
+
+    const result: CreateReviewResult = {
+      authorAvatarUrl: persisted.authorAvatarUrl,
+      authorLogin: persisted.authorLogin,
+      body: persisted.body,
+      gitHubId: persisted.gitHubId,
+      gitHubNumericId: persisted.gitHubNumericId ?? existing.id,
+      id: persisted.id,
+      state: persisted.state
     }
 
     return result

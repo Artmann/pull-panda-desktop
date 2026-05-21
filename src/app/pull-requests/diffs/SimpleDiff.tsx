@@ -399,63 +399,63 @@ export const SimpleDiff = memo(function SimpleDiff({
             {lineSubmittedComments
               .filter((comment) => !comment.parentCommentGitHubId)
               .map((rootComment) => {
-              const replies =
-                childrenByParentGitHubId.get(rootComment.gitHubId) ?? []
-              const threadKey =
-                rootComment.gitHubReviewThreadId ?? rootComment.gitHubId
-              const isReplyOpen = expandedReplyThreads.has(threadKey)
-              const canReply =
-                Boolean(pullRequest) &&
-                rootComment.gitHubReviewThreadId !== null
+                const replies =
+                  childrenByParentGitHubId.get(rootComment.gitHubId) ?? []
+                const threadKey =
+                  rootComment.gitHubReviewThreadId ?? rootComment.gitHubId
+                const isReplyOpen = expandedReplyThreads.has(threadKey)
+                const canReply =
+                  Boolean(pullRequest) &&
+                  rootComment.gitHubReviewThreadId !== null
 
-              const rootElement = registerCommentLandmarks ? (
-                <LandmarkWrapper
-                  key={rootComment.id}
-                  id={`file-comment-${rootComment.id}`}
-                >
-                  <SubmittedComment comment={rootComment} />
-                </LandmarkWrapper>
-              ) : (
-                <SubmittedComment
-                  key={rootComment.id}
-                  comment={rootComment}
-                />
-              )
+                const rootElement = registerCommentLandmarks ? (
+                  <LandmarkWrapper
+                    key={rootComment.id}
+                    id={`file-comment-${rootComment.id}`}
+                  >
+                    <SubmittedComment comment={rootComment} />
+                  </LandmarkWrapper>
+                ) : (
+                  <SubmittedComment
+                    key={rootComment.id}
+                    comment={rootComment}
+                  />
+                )
 
-              return (
-                <div key={rootComment.id}>
-                  {rootElement}
+                return (
+                  <div key={rootComment.id}>
+                    {rootElement}
 
-                  {replies.map((reply) => (
-                    <div
-                      key={reply.id}
-                      className="ml-6 border-l border-border pl-3"
-                    >
-                      <SubmittedComment comment={reply} />
-                    </div>
-                  ))}
+                    {replies.map((reply) => (
+                      <div
+                        key={reply.id}
+                        className="ml-6 border-l border-border pl-3"
+                      >
+                        <SubmittedComment comment={reply} />
+                      </div>
+                    ))}
 
-                  {canReply && pullRequest && (
-                    <div className="border-l-3 border-l-blue-500 border-border border-y bg-background px-3 py-2 font-sans">
-                      {isReplyOpen ? (
-                        <CommentReply
-                          comment={rootComment}
-                          pullRequest={pullRequest}
-                        />
-                      ) : (
-                        <Button
-                          onClick={() => toggleReplyForm(threadKey)}
-                          size="xs"
-                          variant="ghost"
-                        >
-                          Reply
-                        </Button>
-                      )}
-                    </div>
-                  )}
-                </div>
-              )
-            })}
+                    {canReply && pullRequest && (
+                      <div className="border-l-3 border-l-blue-500 border-border border-y bg-background px-3 py-2 font-sans">
+                        {isReplyOpen ? (
+                          <CommentReply
+                            comment={rootComment}
+                            pullRequest={pullRequest}
+                          />
+                        ) : (
+                          <Button
+                            onClick={() => toggleReplyForm(threadKey)}
+                            size="xs"
+                            variant="ghost"
+                          >
+                            Reply
+                          </Button>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                )
+              })}
 
             {linePendingComments.map((comment) =>
               registerCommentLandmarks ? (
