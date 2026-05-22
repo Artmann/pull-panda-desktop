@@ -117,6 +117,29 @@ export async function createReview(
   return response.json()
 }
 
+export async function getPendingReview(
+  request: CreateReviewRequest
+): Promise<CreateReviewResponse | null> {
+  const baseUrl = await getApiBaseUrl()
+  const params = new URLSearchParams({
+    owner: request.owner,
+    pullNumber: String(request.pullNumber),
+    repo: request.repo
+  })
+
+  const response = await fetch(`${baseUrl}/api/reviews/pending?${params}`)
+
+  if (!response.ok) {
+    const error = await response.json()
+
+    throw new Error(
+      extractErrorMessage(error.error, 'Failed to fetch pending review')
+    )
+  }
+
+  return response.json()
+}
+
 export async function submitReview(
   request: SubmitReviewRequest
 ): Promise<void> {

@@ -7,6 +7,7 @@ export interface PendingReview {
   gitHubId: string
   gitHubNumericId: number | null
   id: string
+  isCollapsed: boolean
   pullRequestId: string
   state: string
 }
@@ -27,6 +28,7 @@ export function createOptimisticReview(pullRequestId: string): PendingReview {
     gitHubId: tempId,
     gitHubNumericId: 0,
     id: tempId,
+    isCollapsed: false,
     pullRequestId,
     state: 'PENDING'
   }
@@ -44,11 +46,31 @@ const pendingReviewsSlice = createSlice({
       return action.payload
     },
 
+    setCollapsed(
+      state,
+      action: PayloadAction<{ collapsed: boolean; pullRequestId: string }>
+    ) {
+      const review = state[action.payload.pullRequestId]
+
+      if (!review) {
+        return
+      }
+
+      review.isCollapsed = action.payload.collapsed
+    },
+
     setReview(
       state,
       action: PayloadAction<{ pullRequestId: string; review: PendingReview }>
     ) {
-      state[action.payload.pullRequestId] = action.payload.review
+      const existing = state[action.payload.pullRequestId]
+
+      state[action.payload.pullRequestId] = {
+        ...action.payload.review,
+        isCollapsed: existing
+          ? existing.isCollapsed
+          : action.payload.review.isCollapsed
+      }
     }
   }
 })

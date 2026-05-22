@@ -101,6 +101,7 @@ export const InlineCommentInput = memo(function InlineCommentInput({
           pullRequestId: pullRequest.id,
           review: {
             ...review,
+            isCollapsed: false,
             pullRequestId: pullRequest.id
           }
         })

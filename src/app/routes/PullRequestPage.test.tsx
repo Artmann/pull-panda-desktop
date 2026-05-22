@@ -38,6 +38,7 @@ vi.mock('@/app/lib/api', () => ({
   fetchCodeowners: vi.fn().mockResolvedValue([]),
   fetchCollaborators: vi.fn().mockResolvedValue([]),
   getMergeOptions: vi.fn().mockRejectedValue(new Error('not configured')),
+  getPendingReview: vi.fn().mockResolvedValue(null),
   markPullRequestActive: vi.fn().mockResolvedValue(undefined),
   setFocusedPullRequest: vi.fn().mockResolvedValue(undefined)
 }))

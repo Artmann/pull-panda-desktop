@@ -32,6 +32,7 @@ export const PullRequestToolbar = memo(function PullRequestToolbar({
   )
 
   const hasPendingReview = Boolean(pendingReview)
+  const isDrawerCollapsed = pendingReview?.isCollapsed ?? false
 
   const mergeOptions = useAppSelector(
     (state) => state.mergeOptions[pullRequest.id] ?? null
@@ -63,6 +64,7 @@ export const PullRequestToolbar = memo(function PullRequestToolbar({
           pullRequestId: pullRequest.id,
           review: {
             ...review,
+            isCollapsed: false,
             pullRequestId: pullRequest.id
           }
         })
@@ -119,28 +121,39 @@ export const PullRequestToolbar = memo(function PullRequestToolbar({
 
       <CheckoutBranchButton pullRequest={pullRequest} />
 
-      {!pullRequest.isAuthor && (
+      {hasPendingReview ? (
         <>
           <Separator orientation="vertical" />
           <div className="flex items-center gap-1">
-            {hasPendingReview ? (
-              <Button
-                size="xs"
-                variant="outline"
-              >
-                Review in progress
-              </Button>
-            ) : (
-              <Button
-                onClick={handleStartReview}
-                size="xs"
-              >
-                Start review
-              </Button>
-            )}
+            <Button
+              onClick={() =>
+                dispatch(
+                  pendingReviewsActions.setCollapsed({
+                    collapsed: !isDrawerCollapsed,
+                    pullRequestId: pullRequest.id
+                  })
+                )
+              }
+              size="xs"
+              variant="outline"
+            >
+              {isDrawerCollapsed ? 'Resume review' : 'Review in progress'}
+            </Button>
           </div>
         </>
-      )}
+      ) : !pullRequest.isAuthor ? (
+        <>
+          <Separator orientation="vertical" />
+          <div className="flex items-center gap-1">
+            <Button
+              onClick={handleStartReview}
+              size="xs"
+            >
+              Start review
+            </Button>
+          </div>
+        </>
+      ) : null}
 
       {showMerge && (
         <>

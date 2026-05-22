@@ -12,7 +12,10 @@ import {
   stopApiServer
 } from './main/api'
 import { bootstrap, BootstrapData } from './main/bootstrap'
-import { sendPullRequestResourceEvents } from './main/send-resource-events'
+import {
+  sendPullRequestResourceEvents,
+  setCachedUserLogin
+} from './main/send-resource-events'
 import { taskManager } from './main/task-manager'
 import { deletePullRequestData } from './sync/operations/delete-pull-request'
 import {
@@ -87,6 +90,8 @@ function setupIpcHandlers(): void {
   ipcMain.handle(ipcChannels.AuthClearToken, () => {
     const runtime = getAppRuntime()
 
+    setCachedUserLogin(undefined)
+
     return runtime.runPromise(clearStoredToken)
   })
 
@@ -102,10 +107,13 @@ function setupIpcHandlers(): void {
     return { success: true }
   })
 
-  ipcMain.handle(ipcChannels.AuthGetUser, () => {
+  ipcMain.handle(ipcChannels.AuthGetUser, async () => {
     const runtime = getAppRuntime()
+    const user = await runtime.runPromise(getCurrentUser)
 
-    return runtime.runPromise(getCurrentUser)
+    setCachedUserLogin(user?.login ?? undefined)
+
+    return user
   })
 
   ipcMain.handle(ipcChannels.WindowClose, () => {
@@ -343,8 +351,11 @@ async function getUserLogin(): Promise<string | undefined> {
   }
 
   const user = await runtime.runPromise(getCurrentUser)
+  const login = user?.login ?? undefined
 
-  return user?.login ?? undefined
+  setCachedUserLogin(login)
+
+  return login
 }
 
 app.on('ready', async () => {

@@ -36,6 +36,7 @@ export interface PendingReview {
   gitHubId: string
   gitHubNumericId: number | null
   id: string
+  isCollapsed: boolean
   pullRequestId: string
   state: string
 }
@@ -140,8 +141,7 @@ export async function bootstrap(userLogin?: string): Promise<BootstrapData> {
       changesRequestedCountByPrId.set(review.pullRequestId, count + 1)
     } else if (
       review.state === 'PENDING' &&
-      userLogin &&
-      review.authorLogin === userLogin
+      (!userLogin || review.authorLogin === userLogin)
     ) {
       pendingReviews[review.pullRequestId] = {
         authorAvatarUrl: review.authorAvatarUrl,
@@ -150,6 +150,7 @@ export async function bootstrap(userLogin?: string): Promise<BootstrapData> {
         gitHubId: review.gitHubId,
         gitHubNumericId: review.gitHubNumericId,
         id: review.id,
+        isCollapsed: false,
         pullRequestId: review.pullRequestId,
         state: review.state
       }
@@ -378,12 +379,12 @@ export async function getPullRequestDetails(
     syncedAt: row.syncedAt
   }))
 
-  const pendingReview = userLogin
-    ? (parsedReviews.find(
-        (review) =>
-          review.state === 'PENDING' && review.authorLogin === userLogin
-      ) ?? null)
-    : null
+  const pendingReview =
+    parsedReviews.find(
+      (review) =>
+        review.state === 'PENDING' &&
+        (!userLogin || review.authorLogin === userLogin)
+    ) ?? null
 
   return {
     checks: parsedChecks,

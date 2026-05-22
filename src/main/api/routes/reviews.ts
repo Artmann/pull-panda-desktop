@@ -11,6 +11,7 @@ import {
 import {
   createPendingReview,
   deletePendingReview,
+  getOrSyncPendingReview,
   submitReview,
   type CreateReviewResult,
   type SubmitReviewComment
@@ -20,6 +21,44 @@ import { ValidationError } from '../errors'
 export type { CreateReviewResult as CreateReviewResponse } from '../operations/reviews'
 
 export const reviewsRoute = new Hono<AppEnv>()
+
+reviewsRoute.get(
+  '/pending',
+  effectHandler(
+    (
+      context
+    ): Effect.Effect<
+      CreateReviewResult | null,
+      import('../errors').RouteError,
+      import('../effect-handler').AppServices
+    > =>
+      Effect.gen(function* () {
+        const owner = yield* requireString(context.req.query('owner'), 'owner')
+        const repo = yield* requireString(context.req.query('repo'), 'repo')
+
+        const pullNumberRaw = context.req.query('pullNumber') ?? ''
+        const pullNumber = parseInt(pullNumberRaw, 10)
+
+        if (isNaN(pullNumber)) {
+          return yield* Effect.fail(
+            new ValidationError({
+              field: 'pullNumber',
+              message: 'must be a number'
+            })
+          )
+        }
+
+        const token = context.get('token')
+
+        return yield* getOrSyncPendingReview({
+          owner,
+          pullNumber,
+          repo,
+          token
+        })
+      })
+  )
+)
 
 reviewsRoute.post(
   '/',

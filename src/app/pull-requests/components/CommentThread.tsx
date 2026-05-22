@@ -12,7 +12,6 @@ import {
   memo,
   useCallback,
   useState,
-  type FormEvent,
   type ReactElement,
   type ReactNode
 } from 'react'
@@ -34,24 +33,12 @@ import {
   CardTitle
 } from '@/app/components/ui/card'
 import { Separator } from '@/app/components/ui/separator'
-import { Textarea } from '@/app/components/ui/textarea'
-import {
-  createComment,
-  resolveReviewThread,
-  syncPullRequestDetails,
-  unresolveReviewThread
-} from '@/app/lib/api'
-import { useAuth } from '@/app/lib/store/authContext'
-import {
-  commentsActions,
-  createOptimisticComment
-} from '@/app/store/comments-slice'
-import { getDraftKeyForReply } from '@/app/store/drafts-slice'
+import { resolveReviewThread, unresolveReviewThread } from '@/app/lib/api'
 import { useAppDispatch, useAppSelector } from '@/app/store/hooks'
 import { reviewThreadsActions } from '@/app/store/review-threads-slice'
-import { useDraft } from '@/app/store/use-draft'
 
 import { CommentBody } from './CommentBody'
+import { CommentReply } from './CommentReply'
 import { SimpleDiff } from '../diffs/SimpleDiff'
 
 interface CommentThreadProps {
@@ -291,125 +278,6 @@ function formatCommentAsPrompt(comment: Comment): string {
 
   return lines.join('\n')
 }
-
-interface CommentReplyProps {
-  comment: Comment
-  pullRequest: PullRequest
-}
-
-const CommentReply = memo(function CommentReply({
-  comment,
-  pullRequest
-}: CommentReplyProps): ReactElement {
-  const draftKey = getDraftKeyForReply(pullRequest.id, comment.gitHubId)
-  const { body, setBody, clearDraft } = useDraft(draftKey)
-  const [isSubmitting, setIsSubmitting] = useState(false)
-
-  const dispatch = useAppDispatch()
-  const { user } = useAuth()
-
-  const isReviewComment = comment.gitHubReviewThreadId !== null
-  const reviewCommentId = isReviewComment
-    ? (comment.gitHubNumericId ?? undefined)
-    : undefined
-
-  const handleSubmit = useCallback(
-    async (event: FormEvent) => {
-      event.preventDefault()
-
-      if (!body.trim() || isSubmitting || !user) {
-        return
-      }
-
-      const trimmedBody = body.trim()
-
-      // Create optimistic comment and add to store immediately
-      const optimisticComment = createOptimisticComment({
-        body: trimmedBody,
-        pullRequestId: pullRequest.id,
-        userLogin: user.login,
-        userAvatarUrl: user.avatar_url,
-        parentCommentGitHubId: comment.gitHubId,
-        gitHubReviewThreadId: comment.gitHubReviewThreadId ?? undefined
-      })
-
-      dispatch(
-        commentsActions.addComment({
-          pullRequestId: pullRequest.id,
-          comment: optimisticComment
-        })
-      )
-
-      // Clear draft immediately for better UX
-      clearDraft()
-      setIsSubmitting(true)
-
-      try {
-        await createComment({
-          body: trimmedBody,
-          owner: pullRequest.repositoryOwner,
-          pullNumber: pullRequest.number,
-          repo: pullRequest.repositoryName,
-          reviewCommentId
-        })
-
-        // Trigger sync to get the real comment from the server
-        syncPullRequestDetails(pullRequest.id)
-      } catch (error) {
-        console.error('Failed to post comment:', error)
-
-        // Rollback optimistic comment on error
-        dispatch(
-          commentsActions.removeComment({
-            pullRequestId: pullRequest.id,
-            commentId: optimisticComment.id
-          })
-        )
-      } finally {
-        setIsSubmitting(false)
-      }
-    },
-    [
-      body,
-      clearDraft,
-      comment.gitHubId,
-      comment.gitHubReviewThreadId,
-      dispatch,
-      isSubmitting,
-      pullRequest.id,
-      pullRequest.number,
-      pullRequest.repositoryName,
-      pullRequest.repositoryOwner,
-      reviewCommentId,
-      user
-    ]
-  )
-
-  return (
-    <form
-      className="flex items-end gap-2 w-full"
-      onSubmit={handleSubmit}
-    >
-      <Textarea
-        className="flex-1 border-0 focus:ring-0 focus:border-0 shadow-none resize-none min-h-2 box-border text-xs md:text-xs placeholder:text-xs"
-        disabled={isSubmitting}
-        onChange={(event) => setBody(event.target.value)}
-        placeholder="Reply to comment..."
-        value={body}
-      />
-
-      <Button
-        disabled={!body.trim() || isSubmitting}
-        size="sm"
-        type="submit"
-        variant="ghost"
-      >
-        {isSubmitting && <Loader2 className="size-3 animate-spin" />}
-        {isSubmitting ? 'Posting...' : 'Post'}
-      </Button>
-    </form>
-  )
-})
 
 interface ResolveThreadButtonProps {
   appearance?: 'default' | 'quiet' | 'icon'

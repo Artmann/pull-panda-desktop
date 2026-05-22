@@ -11,7 +11,6 @@ import { useAppSelector } from '@/app/store/hooks'
 import { useLandmark } from '@/app/pull-requests/PullRequestNavigationProvider'
 
 import { CommentBody } from './CommentBody'
-import { NewCommentForm } from './CommentInput'
 import { CommentThreadCard, FileCommentThreadCard } from './CommentThread'
 
 interface ActivityItem {
@@ -91,13 +90,6 @@ export function Activity({ pullRequest }: ActivityProps): ReactElement {
 
   return (
     <div className="flex flex-col gap-4 w-full">
-      <NewCommentForm
-        owner={pullRequest.repositoryOwner}
-        pullNumber={pullRequest.number}
-        pullRequestId={pullRequest.id}
-        repo={pullRequest.repositoryName}
-      />
-
       {sortedActivity.map((item) => (
         <ActivityItemComponent
           key={item.id}

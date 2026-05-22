@@ -1,9 +1,10 @@
 import { Context, Effect, Layer } from 'effect'
-import { and, eq } from 'drizzle-orm'
+import { and, eq, isNull } from 'drizzle-orm'
 
 import { Database } from '../../sync/services/database'
 import type {
   Comment,
+  NewReview,
   PullRequest,
   Review,
   ReviewThread
@@ -20,6 +21,7 @@ import type {
   NotFoundError as SyncNotFoundError
 } from '../../sync/errors'
 import { NotFoundError } from '../../sync/errors'
+import { generateId } from '../../sync/shared/utils'
 
 export interface PullRequestCoordinates {
   readonly number: number
@@ -53,8 +55,25 @@ export class Repository extends Context.Tag('main/Repository')<
     readonly requirePullRequestById: (
       id: string
     ) => Effect.Effect<PullRequest, RepoError | SyncNotFoundError>
+    readonly upsertReview: (input: {
+      readonly pullRequestId: string
+      readonly review: UpsertReviewInput
+    }) => Effect.Effect<Review, RepoError>
   }
 >() {}
+
+export interface UpsertReviewInput {
+  readonly authorAvatarUrl: string | null
+  readonly authorLogin: string | null
+  readonly body: string | null
+  readonly bodyHtml: string | null
+  readonly gitHubId: string
+  readonly gitHubNumericId: number | null
+  readonly gitHubCreatedAt: string | null
+  readonly gitHubSubmittedAt: string | null
+  readonly state: string
+  readonly url: string | null
+}
 
 export const RepositoryLive: Layer.Layer<Repository, never, Database> =
   Layer.effect(
@@ -143,6 +162,79 @@ export const RepositoryLive: Layer.Layer<Repository, never, Database> =
               )
         )
 
+      const upsertReview = ({
+        pullRequestId,
+        review
+      }: {
+        pullRequestId: string
+        review: UpsertReviewInput
+      }) =>
+        database.use('repository.upsertReview', (db) => {
+          const existing = db
+            .select()
+            .from(reviews)
+            .where(
+              and(
+                eq(reviews.pullRequestId, pullRequestId),
+                eq(reviews.gitHubId, review.gitHubId),
+                isNull(reviews.deletedAt)
+              )
+            )
+            .get()
+
+          const now = new Date().toISOString()
+          const id = existing?.id ?? generateId()
+
+          const row: NewReview = {
+            authorAvatarUrl: review.authorAvatarUrl,
+            authorLogin: review.authorLogin,
+            body: review.body,
+            bodyHtml: review.bodyHtml,
+            deletedAt: null,
+            gitHubCreatedAt: review.gitHubCreatedAt,
+            gitHubId: review.gitHubId,
+            gitHubNumericId: review.gitHubNumericId,
+            gitHubSubmittedAt: review.gitHubSubmittedAt,
+            id,
+            pullRequestId,
+            state: review.state,
+            syncedAt: now,
+            url: review.url
+          }
+
+          db.insert(reviews)
+            .values(row)
+            .onConflictDoUpdate({
+              target: reviews.id,
+              set: {
+                authorAvatarUrl: row.authorAvatarUrl,
+                authorLogin: row.authorLogin,
+                body: row.body,
+                bodyHtml: row.bodyHtml,
+                deletedAt: null,
+                gitHubCreatedAt: row.gitHubCreatedAt,
+                gitHubNumericId: row.gitHubNumericId,
+                gitHubSubmittedAt: row.gitHubSubmittedAt,
+                state: row.state,
+                syncedAt: row.syncedAt,
+                url: row.url
+              }
+            })
+            .run()
+
+          const persisted = db
+            .select()
+            .from(reviews)
+            .where(eq(reviews.id, id))
+            .get()
+
+          if (!persisted) {
+            throw new Error(`Failed to read back upserted review ${id}`)
+          }
+
+          return persisted
+        })
+
       return {
         findCommentById,
         findPullRequestByCoords,
@@ -150,7 +242,8 @@ export const RepositoryLive: Layer.Layer<Repository, never, Database> =
         findReviewById,
         findReviewThreadById,
         requirePullRequestByCoords,
-        requirePullRequestById
+        requirePullRequestById,
+        upsertReview
       }
     })
   )

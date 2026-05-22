@@ -4,6 +4,12 @@ import { ipcChannels } from '../lib/ipc/channels'
 import { getPullRequest, getPullRequestDetails } from './bootstrap'
 import type { ResourceUpdatedEvent } from '../types/ipc-events'
 
+let cachedUserLogin: string | undefined
+
+export function setCachedUserLogin(login: string | undefined): void {
+  cachedUserLogin = login
+}
+
 export async function broadcastPullRequestResourceEvents(
   pullRequestId: string,
   userLogin?: string
@@ -41,7 +47,8 @@ export async function sendPullRequestResourceEvents(
     })
   }
 
-  const details = await getPullRequestDetails(pullRequestId, userLogin)
+  const effectiveUserLogin = userLogin ?? cachedUserLogin
+  const details = await getPullRequestDetails(pullRequestId, effectiveUserLogin)
 
   if (details) {
     sendEvent(window, {
@@ -86,11 +93,15 @@ export async function sendPullRequestResourceEvents(
       type: 'review-threads'
     })
 
-    sendEvent(window, {
-      data: details.pendingReview ?? null,
-      pullRequestId,
-      type: 'pending-review'
-    })
+    if (effectiveUserLogin) {
+      sendEvent(window, {
+        data: details.pendingReview
+          ? { ...details.pendingReview, isCollapsed: false, pullRequestId }
+          : null,
+        pullRequestId,
+        type: 'pending-review'
+      })
+    }
   }
 }
 

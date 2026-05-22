@@ -16,6 +16,7 @@ import { pullRequestsActions } from '@/app/store/pull-requests-slice'
 
 import { Activity } from './components/Activity'
 import { CheckList } from './components/CheckList'
+import { NewCommentForm } from './components/CommentInput'
 import { IssueCard } from './components/IssueCard'
 import {
   findIssuesInTheDescriptionOrInTheComments,
@@ -80,6 +81,19 @@ export const Overview = memo(function Overview({
           <Separator />
         </>
       )}
+
+      <section>
+        <SectionHeader>Leave a comment</SectionHeader>
+
+        <NewCommentForm
+          owner={pullRequest.repositoryOwner}
+          pullNumber={pullRequest.number}
+          pullRequestId={pullRequest.id}
+          repo={pullRequest.repositoryName}
+        />
+      </section>
+
+      <Separator />
 
       <section>
         <SectionHeader>Activity</SectionHeader>

@@ -308,12 +308,21 @@ const upsertReviews = (
       }
 
       for (const existingReview of existingReviews) {
-        if (!syncedReviewGitHubIds.includes(existingReview.gitHubId)) {
-          db.update(reviews)
-            .set({ deletedAt: now })
-            .where(eq(reviews.id, existingReview.id))
-            .run()
+        if (syncedReviewGitHubIds.includes(existingReview.gitHubId)) {
+          continue
         }
+
+        // PENDING reviews are user-private drafts owned by explicit
+        // submit/cancel actions. Never soft-delete them based on a missing
+        // entry in a list response.
+        if (existingReview.state === 'PENDING') {
+          continue
+        }
+
+        db.update(reviews)
+          .set({ deletedAt: now })
+          .where(eq(reviews.id, existingReview.id))
+          .run()
       }
 
       return reviewIdMap
