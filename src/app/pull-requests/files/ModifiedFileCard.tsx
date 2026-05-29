@@ -1,6 +1,6 @@
 import { ExternalLinkIcon } from 'lucide-react'
 import { useTheme } from 'next-themes'
-import { memo, useMemo, type ReactElement } from 'react'
+import { memo, useMemo, useState, type ReactElement } from 'react'
 import { shallowEqual } from 'react-redux'
 
 import type { Comment, ModifiedFile } from '@/types/pull-request-details'
@@ -8,6 +8,7 @@ import type { PullRequest } from '@/types/pull-request'
 
 import { Badge } from '@/app/components/ui/badge'
 import { CopyToClipboardButton } from '@/app/components/CopyToClipboardButton'
+import { cn } from '@/app/lib/utils'
 import { useAppTheme } from '@/app/lib/store/themeContext'
 import { useAppSelector } from '@/app/store/hooks'
 import { type PendingReviewComment } from '@/app/store/pending-review-comments-slice'
@@ -17,16 +18,22 @@ import { SimpleDiff } from '../diffs/SimpleDiff'
 
 const emptyPendingComments: PendingReviewComment[] = []
 
+type FileView = 'implementation' | 'test'
+
 interface ModifiedFileCardProps {
   eager?: boolean
   file: ModifiedFile
+  missingTest?: boolean
   pullRequest: PullRequest
+  testFile?: ModifiedFile | null
 }
 
 export const ModifiedFileCard = memo(function ModifiedFileCard({
   eager = false,
   file,
-  pullRequest
+  missingTest = false,
+  pullRequest,
+  testFile = null
 }: ModifiedFileCardProps): ReactElement {
   const { appTheme } = useAppTheme()
   const { resolvedTheme } = useTheme()
@@ -35,7 +42,10 @@ export const ModifiedFileCard = memo(function ModifiedFileCard({
     ? appTheme.dark.background
     : appTheme.light.background
 
-  const filePath = file.filePath
+  const [view, setView] = useState<FileView>('implementation')
+
+  const activeFile = view === 'test' && testFile ? testFile : file
+  const filePath = activeFile.filePath
   const viewFileUrl = `https://github.com/${pullRequest.repositoryOwner}/${pullRequest.repositoryName}/blob/HEAD/${encodeURI(filePath)}`
 
   const allPendingComments = useAppSelector(
@@ -59,29 +69,45 @@ export const ModifiedFileCard = memo(function ModifiedFileCard({
     [allSubmittedComments, filePath]
   )
 
-  const landmarkRef = useLandmark(`file-${filePath}`)
+  const landmarkRef = useLandmark(`file-${file.filePath}`)
 
   return (
     <div ref={landmarkRef}>
       <FileCard style={{ backgroundColor }}>
         <FileCardHeader>
           <div className="flex-1 flex items-center gap-2 font-mono text-xs">
-            <span className="truncate">{file.filePath}</span>
+            <span className="truncate">{activeFile.filePath}</span>
 
-            <CopyToClipboardButton value={file.filePath} />
+            <CopyToClipboardButton value={activeFile.filePath} />
 
-            {file.status === 'added' && (
+            {activeFile.status === 'added' && (
               <Badge className="bg-status-success text-status-success-foreground border-status-success-border uppercase text-[0.6rem]">
                 New
               </Badge>
             )}
 
-            {file.status === 'removed' && (
+            {activeFile.status === 'removed' && (
               <Badge className="bg-status-danger text-status-danger-foreground border-status-danger-border uppercase text-[0.6rem]">
                 Deleted
               </Badge>
             )}
+
+            {missingTest && !testFile && (
+              <Badge
+                className="uppercase text-[0.6rem]"
+                variant="outline"
+              >
+                Missing test
+              </Badge>
+            )}
           </div>
+
+          {testFile && (
+            <FileViewToggle
+              value={view}
+              onChange={setView}
+            />
+          )}
 
           <button
             className="text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
@@ -95,14 +121,15 @@ export const ModifiedFileCard = memo(function ModifiedFileCard({
         </FileCardHeader>
 
         <FileCardBody
+          key={activeFile.filePath}
           eager={eager}
           fallback={<DiffQueuedFallback />}
-          lazy={Boolean(file.diffHunk)}
+          lazy={Boolean(activeFile.diffHunk)}
         >
-          {file.diffHunk ? (
+          {activeFile.diffHunk ? (
             <SimpleDiff
-              diffHunk={file.diffHunk}
-              filePath={file.filePath}
+              diffHunk={activeFile.diffHunk}
+              filePath={activeFile.filePath}
               pendingComments={filePendingComments}
               pullRequest={pullRequest}
               registerCommentLandmarks={true}
@@ -118,6 +145,46 @@ export const ModifiedFileCard = memo(function ModifiedFileCard({
     </div>
   )
 })
+
+function FileViewToggle({
+  onChange,
+  value
+}: {
+  onChange: (value: FileView) => void
+  value: FileView
+}): ReactElement {
+  const options: Array<{ label: string; value: FileView }> = [
+    { label: 'Implementation', value: 'implementation' },
+    { label: 'Test', value: 'test' }
+  ]
+
+  return (
+    <div className="inline-flex items-center gap-0.5 rounded-md border border-border p-0.5">
+      {options.map((option) => {
+        const isSelected = option.value === value
+
+        return (
+          <button
+            key={option.value}
+            aria-pressed={isSelected}
+            className={cn(
+              'cursor-pointer rounded-sm px-2 py-0.5 text-[0.6rem] font-medium uppercase transition-colors',
+              isSelected
+                ? 'bg-muted text-foreground'
+                : 'text-muted-foreground hover:text-foreground'
+            )}
+            onClick={() => {
+              onChange(option.value)
+            }}
+            type="button"
+          >
+            {option.label}
+          </button>
+        )
+      })}
+    </div>
+  )
+}
 
 function DiffQueuedFallback(): ReactElement {
   return (

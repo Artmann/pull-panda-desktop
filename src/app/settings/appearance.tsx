@@ -1,5 +1,5 @@
 import { useTheme } from 'next-themes'
-import { type ReactElement, type ReactNode, useEffect, useState } from 'react'
+import { type ReactElement, useEffect, useState } from 'react'
 
 import { Card, CardContent } from '../components/ui/card'
 import {
@@ -9,6 +9,7 @@ import {
   SelectTrigger,
   SelectValue
 } from '../components/ui/select'
+import { SettingItem } from './SettingItem'
 
 import { getSharedHighlighter } from '@/app/lib/highlighter'
 import { useAppTheme } from '@/app/lib/store/themeContext'
@@ -121,26 +122,5 @@ function CodePreview({ appTheme }: { appTheme: AppTheme }): ReactElement {
       className="rounded-lg overflow-hidden text-sm [&_pre]:p-4 [&_pre]:m-0"
       dangerouslySetInnerHTML={{ __html: highlightedHtml }}
     />
-  )
-}
-
-function SettingItem({
-  children,
-  description,
-  label
-}: {
-  children: ReactNode
-  description: string
-  label: string
-}): ReactElement {
-  return (
-    <div className="flex items-center justify-between py-6 border-b last:border-b-0 border-border">
-      <div>
-        <div className="font-medium">{label}</div>
-        <div className="text-muted-foreground text-sm">{description}</div>
-      </div>
-
-      <div>{children}</div>
-    </div>
   )
 }

@@ -25,6 +25,7 @@ import recentReviewersReducer from '@/app/store/recent-reviewers-slice'
 import reviewerSuggestionsReducer from '@/app/store/reviewer-suggestions-slice'
 import reviewThreadsReducer from '@/app/store/review-threads-slice'
 import reviewsReducer from '@/app/store/reviews-slice'
+import settingsReducer from '@/app/store/settings-slice'
 import tasksReducer from '@/app/store/tasks-slice'
 
 import { AuthProvider } from '@/app/lib/store/authContext'
@@ -160,6 +161,7 @@ function createTestStore(
       reviewerSuggestions: reviewerSuggestionsReducer,
       reviewThreads: reviewThreadsReducer,
       reviews: reviewsReducer,
+      settings: settingsReducer,
       tasks: tasksReducer
     },
     preloadedState: {
@@ -188,6 +190,7 @@ function createTestStore(
       },
       reviewThreads: { items: [] },
       reviews: { items: [] },
+      settings: { combineTestFiles: true },
       tasks: { items: [] }
     }
   })

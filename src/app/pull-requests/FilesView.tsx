@@ -15,6 +15,7 @@ import { useAppSelector } from '@/app/store/hooks'
 
 import { createFileTree, extractGroupedFilesFromTree } from './files/file-tree'
 import { ModifiedFileCard } from './files/ModifiedFileCard'
+import { pairTestFiles, type PairedFile } from './files/test-file-pairing'
 
 export const FilesView = memo(function FilesView({
   pullRequest
@@ -27,6 +28,10 @@ export const FilesView = memo(function FilesView({
         (f) => f.pullRequestId === pullRequest.id
       ),
     shallowEqual
+  )
+
+  const combineTestFiles = useAppSelector(
+    (state) => state.settings.combineTestFiles
   )
 
   const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(new Set())
@@ -44,19 +49,39 @@ export const FilesView = memo(function FilesView({
     })
   }, [files])
 
-  const filesByPath = useMemo(() => {
-    return new Map(sortedFiles.map((file) => [file.filePath, file]))
-  }, [sortedFiles])
+  const pairedFiles = useMemo<PairedFile[]>(() => {
+    if (!combineTestFiles) {
+      return sortedFiles.map(
+        (file): PairedFile => ({
+          missingTest: false,
+          primaryFile: file,
+          testFile: null
+        })
+      )
+    }
+
+    return pairTestFiles(sortedFiles)
+  }, [combineTestFiles, sortedFiles])
+
+  const pairingsByPath = useMemo(() => {
+    return new Map(
+      pairedFiles.map((paired) => [paired.primaryFile.filePath, paired])
+    )
+  }, [pairedFiles])
 
   const eagerFilePaths = useMemo(() => {
-    return new Set(sortedFiles.slice(0, 3).map((file) => file.filePath))
-  }, [sortedFiles])
+    return new Set(
+      pairedFiles.slice(0, 3).map((paired) => paired.primaryFile.filePath)
+    )
+  }, [pairedFiles])
 
   const groupedFiles = useMemo(() => {
-    const tree = createFileTree(sortedFiles.map((file) => file.filePath))
+    const tree = createFileTree(
+      pairedFiles.map((paired) => paired.primaryFile.filePath)
+    )
 
     return extractGroupedFilesFromTree(tree)
-  }, [sortedFiles])
+  }, [pairedFiles])
 
   const toggleGroupCollapse = (groupName: string) => {
     setCollapsedGroups((previous) => {
@@ -117,9 +142,9 @@ export const FilesView = memo(function FilesView({
               {!isCollapsed && (
                 <div className="flex flex-col gap-6">
                   {group.files.map((groupFile) => {
-                    const modifiedFile = filesByPath.get(groupFile.filePath)
+                    const paired = pairingsByPath.get(groupFile.filePath)
 
-                    if (!modifiedFile) {
+                    if (!paired) {
                       return null
                     }
 
@@ -127,8 +152,10 @@ export const FilesView = memo(function FilesView({
                       <ModifiedFileCard
                         key={groupFile.filePath}
                         eager={eagerFilePaths.has(groupFile.filePath)}
-                        file={modifiedFile}
+                        file={paired.primaryFile}
+                        missingTest={paired.missingTest}
                         pullRequest={pullRequest}
+                        testFile={paired.testFile}
                       />
                     )
                   })}

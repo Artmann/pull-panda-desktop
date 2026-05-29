@@ -1,6 +1,7 @@
 import { type ReactElement } from 'react'
 import { AccountSettings } from '../settings/account'
 import { AppearanceSettings } from '../settings/appearance'
+import { FilesSettings } from '../settings/files'
 
 export function SettingsPage(): ReactElement {
   return (
@@ -11,6 +12,7 @@ export function SettingsPage(): ReactElement {
 
           <AccountSettings />
           <AppearanceSettings />
+          <FilesSettings />
         </section>
       </div>
     </div>

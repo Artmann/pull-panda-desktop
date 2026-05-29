@@ -37,6 +37,11 @@ import reviewsReducer, { ReviewsState } from './reviews-slice'
 import reviewThreadsReducer, {
   ReviewThreadsState
 } from './review-threads-slice'
+import settingsReducer, {
+  loadSettingsFromStorage,
+  SettingsState,
+  saveSettingsToStorage
+} from './settings-slice'
 import tasksReducer, { TasksState } from './tasks-slice'
 
 export interface PreloadedState {
@@ -55,6 +60,7 @@ export interface PreloadedState {
   reviewerSuggestions?: ReviewerSuggestionsState
   reviews: ReviewsState
   reviewThreads: ReviewThreadsState
+  settings?: SettingsState
   tasks?: TasksState
 }
 
@@ -69,7 +75,8 @@ export function createStore(preloadedState?: PreloadedState) {
       ...preloadedState,
       drafts: loadDraftsFromStorage(),
       pendingReviewComments: loadPendingReviewCommentsFromStorage(),
-      recentReviewers: loadRecentReviewersFromStorage()
+      recentReviewers: loadRecentReviewersFromStorage(),
+      settings: loadSettingsFromStorage()
     },
     reducer: {
       checks: checksReducer,
@@ -87,6 +94,7 @@ export function createStore(preloadedState?: PreloadedState) {
       reviewerSuggestions: reviewerSuggestionsReducer,
       reviews: reviewsReducer,
       reviewThreads: reviewThreadsReducer,
+      settings: settingsReducer,
       tasks: tasksReducer
     }
   })
@@ -124,6 +132,18 @@ export function createStore(preloadedState?: PreloadedState) {
     if (currentRecentReviewers !== previousRecentReviewers) {
       previousRecentReviewers = currentRecentReviewers
       saveRecentReviewersToStorage(currentRecentReviewers)
+    }
+  })
+
+  // Sync settings to localStorage on every change
+  let previousSettings = store.getState().settings
+
+  store.subscribe(() => {
+    const currentSettings = store.getState().settings
+
+    if (currentSettings !== previousSettings) {
+      previousSettings = currentSettings
+      saveSettingsToStorage(currentSettings)
     }
   })
 

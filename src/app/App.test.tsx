@@ -23,6 +23,7 @@ import recentReviewersReducer from '@/app/store/recent-reviewers-slice'
 import reviewerSuggestionsReducer from '@/app/store/reviewer-suggestions-slice'
 import reviewsReducer from '@/app/store/reviews-slice'
 import reviewThreadsReducer from '@/app/store/review-threads-slice'
+import settingsReducer from '@/app/store/settings-slice'
 import tasksReducer from '@/app/store/tasks-slice'
 
 import { App } from './App'
@@ -91,6 +92,7 @@ function createTestStore() {
       reviewerSuggestions: reviewerSuggestionsReducer,
       reviews: reviewsReducer,
       reviewThreads: reviewThreadsReducer,
+      settings: settingsReducer,
       tasks: tasksReducer
     },
     preloadedState: {
@@ -119,6 +121,7 @@ function createTestStore() {
       },
       reviews: { items: [] },
       reviewThreads: { items: [] },
+      settings: { combineTestFiles: true },
       tasks: { items: [] }
     }
   })

@@ -13,6 +13,7 @@ import { ThemeProvider } from '@/app/lib/store/themeContext'
 import commentsReducer from '@/app/store/comments-slice'
 import modifiedFilesReducer from '@/app/store/modified-files-slice'
 import pendingReviewCommentsReducer from '@/app/store/pending-review-comments-slice'
+import settingsReducer from '@/app/store/settings-slice'
 
 import { FilesView } from './FilesView'
 
@@ -102,6 +103,7 @@ function createMockPullRequest(
 
 function createTestStore(
   options: {
+    combineTestFiles?: boolean
     modifiedFiles?: ModifiedFile[]
   } = {}
 ) {
@@ -109,12 +111,14 @@ function createTestStore(
     reducer: {
       comments: commentsReducer,
       modifiedFiles: modifiedFilesReducer,
-      pendingReviewComments: pendingReviewCommentsReducer
+      pendingReviewComments: pendingReviewCommentsReducer,
+      settings: settingsReducer
     },
     preloadedState: {
       comments: { items: [] },
       modifiedFiles: { items: options.modifiedFiles ?? [] },
-      pendingReviewComments: {}
+      pendingReviewComments: {},
+      settings: { combineTestFiles: options.combineTestFiles ?? true }
     }
   })
 }
@@ -345,5 +349,115 @@ describe('FilesView', () => {
     expect(openUrl).toHaveBeenCalledWith(
       'https://github.com/testowner/testrepo/blob/HEAD/src/index.ts'
     )
+  })
+
+  it('folds a paired test into its implementation in combine mode', async () => {
+    const pullRequest = createMockPullRequest()
+    const files = [
+      createMockFile({
+        id: 'f1',
+        filename: 'customers.ts',
+        filePath: 'src/customers.ts'
+      }),
+      createMockFile({
+        id: 'f2',
+        filename: 'customers.test.ts',
+        filePath: 'src/customers.test.ts'
+      })
+    ]
+    const store = createTestStore({ modifiedFiles: files })
+
+    await act(async () => {
+      renderWithProviders(<FilesView pullRequest={pullRequest} />, { store })
+    })
+
+    expect(screen.getByText('src/customers.ts')).toBeInTheDocument()
+    expect(screen.queryByText('src/customers.test.ts')).not.toBeInTheDocument()
+    expect(
+      screen.getByRole('button', { name: 'Implementation' })
+    ).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Test' })).toBeInTheDocument()
+  })
+
+  it('switches to the test diff when toggling a paired file', async () => {
+    const pullRequest = createMockPullRequest()
+    const files = [
+      createMockFile({
+        id: 'f1',
+        filename: 'customers.ts',
+        filePath: 'src/customers.ts',
+        diffHunk: '@@ -1,2 +1,2 @@\n shared\n+implementationline'
+      }),
+      createMockFile({
+        id: 'f2',
+        filename: 'customers.test.ts',
+        filePath: 'src/customers.test.ts',
+        diffHunk: '@@ -1,2 +1,2 @@\n shared\n+testfileline'
+      })
+    ]
+    const store = createTestStore({ modifiedFiles: files })
+
+    await act(async () => {
+      renderWithProviders(<FilesView pullRequest={pullRequest} />, { store })
+    })
+
+    expect(screen.getByText('implementationline')).toBeInTheDocument()
+    expect(screen.queryByText('testfileline')).not.toBeInTheDocument()
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Test' }))
+    })
+
+    expect(screen.getByText('src/customers.test.ts')).toBeInTheDocument()
+    expect(screen.getByText('testfileline')).toBeInTheDocument()
+  })
+
+  it('flags a source file with no test in combine mode', async () => {
+    const pullRequest = createMockPullRequest()
+    const files = [
+      createMockFile({
+        id: 'f1',
+        filename: 'customers.ts',
+        filePath: 'src/customers.ts'
+      })
+    ]
+    const store = createTestStore({ modifiedFiles: files })
+
+    await act(async () => {
+      renderWithProviders(<FilesView pullRequest={pullRequest} />, { store })
+    })
+
+    expect(screen.getByText('Missing test')).toBeInTheDocument()
+  })
+
+  it('shows tests as separate cards when combine mode is off', async () => {
+    const pullRequest = createMockPullRequest()
+    const files = [
+      createMockFile({
+        id: 'f1',
+        filename: 'customers.ts',
+        filePath: 'src/customers.ts'
+      }),
+      createMockFile({
+        id: 'f2',
+        filename: 'customers.test.ts',
+        filePath: 'src/customers.test.ts'
+      })
+    ]
+    const store = createTestStore({
+      combineTestFiles: false,
+      modifiedFiles: files
+    })
+
+    await act(async () => {
+      renderWithProviders(<FilesView pullRequest={pullRequest} />, { store })
+    })
+
+    expect(screen.getByText('src/customers.ts')).toBeInTheDocument()
+    expect(screen.getByText('src/customers.test.ts')).toBeInTheDocument()
+    expect(
+      screen.queryByRole('button', { name: 'Implementation' })
+    ).not.toBeInTheDocument()
+    expect(screen.queryByText('Missing test')).not.toBeInTheDocument()
   })
 })
