@@ -317,6 +317,8 @@ samp {
 
 /* GitHub-style markdown in PR descriptions */
 .pull-request-description {
+  font-size: 15px;
+
   /* Compact spacing */
   h1,
   h2,
