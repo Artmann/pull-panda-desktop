@@ -4,12 +4,3 @@ export interface MergeRequirement {
   label: string
   satisfied: boolean
 }
-
-export interface MergeRequirementsResponse {
-  allowMergeCommit: boolean
-  allowRebaseMerge: boolean
-  allowSquashMerge: boolean
-  mergeable: boolean | null
-  mergeableState: string
-  requirements: MergeRequirement[]
-}

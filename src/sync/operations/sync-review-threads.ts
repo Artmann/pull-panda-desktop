@@ -15,7 +15,7 @@ import { Database } from '../services/database'
 import { GitHubGraphQL } from '../services/github-graphql'
 import { generateId } from '../shared/utils'
 
-export interface SyncReviewThreadsParams {
+interface SyncReviewThreadsParams {
   pullRequestId: string
   owner: string
   repositoryName: string

@@ -9,7 +9,7 @@ import { GitHubRest } from '../services/github-rest'
 import { paginateRest } from '../shared/paginate'
 import { generateId, normalizeCommentBody } from '../shared/utils'
 
-export interface SyncCommitsParams {
+interface SyncCommitsParams {
   pullRequestId: string
   owner: string
   repositoryName: string

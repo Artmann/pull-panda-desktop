@@ -2,9 +2,9 @@ import { describe, expect, it } from 'vitest'
 
 import {
   createCheck,
-  createComment,
+  createCommentFixture,
   createMergeOptions,
-  createReview,
+  createReviewFixture,
   createThread
 } from './__test-helpers__/factories'
 import { buildTaskGroups, countOpenBlockers } from './use-derived-tasks'
@@ -85,7 +85,7 @@ describe('buildTaskGroups', () => {
   })
 
   it('skips review threads whose anchor comment is outdated', () => {
-    const anchor = createComment({
+    const anchor = createCommentFixture({
       gitHubReviewThreadId: 'gh-thread-1',
       line: null,
       path: 'src/app.ts',
@@ -110,7 +110,7 @@ describe('buildTaskGroups', () => {
   })
 
   it('skips resolved review threads', () => {
-    const anchor = createComment({
+    const anchor = createCommentFixture({
       gitHubReviewThreadId: 'gh-thread-1',
       userLogin: 'alice'
     })
@@ -136,7 +136,7 @@ describe('buildTaskGroups', () => {
   })
 
   it('routes bot-authored unresolved threads into the agents group', () => {
-    const anchor = createComment({
+    const anchor = createCommentFixture({
       body: 'Consider extracting this helper.',
       gitHubReviewThreadId: 'gh-thread-1',
       userAvatarUrl: 'https://example.com/coderabbit.png',
@@ -173,7 +173,7 @@ describe('buildTaskGroups', () => {
   })
 
   it('routes human-authored unresolved threads into the reviewers group', () => {
-    const anchor = createComment({
+    const anchor = createCommentFixture({
       body: 'Rename this please.',
       gitHubReviewThreadId: 'gh-thread-1',
       userLogin: 'bob'
@@ -207,12 +207,12 @@ describe('buildTaskGroups', () => {
   })
 
   it('marks CHANGES_REQUESTED reviews as a blocker and escalates threads', () => {
-    const review = createReview({
+    const review = createReviewFixture({
       authorLogin: 'alice',
       state: 'CHANGES_REQUESTED'
     })
 
-    const anchor = createComment({
+    const anchor = createCommentFixture({
       body: 'Please address this.',
       gitHubReviewThreadId: 'gh-thread-1',
       userLogin: 'bob'
@@ -258,7 +258,10 @@ describe('buildTaskGroups', () => {
 
   it('summarises an all-green PR with a passing-checks task and approved-reviews task', () => {
     const check = createCheck({ conclusion: 'success' })
-    const review = createReview({ authorLogin: 'alice', state: 'APPROVED' })
+    const review = createReviewFixture({
+      authorLogin: 'alice',
+      state: 'APPROVED'
+    })
 
     const groups = buildTaskGroups({
       checks: [check],
@@ -425,7 +428,7 @@ describe('countOpenBlockers', () => {
   it('counts blocker tasks across all groups', () => {
     const failingCheck = createCheck({ conclusion: 'failure' })
 
-    const anchor = createComment({
+    const anchor = createCommentFixture({
       gitHubReviewThreadId: 'gh-thread-1',
       userLogin: 'bob'
     })
@@ -437,7 +440,7 @@ describe('countOpenBlockers', () => {
       comments: [anchor],
       mergeOptions: createMergeOptions({ mergeableState: 'dirty' }),
       reviewThreads: [thread],
-      reviews: [createReview({ state: 'CHANGES_REQUESTED' })]
+      reviews: [createReviewFixture({ state: 'CHANGES_REQUESTED' })]
     })
 
     expect(countOpenBlockers(groups)).toEqual(4)
@@ -449,7 +452,7 @@ describe('countOpenBlockers', () => {
       comments: [],
       mergeOptions: createMergeOptions(),
       reviewThreads: [],
-      reviews: [createReview({ state: 'APPROVED' })]
+      reviews: [createReviewFixture({ state: 'APPROVED' })]
     })
 
     expect(countOpenBlockers(groups)).toEqual(0)

@@ -29,7 +29,7 @@ import {
   normalizeCommentBody
 } from '../shared/utils'
 
-export interface SyncReviewsParams {
+interface SyncReviewsParams {
   pullRequestId: string
   owner: string
   repositoryName: string

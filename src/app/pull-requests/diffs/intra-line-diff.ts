@@ -4,7 +4,7 @@ import { escapeHtml } from '@/app/lib/utils'
 
 import type { DiffHunkLine } from './hunks'
 
-export interface LinePair {
+interface LinePair {
   addIndex: number
   removeIndex: number
 }

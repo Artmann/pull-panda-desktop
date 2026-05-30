@@ -123,29 +123,6 @@ export function isDatabaseInitialized(): boolean {
   return database !== null
 }
 
-export function setDatabase(db: ReturnType<typeof drizzle> | null): void {
-  database = db
-}
-
-export async function createInMemoryDatabase(): Promise<
-  ReturnType<typeof drizzle>
-> {
-  const wasmBuffer = fs.readFileSync(getWasmPath())
-  const wasmBinary = wasmBuffer.buffer.slice(
-    wasmBuffer.byteOffset,
-    wasmBuffer.byteOffset + wasmBuffer.byteLength
-  ) as ArrayBuffer
-  const SQL = await initSqlJs({ wasmBinary })
-  const sqlite = new SQL.Database()
-  const db = drizzle(sqlite, { schema })
-
-  // Apply migrations for in-memory database (used in tests)
-  const migrationsPath = getMigrationsPath()
-  migrate(db, { migrationsFolder: migrationsPath })
-
-  return db
-}
-
 export function saveDatabase(): void {
   if (!sqliteInstance) {
     return

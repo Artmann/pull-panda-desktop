@@ -9,10 +9,10 @@ import { createStore, type AppStore } from '@/app/store'
 
 import {
   createCheck,
-  createComment,
+  createCommentFixture,
   createMergeOptions,
   createPullRequest,
-  createReview,
+  createReviewFixture,
   createThread
 } from './__test-helpers__/factories'
 import { TasksTab } from './TasksTab'
@@ -75,13 +75,13 @@ function buildPopulatedStore(): AppStore {
     },
     comments: {
       items: [
-        createComment({
+        createCommentFixture({
           gitHubReviewThreadId: 'gh-thread-bot',
           id: 'comment-bot',
           path: null,
           userLogin: 'dependabot'
         }),
-        createComment({
+        createCommentFixture({
           gitHubReviewThreadId: 'gh-thread-human',
           id: 'comment-human',
           path: null,
@@ -107,7 +107,7 @@ function buildPopulatedStore(): AppStore {
         })
       ]
     },
-    reviews: { items: [createReview({ state: 'APPROVED' })] }
+    reviews: { items: [createReviewFixture({ state: 'APPROVED' })] }
   } as never)
 }
 
@@ -146,7 +146,7 @@ describe('TasksTab', () => {
       },
       comments: {
         items: [
-          createComment({
+          createCommentFixture({
             gitHubReviewThreadId: 'gh-thread-bot',
             id: 'comment-bot',
             path: null,

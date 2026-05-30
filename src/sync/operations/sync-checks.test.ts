@@ -5,6 +5,7 @@ import { checks, type Check } from '../../database/schema'
 import { Database } from '../services/database'
 import { EtagStore } from '../services/etag-store'
 import { GitHubRest } from '../services/github-rest'
+import { collectLiterals } from './__test-helpers__/sql-introspection'
 import {
   __checksTesting,
   syncChecks,
@@ -29,53 +30,6 @@ interface MutationLog {
 
 const tableName = (table: unknown): InsertRecord['table'] =>
   table === checks ? 'checks' : 'unknown'
-
-// Drizzle's `eq(column, value)` returns an AST object with circular references
-// (column ↔ table). We can't `JSON.stringify` it, so we walk the tree manually
-// and collect every string/number leaf into a flat list. Tests use
-// `.includes(rowId)` to check whether a given row id appears anywhere in the
-// where-clause arguments — that's enough to attribute a soft-delete to a row.
-const collectLiterals = (value: unknown, seen: WeakSet<object>): string[] => {
-  if (value === null || value === undefined) {
-    return []
-  }
-
-  if (typeof value === 'string') {
-    return [value]
-  }
-
-  if (typeof value === 'number' || typeof value === 'boolean') {
-    return [String(value)]
-  }
-
-  if (typeof value !== 'object') {
-    return []
-  }
-
-  const objectValue = value as object
-
-  if (seen.has(objectValue)) {
-    return []
-  }
-
-  seen.add(objectValue)
-
-  const literals: string[] = []
-
-  if (Array.isArray(value)) {
-    for (const entry of value) {
-      literals.push(...collectLiterals(entry, seen))
-    }
-
-    return literals
-  }
-
-  for (const entry of Object.values(value as Record<string, unknown>)) {
-    literals.push(...collectLiterals(entry, seen))
-  }
-
-  return literals
-}
 
 const snapshotWhere = (args: unknown[]): string =>
   collectLiterals(args, new WeakSet()).join('|')

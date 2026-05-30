@@ -1,18 +1,14 @@
 import { ChevronDown, ChevronUp, GitMergeIcon, Loader2 } from 'lucide-react'
 import { memo, ReactElement } from 'react'
-import { toast } from 'sonner'
 
 import { Button } from '@/app/components/ui/button'
 import { Separator } from '@/app/components/ui/separator'
-import { createReview } from '@/app/lib/api'
 import type { MergeOptions } from '@/app/lib/api'
 import { CheckoutBranchButton } from '@/app/pull-requests/components/CheckoutBranchButton'
 import { usePullRequestNavigation } from '@/app/pull-requests/PullRequestNavigationProvider'
+import { startPendingReview } from '@/app/pull-requests/start-pending-review'
 import { useAppDispatch, useAppSelector } from '@/app/store/hooks'
-import {
-  createOptimisticReview,
-  pendingReviewsActions
-} from '@/app/store/pending-reviews-slice'
+import { pendingReviewsActions } from '@/app/store/pending-reviews-slice'
 import { PullRequest } from '@/types/pull-request'
 
 interface PullRequestToolbarProps {
@@ -43,44 +39,7 @@ export const PullRequestToolbar = memo(function PullRequestToolbar({
       return
     }
 
-    const optimisticReview = createOptimisticReview(pullRequest.id)
-
-    dispatch(
-      pendingReviewsActions.setReview({
-        pullRequestId: pullRequest.id,
-        review: optimisticReview
-      })
-    )
-
-    try {
-      const review = await createReview({
-        owner: pullRequest.repositoryOwner,
-        pullNumber: pullRequest.number,
-        repo: pullRequest.repositoryName
-      })
-
-      dispatch(
-        pendingReviewsActions.setReview({
-          pullRequestId: pullRequest.id,
-          review: {
-            ...review,
-            isCollapsed: false,
-            pullRequestId: pullRequest.id
-          }
-        })
-      )
-    } catch (error) {
-      console.error('Failed to start review:', error)
-
-      dispatch(
-        pendingReviewsActions.clearReview({ pullRequestId: pullRequest.id })
-      )
-
-      const message =
-        error instanceof Error ? error.message : 'Failed to start review'
-
-      toast.error(message)
-    }
+    await startPendingReview({ dispatch, pullRequest })
   }
 
   const mergeButtonLabel = getMergeButtonLabel(mergeOptions)

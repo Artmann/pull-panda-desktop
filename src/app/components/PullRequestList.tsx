@@ -3,6 +3,7 @@ import { useMemo, type ReactElement } from 'react'
 import { Link, useNavigate } from 'react-router'
 
 import { PullRequest } from '@/types/pull-request'
+import { getPullRequestStatus } from './pull-request-status'
 import { TimeAgo } from './TimeAgo'
 import { cn } from '../lib/utils'
 import { Badge } from './ui/badge'
@@ -34,38 +35,9 @@ function PullRequestCard({
 }): ReactElement {
   const navigate = useNavigate()
 
-  const { approvalCount, changesRequestedCount, commentCount } = pullRequest
+  const { approvalCount, commentCount } = pullRequest
 
-  const status = useMemo((): string => {
-    // Check PR state first (Merged/Closed take priority)
-    if (pullRequest.state === 'MERGED') {
-      return 'Merged'
-    }
-
-    if (pullRequest.state === 'CLOSED') {
-      return 'Closed'
-    }
-
-    // Then check review states for open PRs
-    if (changesRequestedCount > 0) {
-      return 'Changes Requested'
-    }
-
-    if (approvalCount > 0) {
-      return 'Approved'
-    }
-
-    if (pullRequest.isDraft) {
-      return 'Draft'
-    }
-
-    return 'Pending'
-  }, [
-    approvalCount,
-    changesRequestedCount,
-    pullRequest.isDraft,
-    pullRequest.state
-  ])
+  const status = useMemo(() => getPullRequestStatus(pullRequest), [pullRequest])
 
   const statusColorClasses = useMemo((): string => {
     const colorMap: Record<string, string> = {

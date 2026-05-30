@@ -9,7 +9,7 @@ import { describe, expect, it, vi } from 'vitest'
 import type { Comment } from '@/types/pull-request-details'
 
 import {
-  createComment,
+  createCommentFixture,
   createPullRequest,
   createThread,
   createThreadTask
@@ -66,7 +66,7 @@ function buildStore(items: Comment[]) {
 
 describe('ThreadExpansion', () => {
   it('renders FileCommentThreadCard when the anchor comment has a path', () => {
-    const anchor = createComment({ id: 'c-1', path: 'src/app.ts' })
+    const anchor = createCommentFixture({ id: 'c-1', path: 'src/app.ts' })
     const store = buildStore([anchor])
 
     render(
@@ -83,7 +83,7 @@ describe('ThreadExpansion', () => {
   })
 
   it('renders CommentThreadCard when the anchor has no path', () => {
-    const anchor = createComment({ id: 'c-1', path: null })
+    const anchor = createCommentFixture({ id: 'c-1', path: null })
     const store = buildStore([anchor])
 
     render(
@@ -100,7 +100,7 @@ describe('ThreadExpansion', () => {
   })
 
   it('passes variant="inline" to the rendered card', () => {
-    const anchor = createComment({ id: 'c-1', path: null })
+    const anchor = createCommentFixture({ id: 'c-1', path: null })
     const store = buildStore([anchor])
 
     render(
@@ -118,19 +118,19 @@ describe('ThreadExpansion', () => {
   })
 
   it('sorts comments chronologically before passing them in', () => {
-    const anchor = createComment({
+    const anchor = createCommentFixture({
       gitHubCreatedAt: '2026-01-01T00:00:00Z',
       gitHubReviewThreadId: 'gh-thread-1',
       id: 'c-anchor',
       path: null
     })
-    const newer = createComment({
+    const newer = createCommentFixture({
       gitHubCreatedAt: '2026-01-03T00:00:00Z',
       gitHubReviewThreadId: 'gh-thread-1',
       id: 'c-newer',
       path: null
     })
-    const middle = createComment({
+    const middle = createCommentFixture({
       gitHubCreatedAt: '2026-01-02T00:00:00Z',
       gitHubReviewThreadId: 'gh-thread-1',
       id: 'c-middle',

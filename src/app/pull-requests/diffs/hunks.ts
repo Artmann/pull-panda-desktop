@@ -1,4 +1,4 @@
-export interface ParsedDiffHunk {
+interface ParsedDiffHunk {
   lines: DiffHunkLine[]
   newLineCount: number
   newStartLine: number
@@ -14,7 +14,7 @@ export interface DiffHunkLine {
   type: 'add' | 'remove' | 'context' | 'truncated'
 }
 
-export interface LinePosition {
+interface LinePosition {
   line: number
   side: 'LEFT' | 'RIGHT'
 }

@@ -1,4 +1,4 @@
-export interface BuiltInReviewer {
+interface BuiltInReviewer {
   avatarUrl: string
   description: string
   displayName: string

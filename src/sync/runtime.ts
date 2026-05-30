@@ -2,7 +2,7 @@ import { Layer, ManagedRuntime } from 'effect'
 
 import { makeAppLayer, type AppLayer } from './layer'
 
-export type AppRuntime = ManagedRuntime.ManagedRuntime<
+type AppRuntime = ManagedRuntime.ManagedRuntime<
   Layer.Layer.Success<AppLayer>,
   never
 >

@@ -90,10 +90,6 @@ export const ProbePageResponseSchema = Schema.Struct({
   rateLimit: RateLimitSchema
 })
 
-export type ProbePageResponse = Schema.Schema.Type<
-  typeof ProbePageResponseSchema
->
-
 export const MultiAliasResponseSchema = Schema.Struct({
   rateLimit: RateLimitSchema
 }).pipe(

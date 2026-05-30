@@ -36,7 +36,9 @@ export function createCheck(overrides: Partial<Check> = {}): Check {
   }
 }
 
-export function createComment(overrides: Partial<Comment> = {}): Comment {
+export function createCommentFixture(
+  overrides: Partial<Comment> = {}
+): Comment {
   return {
     body: 'Please rename this variable.',
     bodyHtml: null,
@@ -64,7 +66,7 @@ export function createComment(overrides: Partial<Comment> = {}): Comment {
   }
 }
 
-export function createReview(overrides: Partial<Review> = {}): Review {
+export function createReviewFixture(overrides: Partial<Review> = {}): Review {
   return {
     authorAvatarUrl: 'https://example.com/avatar.png',
     authorLogin: 'alice',
@@ -206,7 +208,7 @@ export function createThreadTask(
   overrides: Partial<ThreadTask> = {}
 ): ThreadTask {
   return {
-    anchorComment: createComment(),
+    anchorComment: createCommentFixture(),
     authorAvatarUrl: 'https://example.com/avatar.png',
     authorLogin: 'alice',
     id: 'task-thread-1',

@@ -39,7 +39,7 @@ export type CommandOption<T = unknown> = {
   value: T
 }
 
-export type CommandParam<T = unknown> = {
+type CommandParam<T = unknown> = {
   type: 'select'
   placeholder?: string
   getOptions: (context: CommandContext, query: string) => CommandOption<T>[]
