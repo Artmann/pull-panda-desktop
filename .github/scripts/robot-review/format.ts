@@ -5,13 +5,13 @@ export const summaryMarker =
   '<!-- robot-code-review -->\n<!-- robot-code-review-summary -->'
 export const commentMarker = '<!-- robot-code-review -->'
 
-export const severityEmoji: Record<Severity, string> = {
+const severityEmoji: Record<Severity, string> = {
   critical: '🔴',
   major: '🟠',
   minor: '🟡'
 }
 
-export const severityLabel: Record<Severity, string> = {
+const severityLabel: Record<Severity, string> = {
   critical: 'Critical',
   major: 'Major',
   minor: 'Minor'
@@ -24,7 +24,7 @@ export function issueSlug(file: string, title: string): string {
     .replace(/-+/g, '-')
 }
 
-export function issueMarker(slug: string): string {
+function issueMarker(slug: string): string {
   return `<!-- robot-issue: ${slug} -->`
 }
 

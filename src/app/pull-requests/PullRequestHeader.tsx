@@ -12,9 +12,9 @@ import { useNavigate } from 'react-router'
 import { toast } from 'sonner'
 import invariant from 'tiny-invariant'
 
-import { updatePullRequest } from '@/app/lib/api'
-import { useAppDispatch, useAppSelector } from '@/app/store/hooks'
-import { pullRequestsActions } from '@/app/store/pull-requests-slice'
+import { useAppSelector } from '@/app/store/hooks'
+
+import { useInlineEditField } from './use-inline-edit-field'
 import { PullRequest } from '@/types/pull-request'
 import type { Commit } from '@/types/pull-request-details'
 import { TimeAgo } from '../components/TimeAgo'
@@ -200,55 +200,31 @@ function InlineEditableTitle({
 }: {
   pullRequest: PullRequest
 }): ReactElement {
-  const [isEditing, setIsEditing] = useState(false)
-  const [draft, setDraft] = useState('')
-  const dispatch = useAppDispatch()
-  const isMerged = pullRequest.state === 'MERGED'
+  const {
+    cancel: handleCancel,
+    draft,
+    isEditing,
+    isMerged,
+    save: handleSave,
+    setDraft,
+    startEdit: handleStartEdit
+  } = useInlineEditField({
+    pullRequest,
+    initialDraft: pullRequest.title,
+    errorMessage: 'Failed to update title',
+    buildSave: (nextValue) => {
+      const trimmed = nextValue.trim()
 
-  const handleStartEdit = () => {
-    if (isMerged) return
-    setDraft(pullRequest.title)
-    setIsEditing(true)
-  }
+      if (!trimmed || trimmed === pullRequest.title) {
+        return null
+      }
 
-  const handleSave = () => {
-    const trimmed = draft.trim()
-
-    if (!trimmed || trimmed === pullRequest.title) {
-      setIsEditing(false)
-      return
+      return {
+        optimisticPullRequest: { ...pullRequest, title: trimmed },
+        payload: { title: trimmed }
+      }
     }
-
-    setIsEditing(false)
-
-    const originalPr = pullRequest
-
-    dispatch(pullRequestsActions.upsertItem({ ...pullRequest, title: trimmed }))
-
-    updatePullRequest({
-      owner: pullRequest.repositoryOwner,
-      pullNumber: pullRequest.number,
-      pullRequestId: pullRequest.id,
-      repo: pullRequest.repositoryName,
-      title: trimmed
-    })
-      .then((updated) => {
-        dispatch(pullRequestsActions.upsertItem(updated))
-      })
-      .catch((error: unknown) => {
-        dispatch(pullRequestsActions.upsertItem(originalPr))
-
-        const message =
-          error instanceof Error ? error.message : 'Failed to update title'
-
-        toast.error(message)
-      })
-  }
-
-  const handleCancel = () => {
-    setIsEditing(false)
-    setDraft('')
-  }
+  })
 
   if (isEditing) {
     return (

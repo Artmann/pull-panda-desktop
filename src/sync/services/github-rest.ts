@@ -107,7 +107,7 @@ function classifyRestError(
   return new NetworkError({ route, cause: error })
 }
 
-export interface RestRequestOptions {
+interface RestRequestOptions {
   etagKey?: ETagKey
 }
 

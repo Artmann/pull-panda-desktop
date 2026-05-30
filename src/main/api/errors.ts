@@ -81,116 +81,64 @@ export interface HttpErrorResponse {
   readonly status: number
 }
 
+const respond = (status: number, message: string): HttpErrorResponse => ({
+  body: { error: { message } },
+  status
+})
+
+type ErrorHandlers = {
+  [K in RouteError['_tag']]: (
+    error: Extract<RouteError, { _tag: K }>
+  ) => HttpErrorResponse
+}
+
+const errorHandlers: ErrorHandlers = {
+  DatabaseNotInitializedError: () => respond(503, 'Database not ready'),
+  DatabaseQueryError: (error) =>
+    respond(500, `Database error during ${error.operation}`),
+  DeviceFlowError: (error) =>
+    respond(error.reason === 'access_denied' ? 403 : 400, error.message),
+  FileSystemError: (error) =>
+    respond(500, `Filesystem ${error.operation} failed at ${error.path}`),
+  ForbiddenError: (error) => respond(403, error.message),
+  GitOperationError: (error) =>
+    respond(500, `Git ${error.operation} failed: ${error.message}`),
+  GraphQLError: (error) =>
+    respond(502, error.errors[0]?.message ?? 'GitHub GraphQL request failed'),
+  HttpError: (error) =>
+    respond(
+      error.status >= 400 && error.status < 600 ? error.status : 502,
+      error.message
+    ),
+  MissingTokenError: (error) => respond(401, error.message),
+  NetworkError: (error) => respond(502, `Network error on ${error.route}`),
+  NotFoundError: (error) =>
+    respond(
+      404,
+      error.resourceId ? `Not found: ${error.resourceId}` : 'Not found'
+    ),
+  OctokitError: (error) =>
+    respond(
+      error.status >= 400 && error.status < 600 ? error.status : 502,
+      error.message
+    ),
+  PermissionError: (error) => respond(403, error.message),
+  PrimaryRateLimitError: () => respond(429, 'GitHub rate limit reached'),
+  SchemaDecodeError: (error) =>
+    respond(502, `Unexpected response shape from GitHub on ${error.route}`),
+  SecondaryRateLimitError: () => respond(429, 'GitHub rate limit reached'),
+  UnauthenticatedError: (error) => respond(401, error.message),
+  ValidationError: (error) =>
+    respond(
+      400,
+      error.field ? `${error.field}: ${error.message}` : error.message
+    )
+}
+
 export function errorToHttp(error: RouteError): HttpErrorResponse {
-  switch (error._tag) {
-    case 'ValidationError':
-      return {
-        status: 400,
-        body: {
-          error: {
-            message: error.field
-              ? `${error.field}: ${error.message}`
-              : error.message
-          }
-        }
-      }
+  const handler = errorHandlers[error._tag] as (
+    error: RouteError
+  ) => HttpErrorResponse
 
-    case 'UnauthenticatedError':
-    case 'MissingTokenError':
-      return { status: 401, body: { error: { message: error.message } } }
-
-    case 'ForbiddenError':
-    case 'PermissionError':
-      return { status: 403, body: { error: { message: error.message } } }
-
-    case 'NotFoundError':
-      return {
-        status: 404,
-        body: {
-          error: {
-            message: error.resourceId
-              ? `Not found: ${error.resourceId}`
-              : 'Not found'
-          }
-        }
-      }
-
-    case 'PrimaryRateLimitError':
-    case 'SecondaryRateLimitError':
-      return {
-        status: 429,
-        body: { error: { message: 'GitHub rate limit reached' } }
-      }
-
-    case 'OctokitError':
-    case 'HttpError':
-      return {
-        status: error.status >= 400 && error.status < 600 ? error.status : 502,
-        body: { error: { message: error.message } }
-      }
-
-    case 'NetworkError':
-      return {
-        status: 502,
-        body: { error: { message: `Network error on ${error.route}` } }
-      }
-
-    case 'GraphQLError':
-      return {
-        status: 502,
-        body: {
-          error: {
-            message: error.errors[0]?.message ?? 'GitHub GraphQL request failed'
-          }
-        }
-      }
-
-    case 'SchemaDecodeError':
-      return {
-        status: 502,
-        body: {
-          error: {
-            message: `Unexpected response shape from GitHub on ${error.route}`
-          }
-        }
-      }
-
-    case 'DatabaseNotInitializedError':
-      return {
-        status: 503,
-        body: { error: { message: 'Database not ready' } }
-      }
-
-    case 'DatabaseQueryError':
-      return {
-        status: 500,
-        body: {
-          error: { message: `Database error during ${error.operation}` }
-        }
-      }
-
-    case 'GitOperationError':
-      return {
-        status: 500,
-        body: {
-          error: { message: `Git ${error.operation} failed: ${error.message}` }
-        }
-      }
-
-    case 'FileSystemError':
-      return {
-        status: 500,
-        body: {
-          error: {
-            message: `Filesystem ${error.operation} failed at ${error.path}`
-          }
-        }
-      }
-
-    case 'DeviceFlowError':
-      return {
-        status: error.reason === 'access_denied' ? 403 : 400,
-        body: { error: { message: error.message } }
-      }
-  }
+  return handler(error)
 }

@@ -1,4 +1,4 @@
-export type TaskStatus = 'pending' | 'running' | 'completed' | 'failed'
+type TaskStatus = 'pending' | 'running' | 'completed' | 'failed'
 
 export type TaskType = 'syncPullRequests' | 'syncPullRequestDetails'
 

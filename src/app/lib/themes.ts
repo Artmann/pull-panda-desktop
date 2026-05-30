@@ -1061,7 +1061,7 @@ export const allShikiThemeValues = [
 ]
 
 // Diff color generation (moved from codeThemes.ts).
-export type ThemeDiffColors = {
+type ThemeDiffColors = {
   diffAdd: string
   diffRemove: string
 }

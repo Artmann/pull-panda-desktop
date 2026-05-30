@@ -1,4 +1,4 @@
-export interface FileTreeNode {
+interface FileTreeNode {
   children?: { [key: string]: FileTreeNode }
   name: string
   path: string
@@ -55,7 +55,7 @@ export function createFileTree(filePaths: string[]): FileTree {
   return tree
 }
 
-export interface GroupedFiles {
+interface GroupedFiles {
   groupName: string
   files: Array<{ filePath: string }>
 }

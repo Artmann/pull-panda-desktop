@@ -43,5 +43,3 @@ export interface PullRequest {
   approvalCount: number
   changesRequestedCount: number
 }
-
-export type PullRequestRelation = 'author' | 'assignee' | 'reviewer'

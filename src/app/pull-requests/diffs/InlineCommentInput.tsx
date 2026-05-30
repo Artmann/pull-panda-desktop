@@ -1,18 +1,13 @@
 import { memo, useState, type ReactElement } from 'react'
-import { toast } from 'sonner'
 
 import { Avatar, AvatarFallback, AvatarImage } from '@/app/components/ui/avatar'
 import { Button } from '@/app/components/ui/button'
 import { Textarea } from '@/app/components/ui/textarea'
-import { createReview } from '@/app/lib/api'
 import { useAuth } from '@/app/lib/store/authContext'
+import { startPendingReview } from '@/app/pull-requests/start-pending-review'
 import { getDraftKeyForInlineComment } from '@/app/store/drafts-slice'
 import { useAppDispatch, useAppSelector } from '@/app/store/hooks'
 import { pendingReviewCommentsActions } from '@/app/store/pending-review-comments-slice'
-import {
-  createOptimisticReview,
-  pendingReviewsActions
-} from '@/app/store/pending-reviews-slice'
 import { useDraft } from '@/app/store/use-draft'
 import type { PullRequest } from '@/types/pull-request'
 
@@ -80,48 +75,7 @@ export const InlineCommentInput = memo(function InlineCommentInput({
       return true
     }
 
-    const optimisticReview = createOptimisticReview(pullRequest.id)
-
-    dispatch(
-      pendingReviewsActions.setReview({
-        pullRequestId: pullRequest.id,
-        review: optimisticReview
-      })
-    )
-
-    try {
-      const review = await createReview({
-        owner: pullRequest.repositoryOwner,
-        pullNumber: pullRequest.number,
-        repo: pullRequest.repositoryName
-      })
-
-      dispatch(
-        pendingReviewsActions.setReview({
-          pullRequestId: pullRequest.id,
-          review: {
-            ...review,
-            isCollapsed: false,
-            pullRequestId: pullRequest.id
-          }
-        })
-      )
-
-      return true
-    } catch (error) {
-      console.error('Failed to start review:', error)
-
-      dispatch(
-        pendingReviewsActions.clearReview({ pullRequestId: pullRequest.id })
-      )
-
-      const message =
-        error instanceof Error ? error.message : 'Failed to start review'
-
-      toast.error(message)
-
-      return false
-    }
+    return startPendingReview({ dispatch, pullRequest })
   }
 
   const handleSubmit = async () => {

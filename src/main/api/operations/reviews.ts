@@ -73,6 +73,76 @@ const octokitErrorOf =
     return new OctokitError({ message, operation, status })
   }
 
+type OctokitReviewData = {
+  body?: string | null
+  body_html?: string | null
+  html_url?: string | null
+  id: number
+  node_id: string
+  state: string
+  submitted_at?: string | null
+  user?: { avatar_url?: string; login?: string } | null
+}
+
+const toUpsertReviewInput = (data: OctokitReviewData) => ({
+  authorAvatarUrl: data.user?.avatar_url ?? null,
+  authorLogin: data.user?.login ?? null,
+  body: data.body ?? null,
+  bodyHtml: data.body_html ?? null,
+  gitHubCreatedAt: data.submitted_at ?? null,
+  gitHubId: data.node_id,
+  gitHubNumericId: data.id,
+  gitHubSubmittedAt: data.submitted_at ?? null,
+  state: data.state,
+  url: data.html_url ?? null
+})
+
+const toCreateReviewResult = (
+  persisted: {
+    authorAvatarUrl: string | null
+    authorLogin: string | null
+    body: string | null
+    gitHubId: string
+    gitHubNumericId: number | null
+    id: string
+    state: string
+  },
+  fallbackNumericId: number
+): CreateReviewResult => ({
+  authorAvatarUrl: persisted.authorAvatarUrl,
+  authorLogin: persisted.authorLogin,
+  body: persisted.body,
+  gitHubId: persisted.gitHubId,
+  gitHubNumericId: persisted.gitHubNumericId ?? fallbackNumericId,
+  id: persisted.id,
+  state: persisted.state
+})
+
+const findPendingReviewForCurrentUser = async (
+  octokit: Octokit,
+  args: {
+    readonly owner: string
+    readonly pullNumber: number
+    readonly repo: string
+  }
+) => {
+  const { data: authenticatedUser } =
+    await octokit.rest.users.getAuthenticated()
+  const { data: reviews } = await octokit.rest.pulls.listReviews({
+    owner: args.owner,
+    pull_number: args.pullNumber,
+    repo: args.repo
+  })
+
+  return (
+    reviews.find(
+      (review) =>
+        review.state === 'PENDING' &&
+        review.user?.login === authenticatedUser.login
+    ) ?? null
+  )
+}
+
 export const createPendingReview = (input: CreateReviewInput) =>
   Effect.gen(function* () {
     const repository = yield* Repository
@@ -102,19 +172,11 @@ export const createPendingReview = (input: CreateReviewInput) =>
             throw error
           }
 
-          const { data: authenticatedUser } =
-            await octokit.rest.users.getAuthenticated()
-          const { data: reviews } = await octokit.rest.pulls.listReviews({
+          const existing = await findPendingReviewForCurrentUser(octokit, {
             owner: input.owner,
-            pull_number: input.pullNumber,
+            pullNumber: input.pullNumber,
             repo: input.repo
           })
-
-          const existing = reviews.find(
-            (review) =>
-              review.state === 'PENDING' &&
-              review.user?.login === authenticatedUser.login
-          )
 
           if (!existing) {
             throw error
@@ -132,35 +194,14 @@ export const createPendingReview = (input: CreateReviewInput) =>
 
     const persisted = yield* repository.upsertReview({
       pullRequestId: pullRequest.id,
-      review: {
-        authorAvatarUrl: data.user?.avatar_url ?? null,
-        authorLogin: data.user?.login ?? null,
-        body: data.body ?? null,
-        bodyHtml: data.body_html ?? null,
-        gitHubCreatedAt: data.submitted_at ?? null,
-        gitHubId: data.node_id,
-        gitHubNumericId: data.id,
-        gitHubSubmittedAt: data.submitted_at ?? null,
-        state: data.state,
-        url: data.html_url ?? null
-      }
+      review: toUpsertReviewInput(data)
     })
 
     yield* Effect.promise(() =>
       broadcastPullRequestResourceEvents(pullRequest.id)
     )
 
-    const result: CreateReviewResult = {
-      authorAvatarUrl: persisted.authorAvatarUrl,
-      authorLogin: persisted.authorLogin,
-      body: persisted.body,
-      gitHubId: persisted.gitHubId,
-      gitHubNumericId: persisted.gitHubNumericId ?? data.id,
-      id: persisted.id,
-      state: persisted.state
-    }
-
-    return result
+    return toCreateReviewResult(persisted, data.id)
   })
 
 export const getOrSyncPendingReview = (input: GetPendingReviewInput) =>
@@ -176,23 +217,12 @@ export const getOrSyncPendingReview = (input: GetPendingReviewInput) =>
     const octokit = new Octokit({ auth: input.token })
 
     const existing = yield* Effect.tryPromise({
-      try: async () => {
-        const { data: authenticatedUser } =
-          await octokit.rest.users.getAuthenticated()
-        const { data: reviews } = await octokit.rest.pulls.listReviews({
+      try: () =>
+        findPendingReviewForCurrentUser(octokit, {
           owner: input.owner,
-          pull_number: input.pullNumber,
+          pullNumber: input.pullNumber,
           repo: input.repo
-        })
-
-        return (
-          reviews.find(
-            (review) =>
-              review.state === 'PENDING' &&
-              review.user?.login === authenticatedUser.login
-          ) ?? null
-        )
-      },
+        }),
       catch: octokitErrorOf('pulls.listReviews (pending)')
     })
 
@@ -202,35 +232,14 @@ export const getOrSyncPendingReview = (input: GetPendingReviewInput) =>
 
     const persisted = yield* repository.upsertReview({
       pullRequestId: pullRequest.id,
-      review: {
-        authorAvatarUrl: existing.user?.avatar_url ?? null,
-        authorLogin: existing.user?.login ?? null,
-        body: existing.body ?? null,
-        bodyHtml: existing.body_html ?? null,
-        gitHubCreatedAt: existing.submitted_at ?? null,
-        gitHubId: existing.node_id,
-        gitHubNumericId: existing.id,
-        gitHubSubmittedAt: existing.submitted_at ?? null,
-        state: existing.state,
-        url: existing.html_url ?? null
-      }
+      review: toUpsertReviewInput(existing)
     })
 
     yield* Effect.promise(() =>
       broadcastPullRequestResourceEvents(pullRequest.id)
     )
 
-    const result: CreateReviewResult = {
-      authorAvatarUrl: persisted.authorAvatarUrl,
-      authorLogin: persisted.authorLogin,
-      body: persisted.body,
-      gitHubId: persisted.gitHubId,
-      gitHubNumericId: persisted.gitHubNumericId ?? existing.id,
-      id: persisted.id,
-      state: persisted.state
-    }
-
-    return result
+    return toCreateReviewResult(persisted, existing.id)
   })
 
 export const deletePendingReview = (input: DeleteReviewInput) =>

@@ -8,7 +8,7 @@ export interface ReviewThreadsState {
 
 const initialState: ReviewThreadsState = { items: [] }
 
-export const reviewThreadsSlice = createSlice({
+const reviewThreadsSlice = createSlice({
   name: 'reviewThreads',
   initialState,
   reducers: {

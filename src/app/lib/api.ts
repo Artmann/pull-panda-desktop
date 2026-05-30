@@ -197,14 +197,14 @@ export async function deleteReview(
   }
 }
 
-export interface ReviewThreadResolutionRequest {
+interface ReviewThreadResolutionRequest {
   owner: string
   pullNumber: number
   repo: string
   threadId: string
 }
 
-export interface ReviewThreadResolutionResponse {
+interface ReviewThreadResolutionResponse {
   gitHubId: string
   isResolved: boolean
   resolvedByLogin: string | null
@@ -629,26 +629,6 @@ export async function setConnectedRepo(args: {
 
     throw new Error(
       extractErrorMessage(error.error, 'Failed to save connected repository')
-    )
-  }
-}
-
-export async function removeConnectedRepo(fullName: string): Promise<void> {
-  const baseUrl = await getApiBaseUrl()
-
-  const response = await fetch(`${baseUrl}/api/repo-checkout/remove`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json'
-    },
-    body: JSON.stringify({ fullName })
-  })
-
-  if (!response.ok) {
-    const error = await response.json()
-
-    throw new Error(
-      extractErrorMessage(error.error, 'Failed to remove connected repository')
     )
   }
 }

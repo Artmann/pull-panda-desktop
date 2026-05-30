@@ -1,6 +1,6 @@
 import { createSlice, type PayloadAction } from '@reduxjs/toolkit'
 
-export interface PendingReview {
+interface PendingReview {
   authorAvatarUrl: string | null
   authorLogin: string | null
   body: string | null

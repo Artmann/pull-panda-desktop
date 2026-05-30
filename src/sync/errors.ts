@@ -109,7 +109,7 @@ export type GitHubTransportError =
   | SchemaDecodeError
   | MissingTokenError
 
-export type DatabaseError = DatabaseNotInitializedError | DatabaseQueryError
+type DatabaseError = DatabaseNotInitializedError | DatabaseQueryError
 
 export type SyncError =
   | GitHubTransportError
@@ -117,13 +117,3 @@ export type SyncError =
   | SyncProbeFailedError
   | SyncHydrationFailedError
   | SyncDetailFailedError
-
-export function isRetryableTransport(
-  error: GitHubTransportError
-): error is NetworkError | PrimaryRateLimitError | SecondaryRateLimitError {
-  return (
-    error._tag === 'NetworkError' ||
-    error._tag === 'PrimaryRateLimitError' ||
-    error._tag === 'SecondaryRateLimitError'
-  )
-}

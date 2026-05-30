@@ -2,7 +2,7 @@ import { Context, Effect, Layer, Ref } from 'effect'
 
 import type { RequestKind } from '../errors'
 
-export interface RateLimitState {
+interface RateLimitState {
   remaining: number
   limit: number
   resetAt: number

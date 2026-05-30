@@ -18,5 +18,3 @@ export const ipcChannels = {
   WindowMaximize: 'window:maximize',
   WindowMinimize: 'window:minimize'
 } as const
-
-export type IpcChannel = (typeof ipcChannels)[keyof typeof ipcChannels]

@@ -34,7 +34,7 @@ const reviewThreadsQuery = `
   }
 `
 
-export function parseReviewFile(path: string): Review | null {
+function parseReviewFile(path: string): Review | null {
   console.log(`Parsing review file: ${path}`)
 
   if (!fs.existsSync(path)) {
@@ -71,7 +71,7 @@ export function parseReviewFile(path: string): Review | null {
   }
 }
 
-export async function fetchExistingReviewThreads(
+async function fetchExistingReviewThreads(
   octokit: Octokit,
   owner: string,
   repo: string,

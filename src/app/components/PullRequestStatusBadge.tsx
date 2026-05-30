@@ -3,13 +3,10 @@ import { useMemo, type ReactElement } from 'react'
 import { cn } from '@/app/lib/utils'
 import { PullRequest } from '@/types/pull-request'
 
-type PullRequestStatus =
-  | 'Approved'
-  | 'Changes Requested'
-  | 'Closed'
-  | 'Draft'
-  | 'Merged'
-  | 'Pending'
+import {
+  getPullRequestStatus,
+  type PullRequestStatus
+} from './pull-request-status'
 
 interface PullRequestStatusBadgeProps {
   pullRequest: PullRequest
@@ -18,36 +15,7 @@ interface PullRequestStatusBadgeProps {
 export function PullRequestStatusBadge({
   pullRequest
 }: PullRequestStatusBadgeProps): ReactElement {
-  const { approvalCount, changesRequestedCount } = pullRequest
-
-  const status = useMemo((): PullRequestStatus => {
-    if (pullRequest.state === 'MERGED') {
-      return 'Merged'
-    }
-
-    if (pullRequest.state === 'CLOSED') {
-      return 'Closed'
-    }
-
-    if (changesRequestedCount > 0) {
-      return 'Changes Requested'
-    }
-
-    if (approvalCount > 0) {
-      return 'Approved'
-    }
-
-    if (pullRequest.isDraft) {
-      return 'Draft'
-    }
-
-    return 'Pending'
-  }, [
-    approvalCount,
-    changesRequestedCount,
-    pullRequest.isDraft,
-    pullRequest.state
-  ])
+  const status = useMemo(() => getPullRequestStatus(pullRequest), [pullRequest])
 
   const colorClass = useMemo((): string => {
     const map: Record<PullRequestStatus, string> = {
