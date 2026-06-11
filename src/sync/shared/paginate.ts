@@ -11,6 +11,18 @@ interface PaginateOptions {
   perPage?: number
 }
 
+// The ETag is only attached to the first request — subsequent pages must not 304.
+function etagOptionsFor(
+  page: number,
+  options: PaginateOptions | undefined
+): { etagKey: ETagKey } | undefined {
+  if (page === 1 && options?.etagKey) {
+    return { etagKey: options.etagKey }
+  }
+
+  return
+}
+
 // Pages through a REST endpoint whose response is `Schema.Array(Item)` directly.
 // Returns Option.none() only when page 1 is None (304 / permission denied), so
 // the caller's existing short-circuit behaviour is preserved. The ETag is only
@@ -46,10 +58,7 @@ export const paginateRestField = <Response, I, Item>(
     const collected: Item[] = []
 
     for (let page = 1; ; page++) {
-      const requestOptions =
-        page === 1 && options?.etagKey
-          ? { etagKey: options.etagKey }
-          : undefined
+      const requestOptions = etagOptionsFor(page, options)
 
       const result = yield* rest.request(
         route,

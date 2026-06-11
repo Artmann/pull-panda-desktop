@@ -12,6 +12,7 @@ import {
   stopApiServer
 } from './main/api'
 import { bootstrap, BootstrapData } from './main/bootstrap'
+import { needsSync } from './main/needs-sync'
 import {
   sendPullRequestResourceEvents,
   setCachedUserLogin
@@ -181,52 +182,60 @@ const createWindow = () => {
   }
 }
 
-// This method will be called when Electron has finished
-// initialization and is ready to create browser windows.
-// Some APIs can only be used after this event occurs.
-function needsSync(
-  pullRequest: {
-    id: string
-    detailsSyncedAt: string | null
-    state: string
-    updatedAt: string
-  },
-  activePullRequestIds: Set<string>
-): boolean {
-  // Merged or closed PRs don't need periodic syncing
-  if (pullRequest.state === 'MERGED' || pullRequest.state === 'CLOSED') {
-    return false
+function errorMessageOf(error: unknown): string {
+  return error instanceof Error ? error.message : 'Unknown error'
+}
+
+async function syncOnePullRequestDetail(
+  pullRequest: BootstrapData['pullRequests'][number],
+  currentUserLogin: string | undefined,
+  deletedPullRequestIds: string[],
+  errors: string[]
+): Promise<void> {
+  const runtime = getAppRuntime()
+
+  try {
+    const result = await runtime.runPromise(
+      syncPullRequestDetails({
+        pullRequestId: pullRequest.id,
+        owner: pullRequest.repositoryOwner,
+        repositoryName: pullRequest.repositoryName,
+        pullNumber: pullRequest.number
+      })
+    )
+
+    if (result.notFound) {
+      await runtime.runPromise(deletePullRequestData(pullRequest.id))
+      deletedPullRequestIds.push(pullRequest.id)
+    } else if (mainWindow) {
+      await sendPullRequestResourceEvents(
+        mainWindow,
+        pullRequest.id,
+        currentUserLogin
+      )
+    }
+  } catch (error) {
+    errors.push(`PR #${pullRequest.number}: ${errorMessageOf(error)}`)
+    console.error(
+      `Failed to sync details for PR #${pullRequest.number}:`,
+      error
+    )
+  }
+}
+
+// If any PRs were deleted, send the updated list to the renderer.
+async function notifyDeletedPullRequests(
+  deletedPullRequestIds: string[]
+): Promise<void> {
+  if (deletedPullRequestIds.length === 0 || !mainWindow) {
+    return
   }
 
-  // Never synced before
-  if (!pullRequest.detailsSyncedAt) {
-    return true
-  }
+  await rebuildBootstrapAndNotify()
 
-  const now = Date.now()
-  const updatedAt = new Date(pullRequest.updatedAt).getTime()
-  const detailsSyncedAt = new Date(pullRequest.detailsSyncedAt).getTime()
-
-  // Updated on GitHub since last sync
-  if (updatedAt > detailsSyncedAt) {
-    return true
-  }
-
-  // Active PRs (user has opened them) sync every 10 seconds
-  if (activePullRequestIds.has(pullRequest.id)) {
-    return now - detailsSyncedAt > 10_000
-  }
-
-  // Recently updated open PRs sync every 60 seconds
-  const oneDayMs = 24 * 60 * 60 * 1000
-  const isRecentlyUpdated = now - updatedAt < oneDayMs
-
-  if (isRecentlyUpdated) {
-    return now - detailsSyncedAt > 60_000
-  }
-
-  // Older open PRs sync every 5 minutes
-  return now - detailsSyncedAt > 5 * 60_000
+  console.log(
+    `Removed ${deletedPullRequestIds.length} inaccessible PRs from the list`
+  )
 }
 
 async function syncAllPullRequestDetails(): Promise<void> {
@@ -240,8 +249,8 @@ async function syncAllPullRequestDetails(): Promise<void> {
   )
 
   const allPullRequests = bootstrapData.pullRequests
-  const pullRequests = allPullRequests.filter((pr) =>
-    needsSync(pr, activePullRequestIds)
+  const pullRequests = allPullRequests.filter((pullRequest) =>
+    needsSync(pullRequest, activePullRequestIds)
   )
   const total = pullRequests.length
 
@@ -275,61 +284,25 @@ async function syncAllPullRequestDetails(): Promise<void> {
 
     await Promise.allSettled(
       batch.map(async (pullRequest) => {
-        try {
-          const result = await runtime.runPromise(
-            syncPullRequestDetails({
-              pullRequestId: pullRequest.id,
-              owner: pullRequest.repositoryOwner,
-              repositoryName: pullRequest.repositoryName,
-              pullNumber: pullRequest.number
-            })
-          )
+        await syncOnePullRequestDetail(
+          pullRequest,
+          currentUserLogin,
+          deletedPullRequestIds,
+          errors
+        )
 
-          if (result.notFound) {
-            await runtime.runPromise(deletePullRequestData(pullRequest.id))
-            deletedPullRequestIds.push(pullRequest.id)
-          } else if (mainWindow) {
-            await sendPullRequestResourceEvents(
-              mainWindow,
-              pullRequest.id,
-              currentUserLogin
-            )
-          }
-        } catch (error) {
-          const message =
-            error instanceof Error ? error.message : 'Unknown error'
-          errors.push(`PR #${pullRequest.number}: ${message}`)
-          console.error(
-            `Failed to sync details for PR #${pullRequest.number}:`,
-            error
-          )
-        } finally {
-          completed++
+        completed++
 
-          taskManager.updateTaskProgress(task.id, {
-            current: completed,
-            total,
-            message: `Syncing ${completed}/${total} pull requests`
-          })
-        }
+        taskManager.updateTaskProgress(task.id, {
+          current: completed,
+          total,
+          message: `Syncing ${completed}/${total} pull requests`
+        })
       })
     )
   }
 
-  // If any PRs were deleted, send the updated list to the renderer
-  if (deletedPullRequestIds.length > 0 && mainWindow) {
-    const postDeleteUserLogin = await getUserLogin()
-    bootstrapData = await bootstrap(postDeleteUserLogin)
-
-    mainWindow.webContents.send(ipcChannels.ResourceUpdated, {
-      type: 'pull-requests',
-      data: bootstrapData.pullRequests
-    })
-
-    console.log(
-      `Removed ${deletedPullRequestIds.length} inaccessible PRs from the list`
-    )
-  }
+  await notifyDeletedPullRequests(deletedPullRequestIds)
 
   if (errors.length > 0) {
     taskManager.failTask(
@@ -453,10 +426,7 @@ async function runPullRequestSync(): Promise<boolean> {
 
     return result.hasChanges
   } catch (error) {
-    taskManager.failTask(
-      syncTask.id,
-      error instanceof Error ? error.message : 'Unknown error'
-    )
+    taskManager.failTask(syncTask.id, errorMessageOf(error))
     console.error('Failed to sync pull requests:', error)
 
     return false

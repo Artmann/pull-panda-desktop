@@ -34,6 +34,22 @@ interface CandidateSource {
   login: string
 }
 
+function mergeWithBuiltInReviewer(source: CandidateSource): {
+  avatarUrl: string
+  description: string | null
+  displayName: string
+  login: string
+} {
+  const builtIn = getBuiltInReviewer(source.login)
+
+  return {
+    avatarUrl: builtIn?.avatarUrl ?? source.avatarUrl,
+    description: source.description ?? builtIn?.description ?? null,
+    displayName: source.displayName ?? builtIn?.displayName ?? source.login,
+    login: source.login
+  }
+}
+
 export function buildReviewerCandidates({
   collaborators,
   codeowners,
@@ -55,14 +71,9 @@ export function buildReviewerCandidates({
     source: CandidateSource,
     section: ReviewerSection
   ): ReviewerCandidate => {
-    const builtIn = getBuiltInReviewer(source.login)
-
     return {
-      avatarUrl: builtIn?.avatarUrl ?? source.avatarUrl,
-      description: source.description ?? builtIn?.description ?? null,
-      displayName: source.displayName ?? builtIn?.displayName ?? source.login,
+      ...mergeWithBuiltInReviewer(source),
       isOwner: codeownerLogins.has(source.login),
-      login: source.login,
       ownerPatterns: codeownerPatternsByLogin.get(source.login) ?? [],
       section
     }
