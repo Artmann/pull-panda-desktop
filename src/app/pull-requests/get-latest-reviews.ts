@@ -10,31 +10,42 @@ function getTimestamp(review: Review): string {
   return review.gitHubSubmittedAt ?? review.syncedAt
 }
 
+function isCounted(review: Review): boolean {
+  if (review.state === 'PENDING') {
+    return false
+  }
+
+  if (review.state === 'COMMENTED' && (review.body ?? '').trim() === '') {
+    return false
+  }
+
+  return true
+}
+
+// A COMMENTED review never replaces an actionable (APPROVED / CHANGES_REQUESTED) one.
+// Only a newer actionable review can replace an existing actionable review.
+function replaces(existing: Review, candidate: Review): boolean {
+  if (isActionable(existing) && !isActionable(candidate)) {
+    return false
+  }
+
+  return getTimestamp(candidate) > getTimestamp(existing)
+}
+
 export function getLatestReviews(reviews: Review[]): Review[] {
   const latestByAuthor = new Map<string, Review>()
 
   for (const review of reviews) {
-    if (!review.authorLogin) continue
-    if (review.state === 'PENDING') continue
-    if (review.state === 'COMMENTED' && (review.body ?? '').trim() === '') {
+    const author = review.authorLogin
+
+    if (!author || !isCounted(review)) {
       continue
     }
 
-    const existing = latestByAuthor.get(review.authorLogin)
+    const existing = latestByAuthor.get(author)
 
-    if (!existing) {
-      latestByAuthor.set(review.authorLogin, review)
-      continue
-    }
-
-    // A COMMENTED review never replaces an actionable (APPROVED / CHANGES_REQUESTED) one.
-    // Only a newer actionable review can replace an existing actionable review.
-    if (isActionable(existing) && !isActionable(review)) {
-      continue
-    }
-
-    if (getTimestamp(review) > getTimestamp(existing)) {
-      latestByAuthor.set(review.authorLogin, review)
+    if (!existing || replaces(existing, review)) {
+      latestByAuthor.set(author, review)
     }
   }
 

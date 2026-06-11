@@ -291,22 +291,26 @@ interface GraphQLMergeState {
   unresolvedReviewThreads: number
 }
 
+interface StatusCheckContext {
+  conclusion?: string | null
+  isRequired: boolean
+  state?: string
+}
+
+interface StatusCheckRollup {
+  contexts: {
+    nodes: StatusCheckContext[]
+  }
+  state: string
+}
+
 interface GraphQLMergeStateResponse {
   node: {
     baseRefName: string
     commits: {
       nodes: Array<{
         commit: {
-          statusCheckRollup: {
-            contexts: {
-              nodes: Array<{
-                conclusion?: string | null
-                isRequired: boolean
-                state?: string
-              }>
-            }
-            state: string
-          } | null
+          statusCheckRollup: StatusCheckRollup | null
         }
       }>
     }
@@ -362,6 +366,32 @@ const mergeStateQuery = `
   }
 `
 
+const passingCheckConclusions = new Set(['NEUTRAL', 'SKIPPED', 'SUCCESS'])
+
+const isRequiredCheckPassing = (check: StatusCheckContext): boolean => {
+  if ('conclusion' in check) {
+    return passingCheckConclusions.has(check.conclusion ?? '')
+  }
+
+  if ('state' in check) {
+    return check.state === 'SUCCESS'
+  }
+
+  return true
+}
+
+const areRequiredChecksPassing = (
+  rollup: StatusCheckRollup | null | undefined
+): boolean => {
+  if (!rollup) {
+    return true
+  }
+
+  return rollup.contexts.nodes.every(
+    (check) => !check.isRequired || isRequiredCheckPassing(check)
+  )
+}
+
 async function fetchMergeStateGraphQL(
   token: string,
   nodeId: string,
@@ -377,43 +407,16 @@ async function fetchMergeStateGraphQL(
   })
 
   const node = response.node
+  const rollup = node.commits.nodes[0]?.commit.statusCheckRollup
   const threads = node.reviewThreads.nodes
   const unresolved = threads.filter((thread) => !thread.isResolved).length
-
-  const commitNode = node.commits.nodes[0]
-  const rollup = commitNode?.commit.statusCheckRollup
-  let requiredChecksPassing = true
-
-  if (rollup) {
-    for (const check of rollup.contexts.nodes) {
-      if (!check.isRequired) {
-        continue
-      }
-
-      if ('conclusion' in check) {
-        if (
-          check.conclusion !== 'SUCCESS' &&
-          check.conclusion !== 'NEUTRAL' &&
-          check.conclusion !== 'SKIPPED'
-        ) {
-          requiredChecksPassing = false
-          break
-        }
-      } else if ('state' in check) {
-        if (check.state !== 'SUCCESS') {
-          requiredChecksPassing = false
-          break
-        }
-      }
-    }
-  }
 
   return {
     baseRefName: node.baseRefName,
     isDraft: node.isDraft,
     mergeable: node.mergeable,
     mergeStateStatus: node.mergeStateStatus,
-    requiredChecksPassing,
+    requiredChecksPassing: areRequiredChecksPassing(rollup),
     reviewDecision: node.reviewDecision,
     totalReviewThreads: node.reviewThreads.totalCount,
     unresolvedReviewThreads: unresolved
@@ -446,6 +449,50 @@ async function fetchRepoSettings(
   return settings
 }
 
+interface BranchProtectionData {
+  required_conversation_resolution?: { enabled?: boolean }
+  required_pull_request_reviews?: {
+    required_approving_review_count?: number
+  }
+  required_status_checks?: { strict?: boolean }
+}
+
+const isNotFoundError = (error: unknown): boolean =>
+  error instanceof Error &&
+  'status' in error &&
+  (error as { status: number }).status === 404
+
+const toBranchProtection = (data: BranchProtectionData): BranchProtection => ({
+  requireConversationResolution:
+    data.required_conversation_resolution?.enabled ?? false,
+  requiredApprovingReviewCount:
+    data.required_pull_request_reviews?.required_approving_review_count ?? 0,
+  requiresStrictStatusChecks: data.required_status_checks?.strict ?? false
+})
+
+async function requestBranchProtection(
+  octokit: Octokit,
+  owner: string,
+  repo: string,
+  branch: string
+): Promise<BranchProtection | null> {
+  try {
+    const { data } = await octokit.rest.repos.getBranchProtection({
+      branch,
+      owner,
+      repo
+    })
+
+    return toBranchProtection(data)
+  } catch (error) {
+    if (isNotFoundError(error)) {
+      return null
+    }
+
+    throw error
+  }
+}
+
 async function fetchBranchProtection(
   token: string,
   owner: string,
@@ -464,130 +511,148 @@ async function fetchBranchProtection(
   }
 
   const octokit = new Octokit({ auth: token })
+  const protection = await requestBranchProtection(octokit, owner, repo, branch)
 
-  try {
-    const { data } = await octokit.rest.repos.getBranchProtection({
-      branch,
-      owner,
-      repo
-    })
+  branchProtectionCache.set(cacheKey, protection, cacheTtl)
 
-    const protection: BranchProtection = {
-      requireConversationResolution:
-        data.required_conversation_resolution?.enabled ?? false,
-      requiredApprovingReviewCount:
-        data.required_pull_request_reviews?.required_approving_review_count ??
-        0,
-      requiresStrictStatusChecks: data.required_status_checks?.strict ?? false
-    }
+  return protection
+}
 
-    branchProtectionCache.set(cacheKey, protection, cacheTtl)
+const approvalDescription = (reviewDecision: string | null): string => {
+  if (reviewDecision === 'APPROVED') {
+    return 'All required reviews have been provided.'
+  }
 
-    return protection
-  } catch (error) {
-    if (
-      error instanceof Error &&
-      'status' in error &&
-      (error as { status: number }).status === 404
-    ) {
-      branchProtectionCache.set(cacheKey, null, cacheTtl)
+  if (reviewDecision === 'CHANGES_REQUESTED') {
+    return 'A reviewer has requested changes.'
+  }
 
-      return null
-    }
+  return 'Waiting for required approving reviews.'
+}
 
-    throw error
+const approvingReviewsRequirement = (
+  state: GraphQLMergeState,
+  protection: BranchProtection | null
+): MergeRequirement | null => {
+  const count = protection?.requiredApprovingReviewCount ?? 0
+
+  if (count < 1) {
+    return null
+  }
+
+  return {
+    description: approvalDescription(state.reviewDecision),
+    key: 'approving-reviews',
+    label:
+      count === 1
+        ? '1 approving review required'
+        : `${count} approving reviews required`,
+    satisfied: state.reviewDecision === 'APPROVED'
   }
 }
 
-function buildRequirements(
+const branchUpToDateRequirement = (
   state: GraphQLMergeState,
   protection: BranchProtection | null
-): MergeRequirement[] {
-  const requirements: MergeRequirement[] = []
+): MergeRequirement | null => {
+  if (!protection?.requiresStrictStatusChecks) {
+    return null
+  }
+
+  const behind = state.mergeStateStatus === 'BEHIND'
+
+  return {
+    description: behind
+      ? 'This branch is behind the base branch.'
+      : 'Branch is up to date with the base branch.',
+    key: 'branch-up-to-date',
+    label: 'Branch is up to date',
+    satisfied: !behind
+  }
+}
+
+const conversationsRequirement = (
+  state: GraphQLMergeState,
+  protection: BranchProtection | null
+): MergeRequirement | null => {
+  if (!protection?.requireConversationResolution) {
+    return null
+  }
+
+  const unresolved = state.unresolvedReviewThreads
+  const allResolved = unresolved === 0
+
+  return {
+    description: allResolved
+      ? 'All conversations have been resolved.'
+      : `${unresolved} unresolved ${unresolved === 1 ? 'conversation' : 'conversations'}.`,
+    key: 'conversations-resolved',
+    label: 'Conversations resolved',
+    satisfied: allResolved
+  }
+}
+
+const draftRequirement = (state: GraphQLMergeState): MergeRequirement => ({
+  description: state.isDraft
+    ? 'This pull request is still a draft.'
+    : 'Pull request is ready for review.',
+  key: 'not-draft',
+  label: 'Not a draft',
+  satisfied: !state.isDraft
+})
+
+const mergeConflictsRequirement = (
+  state: GraphQLMergeState
+): MergeRequirement => {
   const hasConflicts = state.mergeable === 'CONFLICTING'
 
-  requirements.push({
+  return {
     description: hasConflicts
       ? 'This branch has conflicts that must be resolved.'
       : 'No merge conflicts.',
     key: 'no-conflicts',
     label: 'No merge conflicts',
     satisfied: !hasConflicts
-  })
+  }
+}
 
-  requirements.push({
-    description: state.isDraft
-      ? 'This pull request is still a draft.'
-      : 'Pull request is ready for review.',
-    key: 'not-draft',
-    label: 'Not a draft',
-    satisfied: !state.isDraft
-  })
+const requiredChecksRequirement = (
+  state: GraphQLMergeState,
+  protection: BranchProtection | null
+): MergeRequirement | null => {
+  const failing =
+    state.mergeStateStatus === 'UNSTABLE' || !state.requiredChecksPassing
 
-  if (protection && protection.requiredApprovingReviewCount > 0) {
-    const approved = state.reviewDecision === 'APPROVED'
-    const count = protection.requiredApprovingReviewCount
-    const label =
-      count === 1
-        ? '1 approving review required'
-        : `${count} approving reviews required`
-
-    requirements.push({
-      description: approved
-        ? 'All required reviews have been provided.'
-        : state.reviewDecision === 'CHANGES_REQUESTED'
-          ? 'A reviewer has requested changes.'
-          : 'Waiting for required approving reviews.',
-      key: 'approving-reviews',
-      label,
-      satisfied: approved
-    })
+  if (!failing && !protection?.requiresStrictStatusChecks) {
+    return null
   }
 
-  if (state.mergeStateStatus === 'UNSTABLE' || !state.requiredChecksPassing) {
-    requirements.push({
-      description: 'Some required status checks have not passed.',
-      key: 'required-checks',
-      label: 'Required checks passing',
-      satisfied: false
-    })
-  } else if (protection && protection.requiresStrictStatusChecks) {
-    requirements.push({
-      description: 'All required status checks have passed.',
-      key: 'required-checks',
-      label: 'Required checks passing',
-      satisfied: true
-    })
+  return {
+    description: failing
+      ? 'Some required status checks have not passed.'
+      : 'All required status checks have passed.',
+    key: 'required-checks',
+    label: 'Required checks passing',
+    satisfied: !failing
   }
+}
 
-  if (protection && protection.requireConversationResolution) {
-    const allResolved = state.unresolvedReviewThreads === 0
-    const unresolved = state.unresolvedReviewThreads
+export function buildRequirements(
+  state: GraphQLMergeState,
+  protection: BranchProtection | null
+): MergeRequirement[] {
+  const candidates = [
+    mergeConflictsRequirement(state),
+    draftRequirement(state),
+    approvingReviewsRequirement(state, protection),
+    requiredChecksRequirement(state, protection),
+    conversationsRequirement(state, protection),
+    branchUpToDateRequirement(state, protection)
+  ]
 
-    requirements.push({
-      description: allResolved
-        ? 'All conversations have been resolved.'
-        : `${unresolved} unresolved ${unresolved === 1 ? 'conversation' : 'conversations'}.`,
-      key: 'conversations-resolved',
-      label: 'Conversations resolved',
-      satisfied: allResolved
-    })
-  }
-
-  if (protection && protection.requiresStrictStatusChecks) {
-    const behind = state.mergeStateStatus === 'BEHIND'
-
-    requirements.push({
-      description: behind
-        ? 'This branch is behind the base branch.'
-        : 'Branch is up to date with the base branch.',
-      key: 'branch-up-to-date',
-      label: 'Branch is up to date',
-      satisfied: !behind
-    })
-  }
-
-  return requirements
+  return candidates.filter(
+    (requirement): requirement is MergeRequirement => requirement !== null
+  )
 }
 
 export const fetchMergeOptions = (input: {

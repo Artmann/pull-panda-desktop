@@ -43,6 +43,38 @@ export async function getSharedHighlighter(): Promise<Highlighter> {
   return highlighterPromise
 }
 
+const languageByExtension: Record<string, string> = {
+  bash: 'bash',
+  c: 'c',
+  cpp: 'c',
+  css: 'css',
+  go: 'go',
+  gql: 'graphql',
+  graphql: 'graphql',
+  h: 'c',
+  hpp: 'c',
+  htm: 'html',
+  html: 'html',
+  java: 'java',
+  js: 'javascript',
+  json: 'json',
+  jsx: 'javascript',
+  md: 'markdown',
+  php: 'php',
+  py: 'python',
+  rb: 'ruby',
+  rs: 'rust',
+  sass: 'css',
+  scss: 'css',
+  sh: 'bash',
+  sql: 'sql',
+  ts: 'typescript',
+  tsx: 'typescript',
+  yaml: 'yaml',
+  yml: 'yaml',
+  zsh: 'bash'
+}
+
 export function getLanguageFromPath(path?: string): string | undefined {
   if (!path) {
     return
@@ -50,54 +82,9 @@ export function getLanguageFromPath(path?: string): string | undefined {
 
   const extension = path.split('.').pop()?.toLowerCase()
 
-  switch (extension) {
-    case 'js':
-    case 'jsx':
-      return 'javascript'
-    case 'ts':
-    case 'tsx':
-      return 'typescript'
-    case 'py':
-      return 'python'
-    case 'java':
-      return 'java'
-    case 'c':
-    case 'cpp':
-    case 'h':
-    case 'hpp':
-      return 'c'
-    case 'go':
-      return 'go'
-    case 'rb':
-      return 'ruby'
-    case 'php':
-      return 'php'
-    case 'html':
-    case 'htm':
-      return 'html'
-    case 'css':
-    case 'scss':
-    case 'sass':
-      return 'css'
-    case 'gql':
-    case 'graphql':
-      return 'graphql'
-    case 'json':
-      return 'json'
-    case 'md':
-      return 'markdown'
-    case 'rs':
-      return 'rust'
-    case 'sh':
-    case 'bash':
-    case 'zsh':
-      return 'bash'
-    case 'sql':
-      return 'sql'
-    case 'yaml':
-    case 'yml':
-      return 'yaml'
-    default:
-      return
+  if (!extension) {
+    return
   }
+
+  return languageByExtension[extension]
 }

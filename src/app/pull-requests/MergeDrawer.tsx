@@ -97,6 +97,47 @@ const mergeMethodShortLabels: Record<MergeMethod, string> = {
   squash: 'Squash'
 }
 
+export function getAllowedMergeMethods(
+  mergeOptions: MergeOptions | null
+): MergeMethod[] {
+  if (!mergeOptions) {
+    return []
+  }
+
+  const methods: MergeMethod[] = []
+
+  if (mergeOptions.allowSquashMerge) {
+    methods.push('squash')
+  }
+
+  if (mergeOptions.allowMergeCommit) {
+    methods.push('merge')
+  }
+
+  if (mergeOptions.allowRebaseMerge) {
+    methods.push('rebase')
+  }
+
+  return methods
+}
+
+export function resolveInitialMergeMethod(
+  mergeOptions: MergeOptions | null,
+  savedMethod: MergeMethod | null
+): MergeMethod | null {
+  if (!mergeOptions || mergeOptions.mergeable === null) {
+    return null
+  }
+
+  const allowedMethods = getAllowedMergeMethods(mergeOptions)
+
+  if (savedMethod && allowedMethods.includes(savedMethod)) {
+    return savedMethod
+  }
+
+  return allowedMethods[0] ?? null
+}
+
 interface MergeDrawerProps {
   onClose: () => void
   open: boolean
@@ -131,44 +172,16 @@ export const MergeDrawer = memo(function MergeDrawer({
 
   useEffect(
     function initializeSelectedMethod() {
-      if (!mergeOptions || mergeOptions.mergeable === null) {
-        setSelectedMethod(null)
-
-        return
-      }
-
       const repo = `${pullRequest.repositoryOwner}/${pullRequest.repositoryName}`
-      const saved = getSavedMergeMethod(repo)
 
-      const allowedMap: Record<MergeMethod, boolean> = {
-        merge: mergeOptions.allowMergeCommit,
-        rebase: mergeOptions.allowRebaseMerge,
-        squash: mergeOptions.allowSquashMerge
-      }
-
-      const initial =
-        (saved && allowedMap[saved] && saved) ||
-        (mergeOptions.allowSquashMerge && 'squash') ||
-        (mergeOptions.allowMergeCommit && 'merge') ||
-        (mergeOptions.allowRebaseMerge && 'rebase') ||
-        null
-
-      setSelectedMethod(initial as MergeMethod | null)
+      setSelectedMethod(
+        resolveInitialMergeMethod(mergeOptions, getSavedMergeMethod(repo))
+      )
     },
     [mergeOptions, pullRequest.repositoryName, pullRequest.repositoryOwner]
   )
 
-  const allowedMethods: MergeMethod[] = mergeOptions
-    ? ([
-        mergeOptions.allowSquashMerge && 'squash',
-        mergeOptions.allowMergeCommit && 'merge',
-        mergeOptions.allowRebaseMerge && 'rebase'
-      ].filter(Boolean) as MergeMethod[])
-    : []
-
-  const latestReviews = useLatestReviews(reviews)
-  const checksSummary = useChecksSummary(checks)
-
+  const allowedMethods = getAllowedMergeMethods(mergeOptions)
   const canMerge = mergeOptions?.mergeable === true
 
   const handleTabClick = (method: MergeMethod) => {
@@ -248,31 +261,11 @@ export const MergeDrawer = memo(function MergeDrawer({
       className="w-[440px]"
       open={open}
     >
-      <SidePanelHeader>
-        <div className="flex items-center justify-between">
-          <SidePanelTitle>
-            {showSquashFields ? 'Squash and merge' : 'Merge pull request'}
-          </SidePanelTitle>
-
-          <Button
-            onClick={onClose}
-            size="icon-xs"
-            variant="ghost"
-          >
-            <X className="size-4" />
-          </Button>
-        </div>
-
-        <div className="flex items-center gap-2 mt-2">
-          <span className="text-xs bg-muted/50 px-2 py-0.5 rounded-full text-muted-foreground">
-            #{pullRequest.number}
-          </span>
-
-          <span className="text-xs bg-muted/50 px-2 py-0.5 rounded-full text-muted-foreground">
-            {pullRequest.repositoryOwner}/{pullRequest.repositoryName}
-          </span>
-        </div>
-      </SidePanelHeader>
+      <MergeDrawerHeader
+        onClose={onClose}
+        pullRequest={pullRequest}
+        showSquashFields={showSquashFields}
+      />
 
       <SidePanelContent className={showSquashFields ? 'flex flex-col' : ''}>
         <div
@@ -290,149 +283,296 @@ export const MergeDrawer = memo(function MergeDrawer({
               onCommitTitleChange={setCommitTitle}
             />
           ) : (
-            <>
-              {latestReviews.length > 0 && (
-                <ReviewsSection
-                  approvalCount={pullRequest.approvalCount}
-                  changesRequestedCount={pullRequest.changesRequestedCount}
-                  reviews={latestReviews}
-                />
-              )}
-
-              {checks.length > 0 && (
-                <ChecksSection
-                  checks={checks}
-                  requiredChecksPending={
-                    mergeOptions?.requirements.some(
-                      (requirement) =>
-                        requirement.key === 'required-checks' &&
-                        !requirement.satisfied
-                    ) ?? false
-                  }
-                  summary={checksSummary}
-                />
-              )}
-
-              {mergeOptions !== null &&
-                mergeOptions.mergeable !== null &&
-                mergeOptions.requirements.length > 0 && (
-                  <MergeRequirementsChecklist
-                    requirements={mergeOptions.requirements}
-                  />
-                )}
-
-              <BranchSyncActions pullRequest={pullRequest} />
-
-              {!mergeOptions && (
-                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <Loader2 className="size-4 animate-spin" />
-                  Loading merge options...
-                </div>
-              )}
-            </>
+            <MergeStatusSections
+              checks={checks}
+              mergeOptions={mergeOptions}
+              pullRequest={pullRequest}
+              reviews={reviews}
+            />
           )}
         </div>
       </SidePanelContent>
 
       <SidePanelFooter>
-        <div className="flex flex-col gap-6 max-w-72 mx-auto w-full">
-          {allowedMethods.length > 0 && !showSquashFields && (
-            <div className="flex flex-col gap-2">
-              <div className="flex gap-2">
-                {(['squash', 'merge', 'rebase'] as MergeMethod[])
-                  .filter((method) => allowedMethods.includes(method))
-                  .map((method) => (
-                    <button
-                      className={cn(
-                        'flex-1 flex items-center justify-center gap-1.5 px-2 py-1.5 rounded-md border cursor-pointer transition-colors text-xs font-medium',
-                        selectedMethod === method
-                          ? 'border-primary bg-primary/10 text-primary'
-                          : 'border-border hover:border-foreground/20'
-                      )}
-                      key={method}
-                      onClick={() => handleTabClick(method)}
-                      type="button"
-                    >
-                      <MergeMethodIcon method={method} />
-                      {mergeMethodShortLabels[method]}
-                    </button>
-                  ))}
-              </div>
-
-              {selectedMethod && (
-                <p className="text-xs text-muted-foreground text-center">
-                  {mergeMethodDescriptions[selectedMethod]}
-                </p>
-              )}
-            </div>
-          )}
-
-          {canMerge && selectedMethod ? (
-            <Button
-              className="w-full bg-status-success border border-status-success-border text-status-success-foreground hover:bg-status-success/90"
-              onClick={handleMerge}
-              size="sm"
-            >
-              <GitMerge className="size-3" />
-              {mergeMethodLabels[selectedMethod]}
-            </Button>
-          ) : (
-            mergeOptions !== null &&
-            !canMerge && (
-              <div className="flex flex-col gap-4">
-                <div className="flex flex-col gap-2 items-center">
-                  <Button
-                    className="w-full"
-                    disabled
-                    size="sm"
-                    variant="outline"
-                  >
-                    <ShieldAlert className="size-3" />
-                    Merge is blocked
-                  </Button>
-
-                  <p className="text-xs text-muted-foreground text-center">
-                    {mergeBlockedSummary(mergeOptions)}
-                  </p>
-                </div>
-
-                {mergeOptions.mergeableState === 'dirty' ? (
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <div>
-                        <Button
-                          className="w-full"
-                          disabled
-                          size="sm"
-                          variant="destructive"
-                        >
-                          Merge without waiting for requirements
-                        </Button>
-                      </div>
-                    </TooltipTrigger>
-
-                    <TooltipContent>
-                      Cannot merge while there are conflicts.
-                    </TooltipContent>
-                  </Tooltip>
-                ) : (
-                  <Button
-                    className="w-full"
-                    onClick={handleForceMerge}
-                    size="sm"
-                    variant="destructive"
-                  >
-                    Merge without waiting for requirements
-                  </Button>
-                )}
-              </div>
-            )
-          )}
-        </div>
+        <MergeDrawerFooter
+          allowedMethods={allowedMethods}
+          canMerge={canMerge}
+          mergeOptions={mergeOptions}
+          onForceMerge={handleForceMerge}
+          onMerge={handleMerge}
+          onTabClick={handleTabClick}
+          selectedMethod={selectedMethod}
+          showSquashFields={showSquashFields}
+        />
       </SidePanelFooter>
     </SidePanel>
   )
 })
+
+interface MergeDrawerHeaderProps {
+  onClose: () => void
+  pullRequest: PullRequest
+  showSquashFields: boolean
+}
+
+function MergeDrawerHeader({
+  onClose,
+  pullRequest,
+  showSquashFields
+}: MergeDrawerHeaderProps): ReactElement {
+  return (
+    <SidePanelHeader>
+      <div className="flex items-center justify-between">
+        <SidePanelTitle>
+          {showSquashFields ? 'Squash and merge' : 'Merge pull request'}
+        </SidePanelTitle>
+
+        <Button
+          onClick={onClose}
+          size="icon-xs"
+          variant="ghost"
+        >
+          <X className="size-4" />
+        </Button>
+      </div>
+
+      <div className="flex items-center gap-2 mt-2">
+        <span className="text-xs bg-muted/50 px-2 py-0.5 rounded-full text-muted-foreground">
+          #{pullRequest.number}
+        </span>
+
+        <span className="text-xs bg-muted/50 px-2 py-0.5 rounded-full text-muted-foreground">
+          {pullRequest.repositoryOwner}/{pullRequest.repositoryName}
+        </span>
+      </div>
+    </SidePanelHeader>
+  )
+}
+
+interface MergeStatusSectionsProps {
+  checks: Check[]
+  mergeOptions: MergeOptions | null
+  pullRequest: PullRequest
+  reviews: Review[]
+}
+
+function MergeStatusSections({
+  checks,
+  mergeOptions,
+  pullRequest,
+  reviews
+}: MergeStatusSectionsProps): ReactElement {
+  const checksSummary = useChecksSummary(checks)
+  const latestReviews = useLatestReviews(reviews)
+
+  return (
+    <>
+      {latestReviews.length > 0 && (
+        <ReviewsSection
+          approvalCount={pullRequest.approvalCount}
+          changesRequestedCount={pullRequest.changesRequestedCount}
+          reviews={latestReviews}
+        />
+      )}
+
+      {checks.length > 0 && (
+        <ChecksSection
+          checks={checks}
+          requiredChecksPending={hasUnsatisfiedRequiredChecks(mergeOptions)}
+          summary={checksSummary}
+        />
+      )}
+
+      {mergeOptions !== null &&
+        mergeOptions.mergeable !== null &&
+        mergeOptions.requirements.length > 0 && (
+          <MergeRequirementsChecklist
+            requirements={mergeOptions.requirements}
+          />
+        )}
+
+      <BranchSyncActions pullRequest={pullRequest} />
+
+      {!mergeOptions && (
+        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+          <Loader2 className="size-4 animate-spin" />
+          Loading merge options...
+        </div>
+      )}
+    </>
+  )
+}
+
+function hasUnsatisfiedRequiredChecks(
+  mergeOptions: MergeOptions | null
+): boolean {
+  if (!mergeOptions) {
+    return false
+  }
+
+  return mergeOptions.requirements.some(
+    (requirement) =>
+      requirement.key === 'required-checks' && !requirement.satisfied
+  )
+}
+
+interface MergeDrawerFooterProps {
+  allowedMethods: MergeMethod[]
+  canMerge: boolean
+  mergeOptions: MergeOptions | null
+  onForceMerge: () => void
+  onMerge: () => void
+  onTabClick: (method: MergeMethod) => void
+  selectedMethod: MergeMethod | null
+  showSquashFields: boolean
+}
+
+function MergeDrawerFooter({
+  allowedMethods,
+  canMerge,
+  mergeOptions,
+  onForceMerge,
+  onMerge,
+  onTabClick,
+  selectedMethod,
+  showSquashFields
+}: MergeDrawerFooterProps): ReactElement {
+  return (
+    <div className="flex flex-col gap-6 max-w-72 mx-auto w-full">
+      {allowedMethods.length > 0 && !showSquashFields && (
+        <MergeMethodTabs
+          allowedMethods={allowedMethods}
+          onTabClick={onTabClick}
+          selectedMethod={selectedMethod}
+        />
+      )}
+
+      {canMerge && selectedMethod ? (
+        <Button
+          className="w-full bg-status-success border border-status-success-border text-status-success-foreground hover:bg-status-success/90"
+          onClick={onMerge}
+          size="sm"
+        >
+          <GitMerge className="size-3" />
+          {mergeMethodLabels[selectedMethod]}
+        </Button>
+      ) : (
+        mergeOptions !== null &&
+        !canMerge && (
+          <BlockedMergeActions
+            mergeOptions={mergeOptions}
+            onForceMerge={onForceMerge}
+          />
+        )
+      )}
+    </div>
+  )
+}
+
+interface MergeMethodTabsProps {
+  allowedMethods: MergeMethod[]
+  onTabClick: (method: MergeMethod) => void
+  selectedMethod: MergeMethod | null
+}
+
+function MergeMethodTabs({
+  allowedMethods,
+  onTabClick,
+  selectedMethod
+}: MergeMethodTabsProps): ReactElement {
+  const orderedMethods: MergeMethod[] = ['squash', 'merge', 'rebase']
+
+  return (
+    <div className="flex flex-col gap-2">
+      <div className="flex gap-2">
+        {orderedMethods
+          .filter((method) => allowedMethods.includes(method))
+          .map((method) => (
+            <button
+              className={cn(
+                'flex-1 flex items-center justify-center gap-1.5 px-2 py-1.5 rounded-md border cursor-pointer transition-colors text-xs font-medium',
+                selectedMethod === method
+                  ? 'border-primary bg-primary/10 text-primary'
+                  : 'border-border hover:border-foreground/20'
+              )}
+              key={method}
+              onClick={() => onTabClick(method)}
+              type="button"
+            >
+              <MergeMethodIcon method={method} />
+              {mergeMethodShortLabels[method]}
+            </button>
+          ))}
+      </div>
+
+      {selectedMethod && (
+        <p className="text-xs text-muted-foreground text-center">
+          {mergeMethodDescriptions[selectedMethod]}
+        </p>
+      )}
+    </div>
+  )
+}
+
+interface BlockedMergeActionsProps {
+  mergeOptions: MergeOptions
+  onForceMerge: () => void
+}
+
+function BlockedMergeActions({
+  mergeOptions,
+  onForceMerge
+}: BlockedMergeActionsProps): ReactElement {
+  return (
+    <div className="flex flex-col gap-4">
+      <div className="flex flex-col gap-2 items-center">
+        <Button
+          className="w-full"
+          disabled
+          size="sm"
+          variant="outline"
+        >
+          <ShieldAlert className="size-3" />
+          Merge is blocked
+        </Button>
+
+        <p className="text-xs text-muted-foreground text-center">
+          {mergeBlockedSummary(mergeOptions)}
+        </p>
+      </div>
+
+      {mergeOptions.mergeableState === 'dirty' ? (
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <div>
+              <Button
+                className="w-full"
+                disabled
+                size="sm"
+                variant="destructive"
+              >
+                Merge without waiting for requirements
+              </Button>
+            </div>
+          </TooltipTrigger>
+
+          <TooltipContent>
+            Cannot merge while there are conflicts.
+          </TooltipContent>
+        </Tooltip>
+      ) : (
+        <Button
+          className="w-full"
+          onClick={onForceMerge}
+          size="sm"
+          variant="destructive"
+        >
+          Merge without waiting for requirements
+        </Button>
+      )}
+    </div>
+  )
+}
 
 function MergeMethodIcon({ method }: { method: MergeMethod }): ReactElement {
   if (method === 'squash') {
@@ -541,17 +681,10 @@ function ReviewsSection({
             className="flex items-center gap-3 px-3 py-3 text-sm border-b border-border last:border-0"
             key={review.id}
           >
-            {review.authorAvatarUrl ? (
-              <img
-                alt={review.authorLogin ?? ''}
-                className="size-6 rounded-full ring-1 ring-foreground/10 shrink-0"
-                src={review.authorAvatarUrl}
-              />
-            ) : (
-              <div className="size-6 rounded-full bg-muted flex items-center justify-center text-xs font-medium shrink-0">
-                {(review.authorLogin ?? '?').slice(0, 2).toUpperCase()}
-              </div>
-            )}
+            <ReviewerAvatar
+              authorAvatarUrl={review.authorAvatarUrl}
+              authorLogin={review.authorLogin}
+            />
 
             <span className="flex-1 truncate">{review.authorLogin}</span>
 
@@ -559,6 +692,32 @@ function ReviewsSection({
           </div>
         ))}
       </div>
+    </div>
+  )
+}
+
+interface ReviewerAvatarProps {
+  authorAvatarUrl: string | null
+  authorLogin: string | null
+}
+
+function ReviewerAvatar({
+  authorAvatarUrl,
+  authorLogin
+}: ReviewerAvatarProps): ReactElement {
+  if (authorAvatarUrl) {
+    return (
+      <img
+        alt={authorLogin ?? ''}
+        className="size-6 rounded-full ring-1 ring-foreground/10 shrink-0"
+        src={authorAvatarUrl}
+      />
+    )
+  }
+
+  return (
+    <div className="size-6 rounded-full bg-muted flex items-center justify-center text-xs font-medium shrink-0">
+      {(authorLogin ?? '?').slice(0, 2).toUpperCase()}
     </div>
   )
 }
@@ -596,29 +755,10 @@ function ChecksSection({
       check.conclusion !== 'skipped'
   )
 
-  const total = summary.failed + summary.passed + summary.pending
-  let summaryIcon: ReactElement
-  let summaryText: string
-
-  if (summary.failed > 0) {
-    summaryIcon = (
-      <XCircle className="size-4 text-status-danger-foreground shrink-0" />
-    )
-    summaryText = `${summary.failed} of ${total} checks failed`
-  } else if (summary.pending > 0) {
-    summaryIcon = (
-      <Loader2 className="size-4 text-muted-foreground shrink-0 animate-spin" />
-    )
-    summaryText = `${summary.pending} checks running`
-  } else if (requiredChecksPending) {
-    summaryIcon = <Clock className="size-4 text-muted-foreground shrink-0" />
-    summaryText = 'Waiting on required checks'
-  } else {
-    summaryIcon = (
-      <CheckCircle2 className="size-4 text-status-success-foreground shrink-0" />
-    )
-    summaryText = 'All checks have passed'
-  }
+  const { icon: summaryIcon, text: summaryText } = checksSummaryStatus(
+    summary,
+    requiredChecksPending
+  )
 
   return (
     <div className="flex flex-col gap-4">
@@ -642,6 +782,45 @@ function ChecksSection({
       )}
     </div>
   )
+}
+
+function checksSummaryStatus(
+  summary: ChecksSummary,
+  requiredChecksPending: boolean
+): { icon: ReactElement; text: string } {
+  const total = summary.failed + summary.passed + summary.pending
+
+  if (summary.failed > 0) {
+    return {
+      icon: (
+        <XCircle className="size-4 text-status-danger-foreground shrink-0" />
+      ),
+      text: `${summary.failed} of ${total} checks failed`
+    }
+  }
+
+  if (summary.pending > 0) {
+    return {
+      icon: (
+        <Loader2 className="size-4 text-muted-foreground shrink-0 animate-spin" />
+      ),
+      text: `${summary.pending} checks running`
+    }
+  }
+
+  if (requiredChecksPending) {
+    return {
+      icon: <Clock className="size-4 text-muted-foreground shrink-0" />,
+      text: 'Waiting on required checks'
+    }
+  }
+
+  return {
+    icon: (
+      <CheckCircle2 className="size-4 text-status-success-foreground shrink-0" />
+    ),
+    text: 'All checks have passed'
+  }
 }
 
 function mergeBlockedSummary(mergeOptions: MergeOptions): string {

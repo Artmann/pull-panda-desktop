@@ -12,27 +12,35 @@ interface ReviewBadgeProps {
   review: Review
 }
 
+interface ReviewBadgeVariant {
+  colorClass: string
+  label: string
+  tooltipSuffix: string
+}
+
+const fallbackVariant: ReviewBadgeVariant = {
+  colorClass: 'text-muted-foreground',
+  label: 'Commented',
+  tooltipSuffix: 'left review comments'
+}
+
+const variantsByState: Record<string, ReviewBadgeVariant | undefined> = {
+  APPROVED: {
+    colorClass: 'text-[var(--status-success-foreground)]',
+    label: 'Approved',
+    tooltipSuffix: 'approved these changes'
+  },
+  CHANGES_REQUESTED: {
+    colorClass: 'text-[var(--status-danger-foreground)]',
+    label: 'Requested changes',
+    tooltipSuffix: 'requested changes'
+  }
+}
+
 export function ReviewBadge({ review }: ReviewBadgeProps): ReactElement {
-  const isApproved = review.state === 'APPROVED'
-  const isChangesRequested = review.state === 'CHANGES_REQUESTED'
+  const variant = variantsByState[review.state] ?? fallbackVariant
 
-  const colorClass = isApproved
-    ? 'text-[var(--status-success-foreground)]'
-    : isChangesRequested
-      ? 'text-[var(--status-danger-foreground)]'
-      : 'text-muted-foreground'
-
-  const reviewText = isApproved
-    ? 'Approved'
-    : isChangesRequested
-      ? 'Requested changes'
-      : 'Commented'
-
-  const tooltipText = isApproved
-    ? `${review.authorLogin} approved these changes`
-    : isChangesRequested
-      ? `${review.authorLogin} requested changes`
-      : `${review.authorLogin} left review comments`
+  const tooltipText = `${review.authorLogin} ${variant.tooltipSuffix}`
 
   return (
     <Tooltip>
@@ -42,7 +50,7 @@ export function ReviewBadge({ review }: ReviewBadgeProps): ReactElement {
             'inline-flex items-center gap-1.5',
             'rounded-full border border-current/60',
             'px-2 py-0.5 text-[10px] font-medium whitespace-nowrap',
-            colorClass
+            variant.colorClass
           )}
         >
           {review.authorAvatarUrl ? (
@@ -57,7 +65,7 @@ export function ReviewBadge({ review }: ReviewBadgeProps): ReactElement {
               className="h-1.5 w-1.5 rounded-full bg-current"
             />
           )}
-          {reviewText}
+          {variant.label}
         </span>
       </TooltipTrigger>
       <TooltipContent>{tooltipText}</TooltipContent>

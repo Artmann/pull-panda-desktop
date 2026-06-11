@@ -30,31 +30,13 @@ import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 
 import { App } from './app/App'
-import { filterReadyPullRequests } from './app/lib/pull-requests'
+import { buildPreloadedState } from './app/lib/bootstrap-state'
 import { createStore } from './app/store'
 import './app/index.css'
 
 async function main() {
   const bootstrapData = await window.electron.getBootstrapData()
-  const readyPullRequests = filterReadyPullRequests(bootstrapData?.pullRequests)
-
-  const store = createStore({
-    checks: { items: bootstrapData?.checks ?? [] },
-    comments: { items: bootstrapData?.comments ?? [] },
-    commits: { items: bootstrapData?.commits ?? [] },
-    connectedRepos: {
-      byFullName: bootstrapData?.connectedRepos ?? {},
-      checkoutsInProgress: {},
-      initialized: true
-    },
-    modifiedFiles: { items: bootstrapData?.modifiedFiles ?? [] },
-    pendingReviews: bootstrapData?.pendingReviews ?? {},
-    pullRequests: { initialized: true, items: readyPullRequests },
-    reactions: { items: bootstrapData?.reactions ?? [] },
-    reviews: { items: bootstrapData?.reviews ?? [] },
-    reviewThreads: { items: bootstrapData?.reviewThreads ?? [] }
-  })
-
+  const store = createStore(buildPreloadedState(bootstrapData))
   const root = document.getElementById('root')
 
   if (!root) {

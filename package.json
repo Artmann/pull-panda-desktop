@@ -126,6 +126,7 @@
     "@typescript-eslint/eslint-plugin": "^5.62.0",
     "@typescript-eslint/parser": "^5.62.0",
     "@vitejs/plugin-react": "^5.1.2",
+    "@vitest/coverage-v8": "4.0.16",
     "agent-browser": "^0.26.0",
     "drizzle-kit": "^0.31.8",
     "electron": "39.2.7",

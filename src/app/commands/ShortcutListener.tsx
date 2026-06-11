@@ -3,6 +3,7 @@ import { useHotkeys } from 'react-hotkeys-hook'
 import { openCommandPaletteWithCommand } from './CommandPalette'
 import { useCommandContext } from './context'
 import { commandRegistry } from './registry'
+import { matchesShortcut } from './shortcut-matching'
 import type { Shortcut } from './types'
 
 // Convert our Shortcut type to react-hotkeys-hook format
@@ -36,35 +37,29 @@ export function ShortcutListener(): null {
       // Find the command that matches this hotkey
       // handler.keys only contains non-modifier keys, so we need to reconstruct
       const key = handler.keys?.[0] ?? ''
-      const hasMod = event.metaKey || event.ctrlKey
-      const hasShift = event.shiftKey
-      const hasAlt = event.altKey
+      const modifiers = {
+        alt: event.altKey,
+        mod: event.metaKey || event.ctrlKey,
+        shift: event.shiftKey
+      }
 
-      for (const command of commandsWithShortcuts) {
-        const shortcut = command.shortcut
-        const keyMatches = shortcut.key.toLowerCase() === key.toLowerCase()
-        const modMatches = !!shortcut.mod === hasMod
-        const shiftMatches = !!shortcut.shift === hasShift
-        const altMatches = !!shortcut.alt === hasAlt
+      const command = commandsWithShortcuts.find(
+        (candidate) =>
+          matchesShortcut(candidate.shortcut, key, modifiers) &&
+          candidate.isAvailable(context)
+      )
 
-        if (
-          keyMatches &&
-          modMatches &&
-          shiftMatches &&
-          altMatches &&
-          command.isAvailable(context)
-        ) {
-          event.preventDefault()
+      if (!command) {
+        return
+      }
 
-          // For parameterized commands, open the palette in params mode
-          if (command.param) {
-            openCommandPaletteWithCommand(command)
-          } else {
-            command.execute(context)
-          }
+      event.preventDefault()
 
-          break
-        }
+      // For parameterized commands, open the palette in params mode
+      if (command.param) {
+        openCommandPaletteWithCommand(command)
+      } else {
+        command.execute(context)
       }
     },
     {

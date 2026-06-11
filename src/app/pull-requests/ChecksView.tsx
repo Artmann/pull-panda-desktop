@@ -246,50 +246,43 @@ function CheckRow({ children }: { children: ReactNode }): ReactElement {
   )
 }
 
+const checkConclusionIcons: Record<string, ReactElement | undefined> = {
+  cancelled: <AlertTriangleIcon className="size-3 text-muted-foreground" />,
+  failure: <XCircleIcon className="size-3 text-status-danger-foreground" />,
+  neutral: <AlertTriangleIcon className="size-3 text-muted-foreground" />,
+  skipped: <AlertTriangleIcon className="size-3 text-muted-foreground" />,
+  stale: <AlertTriangleIcon className="size-3 text-muted-foreground" />,
+  startup_failure: (
+    <XCircleIcon className="size-3 text-status-danger-foreground" />
+  ),
+  success: <CheckCircle2Icon className="size-3 text-status-success-foreground" />
+}
+
+const completedCheckStateIcons: Record<string, ReactElement | undefined> = {
+  action_required: (
+    <AlertTriangleIcon className="size-3 text-status-warning-foreground" />
+  ),
+  timed_out: <ClockIcon className="size-3 text-status-warning-foreground" />
+}
+
+const pendingCheckStateIcons: Record<string, ReactElement | undefined> = {
+  in_progress: (
+    <Loader2Icon className="size-3 text-status-warning-foreground animate-spin" />
+  ),
+  queued: <ClockIcon className="size-3 text-status-warning-foreground" />
+}
+
 function CheckStatusIcon({ check }: { check: Check }): ReactElement {
-  if (check.state?.toLowerCase() === 'in_progress') {
-    return (
-      <Loader2Icon className="size-3 text-status-warning-foreground animate-spin" />
+  const conclusion = check.conclusion?.toLowerCase() ?? ''
+  const state = check.state?.toLowerCase() ?? ''
+
+  return (
+    pendingCheckStateIcons[state] ??
+    checkConclusionIcons[conclusion] ??
+    completedCheckStateIcons[state] ?? (
+      <ClockIcon className="size-3 text-status-warning-foreground" />
     )
-  }
-
-  if (check.state?.toLowerCase() === 'queued') {
-    return <ClockIcon className="size-3 text-status-warning-foreground" />
-  }
-
-  if (check.conclusion?.toLowerCase() === 'success') {
-    return (
-      <CheckCircle2Icon className="size-3 text-status-success-foreground" />
-    )
-  }
-
-  if (
-    ['failure', 'startup_failure'].includes(
-      check.conclusion?.toLowerCase() ?? ''
-    )
-  ) {
-    return <XCircleIcon className="size-3 text-status-danger-foreground" />
-  }
-
-  if (
-    ['neutral', 'cancelled', 'stale', 'skipped'].includes(
-      check.conclusion?.toLowerCase() ?? ''
-    )
-  ) {
-    return <AlertTriangleIcon className="size-3 text-muted-foreground" />
-  }
-
-  if (check.state?.toLowerCase() === 'timed_out') {
-    return <ClockIcon className="size-3 text-status-warning-foreground" />
-  }
-
-  if (check.state?.toLowerCase() === 'action_required') {
-    return (
-      <AlertTriangleIcon className="size-3 text-status-warning-foreground" />
-    )
-  }
-
-  return <ClockIcon className="size-3 text-status-warning-foreground" />
+  )
 }
 
 function StatusIcon({ status }: { status: string }): ReactElement {

@@ -1,6 +1,7 @@
 {
   "$schema": "https://docs.fallow.tools/schemas/fallowrc.json",
   "entry": [
+    "src/__test-helpers__/electron-stub.ts",
     "src/preload.ts",
     "vite.main.config.ts",
     "vite.preload.config.ts",

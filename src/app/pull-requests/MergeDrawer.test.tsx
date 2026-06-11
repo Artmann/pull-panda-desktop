@@ -16,7 +16,11 @@ import pullRequestsReducer from '@/app/store/pull-requests-slice'
 import reviewsReducer from '@/app/store/reviews-slice'
 
 import { createMockPullRequest } from './__test-helpers__/pull-request-fixtures'
-import { MergeDrawer } from './MergeDrawer'
+import {
+  getAllowedMergeMethods,
+  MergeDrawer,
+  resolveInitialMergeMethod
+} from './MergeDrawer'
 
 const mockMergePullRequest = vi.fn()
 
@@ -521,5 +525,94 @@ describe('MergeDrawer', () => {
     })
 
     expect(screen.getByText('Loading merge options...')).toBeInTheDocument()
+  })
+})
+
+describe('getAllowedMergeMethods', () => {
+  it('returns an empty list when merge options are missing', () => {
+    expect(getAllowedMergeMethods(null)).toEqual([])
+  })
+
+  it('returns all methods in priority order when everything is allowed', () => {
+    expect(getAllowedMergeMethods(mergeableOptions)).toEqual([
+      'squash',
+      'merge',
+      'rebase'
+    ])
+  })
+
+  it('returns only the allowed methods', () => {
+    expect(
+      getAllowedMergeMethods({
+        ...mergeableOptions,
+        allowSquashMerge: false
+      })
+    ).toEqual(['merge', 'rebase'])
+  })
+})
+
+describe('resolveInitialMergeMethod', () => {
+  it('returns null when merge options are missing', () => {
+    expect(resolveInitialMergeMethod(null, 'squash')).toEqual(null)
+  })
+
+  it('returns null while mergeability is still unknown', () => {
+    expect(
+      resolveInitialMergeMethod(
+        { ...mergeableOptions, mergeable: null },
+        'squash'
+      )
+    ).toEqual(null)
+  })
+
+  it('prefers the saved method when it is allowed', () => {
+    expect(resolveInitialMergeMethod(mergeableOptions, 'rebase')).toEqual(
+      'rebase'
+    )
+  })
+
+  it('falls back to the highest priority allowed method when the saved method is not allowed', () => {
+    expect(
+      resolveInitialMergeMethod(
+        { ...mergeableOptions, allowRebaseMerge: false },
+        'rebase'
+      )
+    ).toEqual('squash')
+  })
+
+  it('falls back through the priority order without a saved method', () => {
+    expect(resolveInitialMergeMethod(mergeableOptions, null)).toEqual('squash')
+
+    expect(
+      resolveInitialMergeMethod(
+        { ...mergeableOptions, allowSquashMerge: false },
+        null
+      )
+    ).toEqual('merge')
+
+    expect(
+      resolveInitialMergeMethod(
+        {
+          ...mergeableOptions,
+          allowMergeCommit: false,
+          allowSquashMerge: false
+        },
+        null
+      )
+    ).toEqual('rebase')
+  })
+
+  it('returns null when no method is allowed', () => {
+    expect(
+      resolveInitialMergeMethod(
+        {
+          ...mergeableOptions,
+          allowMergeCommit: false,
+          allowRebaseMerge: false,
+          allowSquashMerge: false
+        },
+        null
+      )
+    ).toEqual(null)
   })
 })

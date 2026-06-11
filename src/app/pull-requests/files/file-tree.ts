@@ -9,47 +9,55 @@ export interface FileTree {
   [key: string]: FileTreeNode
 }
 
+function getOrCreateNode(
+  level: FileTree,
+  name: string,
+  path: string,
+  isFile: boolean
+): FileTreeNode {
+  const existing = level[name]
+
+  if (existing) {
+    return existing
+  }
+
+  const node: FileTreeNode = isFile
+    ? { name, path, type: 'file' }
+    : { children: {}, name, path, type: 'directory' }
+  level[name] = node
+
+  return node
+}
+
+function insertPath(tree: FileTree, filePath: string): void {
+  const normalizedPath = filePath.replace(/\\/g, '/')
+  const segments = normalizedPath
+    .split('/')
+    .filter((segment) => segment.length > 0)
+
+  let currentLevel = tree
+  let currentPath = ''
+
+  for (let i = 0; i < segments.length; i++) {
+    const segment = segments[i]
+    const isLastSegment = i === segments.length - 1
+    const isFile = isLastSegment && segment.includes('.')
+
+    currentPath += (currentPath ? '/' : '') + segment
+
+    const node = getOrCreateNode(currentLevel, segment, currentPath, isFile)
+
+    if (!isFile && node.children) {
+      currentLevel = node.children
+    }
+  }
+}
+
 export function createFileTree(filePaths: string[]): FileTree {
   const tree: FileTree = {}
 
   for (const filePath of filePaths) {
-    const normalizedPath = filePath.replace(/\\/g, '/')
-    const segments = normalizedPath
-      .split('/')
-      .filter((segment) => segment.length > 0)
-
-    let currentLevel = tree
-    let currentPath = ''
-
-    for (let i = 0; i < segments.length; i++) {
-      const segment = segments[i]
-      const isLastSegment = i === segments.length - 1
-      const isFile = isLastSegment && segment.includes('.')
-
-      currentPath += (currentPath ? '/' : '') + segment
-
-      if (!currentLevel[segment]) {
-        currentLevel[segment] = {
-          name: segment,
-          path: currentPath,
-          type: isFile ? 'file' : 'directory'
-        }
-
-        if (!isFile) {
-          currentLevel[segment].children = {}
-        }
-      }
-
-      if (!isFile) {
-        const nextLevel = currentLevel[segment].children
-
-        if (!nextLevel) {
-          continue
-        }
-
-        currentLevel = nextLevel
-      }
-    }
+    insertPath(tree, filePath)
   }
 
   return tree
