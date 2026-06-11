@@ -17,6 +17,52 @@ import {
   AccordionTrigger
 } from '@/app/components/ui/accordion'
 
+const checkConclusionRanks: Record<string, number | undefined> = {
+  error: 0,
+  failure: 1,
+  skipped: 2,
+  success: 3
+}
+
+const checkStateRanks: Record<string, number | undefined> = {
+  completed: 2,
+  in_progress: 1,
+  queued: 0
+}
+
+function compareCheckConclusions(a: Check, b: Check): number | undefined {
+  const aConclusion = a.conclusion?.toLowerCase()
+  const bConclusion = b.conclusion?.toLowerCase()
+
+  if (!aConclusion || !bConclusion) {
+    return
+  }
+
+  if (checkConclusionRanks[aConclusion] === checkConclusionRanks[bConclusion]) {
+    return
+  }
+
+  return (
+    (checkConclusionRanks[aConclusion] ?? 3) -
+    (checkConclusionRanks[bConclusion] ?? 3)
+  )
+}
+
+function compareCheckStates(a: Check, b: Check): number | undefined {
+  const aState = a.state?.toLowerCase()
+  const bState = b.state?.toLowerCase()
+
+  if (!aState || !bState) {
+    return
+  }
+
+  if (checkStateRanks[aState] === checkStateRanks[bState]) {
+    return
+  }
+
+  return (checkStateRanks[aState] ?? 2) - (checkStateRanks[bState] ?? 2)
+}
+
 export function CheckList({ checks }: { checks: Check[] }): ReactElement {
   const hasRunningChecks = checks.some(
     (check) =>
@@ -106,41 +152,12 @@ export function CheckList({ checks }: { checks: Check[] }): ReactElement {
     return parts.join(', ')
   }, [checks])
 
-  const sortedChecks = [...checks].sort((a, b) => {
-    const stateOrder: Record<string, number> = {
-      queued: 0,
-      in_progress: 1,
-      completed: 2
-    }
-    const conclusionOrder: Record<string, number> = {
-      error: 0,
-      failure: 1,
-      skipped: 2,
-      success: 3
-    }
-
-    const aState = a.state?.toLowerCase()
-    const bState = b.state?.toLowerCase()
-    const aConclusion = a.conclusion?.toLowerCase()
-    const bConclusion = b.conclusion?.toLowerCase()
-
-    if (aState && bState && stateOrder[aState] !== stateOrder[bState]) {
-      return (stateOrder[aState] ?? 2) - (stateOrder[bState] ?? 2)
-    }
-
-    if (
-      aConclusion &&
-      bConclusion &&
-      conclusionOrder[aConclusion] !== conclusionOrder[bConclusion]
-    ) {
-      return (
-        (conclusionOrder[aConclusion] ?? 3) -
-        (conclusionOrder[bConclusion] ?? 3)
-      )
-    }
-
-    return a.name.localeCompare(b.name)
-  })
+  const sortedChecks = [...checks].sort(
+    (a, b) =>
+      compareCheckStates(a, b) ??
+      compareCheckConclusions(a, b) ??
+      a.name.localeCompare(b.name)
+  )
 
   const getCheckIcon = (check: Check) => {
     const state = check.state?.toLowerCase()

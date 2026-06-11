@@ -9,49 +9,70 @@ interface LinePair {
   removeIndex: number
 }
 
+function collectRemoveRun(lines: DiffHunkLine[], start: number): number[] {
+  const removeIndices: number[] = []
+
+  let index = start
+  while (index < lines.length && lines[index].type === 'remove') {
+    removeIndices.push(index)
+    index++
+  }
+
+  return removeIndices
+}
+
+function collectFollowingAdds(
+  lines: DiffHunkLine[],
+  start: number
+): { addIndices: number[]; end: number } {
+  const addIndices: number[] = []
+
+  let contextGap = 0
+  let index = start
+
+  while (index < lines.length && contextGap < 3) {
+    const lineType = lines[index].type
+
+    if (lineType === 'add') {
+      addIndices.push(index)
+      contextGap = 0
+    } else if (lineType === 'context') {
+      contextGap++
+    } else {
+      break
+    }
+
+    index++
+  }
+
+  return { addIndices, end: index }
+}
+
 export function pairModifiedLines(lines: DiffHunkLine[]): LinePair[] {
   const pairs: LinePair[] = []
-  let i = 0
+  let index = 0
 
-  while (i < lines.length) {
-    const line = lines[i]
-
-    if (line.type === 'remove') {
-      const removeIndices: number[] = []
-      const addIndices: number[] = []
-
-      let j = i
-      while (j < lines.length && lines[j].type === 'remove') {
-        removeIndices.push(j)
-        j++
-      }
-
-      let contextGap = 0
-      while (j < lines.length && contextGap < 3) {
-        if (lines[j].type === 'add') {
-          addIndices.push(j)
-          contextGap = 0
-          j++
-        } else if (lines[j].type === 'context') {
-          contextGap++
-          j++
-        } else {
-          break
-        }
-      }
-
-      const pairCount = Math.min(removeIndices.length, addIndices.length)
-      for (let k = 0; k < pairCount; k++) {
-        pairs.push({
-          addIndex: addIndices[k],
-          removeIndex: removeIndices[k]
-        })
-      }
-
-      i = j
-    } else {
-      i++
+  while (index < lines.length) {
+    if (lines[index].type !== 'remove') {
+      index++
+      continue
     }
+
+    const removeIndices = collectRemoveRun(lines, index)
+    const { addIndices, end } = collectFollowingAdds(
+      lines,
+      index + removeIndices.length
+    )
+    const pairCount = Math.min(removeIndices.length, addIndices.length)
+
+    for (let pair = 0; pair < pairCount; pair++) {
+      pairs.push({
+        addIndex: addIndices[pair],
+        removeIndex: removeIndices[pair]
+      })
+    }
+
+    index = end
   }
 
   return pairs

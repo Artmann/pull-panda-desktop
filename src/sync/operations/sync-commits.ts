@@ -9,12 +9,40 @@ import { GitHubRest } from '../services/github-rest'
 import { paginateRest } from '../shared/paginate'
 import { generateId, normalizeCommentBody } from '../shared/utils'
 
-interface SyncCommitsParams {
+export interface SyncCommitsParams {
   pullRequestId: string
   owner: string
   repositoryName: string
   pullNumber: number
 }
+
+const commitAuthorFields = (commitData: Commit) => ({
+  authorLogin:
+    commitData.author?.login ?? commitData.commit.author?.name ?? null,
+  authorAvatarUrl: commitData.author?.avatar_url ?? null,
+  gitHubCreatedAt: commitData.commit.author?.date ?? null
+})
+
+const buildCommitRecord = (
+  commitData: Commit,
+  existingId: string | undefined,
+  pullRequestId: string,
+  now: string
+): NewCommit => ({
+  id: existingId ?? generateId(),
+  gitHubId: commitData.sha,
+  pullRequestId,
+  hash: commitData.sha,
+  message: commitData.commit.message
+    ? normalizeCommentBody(commitData.commit.message)
+    : null,
+  url: commitData.html_url ?? null,
+  ...commitAuthorFields(commitData),
+  linesAdded: null,
+  linesRemoved: null,
+  syncedAt: now,
+  deletedAt: null
+})
 
 export const syncCommits = (
   params: SyncCommitsParams
@@ -73,24 +101,12 @@ export const syncCommits = (
           (row) => row.gitHubId === gitHubId
         )
 
-        const commit: NewCommit = {
-          id: existingCommit?.id ?? generateId(),
-          gitHubId,
-          pullRequestId: params.pullRequestId,
-          hash: commitData.sha,
-          message: commitData.commit.message
-            ? normalizeCommentBody(commitData.commit.message)
-            : null,
-          url: commitData.html_url ?? null,
-          authorLogin:
-            commitData.author?.login ?? commitData.commit.author?.name ?? null,
-          authorAvatarUrl: commitData.author?.avatar_url ?? null,
-          linesAdded: null,
-          linesRemoved: null,
-          gitHubCreatedAt: commitData.commit.author?.date ?? null,
-          syncedAt: now,
-          deletedAt: null
-        }
+        const commit = buildCommitRecord(
+          commitData,
+          existingCommit?.id,
+          params.pullRequestId,
+          now
+        )
 
         db.insert(commits)
           .values(commit)

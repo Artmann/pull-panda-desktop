@@ -35,32 +35,45 @@ const basePullRequest: PullRequest = {
   changesRequestedCount: 0
 }
 
+const storyTitles = [
+  'Add Storybook setup',
+  'Preserve scroll position per PR tab',
+  'Reduce comment markdown header sizes',
+  'Add fallow dev dependency',
+  'Refactor pull request syncer',
+  'Encrypt tokens using safeStorage',
+  'Upgrade to React 19',
+  'Migrate to Tailwind v4',
+  'Add keyboard shortcuts',
+  'Fix breadcrumb spacing',
+  'Ship dark mode variants',
+  'Optimize highlighter bundle',
+  'Polish empty states',
+  'Cache GraphQL responses'
+]
+
+const approvalCountCycle = [2, 0, 0]
+const authorLoginCycle = ['artgaard', 'octocat']
+const changesRequestedCountCycle = [1, 0, 0, 0]
+const stateCycle: PullRequest['state'][] = [
+  'MERGED',
+  'OPEN',
+  'OPEN',
+  'OPEN',
+  'OPEN'
+]
+
 const pullRequests: PullRequest[] = Array.from({ length: 14 }).map(
   (_, index) => ({
     ...basePullRequest,
     id: String(index + 1),
     number: 100 - index,
-    title: [
-      'Add Storybook setup',
-      'Preserve scroll position per PR tab',
-      'Reduce comment markdown header sizes',
-      'Add fallow dev dependency',
-      'Refactor pull request syncer',
-      'Encrypt tokens using safeStorage',
-      'Upgrade to React 19',
-      'Migrate to Tailwind v4',
-      'Add keyboard shortcuts',
-      'Fix breadcrumb spacing',
-      'Ship dark mode variants',
-      'Optimize highlighter bundle',
-      'Polish empty states',
-      'Cache GraphQL responses'
-    ][index],
-    authorLogin: index % 2 === 0 ? 'artgaard' : 'octocat',
-    state: index % 5 === 0 ? 'MERGED' : 'OPEN',
+    title: storyTitles[index],
+    authorLogin: authorLoginCycle[index % 2],
+    state: stateCycle[index % 5],
     isDraft: index % 7 === 0,
-    approvalCount: index % 3 === 0 ? 2 : 0,
-    changesRequestedCount: index % 4 === 0 ? 1 : 0,
+    approvalCount: approvalCountCycle[index % 3],
+    changesRequestedCount: changesRequestedCountCycle[index % 4],
     commentCount: index
   })
 )

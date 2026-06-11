@@ -12,6 +12,7 @@ import {
 } from '../errors'
 import { retryTransport } from '../retry'
 import { RateLimitSchema } from '../schemas/github-graphql'
+import { parseResetSeconds, parseRetryAfterMs } from './rate-limit-headers'
 import { RateLimitTracker } from './rate-limit-tracker'
 import { RequestBroker } from './request-broker'
 import { TokenProvider } from './token-provider'
@@ -36,54 +37,66 @@ function getClient(token: string): GraphQLApi {
   return client
 }
 
-function classifyGraphQLError(
+function messageOf(error: unknown): string | undefined {
+  return (error as { message?: string } | null)?.message
+}
+
+function responseHeadersOf(error: unknown): Record<string, string> {
+  return (
+    (error as { response?: { headers?: Record<string, string> } } | null)
+      ?.response?.headers ?? {}
+  )
+}
+
+function statusOf(error: unknown): number | undefined {
+  return (error as { status?: number } | null)?.status
+}
+
+function classifyGraphQLResponseError(
+  error: GraphqlResponseError<unknown>,
+  query: string
+): GitHubTransportError {
+  const headers = error.headers ?? {}
+  const messageLower = error.message?.toLowerCase() ?? ''
+  const isRateLimit =
+    messageLower.includes('api rate limit exceeded') ||
+    messageLower.includes('rate limit')
+
+  if (isRateLimit) {
+    return new PrimaryRateLimitError({
+      kind: 'graphql',
+      resetAt: parseResetSeconds(headers['x-ratelimit-reset'])
+    })
+  }
+
+  if (error.errors && error.errors.length > 0) {
+    return new GraphQLError({
+      query,
+      errors: error.errors.map((entry) => ({ message: entry.message }))
+    })
+  }
+
+  return new HttpError({
+    route: 'graphql',
+    status: 0,
+    message: error.message ?? 'GraphQL error'
+  })
+}
+
+export function classifyGraphQLError(
   error: unknown,
   query: string
 ): GitHubTransportError {
   if (error instanceof GraphqlResponseError) {
-    const headers = error.headers ?? {}
-    const messageLower = error.message?.toLowerCase() ?? ''
-    const isRateLimit =
-      messageLower.includes('api rate limit exceeded') ||
-      messageLower.includes('rate limit')
-
-    if (isRateLimit) {
-      const resetAt = headers['x-ratelimit-reset']
-      const resetSeconds = resetAt
-        ? parseInt(resetAt, 10)
-        : Math.floor(Date.now() / 1000) + 60
-
-      return new PrimaryRateLimitError({
-        kind: 'graphql',
-        resetAt: resetSeconds
-      })
-    }
-
-    if (error.errors && error.errors.length > 0) {
-      return new GraphQLError({
-        query,
-        errors: error.errors.map((entry) => ({ message: entry.message }))
-      })
-    }
-
-    return new HttpError({
-      route: 'graphql',
-      status: 0,
-      message: error.message ?? 'GraphQL error'
-    })
+    return classifyGraphQLResponseError(error, query)
   }
 
-  const status = (error as { status?: number } | null)?.status
+  const status = statusOf(error)
 
   if (status === 429) {
-    const headers =
-      (error as { response?: { headers?: Record<string, string> } } | null)
-        ?.response?.headers ?? {}
-    const retryAfter = headers['retry-after']
-
     return new SecondaryRateLimitError({
       kind: 'graphql',
-      retryAfterMs: retryAfter ? parseInt(retryAfter, 10) * 1000 : 30_000
+      retryAfterMs: parseRetryAfterMs(responseHeadersOf(error)['retry-after'])
     })
   }
 
@@ -91,7 +104,7 @@ function classifyGraphQLError(
     return new HttpError({
       route: 'graphql',
       status,
-      message: (error as { message?: string } | null)?.message ?? 'HTTP error'
+      message: messageOf(error) ?? 'HTTP error'
     })
   }
 

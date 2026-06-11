@@ -52,7 +52,14 @@ export function buildReviewerStoryStore(args?: {
   recents?: Record<string, RecentReviewer[]>
   reviews?: Review[]
 }) {
-  const pullRequest = args?.pullRequest ?? reviewerStoryPullRequest
+  const defaultRecents: Record<string, RecentReviewer[]> = {}
+  const defaultReviews: Review[] = []
+  const options = {
+    pullRequest: reviewerStoryPullRequest,
+    recents: defaultRecents,
+    reviews: defaultReviews,
+    ...args
+  }
 
   return configureStore({
     middleware: (getDefaultMiddleware) =>
@@ -61,9 +68,9 @@ export function buildReviewerStoryStore(args?: {
         serializableCheck: false
       }),
     preloadedState: {
-      pullRequests: { initialized: true, items: [pullRequest] },
-      recentReviewers: { byRepo: args?.recents ?? {} },
-      reviews: { items: args?.reviews ?? [] }
+      pullRequests: { initialized: true, items: [options.pullRequest] },
+      recentReviewers: { byRepo: options.recents },
+      reviews: { items: options.reviews }
     },
     reducer: {
       pullRequests: pullRequestsReducer,

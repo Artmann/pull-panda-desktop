@@ -506,6 +506,38 @@ function LandmarkWrapper({
   return <div ref={landmarkRef}>{children}</div>
 }
 
+const gutterBorderClasses: Record<string, string | undefined> = {
+  add: 'border-l-[#5CC9B6]',
+  remove: 'border-l-[#D46060]'
+}
+
+function getLineBackgroundColor(
+  lineType: DiffHunkLine['type'],
+  diffColors?: { diffAdd: string; diffRemove: string }
+): string | undefined {
+  if (lineType === 'add') {
+    return diffColors?.diffAdd
+  }
+
+  if (lineType === 'remove') {
+    return diffColors?.diffRemove
+  }
+
+  return
+}
+
+function getLineNumberLabel(line: DiffHunkLine): string | number {
+  if (line.type === 'truncated') {
+    return blankSpace
+  }
+
+  if (line.type === 'remove') {
+    return line.oldLineNumber ?? blankSpace
+  }
+
+  return line.newLineNumber ?? blankSpace
+}
+
 const DiffLine = memo(function DiffLine({
   canComment,
   diffColors,
@@ -518,26 +550,10 @@ const DiffLine = memo(function DiffLine({
   diffColors?: { diffAdd: string; diffRemove: string }
   highlightedLines: string[]
   index: number
-  line: ReturnType<typeof parseDiffHunk>['lines'][number]
+  line: DiffHunkLine
   onClick: () => void
 }) {
-  const getLineBackgroundColor = (
-    lineType: 'add' | 'remove' | 'context' | 'truncated'
-  ): string | undefined => {
-    if (lineType === 'add') {
-      return diffColors?.diffAdd
-    }
-
-    if (lineType === 'remove') {
-      return diffColors?.diffRemove
-    }
-
-    return
-  }
-
-  const wasAdded = line.type === 'add'
-  const wasRemoved = line.type === 'remove'
-  const lineBackground = getLineBackgroundColor(line.type)
+  const lineBackground = getLineBackgroundColor(line.type, diffColors)
 
   return (
     <div
@@ -549,20 +565,12 @@ const DiffLine = memo(function DiffLine({
           className={cn(
             'px-3',
             'border-l-3',
-            wasAdded
-              ? 'border-l-[#5CC9B6]'
-              : wasRemoved
-                ? 'border-l-[#D46060]'
-                : 'border-l-transparent',
+            gutterBorderClasses[line.type] ?? 'border-l-transparent',
             line.type === 'truncated' && 'bg-muted/50'
           )}
           style={{ backgroundColor: lineBackground }}
         >
-          {line.type === 'truncated'
-            ? blankSpace
-            : wasRemoved
-              ? (line.oldLineNumber ?? blankSpace)
-              : (line.newLineNumber ?? blankSpace)}
+          {getLineNumberLabel(line)}
         </div>
       </div>
 

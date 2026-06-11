@@ -13,7 +13,11 @@ import {
 } from '@/app/commands/theme-accessor'
 import { applyThemePalette } from '@/app/lib/applyThemePalette'
 import {
-  appThemes,
+  darkStorageKey,
+  lightStorageKey,
+  migrateFromLegacyKeys
+} from '@/app/lib/store/themeMigration'
+import {
   defaultDarkThemeValue,
   defaultLightThemeValue,
   getThemeByValue,
@@ -26,66 +30,6 @@ type AppThemeContextType = {
 }
 
 const AppThemeContext = createContext<AppThemeContextType | null>(null)
-
-const darkStorageKey = 'app-theme-dark'
-const lightStorageKey = 'app-theme-light'
-
-function migrateFromLegacyKeys(): void {
-  // Migrate from the old single `app-theme` key.
-  const oldSingle = localStorage.getItem('app-theme')
-
-  if (oldSingle) {
-    const theme = appThemes.find((t) => t.value === oldSingle)
-    const modes = theme?.modes ?? 'both'
-
-    if (modes === 'both' || modes === 'dark') {
-      localStorage.setItem(darkStorageKey, oldSingle)
-    }
-
-    if (modes === 'both' || modes === 'light') {
-      localStorage.setItem(lightStorageKey, oldSingle)
-    }
-
-    localStorage.removeItem('app-theme')
-  }
-
-  // Migrate from the old combined "catppuccin" value to the split variants.
-  const storedDark = localStorage.getItem(darkStorageKey)
-  const storedLight = localStorage.getItem(lightStorageKey)
-
-  if (storedDark === 'catppuccin') {
-    localStorage.setItem(darkStorageKey, 'catppuccin-mocha')
-  }
-
-  if (storedLight === 'catppuccin') {
-    localStorage.setItem(lightStorageKey, 'catppuccin-latte')
-  }
-
-  // Migrate from even older per-mode code-theme keys.
-  const oldDark = localStorage.getItem('code-theme-dark')
-  const oldLight = localStorage.getItem('code-theme-light')
-
-  if (oldDark || oldLight) {
-    const candidate = oldDark ?? oldLight
-    const match = appThemes.find(
-      (t) =>
-        t.darkShikiTheme === candidate ||
-        t.lightShikiTheme === candidate ||
-        t.value === candidate
-    )
-
-    if (match && !localStorage.getItem(darkStorageKey)) {
-      localStorage.setItem(darkStorageKey, match.value)
-    }
-
-    if (match && !localStorage.getItem(lightStorageKey)) {
-      localStorage.setItem(lightStorageKey, match.value)
-    }
-
-    localStorage.removeItem('code-theme-dark')
-    localStorage.removeItem('code-theme-light')
-  }
-}
 
 function readStoredTheme(key: string, fallback: string): string {
   return localStorage.getItem(key) ?? fallback

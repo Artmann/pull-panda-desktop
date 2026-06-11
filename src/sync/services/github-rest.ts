@@ -14,8 +14,9 @@ import {
   type GitHubTransportError
 } from '../errors'
 import { retryTransport } from '../retry'
-import type { ETagKey } from '../schemas/domain'
+import type { ETagEntry, ETagKey } from '../schemas/domain'
 import { EtagStore } from './etag-store'
+import { parseResetSeconds, parseRetryAfterMs } from './rate-limit-headers'
 import { RateLimitTracker } from './rate-limit-tracker'
 import { RequestBroker } from './request-broker'
 import { TokenProvider } from './token-provider'
@@ -35,73 +36,101 @@ function getClient(token: string): Octokit {
   return client
 }
 
-function classifyRestError(
+function isPermissionMessage(messageLower: string): boolean {
+  return (
+    messageLower.includes('resource not accessible by integration') ||
+    messageLower.includes('resource not accessible')
+  )
+}
+
+function primaryRateLimitError(
+  headers: Record<string, string>
+): PrimaryRateLimitError {
+  return new PrimaryRateLimitError({
+    kind: 'rest',
+    resetAt: parseResetSeconds(headers['x-ratelimit-reset'])
+  })
+}
+
+function secondaryRateLimitError(
+  headers: Record<string, string>
+): SecondaryRateLimitError {
+  return new SecondaryRateLimitError({
+    kind: 'rest',
+    retryAfterMs: parseRetryAfterMs(headers['retry-after'])
+  })
+}
+
+function classifyRateLimitError(
+  status: number,
+  messageLower: string,
+  headers: Record<string, string>
+): GitHubTransportError | null {
+  // Order matters: 'rate limit' is a substring of 'secondary rate limit',
+  // so the secondary-specific branch must be checked first. Otherwise a
+  // secondary-rate-limit 403 carrying a retry-after header would be
+  // misclassified as primary and the retry would wait until the primary
+  // window resets (potentially hours) instead of the secondary's retry-after.
+  if (status === 403 && messageLower.includes('secondary rate limit')) {
+    return secondaryRateLimitError(headers)
+  }
+
+  if (
+    status === 403 &&
+    (messageLower.includes('rate limit') ||
+      headers['x-ratelimit-remaining'] === '0')
+  ) {
+    return primaryRateLimitError(headers)
+  }
+
+  if (status === 429) {
+    return secondaryRateLimitError(headers)
+  }
+
+  return null
+}
+
+function classifyRequestError(
+  error: RequestError,
+  route: string
+): GitHubTransportError {
+  const headers = (error.response?.headers ?? {}) as Record<string, string>
+  const messageLower = error.message?.toLowerCase() ?? ''
+  const rateLimitError = classifyRateLimitError(
+    error.status,
+    messageLower,
+    headers
+  )
+
+  if (rateLimitError) {
+    return rateLimitError
+  }
+
+  if (error.status === 404) {
+    return new NotFoundError({ route, resourceId: null })
+  }
+
+  if (isPermissionMessage(messageLower)) {
+    return new PermissionError({ route, message: error.message })
+  }
+
+  if (error.status === 403) {
+    return new ForbiddenError({ route, message: error.message })
+  }
+
+  return new HttpError({
+    route,
+    status: error.status,
+    message: error.message
+  })
+}
+
+export function classifyRestError(
   error: unknown,
   route: string
 ): GitHubTransportError {
   if (error instanceof RequestError) {
-    const headers = (error.response?.headers ?? {}) as Record<string, string>
-    const messageLower = error.message?.toLowerCase() ?? ''
-
-    // Order matters: 'rate limit' is a substring of 'secondary rate limit',
-    // so the secondary-specific branch must be checked first. Otherwise a
-    // secondary-rate-limit 403 carrying a retry-after header would be
-    // misclassified as primary and the retry would wait until the primary
-    // window resets (potentially hours) instead of the secondary's retry-after.
-    if (error.status === 403 && messageLower.includes('secondary rate limit')) {
-      const retryAfter = headers['retry-after']
-
-      return new SecondaryRateLimitError({
-        kind: 'rest',
-        retryAfterMs: retryAfter ? parseInt(retryAfter, 10) * 1000 : 30_000
-      })
-    }
-
-    if (
-      error.status === 403 &&
-      (messageLower.includes('rate limit') ||
-        headers['x-ratelimit-remaining'] === '0')
-    ) {
-      const resetAt = headers['x-ratelimit-reset']
-      const resetSeconds = resetAt
-        ? parseInt(resetAt, 10)
-        : Math.floor(Date.now() / 1000) + 60
-
-      return new PrimaryRateLimitError({
-        kind: 'rest',
-        resetAt: resetSeconds
-      })
-    }
-
-    if (error.status === 429) {
-      const retryAfter = headers['retry-after']
-
-      return new SecondaryRateLimitError({
-        kind: 'rest',
-        retryAfterMs: retryAfter ? parseInt(retryAfter, 10) * 1000 : 30_000
-      })
-    }
-
-    if (error.status === 404) {
-      return new NotFoundError({ route, resourceId: null })
-    }
-
-    if (
-      messageLower.includes('resource not accessible by integration') ||
-      messageLower.includes('resource not accessible')
-    ) {
-      return new PermissionError({ route, message: error.message })
-    }
-
-    if (error.status === 403) {
-      return new ForbiddenError({ route, message: error.message })
-    }
-
-    return new HttpError({
-      route,
-      status: error.status,
-      message: error.message
-    })
+    return classifyRequestError(error, route)
   }
 
   return new NetworkError({ route, cause: error })
@@ -109,6 +138,57 @@ function classifyRestError(
 
 interface RestRequestOptions {
   etagKey?: ETagKey
+}
+
+type EtagStoreService = Context.Tag.Service<EtagStore>
+
+// Builds the conditional-request headers for a cached ETag entry. Returns an
+// empty record when nothing is cached so the request goes out unconditionally.
+function buildConditionalHeaders(
+  cachedEtag: Option.Option<ETagEntry>
+): Record<string, string> {
+  if (Option.isNone(cachedEtag)) {
+    return {}
+  }
+
+  const headers: Record<string, string> = {
+    'If-None-Match': cachedEtag.value.etag
+  }
+
+  if (cachedEtag.value.lastModified) {
+    headers['If-Modified-Since'] = cachedEtag.value.lastModified
+  }
+
+  return headers
+}
+
+function loadCachedEtag(
+  etagStore: EtagStoreService,
+  etagKey: ETagKey | undefined
+): Effect.Effect<Option.Option<ETagEntry>> {
+  if (!etagKey) {
+    return Effect.succeed(Option.none<ETagEntry>())
+  }
+
+  return etagStore
+    .get(etagKey)
+    .pipe(Effect.catchAll(() => Effect.succeed(Option.none<ETagEntry>())))
+}
+
+function persistEtag(
+  etagStore: EtagStoreService,
+  etagKey: ETagKey | undefined,
+  responseHeaders: Record<string, string>
+): Effect.Effect<void> {
+  const etagHeader = responseHeaders['etag']
+
+  if (!etagKey || !etagHeader) {
+    return Effect.void
+  }
+
+  return Effect.ignore(
+    etagStore.set(etagKey, etagHeader, responseHeaders['last-modified'])
+  )
 }
 
 export class GitHubRest extends Context.Tag('sync/GitHubRest')<
@@ -155,33 +235,8 @@ export const GitHubRestLive: Layer.Layer<
             onFalse: () => Effect.void
           })
 
-          const cachedEtag = options?.etagKey
-            ? yield* etagStore.get(options.etagKey).pipe(
-                Effect.catchAll(() =>
-                  Effect.succeed(
-                    Option.none<{
-                      etag: string
-                      lastModified: string | null
-                      validatedAt: string
-                    }>()
-                  )
-                )
-              )
-            : Option.none<{
-                etag: string
-                lastModified: string | null
-                validatedAt: string
-              }>()
-
-          const headers: Record<string, string> = {}
-
-          if (Option.isSome(cachedEtag)) {
-            headers['If-None-Match'] = cachedEtag.value.etag
-
-            if (cachedEtag.value.lastModified) {
-              headers['If-Modified-Since'] = cachedEtag.value.lastModified
-            }
-          }
+          const cachedEtag = yield* loadCachedEtag(etagStore, options?.etagKey)
+          const headers = buildConditionalHeaders(cachedEtag)
 
           const client = getClient(token)
 
@@ -222,18 +277,7 @@ export const GitHubRestLive: Layer.Layer<
 
           // Persist ETag only after a successful decode — otherwise a failure
           // here can cause the next run to get a 304 for data we never stored.
-          const etagHeader = responseHeaders['etag']
-          const lastModifiedHeader = responseHeaders['last-modified']
-
-          if (options?.etagKey && etagHeader) {
-            yield* Effect.ignore(
-              etagStore.set(
-                options.etagKey,
-                etagHeader,
-                lastModifiedHeader ?? undefined
-              )
-            )
-          }
+          yield* persistEtag(etagStore, options?.etagKey, responseHeaders)
 
           return Option.some(decoded)
         })

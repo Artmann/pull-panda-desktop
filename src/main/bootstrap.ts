@@ -102,43 +102,55 @@ function buildPullRequest(
   }
 }
 
-export async function bootstrap(userLogin?: string): Promise<BootstrapData> {
+interface ReviewAggregates {
+  approvalCountByPullRequestId: Map<string, number>
+  changesRequestedCountByPullRequestId: Map<string, number>
+  pendingReviews: Record<string, PendingReview>
+}
+
+function countCommentsByPullRequestId(): Map<string, number> {
   const database = getDatabase()
 
-  const rows = database.select().from(pullRequests).all()
-
-  // Get comment counts per PR
   const commentRows = database
     .select()
     .from(comments)
     .where(isNull(comments.deletedAt))
     .all()
 
-  const commentCountByPrId = new Map<string, number>()
+  const countByPullRequestId = new Map<string, number>()
 
   for (const comment of commentRows) {
-    const count = commentCountByPrId.get(comment.pullRequestId) ?? 0
-    commentCountByPrId.set(comment.pullRequestId, count + 1)
+    const count = countByPullRequestId.get(comment.pullRequestId) ?? 0
+
+    countByPullRequestId.set(comment.pullRequestId, count + 1)
   }
 
-  // Get review counts per PR (approvals and changes requested)
+  return countByPullRequestId
+}
+
+function aggregateReviews(userLogin?: string): ReviewAggregates {
+  const database = getDatabase()
+
   const reviewRows = database
     .select()
     .from(reviews)
     .where(isNull(reviews.deletedAt))
     .all()
 
-  const approvalCountByPrId = new Map<string, number>()
-  const changesRequestedCountByPrId = new Map<string, number>()
+  const approvalCountByPullRequestId = new Map<string, number>()
+  const changesRequestedCountByPullRequestId = new Map<string, number>()
   const pendingReviews: Record<string, PendingReview> = {}
 
   for (const review of reviewRows) {
     if (review.state === 'APPROVED') {
-      const count = approvalCountByPrId.get(review.pullRequestId) ?? 0
-      approvalCountByPrId.set(review.pullRequestId, count + 1)
+      const count = approvalCountByPullRequestId.get(review.pullRequestId) ?? 0
+
+      approvalCountByPullRequestId.set(review.pullRequestId, count + 1)
     } else if (review.state === 'CHANGES_REQUESTED') {
-      const count = changesRequestedCountByPrId.get(review.pullRequestId) ?? 0
-      changesRequestedCountByPrId.set(review.pullRequestId, count + 1)
+      const count =
+        changesRequestedCountByPullRequestId.get(review.pullRequestId) ?? 0
+
+      changesRequestedCountByPullRequestId.set(review.pullRequestId, count + 1)
     } else if (
       review.state === 'PENDING' &&
       (!userLogin || review.authorLogin === userLogin)
@@ -157,47 +169,87 @@ export async function bootstrap(userLogin?: string): Promise<BootstrapData> {
     }
   }
 
-  const parsedPullRequests: PullRequest[] = rows.map((row) =>
-    buildPullRequest(row, {
-      approvalCount: approvalCountByPrId.get(row.id) ?? 0,
-      changesRequestedCount: changesRequestedCountByPrId.get(row.id) ?? 0,
-      commentCount: commentCountByPrId.get(row.id) ?? 0
-    })
-  )
+  return {
+    approvalCountByPullRequestId,
+    changesRequestedCountByPullRequestId,
+    pendingReviews
+  }
+}
 
-  const allChecks: Check[] = []
-  const allComments: Comment[] = []
-  const allCommits: Commit[] = []
-  const allModifiedFiles: ModifiedFile[] = []
-  const allReactions: CommentReaction[] = []
-  const allReviews: Review[] = []
-  const allReviewThreads: ReviewThread[] = []
+interface CollectedDetails {
+  checks: Check[]
+  comments: Comment[]
+  commits: Commit[]
+  files: ModifiedFile[]
+  reactions: CommentReaction[]
+  reviews: Review[]
+  reviewThreads: ReviewThread[]
+}
+
+async function collectDetails(
+  parsedPullRequests: PullRequest[],
+  userLogin?: string
+): Promise<CollectedDetails> {
+  const collected: CollectedDetails = {
+    checks: [],
+    comments: [],
+    commits: [],
+    files: [],
+    reactions: [],
+    reviews: [],
+    reviewThreads: []
+  }
 
   for (const pullRequest of parsedPullRequests) {
     const details = await getPullRequestDetails(pullRequest.id, userLogin)
 
     if (details) {
-      allChecks.push(...details.checks)
-      allComments.push(...details.comments)
-      allCommits.push(...details.commits)
-      allModifiedFiles.push(...details.files)
-      allReactions.push(...details.reactions)
-      allReviews.push(...details.reviews)
-      allReviewThreads.push(...details.reviewThreads)
+      collected.checks.push(...details.checks)
+      collected.comments.push(...details.comments)
+      collected.commits.push(...details.commits)
+      collected.files.push(...details.files)
+      collected.reactions.push(...details.reactions)
+      collected.reviews.push(...details.reviews)
+      collected.reviewThreads.push(...details.reviewThreads)
     }
   }
 
+  return collected
+}
+
+export async function bootstrap(userLogin?: string): Promise<BootstrapData> {
+  const database = getDatabase()
+
+  const rows = database.select().from(pullRequests).all()
+  const commentCountByPullRequestId = countCommentsByPullRequestId()
+  const {
+    approvalCountByPullRequestId,
+    changesRequestedCountByPullRequestId,
+    pendingReviews
+  } = aggregateReviews(userLogin)
+
+  const parsedPullRequests: PullRequest[] = rows.map((row) =>
+    buildPullRequest(row, {
+      approvalCount: approvalCountByPullRequestId.get(row.id) ?? 0,
+      changesRequestedCount:
+        changesRequestedCountByPullRequestId.get(row.id) ?? 0,
+      commentCount: commentCountByPullRequestId.get(row.id) ?? 0
+    })
+  )
+
+  const details = await collectDetails(parsedPullRequests, userLogin)
+
   return {
-    checks: allChecks,
-    comments: allComments,
-    commits: allCommits,
+    checks: details.checks,
+    comments: details.comments,
+    commits: details.commits,
     connectedRepos: loadConnectedRepos(),
-    modifiedFiles: allModifiedFiles,
+    modifiedFiles: details.files,
     pendingReviews,
     pullRequests: parsedPullRequests,
-    reactions: allReactions,
-    reviews: allReviews,
-    reviewThreads: allReviewThreads
+    reactions: details.reactions,
+    reviews: details.reviews,
+    reviewThreads: details.reviewThreads
   }
 }
 

@@ -334,94 +334,142 @@ const hydratePullRequestNodes = (
     return result
   })
 
+const probeAllRelations = (
+  entries: Map<string, ProbeEntry>
+): Effect.Effect<number, SyncError, GitHubGraphQL> =>
+  Effect.gen(function* () {
+    const authoredCost = yield* probeSearch(
+      'is:pr is:open author:@me',
+      entries,
+      'isAuthor'
+    )
+    const assignedCost = yield* probeSearch(
+      'is:pr is:open assignee:@me',
+      entries,
+      'isAssignee'
+    )
+    const reviewerCost = yield* probeSearch(
+      'is:pr is:open review-requested:@me',
+      entries,
+      'isReviewer'
+    )
+
+    return authoredCost + assignedCost + reviewerCost
+  })
+
+function collectIdsNeedingHydration(
+  entries: Map<string, ProbeEntry>,
+  knownUpdatedAt: ReadonlyMap<string, string>
+): string[] {
+  const ids: string[] = []
+
+  for (const entry of entries.values()) {
+    const known = knownUpdatedAt.get(entry.id)
+
+    if (!known || known !== entry.updatedAt) {
+      ids.push(entry.id)
+    }
+  }
+
+  return ids
+}
+
+const hydrateAndPersistPullRequests = (
+  entries: Map<string, ProbeEntry>,
+  ids: ReadonlyArray<string>,
+  now: string
+): Effect.Effect<
+  { errors: ReadonlyArray<string>; syncedCount: number },
+  SyncError,
+  Database | GitHubGraphQL
+> =>
+  Effect.gen(function* () {
+    const errors: string[] = []
+    let syncedCount = 0
+
+    const hydrated = yield* hydratePullRequestNodes(ids).pipe(
+      Effect.catchTag('SyncHydrationFailedError', (error) => {
+        errors.push(`Failed to hydrate PRs: ${String(error.cause)}`)
+
+        return Effect.succeed(new Map<string, PullRequestNode | null>())
+      })
+    )
+
+    for (const id of ids) {
+      const node = hydrated.get(id)
+      const entry = entries.get(id)
+
+      if (!node || node.__typename !== 'PullRequest' || !entry) {
+        continue
+      }
+
+      yield* persistPullRequest(transformNode(node, entry, now))
+      syncedCount++
+    }
+
+    return { errors, syncedCount }
+  })
+
+const refreshUnchangedRelationFlags = (
+  entries: Map<string, ProbeEntry>,
+  hydratedIds: ReadonlySet<string>,
+  knownUpdatedAt: ReadonlyMap<string, string>
+) =>
+  Effect.gen(function* () {
+    for (const entry of entries.values()) {
+      if (hydratedIds.has(entry.id) || !knownUpdatedAt.has(entry.id)) {
+        continue
+      }
+
+      yield* updateRelationFlags(entry)
+    }
+  })
+
 export const syncPullRequests: Effect.Effect<
   SyncResult,
   SyncError,
   Database | GitHubGraphQL
 > = Effect.gen(function* () {
   const now = new Date().toISOString()
-
   const entries = new Map<string, ProbeEntry>()
 
-  const authoredCost = yield* probeSearch(
-    'is:pr is:open author:@me',
-    entries,
-    'isAuthor'
-  )
-  const assignedCost = yield* probeSearch(
-    'is:pr is:open assignee:@me',
-    entries,
-    'isAssignee'
-  )
-  const reviewerCost = yield* probeSearch(
-    'is:pr is:open review-requested:@me',
-    entries,
-    'isReviewer'
-  )
-
+  const totalProbeCost = yield* probeAllRelations(entries)
   const allIds = Array.from(entries.keys())
-  const totalProbeCost = authoredCost + assignedCost + reviewerCost
 
   yield* Effect.logInfo(
     `[Sync] Probe returned ${allIds.length} PRs (cost=${totalProbeCost})`
   )
 
   const knownUpdatedAt = yield* getKnownUpdatedAtMap(allIds)
-  const idsNeedingHydration: string[] = []
-
-  for (const entry of entries.values()) {
-    const known = knownUpdatedAt.get(entry.id)
-
-    if (!known || known !== entry.updatedAt) {
-      idsNeedingHydration.push(entry.id)
-    }
-  }
-
+  const idsNeedingHydration = collectIdsNeedingHydration(
+    entries,
+    knownUpdatedAt
+  )
   const hasChanges = idsNeedingHydration.length > 0
+
+  let errors: ReadonlyArray<string> = []
   let syncedCount = 0
-  const errors: string[] = []
 
   if (hasChanges) {
     yield* Effect.logInfo(
       `[Sync] Hydrating ${idsNeedingHydration.length}/${allIds.length} changed PRs`
     )
 
-    const hydrated = yield* hydratePullRequestNodes(idsNeedingHydration).pipe(
-      Effect.catchTag('SyncHydrationFailedError', (error) => {
-        errors.push(`Failed to hydrate PRs: ${String(error.cause)}`)
-        return Effect.succeed(new Map<string, PullRequestNode | null>())
-      })
+    const hydration = yield* hydrateAndPersistPullRequests(
+      entries,
+      idsNeedingHydration,
+      now
     )
 
-    for (const id of idsNeedingHydration) {
-      const node = hydrated.get(id)
-
-      if (!node || node.__typename !== 'PullRequest') {
-        continue
-      }
-
-      const entry = entries.get(id)
-
-      if (!entry) {
-        continue
-      }
-
-      const record = transformNode(node, entry, now)
-
-      yield* persistPullRequest(record)
-      syncedCount++
-    }
+    errors = hydration.errors
+    syncedCount = hydration.syncedCount
   }
 
-  for (const entry of entries.values()) {
-    if (idsNeedingHydration.includes(entry.id)) {
-      continue
-    }
-
-    if (knownUpdatedAt.has(entry.id)) {
-      yield* updateRelationFlags(entry)
-    }
-  }
+  yield* refreshUnchangedRelationFlags(
+    entries,
+    new Set(idsNeedingHydration),
+    knownUpdatedAt
+  )
 
   return {
     synced: syncedCount,

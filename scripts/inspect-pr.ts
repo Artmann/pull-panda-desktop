@@ -1,9 +1,9 @@
 import fs from 'node:fs'
 import path from 'node:path'
 
-import { drizzle } from 'drizzle-orm/sql-js'
+import { drizzle, type SQLJsDatabase } from 'drizzle-orm/sql-js'
 import { and, eq, isNull } from 'drizzle-orm'
-import initSqlJs from 'sql.js'
+import initSqlJs, { type Database } from 'sql.js'
 
 import {
   checks,
@@ -14,6 +14,8 @@ import {
   pullRequests,
   reviews
 } from '../src/database/schema'
+
+type PullRequest = typeof pullRequests.$inferSelect
 
 // ANSI colors
 
@@ -35,7 +37,7 @@ const noisyFields = new Set([
   'userAvatarUrl'
 ])
 
-function usage() {
+function usage(): never {
   console.log(`
 ${bold('Usage:')} bun run inspect-pr <number> [options]
 
@@ -51,38 +53,43 @@ ${bold('Examples:')}
   process.exit(1)
 }
 
-function parseArgs() {
-  const args = process.argv.slice(2)
+function parsePrNumber(argument: string): number {
+  const parsed = parseInt(argument, 10)
+
+  if (isNaN(parsed) || parsed <= 0) {
+    console.error(red(`Error: "${argument}" is not a valid PR number.`))
+    process.exit(1)
+  }
+
+  return parsed
+}
+
+function parseRepoValue(value: string | undefined): string {
+  if (!value || !value.includes('/')) {
+    console.error(red('Error: --repo requires a value in owner/name format.'))
+    process.exit(1)
+  }
+
+  return value
+}
+
+export function parseArgs(args: string[]) {
   let brief = false
   let number: number | null = null
   let repo: string | null = null
 
   for (let i = 0; i < args.length; i++) {
-    const arg = args[i]
+    const argument = args[i]
 
-    if (arg === '--brief') {
+    if (argument === '--brief') {
       brief = true
-    } else if (arg === '--repo') {
+    } else if (argument === '--repo') {
       i++
-      repo = args[i] ?? null
-
-      if (!repo || !repo.includes('/')) {
-        console.error(
-          red('Error: --repo requires a value in owner/name format.')
-        )
-        process.exit(1)
-      }
-    } else if (!arg.startsWith('-')) {
-      const parsed = parseInt(arg, 10)
-
-      if (isNaN(parsed) || parsed <= 0) {
-        console.error(red(`Error: "${arg}" is not a valid PR number.`))
-        process.exit(1)
-      }
-
-      number = parsed
+      repo = parseRepoValue(args[i])
+    } else if (!argument.startsWith('-')) {
+      number = parsePrNumber(argument)
     } else {
-      console.error(red(`Error: Unknown option "${arg}".`))
+      console.error(red(`Error: Unknown option "${argument}".`))
       usage()
     }
   }
@@ -94,7 +101,7 @@ function parseArgs() {
   return { brief, number, repo }
 }
 
-function formatState(state: string) {
+export function formatState(state: string) {
   switch (state.toUpperCase()) {
     case 'MERGED':
       return `\x1b[35m${state}\x1b[0m`
@@ -107,7 +114,7 @@ function formatState(state: string) {
   }
 }
 
-function redactNoisy(key: string, value: unknown): unknown {
+export function redactNoisy(key: string, value: unknown): unknown {
   if (noisyFields.has(key) && typeof value === 'string') {
     return `[${value.length} chars]`
   }
@@ -135,11 +142,10 @@ function printSection(label: string, rows: Record<string, unknown>[]) {
   printJson(rows)
 }
 
-async function main() {
-  const { brief, number, repo } = parseArgs()
-
-  // Open database
-
+async function openDatabase(): Promise<{
+  database: SQLJsDatabase
+  sqlite: Database
+}> {
   const databasePath = path.join(process.cwd(), 'pull-panda.db')
 
   if (!fs.existsSync(databasePath)) {
@@ -168,25 +174,32 @@ async function main() {
   const sqlite = new SQL.Database(fileBuffer)
   const database = drizzle(sqlite)
 
-  // Find PR(s) by number
+  return { database, sqlite }
+}
 
-  const numberCondition = eq(pullRequests.number, number)
+export function buildRepoConditions(repo: string | null) {
+  if (!repo) {
+    return []
+  }
 
-  const repoConditions = repo
-    ? (() => {
-        const [owner, name] = repo.split('/')
+  const [owner, name] = repo.split('/')
 
-        return [
-          eq(pullRequests.repositoryOwner, owner),
-          eq(pullRequests.repositoryName, name)
-        ]
-      })()
-    : []
+  return [
+    eq(pullRequests.repositoryOwner, owner),
+    eq(pullRequests.repositoryName, name)
+  ]
+}
 
+function findPullRequest(
+  database: SQLJsDatabase,
+  sqlite: Database,
+  number: number,
+  repo: string | null
+): PullRequest {
   const matchingPrs = database
     .select()
     .from(pullRequests)
-    .where(and(numberCondition, ...repoConditions))
+    .where(and(eq(pullRequests.number, number), ...buildRepoConditions(repo)))
     .all()
 
   if (matchingPrs.length === 0) {
@@ -214,10 +227,10 @@ async function main() {
     process.exit(1)
   }
 
-  const pr = matchingPrs[0]
+  return matchingPrs[0]
+}
 
-  // Print summary header
-
+function printSummaryHeader(pr: PullRequest) {
   console.log()
   console.log(bold(`PR #${pr.number}: ${pr.title}`))
   console.log(`  Repo:    ${pr.repositoryOwner}/${pr.repositoryName}`)
@@ -240,6 +253,80 @@ async function main() {
   console.log(
     `  Draft: ${pr.isDraft}  Author: ${pr.isAuthor}  Assignee: ${pr.isAssignee}  Reviewer: ${pr.isReviewer}`
   )
+}
+
+function printRelatedSections(
+  database: SQLJsDatabase,
+  pullRequestId: PullRequest['id']
+) {
+  const reviewRows = database
+    .select()
+    .from(reviews)
+    .where(
+      and(eq(reviews.pullRequestId, pullRequestId), isNull(reviews.deletedAt))
+    )
+    .all()
+
+  const commentRows = database
+    .select()
+    .from(comments)
+    .where(
+      and(eq(comments.pullRequestId, pullRequestId), isNull(comments.deletedAt))
+    )
+    .all()
+
+  const reactionRows = database
+    .select()
+    .from(commentReactions)
+    .where(
+      and(
+        eq(commentReactions.pullRequestId, pullRequestId),
+        isNull(commentReactions.deletedAt)
+      )
+    )
+    .all()
+
+  const checkRows = database
+    .select()
+    .from(checks)
+    .where(
+      and(eq(checks.pullRequestId, pullRequestId), isNull(checks.deletedAt))
+    )
+    .all()
+
+  const commitRows = database
+    .select()
+    .from(commits)
+    .where(
+      and(eq(commits.pullRequestId, pullRequestId), isNull(commits.deletedAt))
+    )
+    .all()
+
+  const fileRows = database
+    .select()
+    .from(modifiedFiles)
+    .where(
+      and(
+        eq(modifiedFiles.pullRequestId, pullRequestId),
+        isNull(modifiedFiles.deletedAt)
+      )
+    )
+    .all()
+
+  printSection('Reviews', reviewRows)
+  printSection('Comments', commentRows)
+  printSection('Reactions', reactionRows)
+  printSection('Checks', checkRows)
+  printSection('Commits', commitRows)
+  printSection('Modified Files', fileRows)
+}
+
+async function main() {
+  const { brief, number, repo } = parseArgs(process.argv.slice(2))
+  const { database, sqlite } = await openDatabase()
+  const pr = findPullRequest(database, sqlite, number, repo)
+
+  printSummaryHeader(pr)
 
   if (brief) {
     console.log()
@@ -250,64 +337,10 @@ async function main() {
     return
   }
 
-  // Query related data
-
-  const reviewRows = database
-    .select()
-    .from(reviews)
-    .where(and(eq(reviews.pullRequestId, pr.id), isNull(reviews.deletedAt)))
-    .all()
-
-  const commentRows = database
-    .select()
-    .from(comments)
-    .where(and(eq(comments.pullRequestId, pr.id), isNull(comments.deletedAt)))
-    .all()
-
-  const reactionRows = database
-    .select()
-    .from(commentReactions)
-    .where(
-      and(
-        eq(commentReactions.pullRequestId, pr.id),
-        isNull(commentReactions.deletedAt)
-      )
-    )
-    .all()
-
-  const checkRows = database
-    .select()
-    .from(checks)
-    .where(and(eq(checks.pullRequestId, pr.id), isNull(checks.deletedAt)))
-    .all()
-
-  const commitRows = database
-    .select()
-    .from(commits)
-    .where(and(eq(commits.pullRequestId, pr.id), isNull(commits.deletedAt)))
-    .all()
-
-  const fileRows = database
-    .select()
-    .from(modifiedFiles)
-    .where(
-      and(
-        eq(modifiedFiles.pullRequestId, pr.id),
-        isNull(modifiedFiles.deletedAt)
-      )
-    )
-    .all()
-
-  // Print sections
-
-  printSection('Reviews', reviewRows)
-  printSection('Comments', commentRows)
-  printSection('Reactions', reactionRows)
-  printSection('Checks', checkRows)
-  printSection('Commits', commitRows)
-  printSection('Modified Files', fileRows)
-
+  printRelatedSections(database, pr.id)
   sqlite.close()
 }
 
-main()
+if (import.meta.main) {
+  main()
+}

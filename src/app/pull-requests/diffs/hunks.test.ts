@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 
-import { parseDiffHunk } from './hunks'
+import { parseDiffHunk, parseSingleHunk } from './hunks'
 
 describe('parseDiffHunk', () => {
   it('should parse a simple diff hunk with added lines', () => {
@@ -440,6 +440,172 @@ describe('parseDiffHunk', () => {
         type: 'remove',
         oldLineNumber: 4,
         newLineNumber: null
+      }
+    ])
+  })
+})
+
+describe('parseSingleHunk', () => {
+  it('should parse a hunk with mixed add, remove, and context lines', () => {
+    const diffHunk = `@@ -1,3 +1,3 @@
+ keep
+-before
++after`
+
+    const result = parseSingleHunk(diffHunk, 1, null, null)
+
+    expect(result).toEqual({
+      oldStartLine: 1,
+      oldLineCount: 3,
+      newStartLine: 1,
+      newLineCount: 3,
+      lines: [
+        {
+          content: 'keep',
+          localLineNumber: 1,
+          type: 'context',
+          oldLineNumber: 1,
+          newLineNumber: 1
+        },
+        {
+          content: 'before',
+          localLineNumber: 2,
+          type: 'remove',
+          oldLineNumber: 2,
+          newLineNumber: null
+        },
+        {
+          content: 'after',
+          localLineNumber: 3,
+          type: 'add',
+          oldLineNumber: null,
+          newLineNumber: 2
+        }
+      ]
+    })
+  })
+
+  it('should parse a hunk with only a header and no lines', () => {
+    const diffHunk = '@@ -1,0 +1,0 @@'
+
+    const result = parseSingleHunk(diffHunk, 1, null, null)
+
+    expect(result).toEqual({
+      oldStartLine: 1,
+      oldLineCount: 0,
+      newStartLine: 1,
+      newLineCount: 0,
+      lines: []
+    })
+  })
+
+  it('should respect the starting local line number', () => {
+    const diffHunk = `@@ -1,1 +1,2 @@
+ context
++added`
+
+    const result = parseSingleHunk(diffHunk, 10, null, null)
+
+    expect(result.lines.map((line) => line.localLineNumber)).toEqual([10, 11])
+  })
+
+  it('should treat a no-newline marker as a context line', () => {
+    const diffHunk = `@@ -1,2 +1,2 @@
+ line1
+-old last line
++new last line
+\\ No newline at end of file`
+
+    const result = parseSingleHunk(diffHunk, 1, null, null)
+
+    expect(result.lines[3]).toEqual({
+      content: '\\ No newline at end of file',
+      localLineNumber: 4,
+      type: 'context',
+      oldLineNumber: 3,
+      newLineNumber: 3
+    })
+  })
+
+  it('should insert a truncated line for a first hunk starting after line 1', () => {
+    const diffHunk = `@@ -5,2 +5,3 @@
+ line5
++added
+ line6`
+
+    const result = parseSingleHunk(diffHunk, 1, null, null)
+
+    expect(result.lines[0]).toEqual({
+      content: '4 unmodified lines',
+      localLineNumber: 1,
+      type: 'truncated',
+      oldLineNumber: 4,
+      newLineNumber: 4
+    })
+  })
+
+  it('should insert a gap line between hunks based on previous hunk ends', () => {
+    const diffHunk = `@@ -10,2 +12,2 @@
+ line10
+ line11`
+
+    const result = parseSingleHunk(diffHunk, 5, 4, 6)
+
+    expect(result.lines).toEqual([
+      {
+        content: '5 unmodified lines',
+        localLineNumber: 5,
+        type: 'truncated',
+        oldLineNumber: 9,
+        newLineNumber: 11
+      },
+      {
+        content: 'line10',
+        localLineNumber: 6,
+        type: 'context',
+        oldLineNumber: 10,
+        newLineNumber: 12
+      },
+      {
+        content: 'line11',
+        localLineNumber: 7,
+        type: 'context',
+        oldLineNumber: 11,
+        newLineNumber: 13
+      }
+    ])
+  })
+
+  it('should not insert a gap line when hunks are adjacent', () => {
+    const diffHunk = `@@ -5,1 +5,1 @@
+ line5`
+
+    const result = parseSingleHunk(diffHunk, 3, 4, 4)
+
+    expect(result.lines).toEqual([
+      {
+        content: 'line5',
+        localLineNumber: 3,
+        type: 'context',
+        oldLineNumber: 5,
+        newLineNumber: 5
+      }
+    ])
+  })
+
+  it('should not add header context for a continuation hunk', () => {
+    const diffHunk = `@@ -3,1 +3,1 @@ function example() {
+ line3`
+
+    const result = parseSingleHunk(diffHunk, 1, 2, 2)
+
+    expect(result.lines).toEqual([
+      {
+        content: 'line3',
+        localLineNumber: 1,
+        type: 'context',
+        oldLineNumber: 3,
+        newLineNumber: 3
       }
     ])
   })

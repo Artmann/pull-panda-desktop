@@ -73,7 +73,7 @@ const octokitErrorOf =
     return new OctokitError({ message, operation, status })
   }
 
-type OctokitReviewData = {
+export type OctokitReviewData = {
   body?: string | null
   body_html?: string | null
   html_url?: string | null
@@ -84,7 +84,7 @@ type OctokitReviewData = {
   user?: { avatar_url?: string; login?: string } | null
 }
 
-const toUpsertReviewInput = (data: OctokitReviewData) => ({
+export const toUpsertReviewInput = (data: OctokitReviewData) => ({
   authorAvatarUrl: data.user?.avatar_url ?? null,
   authorLogin: data.user?.login ?? null,
   body: data.body ?? null,

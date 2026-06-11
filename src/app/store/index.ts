@@ -39,7 +39,7 @@ import reviewThreadsReducer, {
 } from './review-threads-slice'
 import tasksReducer, { TasksState } from './tasks-slice'
 
-interface PreloadedState {
+export interface PreloadedState {
   checks: ChecksState
   comments: CommentsState
   commits: CommitsState

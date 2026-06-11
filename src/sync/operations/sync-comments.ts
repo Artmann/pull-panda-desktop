@@ -26,6 +26,37 @@ export interface SyncCommentsParams {
   pullNumber: number
 }
 
+const buildIssueComment = (
+  commentData: IssueComment,
+  commentId: string,
+  pullRequestId: string,
+  now: string
+): NewComment => ({
+  id: commentId,
+  gitHubId: commentData.node_id,
+  gitHubNumericId: commentData.id,
+  pullRequestId,
+  reviewId: null,
+  body: normalizeCommentBody(commentData.body),
+  bodyHtml: commentData.body_html ?? null,
+  path: null,
+  line: null,
+  originalLine: null,
+  diffHunk: null,
+  commitId: null,
+  originalCommitId: null,
+  gitHubReviewId: null,
+  gitHubReviewThreadId: null,
+  parentCommentGitHubId: null,
+  userLogin: commentData.user?.login ?? null,
+  userAvatarUrl: commentData.user?.avatar_url ?? null,
+  url: commentData.html_url,
+  gitHubCreatedAt: commentData.created_at,
+  gitHubUpdatedAt: commentData.updated_at,
+  syncedAt: now,
+  deletedAt: null
+})
+
 const fetchReactions = (params: SyncCommentsParams, commentNumericId: number) =>
   paginateRest(
     'GET /repos/{owner}/{repo}/issues/comments/{comment_id}/reactions',
@@ -116,31 +147,12 @@ export const syncComments = (
 
         commentEntries.push({ id: commentId, comment: commentData })
 
-        const comment: NewComment = {
-          id: commentId,
-          gitHubId,
-          gitHubNumericId: commentData.id,
-          pullRequestId: params.pullRequestId,
-          reviewId: null,
-          body: normalizeCommentBody(commentData.body),
-          bodyHtml: commentData.body_html ?? null,
-          path: null,
-          line: null,
-          originalLine: null,
-          diffHunk: null,
-          commitId: null,
-          originalCommitId: null,
-          gitHubReviewId: null,
-          gitHubReviewThreadId: null,
-          parentCommentGitHubId: null,
-          userLogin: commentData.user?.login ?? null,
-          userAvatarUrl: commentData.user?.avatar_url ?? null,
-          url: commentData.html_url,
-          gitHubCreatedAt: commentData.created_at,
-          gitHubUpdatedAt: commentData.updated_at,
-          syncedAt: now,
-          deletedAt: null
-        }
+        const comment = buildIssueComment(
+          commentData,
+          commentId,
+          params.pullRequestId,
+          now
+        )
 
         db.insert(comments)
           .values(comment)

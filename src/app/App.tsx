@@ -20,7 +20,6 @@ import { ErrorBoundary } from '@/app/components/ErrorBoundary'
 import { FpsCounter } from '@/app/components/FpsCounter'
 import { TitleBar } from '@/app/components/TitleBar'
 import { Toaster } from '@/app/components/ui/sonner'
-import { filterReadyPullRequests } from '@/app/lib/pull-requests'
 import { AuthProvider, useAuth } from '@/app/lib/store/authContext'
 import { TasksProvider } from '@/app/lib/store/tasksContext'
 import { ThemeProvider } from '@/app/lib/store/themeContext'
@@ -32,16 +31,8 @@ import { PullRequestPage } from '@/app/routes/PullRequestPage'
 import { SettingsPage } from '@/app/routes/SettingsPage'
 import { SignInPage } from '@/app/routes/SignInPage'
 import { getSavedRoute, saveRoute } from '@/app/lib/routePersistence'
-import { checksActions } from '@/app/store/checks-slice'
-import { commentsActions } from '@/app/store/comments-slice'
-import { commitsActions } from '@/app/store/commits-slice'
 import { useAppDispatch } from '@/app/store/hooks'
-import { modifiedFilesActions } from '@/app/store/modified-files-slice'
-import { pendingReviewsActions } from '@/app/store/pending-reviews-slice'
-import { pullRequestsActions } from '@/app/store/pull-requests-slice'
-import { reactionsActions } from '@/app/store/reactions-slice'
-import { reviewsActions } from '@/app/store/reviews-slice'
-import { reviewThreadsActions } from '@/app/store/review-threads-slice'
+import { resourceEventToAction } from '@/app/store/resource-event-to-action'
 import { AppFooter } from './AppFooter'
 
 interface AppProps {
@@ -89,97 +80,7 @@ function AppContent(): ReactElement {
   // Listen for resource updates from the main process
   useEffect(() => {
     const unsubscribe = window.electron.onResourceUpdated((event) => {
-      switch (event.type) {
-        case 'checks':
-          dispatch(
-            checksActions.setForPullRequest({
-              pullRequestId: event.pullRequestId,
-              items: event.data
-            })
-          )
-          break
-
-        case 'comments':
-          dispatch(
-            commentsActions.setForPullRequest({
-              pullRequestId: event.pullRequestId,
-              items: event.data
-            })
-          )
-          break
-
-        case 'commits':
-          dispatch(
-            commitsActions.setForPullRequest({
-              pullRequestId: event.pullRequestId,
-              items: event.data
-            })
-          )
-          break
-
-        case 'modified-files':
-          dispatch(
-            modifiedFilesActions.setForPullRequest({
-              pullRequestId: event.pullRequestId,
-              items: event.data
-            })
-          )
-          break
-
-        case 'pending-review':
-          if (event.data) {
-            dispatch(
-              pendingReviewsActions.setReview({
-                pullRequestId: event.pullRequestId,
-                review: event.data
-              })
-            )
-          } else {
-            dispatch(
-              pendingReviewsActions.clearReview({
-                pullRequestId: event.pullRequestId
-              })
-            )
-          }
-          break
-
-        case 'pull-request':
-          dispatch(pullRequestsActions.upsertItem(event.data))
-          break
-
-        case 'pull-requests':
-          dispatch(
-            pullRequestsActions.setItems(filterReadyPullRequests(event.data))
-          )
-          break
-
-        case 'reactions':
-          dispatch(
-            reactionsActions.setForPullRequest({
-              pullRequestId: event.pullRequestId,
-              items: event.data
-            })
-          )
-          break
-
-        case 'reviews':
-          dispatch(
-            reviewsActions.setForPullRequest({
-              pullRequestId: event.pullRequestId,
-              items: event.data
-            })
-          )
-          break
-
-        case 'review-threads':
-          dispatch(
-            reviewThreadsActions.setForPullRequest({
-              pullRequestId: event.pullRequestId,
-              items: event.data
-            })
-          )
-          break
-      }
+      dispatch(resourceEventToAction(event))
     })
 
     return unsubscribe
@@ -217,65 +118,68 @@ function AppContent(): ReactElement {
         <ErrorBoundary>
           {isAuthenticated && <RouteRestorer />}
 
-          <Routes>
-            <Route
-              path="/sign-in"
-              element={
-                isAuthenticated ? (
-                  <Navigate to={postSignInRedirect} />
-                ) : (
-                  <SignInPage />
-                )
-              }
-            />
-            <Route
-              path="/onboarding"
-              element={
-                isAuthenticated ? (
-                  <OnboardingPage />
-                ) : (
-                  <Navigate to="/sign-in" />
-                )
-              }
-            />
-            <Route
-              path="/"
-              element={
-                isAuthenticated ? <HomePage /> : <Navigate to="/sign-in" />
-              }
-            />
-            <Route
-              path="/bg"
-              element={
-                isAuthenticated ? (
-                  <BackgroundSyncerPage />
-                ) : (
-                  <Navigate to="/sign-in" />
-                )
-              }
-            />
-            <Route
-              path="/pull-requests/:id"
-              element={
-                isAuthenticated ? (
-                  <PullRequestPage />
-                ) : (
-                  <Navigate to="/sign-in" />
-                )
-              }
-            />
-            <Route
-              path="/settings"
-              element={
-                isAuthenticated ? <SettingsPage /> : <Navigate to="/sign-in" />
-              }
-            />
-          </Routes>
+          <AppRoutes
+            isAuthenticated={isAuthenticated}
+            postSignInRedirect={postSignInRedirect}
+          />
         </ErrorBoundary>
       </div>
 
       {isAuthenticated && <AppFooter />}
     </main>
+  )
+}
+
+interface AppRoutesProps {
+  isAuthenticated: boolean
+  postSignInRedirect: string
+}
+
+function AppRoutes({
+  isAuthenticated,
+  postSignInRedirect
+}: AppRoutesProps): ReactElement {
+  return (
+    <Routes>
+      <Route
+        path="/sign-in"
+        element={
+          isAuthenticated ? <Navigate to={postSignInRedirect} /> : <SignInPage />
+        }
+      />
+      <Route
+        path="/onboarding"
+        element={
+          isAuthenticated ? <OnboardingPage /> : <Navigate to="/sign-in" />
+        }
+      />
+      <Route
+        path="/"
+        element={isAuthenticated ? <HomePage /> : <Navigate to="/sign-in" />}
+      />
+      <Route
+        path="/bg"
+        element={
+          isAuthenticated ? (
+            <BackgroundSyncerPage />
+          ) : (
+            <Navigate to="/sign-in" />
+          )
+        }
+      />
+      <Route
+        path="/pull-requests/:id"
+        element={
+          isAuthenticated ? <PullRequestPage /> : <Navigate to="/sign-in" />
+        }
+      />
+      <Route
+        path="/settings"
+        element={
+          isAuthenticated ? <SettingsPage /> : <Navigate to="/sign-in" />
+        }
+      />
+    </Routes>
   )
 }
 

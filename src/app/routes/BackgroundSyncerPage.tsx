@@ -11,29 +11,10 @@ import {
   CardTitle
 } from '@/app/components/ui/card'
 import { BarChart, MultiLineChart } from '@/app/components/ui/chart'
+import { aggregateData, formatTime } from '@/app/routes/aggregateData'
 import type { MonitoringData, SyncRecord } from '@/types/syncer-monitoring'
 
 const refreshInterval = 2000
-const bucketSizeMs = 60000
-
-interface ChartDataPoint {
-  time: string
-  timestamp: number
-  syncs: number
-  restRateLimit: number | null
-  graphqlRateLimit: number | null
-}
-
-function formatTime(timestamp: number): string {
-  const date = new Date(timestamp)
-
-  return date.toLocaleTimeString('en-US', {
-    hour: '2-digit',
-    minute: '2-digit',
-    second: '2-digit',
-    hour12: false
-  })
-}
 
 function formatDuration(ms: number): string {
   if (ms < 1000) {
@@ -41,92 +22,6 @@ function formatDuration(ms: number): string {
   }
 
   return `${(ms / 1000).toFixed(2)}s`
-}
-
-interface BucketData {
-  syncs: number
-  restRateLimits: number[]
-  graphqlRateLimits: number[]
-}
-
-function aggregateData(data: MonitoringData): ChartDataPoint[] {
-  if (data.syncs.length === 0 && data.rateLimits.length === 0) {
-    return []
-  }
-
-  // Find time range
-  const allTimestamps = [
-    ...data.syncs.map((s) => s.timestamp),
-    ...data.rateLimits.map((r) => r.timestamp)
-  ]
-  const minTime = Math.min(...allTimestamps)
-  const maxTime = Math.max(...allTimestamps)
-
-  // Create buckets
-  const buckets = new Map<number, BucketData>()
-  const startBucket = Math.floor(minTime / bucketSizeMs) * bucketSizeMs
-  const endBucket = Math.floor(maxTime / bucketSizeMs) * bucketSizeMs
-
-  // Initialize buckets
-  for (let bucket = startBucket; bucket <= endBucket; bucket += bucketSizeMs) {
-    buckets.set(bucket, { syncs: 0, restRateLimits: [], graphqlRateLimits: [] })
-  }
-
-  // Aggregate syncs
-  for (const sync of data.syncs) {
-    const bucket = Math.floor(sync.timestamp / bucketSizeMs) * bucketSizeMs
-    const existing = buckets.get(bucket)
-
-    if (existing) {
-      existing.syncs++
-    }
-  }
-
-  // Aggregate rate limits by type
-  for (const rateLimit of data.rateLimits) {
-    const bucket = Math.floor(rateLimit.timestamp / bucketSizeMs) * bucketSizeMs
-    const existing = buckets.get(bucket)
-
-    if (existing) {
-      if (rateLimit.type === 'rest') {
-        existing.restRateLimits.push(rateLimit.remaining)
-      } else {
-        existing.graphqlRateLimits.push(rateLimit.remaining)
-      }
-    }
-  }
-
-  // Convert to chart data
-  const chartData: ChartDataPoint[] = []
-
-  for (const [timestamp, value] of buckets) {
-    const avgRestRateLimit =
-      value.restRateLimits.length > 0
-        ? Math.round(
-            value.restRateLimits.reduce((a, b) => a + b, 0) /
-              value.restRateLimits.length
-          )
-        : null
-
-    const avgGraphqlRateLimit =
-      value.graphqlRateLimits.length > 0
-        ? Math.round(
-            value.graphqlRateLimits.reduce((a, b) => a + b, 0) /
-              value.graphqlRateLimits.length
-          )
-        : null
-
-    chartData.push({
-      time: formatTime(timestamp),
-      timestamp,
-      syncs: value.syncs,
-      restRateLimit: avgRestRateLimit,
-      graphqlRateLimit: avgGraphqlRateLimit
-    })
-  }
-
-  // Sort by timestamp and limit to last 30 buckets (5 minutes)
-  return chartData.sort((a, b) => a.timestamp - b.timestamp).slice(-30)
 }
 
 export function BackgroundSyncerPage(): ReactElement {

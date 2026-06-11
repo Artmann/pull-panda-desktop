@@ -16,6 +16,25 @@ export interface SyncFilesParams {
   pullNumber: number
 }
 
+const buildModifiedFileRecord = (
+  fileData: ModifiedFile,
+  existingId: string | undefined,
+  pullRequestId: string,
+  now: string
+): NewModifiedFile => ({
+  id: existingId ?? generateId(),
+  pullRequestId,
+  filename: fileData.filename,
+  filePath: fileData.filename,
+  status: fileData.status ?? null,
+  additions: fileData.additions ?? null,
+  deletions: fileData.deletions ?? null,
+  changes: fileData.changes ?? null,
+  diffHunk: fileData.patch ?? null,
+  syncedAt: now,
+  deletedAt: null
+})
+
 export const syncFiles = (
   params: SyncFilesParams
 ): Effect.Effect<void, SyncError, Database | GitHubRest> =>
@@ -73,19 +92,12 @@ export const syncFiles = (
           (row) => row.filename === filename
         )
 
-        const file: NewModifiedFile = {
-          id: existingFile?.id ?? generateId(),
-          pullRequestId: params.pullRequestId,
-          filename,
-          filePath: filename,
-          status: fileData.status ?? null,
-          additions: fileData.additions ?? null,
-          deletions: fileData.deletions ?? null,
-          changes: fileData.changes ?? null,
-          diffHunk: fileData.patch ?? null,
-          syncedAt: now,
-          deletedAt: null
-        }
+        const file = buildModifiedFileRecord(
+          fileData,
+          existingFile?.id,
+          params.pullRequestId,
+          now
+        )
 
         db.insert(modifiedFiles)
           .values(file)
