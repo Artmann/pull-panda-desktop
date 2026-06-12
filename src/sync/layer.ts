@@ -3,6 +3,7 @@ import { Layer } from 'effect'
 import { AuthStoreLive } from '../main/services/auth-store'
 import { CodeownersLive } from '../main/services/codeowners'
 import { GitLive } from '../main/services/git'
+import { GitHubApiLive } from '../main/services/github-api'
 import { GitHubAuthLive } from '../main/services/github-auth'
 import { MainWindowLive } from '../main/services/main-window'
 import { RepositoryLive } from '../main/services/repository'
@@ -52,6 +53,7 @@ export const makeAppLayer = (getToken: () => string | null) => {
     AuthStoreLive,
     CodeownersLive,
     GitLive,
+    GitHubApiLive,
     GitHubAuthLive,
     MainWindowLive,
     TaskManagerLive

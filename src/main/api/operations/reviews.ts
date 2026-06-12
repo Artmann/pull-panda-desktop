@@ -4,7 +4,7 @@ import { Effect } from 'effect'
 import { syncPullRequestDetails } from '../../../sync/operations/sync-pull-request-details'
 import { Repository } from '../../services/repository'
 import { broadcastPullRequestResourceEvents } from '../../send-resource-events'
-import { OctokitError } from '../errors'
+import { octokitErrorOf } from '../octokit-error'
 
 export interface CreateReviewInput {
   readonly owner: string
@@ -55,23 +55,6 @@ export interface SubmitReviewInput {
   readonly reviewId: number
   readonly token: string
 }
-
-const octokitErrorOf =
-  (operation: string, fallback?: (message: string) => string) =>
-  (cause: unknown) => {
-    const status =
-      typeof cause === 'object' &&
-      cause !== null &&
-      'status' in cause &&
-      typeof (cause as { status: unknown }).status === 'number'
-        ? (cause as { status: number }).status
-        : 500
-    const rawMessage =
-      cause instanceof Error ? cause.message : `Failed: ${operation}`
-    const message = fallback ? fallback(rawMessage) : rawMessage
-
-    return new OctokitError({ message, operation, status })
-  }
 
 export type OctokitReviewData = {
   body?: string | null
@@ -185,11 +168,12 @@ export const createPendingReview = (input: CreateReviewInput) =>
           return existing
         }
       },
-      catch: octokitErrorOf('pulls.createReview', (message) =>
-        message.includes('one pending review per pull request')
-          ? 'You already have a pending review on this pull request'
-          : message
-      )
+      catch: octokitErrorOf('pulls.createReview', {
+        transform: (message) =>
+          message.includes('one pending review per pull request')
+            ? 'You already have a pending review on this pull request'
+            : message
+      })
     })
 
     const persisted = yield* repository.upsertReview({

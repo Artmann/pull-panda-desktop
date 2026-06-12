@@ -19,6 +19,7 @@ import { Repository } from '../../services/repository'
 import type { MergeRequirement } from '../../../types/merge-requirements'
 import type { PullRequest } from '../../../types/pull-request'
 import { OctokitError, ValidationError } from '../errors'
+import { octokitErrorOf } from '../octokit-error'
 
 const cacheTtl = 5 * 60 * 1000
 
@@ -36,22 +37,6 @@ interface BranchProtection {
 
 const repoSettingsCache = new MemoryCache<RepoSettings>()
 const branchProtectionCache = new MemoryCache<BranchProtection | null>()
-
-const octokitErrorOf =
-  (operation: string) =>
-  (cause: unknown): OctokitError => {
-    const status =
-      typeof cause === 'object' &&
-      cause !== null &&
-      'status' in cause &&
-      typeof (cause as { status: unknown }).status === 'number'
-        ? (cause as { status: number }).status
-        : 500
-    const message =
-      cause instanceof Error ? cause.message : `Failed: ${operation}`
-
-    return new OctokitError({ message, operation, status })
-  }
 
 const broadcastPullRequestUpdate = (
   pullRequestId: string,
