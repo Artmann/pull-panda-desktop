@@ -3,7 +3,7 @@ import { Hono } from 'hono'
 
 import {
   effectHandler,
-  parseJson,
+  jsonBody,
   requireNumber,
   requireString,
   type AppEnv
@@ -16,17 +16,7 @@ commentsRoute.post(
   '/',
   effectHandler((context) =>
     Effect.gen(function* () {
-      const raw = yield* parseJson(context, (input) => {
-        const record = (input ?? {}) as Record<string, unknown>
-
-        return {
-          body: record.body,
-          owner: record.owner,
-          pullNumber: record.pullNumber,
-          repo: record.repo,
-          reviewCommentId: record.reviewCommentId
-        }
-      })
+      const raw = yield* jsonBody(context)
 
       const body = yield* requireString(raw.body, 'body')
       const owner = yield* requireString(raw.owner, 'owner')

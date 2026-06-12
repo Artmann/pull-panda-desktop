@@ -3,7 +3,7 @@ import { Hono } from 'hono'
 
 import {
   effectHandler,
-  parseJson,
+  jsonBody,
   requireNumber,
   requireString,
   type AppEnv
@@ -71,15 +71,7 @@ reviewsRoute.post(
       import('../effect-handler').AppServices
     > =>
       Effect.gen(function* () {
-        const raw = yield* parseJson(context, (input) => {
-          const record = (input ?? {}) as Record<string, unknown>
-
-          return {
-            owner: record.owner,
-            pullNumber: record.pullNumber,
-            repo: record.repo
-          }
-        })
+        const raw = yield* jsonBody(context)
 
         const owner = yield* requireString(raw.owner, 'owner')
         const repo = yield* requireString(raw.repo, 'repo')
@@ -153,18 +145,7 @@ reviewsRoute.post(
         )
       }
 
-      const raw = yield* parseJson(context, (input) => {
-        const record = (input ?? {}) as Record<string, unknown>
-
-        return {
-          body: record.body,
-          comments: record.comments,
-          event: record.event,
-          owner: record.owner,
-          pullNumber: record.pullNumber,
-          repo: record.repo
-        }
-      })
+      const raw = yield* jsonBody(context)
 
       const owner = yield* requireString(raw.owner, 'owner')
       const repo = yield* requireString(raw.repo, 'repo')

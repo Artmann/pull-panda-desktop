@@ -3,7 +3,7 @@ import { Hono } from 'hono'
 
 import {
   effectHandler,
-  parseJson,
+  jsonBody,
   requireNumber,
   requireString,
   type AppEnv
@@ -80,19 +80,7 @@ pullRequestsRoute.patch(
         'pullRequestId'
       )
 
-      const raw = yield* parseJson(context, (input) => {
-        const record = (input ?? {}) as Record<string, unknown>
-
-        return {
-          body: record.body,
-          isDraft: record.isDraft,
-          owner: record.owner,
-          pullNumber: record.pullNumber,
-          repo: record.repo,
-          state: record.state,
-          title: record.title
-        }
-      })
+      const raw = yield* jsonBody(context)
 
       const owner = yield* requireString(raw.owner, 'owner')
       const repo = yield* requireString(raw.repo, 'repo')
@@ -145,18 +133,7 @@ pullRequestsRoute.post(
         'pullRequestId'
       )
 
-      const raw = yield* parseJson(context, (input) => {
-        const record = (input ?? {}) as Record<string, unknown>
-
-        return {
-          commitMessage: record.commitMessage,
-          commitTitle: record.commitTitle,
-          mergeMethod: record.mergeMethod,
-          owner: record.owner,
-          pullNumber: record.pullNumber,
-          repo: record.repo
-        }
-      })
+      const raw = yield* jsonBody(context)
 
       const owner = yield* requireString(raw.owner, 'owner')
       const repo = yield* requireString(raw.repo, 'repo')
@@ -193,16 +170,7 @@ pullRequestsRoute.post(
     Effect.gen(function* () {
       yield* requireString(context.req.param('pullRequestId'), 'pullRequestId')
 
-      const raw = yield* parseJson(context, (input) => {
-        const record = (input ?? {}) as Record<string, unknown>
-
-        return {
-          expectedHeadSha: record.expectedHeadSha,
-          owner: record.owner,
-          pullNumber: record.pullNumber,
-          repo: record.repo
-        }
-      })
+      const raw = yield* jsonBody(context)
 
       const owner = yield* requireString(raw.owner, 'owner')
       const repo = yield* requireString(raw.repo, 'repo')
@@ -232,11 +200,7 @@ pullRequestsRoute.post(
         context.req.param('pullRequestId'),
         'pullRequestId'
       )
-      const raw = yield* parseJson(context, (input) => {
-        const record = (input ?? {}) as Record<string, unknown>
-
-        return { logins: record.logins }
-      })
+      const raw = yield* jsonBody(context)
 
       const logins = Array.isArray(raw.logins)
         ? raw.logins.filter(
@@ -258,11 +222,7 @@ pullRequestsRoute.delete(
         context.req.param('pullRequestId'),
         'pullRequestId'
       )
-      const raw = yield* parseJson(context, (input) => {
-        const record = (input ?? {}) as Record<string, unknown>
-
-        return { logins: record.logins }
-      })
+      const raw = yield* jsonBody(context)
 
       const logins = Array.isArray(raw.logins)
         ? raw.logins.filter(

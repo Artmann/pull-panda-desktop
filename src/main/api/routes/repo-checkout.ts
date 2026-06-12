@@ -3,7 +3,7 @@ import { Hono } from 'hono'
 
 import {
   effectHandler,
-  parseJson,
+  jsonBody,
   requireString,
   type AppEnv
 } from '../effect-handler'
@@ -27,14 +27,7 @@ repoCheckoutRoute.post(
   '/verify',
   effectHandler((context) =>
     Effect.gen(function* () {
-      const body = yield* parseJson(context, (raw) => {
-        const record = (raw ?? {}) as Record<string, unknown>
-
-        return {
-          fullName: record.fullName,
-          localPath: record.localPath
-        }
-      })
+      const body = yield* jsonBody(context)
       const fullName = yield* requireString(body.fullName, 'fullName')
       const localPath = yield* requireString(body.localPath, 'localPath')
 
@@ -47,14 +40,7 @@ repoCheckoutRoute.post(
   '/clone',
   effectHandler((context) =>
     Effect.gen(function* () {
-      const body = yield* parseJson(context, (raw) => {
-        const record = (raw ?? {}) as Record<string, unknown>
-
-        return {
-          fullName: record.fullName,
-          parentDir: record.parentDir
-        }
-      })
+      const body = yield* jsonBody(context)
       const fullName = yield* requireString(body.fullName, 'fullName')
       const parentDir = yield* requireString(body.parentDir, 'parentDir')
 
@@ -67,14 +53,7 @@ repoCheckoutRoute.post(
   '/set',
   effectHandler((context) =>
     Effect.gen(function* () {
-      const body = yield* parseJson(context, (raw) => {
-        const record = (raw ?? {}) as Record<string, unknown>
-
-        return {
-          fullName: record.fullName,
-          localPath: record.localPath
-        }
-      })
+      const body = yield* jsonBody(context)
       const fullName = yield* requireString(body.fullName, 'fullName')
       const localPath = yield* requireString(body.localPath, 'localPath')
 
@@ -87,11 +66,7 @@ repoCheckoutRoute.post(
   '/remove',
   effectHandler((context) =>
     Effect.gen(function* () {
-      const body = yield* parseJson(context, (raw) => {
-        const record = (raw ?? {}) as Record<string, unknown>
-
-        return { fullName: record.fullName }
-      })
+      const body = yield* jsonBody(context)
       const fullName = yield* requireString(body.fullName, 'fullName')
 
       return yield* removeConnectedRepo({ fullName })
@@ -103,11 +78,7 @@ repoCheckoutRoute.post(
   '/checkout',
   effectHandler((context) =>
     Effect.gen(function* () {
-      const body = yield* parseJson(context, (raw) => {
-        const record = (raw ?? {}) as Record<string, unknown>
-
-        return { pullRequestId: record.pullRequestId }
-      })
+      const body = yield* jsonBody(context)
       const pullRequestId = yield* requireString(
         body.pullRequestId,
         'pullRequestId'
