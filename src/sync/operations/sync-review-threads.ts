@@ -1,5 +1,5 @@
 import { Effect } from 'effect'
-import { and, eq, isNull } from 'drizzle-orm'
+import { eq } from 'drizzle-orm'
 
 import {
   comments,
@@ -13,6 +13,7 @@ import {
 } from '../schemas/github-graphql'
 import { Database } from '../services/database'
 import { GitHubGraphQL } from '../services/github-graphql'
+import { reconcileBySoftDelete } from '../shared/reconcile'
 import { generateId } from '../shared/utils'
 
 interface SyncReviewThreadsParams {
@@ -107,65 +108,29 @@ export const syncReviewThreads = (
     const now = new Date().toISOString()
 
     yield* database.use('syncReviewThreads', (db) => {
-      const existingThreads = db
-        .select()
-        .from(reviewThreads)
-        .where(
-          and(
-            eq(reviewThreads.pullRequestId, params.pullRequestId),
-            isNull(reviewThreads.deletedAt)
-          )
-        )
-        .all()
-
-      const syncedGitHubIds: string[] = []
-
-      for (const threadNode of allThreads) {
-        const gitHubId = threadNode.id
-        syncedGitHubIds.push(gitHubId)
-
-        const existingThread = existingThreads.find(
-          (row) => row.gitHubId === gitHubId
-        )
-
-        const threadId = existingThread?.id ?? generateId()
-
-        const thread: NewReviewThread = {
-          id: threadId,
-          gitHubId,
+      reconcileBySoftDelete(db, reviewThreads, {
+        scope: [eq(reviewThreads.pullRequestId, params.pullRequestId)],
+        items: allThreads,
+        keyOfItem: (threadNode) => threadNode.id,
+        keyOfRow: (row) => row.gitHubId,
+        build: (threadNode, existingId): NewReviewThread => ({
+          id: existingId ?? generateId(),
+          gitHubId: threadNode.id,
           pullRequestId: params.pullRequestId,
           isResolved: threadNode.isResolved,
           resolvedByLogin: threadNode.resolvedBy?.login ?? null,
           syncedAt: now,
           deletedAt: null
-        }
+        }),
+        now
+      })
 
-        db.insert(reviewThreads)
-          .values(thread)
-          .onConflictDoUpdate({
-            target: reviewThreads.id,
-            set: {
-              isResolved: thread.isResolved,
-              resolvedByLogin: thread.resolvedByLogin,
-              syncedAt: thread.syncedAt,
-              deletedAt: null
-            }
-          })
-          .run()
-
+      // Link each thread's comments back to the thread by GitHub id.
+      for (const threadNode of allThreads) {
         for (const commentNode of threadNode.comments.nodes) {
           db.update(comments)
-            .set({ gitHubReviewThreadId: gitHubId })
+            .set({ gitHubReviewThreadId: threadNode.id })
             .where(eq(comments.gitHubId, commentNode.id))
-            .run()
-        }
-      }
-
-      for (const existingThread of existingThreads) {
-        if (!syncedGitHubIds.includes(existingThread.gitHubId)) {
-          db.update(reviewThreads)
-            .set({ deletedAt: now })
-            .where(eq(reviewThreads.id, existingThread.id))
             .run()
         }
       }

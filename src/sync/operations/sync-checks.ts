@@ -12,6 +12,7 @@ import { Database } from '../services/database'
 import { EtagStore } from '../services/etag-store'
 import { GitHubRest } from '../services/github-rest'
 import { paginateRestField } from '../shared/paginate'
+import { reconcileBySoftDelete } from '../shared/reconcile'
 import { generateId } from '../shared/utils'
 
 export interface SyncChecksParams {
@@ -191,65 +192,21 @@ export const syncChecks = (
     const now = new Date().toISOString()
 
     yield* database.use('syncChecks.upsert', (db) => {
-      const existingChecks = db
-        .select()
-        .from(checks)
-        .where(
-          and(
-            eq(checks.pullRequestId, params.pullRequestId),
-            isNull(checks.deletedAt)
-          )
-        )
-        .all()
-
-      const syncedGitHubIds: string[] = []
-
-      for (const checkRun of checkRuns) {
-        const gitHubId = String(checkRun.id)
-        syncedGitHubIds.push(gitHubId)
-
-        const existingCheck = existingChecks.find(
-          (row) => row.gitHubId === gitHubId
-        )
-        const checkData = buildCheck(
-          checkRun,
-          existingCheck?.id,
-          params.pullRequestId,
-          commitSha,
-          now
-        )
-
-        db.insert(checks)
-          .values(checkData)
-          .onConflictDoUpdate({
-            target: checks.id,
-            set: {
-              name: checkData.name,
-              state: checkData.state,
-              conclusion: checkData.conclusion,
-              commitSha: checkData.commitSha,
-              suiteName: checkData.suiteName,
-              durationInSeconds: checkData.durationInSeconds,
-              detailsUrl: checkData.detailsUrl,
-              message: checkData.message,
-              url: checkData.url,
-              gitHubCreatedAt: checkData.gitHubCreatedAt,
-              gitHubUpdatedAt: checkData.gitHubUpdatedAt,
-              syncedAt: checkData.syncedAt,
-              deletedAt: null
-            }
-          })
-          .run()
-      }
-
-      for (const existingCheck of existingChecks) {
-        if (!syncedGitHubIds.includes(existingCheck.gitHubId)) {
-          db.update(checks)
-            .set({ deletedAt: now })
-            .where(eq(checks.id, existingCheck.id))
-            .run()
-        }
-      }
+      reconcileBySoftDelete(db, checks, {
+        scope: [eq(checks.pullRequestId, params.pullRequestId)],
+        items: checkRuns,
+        keyOfItem: (checkRun) => String(checkRun.id),
+        keyOfRow: (row) => row.gitHubId,
+        build: (checkRun, existingId) =>
+          buildCheck(
+            checkRun,
+            existingId,
+            params.pullRequestId,
+            commitSha,
+            now
+          ),
+        now
+      })
     })
 
     yield* database.use('syncChecks.dedupe', (db) => {

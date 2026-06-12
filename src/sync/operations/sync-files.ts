@@ -1,5 +1,5 @@
 import { Effect, Option } from 'effect'
-import { and, eq, isNull } from 'drizzle-orm'
+import { eq } from 'drizzle-orm'
 
 import { modifiedFiles, type NewModifiedFile } from '../../database/schema'
 import { SyncDetailFailedError, type SyncError } from '../errors'
@@ -7,6 +7,7 @@ import { FilesResponseSchema, type ModifiedFile } from '../schemas/github-rest'
 import { Database } from '../services/database'
 import { GitHubRest } from '../services/github-rest'
 import { paginateRest } from '../shared/paginate'
+import { reconcileBySoftDelete } from '../shared/reconcile'
 import { generateId } from '../shared/utils'
 
 export interface SyncFilesParams {
@@ -67,64 +68,18 @@ export const syncFiles = (
       return
     }
 
-    const filesData = result.value
+    const filesData = result.value as ReadonlyArray<ModifiedFile>
     const now = new Date().toISOString()
 
     yield* database.use('syncFiles', (db) => {
-      const existingFiles = db
-        .select()
-        .from(modifiedFiles)
-        .where(
-          and(
-            eq(modifiedFiles.pullRequestId, params.pullRequestId),
-            isNull(modifiedFiles.deletedAt)
-          )
-        )
-        .all()
-
-      const syncedFilenames: string[] = []
-
-      for (const fileData of filesData as ReadonlyArray<ModifiedFile>) {
-        const filename = fileData.filename
-        syncedFilenames.push(filename)
-
-        const existingFile = existingFiles.find(
-          (row) => row.filename === filename
-        )
-
-        const file = buildModifiedFileRecord(
-          fileData,
-          existingFile?.id,
-          params.pullRequestId,
-          now
-        )
-
-        db.insert(modifiedFiles)
-          .values(file)
-          .onConflictDoUpdate({
-            target: modifiedFiles.id,
-            set: {
-              filename: file.filename,
-              filePath: file.filePath,
-              status: file.status,
-              additions: file.additions,
-              deletions: file.deletions,
-              changes: file.changes,
-              diffHunk: file.diffHunk,
-              syncedAt: file.syncedAt,
-              deletedAt: null
-            }
-          })
-          .run()
-      }
-
-      for (const existingFile of existingFiles) {
-        if (!syncedFilenames.includes(existingFile.filename)) {
-          db.update(modifiedFiles)
-            .set({ deletedAt: now })
-            .where(eq(modifiedFiles.id, existingFile.id))
-            .run()
-        }
-      }
+      reconcileBySoftDelete(db, modifiedFiles, {
+        scope: [eq(modifiedFiles.pullRequestId, params.pullRequestId)],
+        items: filesData,
+        keyOfItem: (file) => file.filename,
+        keyOfRow: (row) => row.filename,
+        build: (file, existingId) =>
+          buildModifiedFileRecord(file, existingId, params.pullRequestId, now),
+        now
+      })
     })
   })
