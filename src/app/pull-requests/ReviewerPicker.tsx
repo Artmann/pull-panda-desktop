@@ -8,12 +8,12 @@ import {
   useState,
   type ReactElement
 } from 'react'
-import { toast } from 'sonner'
 
 import { UserAvatar } from '@/app/components/UserAvatar'
 import { Badge } from '@/app/components/ui/badge'
 import { Input } from '@/app/components/ui/input'
 import { removeReviewers, requestReviewers } from '@/app/lib/api'
+import { runOptimisticMutation } from '@/app/lib/mutations/run-optimistic-mutation'
 import { cn } from '@/app/lib/utils'
 import { useAppDispatch, useAppSelector } from '@/app/store/hooks'
 import { pullRequestsActions } from '@/app/store/pull-requests-slice'
@@ -152,53 +152,48 @@ export const ReviewerPicker = memo(function ReviewerPicker({
       const isRequested = requestedLogins.has(candidate.login)
       const previous = pullRequest.requestedReviewers
 
-      const optimistic = isRequested
+      const optimisticReviewers = isRequested
         ? previous.filter((reviewer) => reviewer.login !== candidate.login)
         : [
             ...previous,
             { avatarUrl: candidate.avatarUrl, login: candidate.login }
           ]
 
-      dispatch(
-        pullRequestsActions.upsertItem({
-          ...pullRequest,
-          requestedReviewers: optimistic
-        })
-      )
+      const action = isRequested ? removeReviewers : requestReviewers
 
-      if (!isRequested) {
-        dispatch(
-          recentReviewersActions.recordUsage({
-            avatarUrl: candidate.avatarUrl,
-            login: candidate.login,
-            repoFullName
-          })
-        )
-      }
+      runOptimisticMutation({
+        optimistic: () => {
+          dispatch(
+            pullRequestsActions.upsertItem({
+              ...pullRequest,
+              requestedReviewers: optimisticReviewers
+            })
+          )
 
-      const mutation = isRequested ? removeReviewers : requestReviewers
-
-      mutation({ logins: [candidate.login], pullRequestId: pullRequest.id })
-        .then((updated) => {
-          dispatch(pullRequestsActions.upsertItem(updated))
-        })
-        .catch((error: unknown) => {
+          if (!isRequested) {
+            dispatch(
+              recentReviewersActions.recordUsage({
+                avatarUrl: candidate.avatarUrl,
+                login: candidate.login,
+                repoFullName
+              })
+            )
+          }
+        },
+        request: () =>
+          action({ logins: [candidate.login], pullRequestId: pullRequest.id }),
+        commit: (updated) => dispatch(pullRequestsActions.upsertItem(updated)),
+        rollback: () =>
           dispatch(
             pullRequestsActions.upsertItem({
               ...pullRequest,
               requestedReviewers: previous
             })
-          )
-
-          const message =
-            error instanceof Error
-              ? error.message
-              : isRequested
-                ? 'Failed to remove reviewer'
-                : 'Failed to request reviewer'
-
-          toast.error(message)
-        })
+          ),
+        errorMessage: isRequested
+          ? 'Failed to remove reviewer'
+          : 'Failed to request reviewer'
+      })
     },
     [dispatch, pullRequest, repoFullName, requestedLogins]
   )

@@ -11,7 +11,6 @@ import {
   XCircle
 } from 'lucide-react'
 import { memo, ReactElement, useEffect, useMemo, useState } from 'react'
-import { toast } from 'sonner'
 
 import { Button } from '@/app/components/ui/button'
 import { Input } from '@/app/components/ui/input'
@@ -30,6 +29,7 @@ import {
 } from '@/app/components/ui/tooltip'
 import { mergePullRequest } from '@/app/lib/api'
 import type { MergeOptions, MergeRequirement } from '@/app/lib/api'
+import { runOptimisticMutation } from '@/app/lib/mutations/run-optimistic-mutation'
 import { cn } from '@/app/lib/utils'
 import { BranchSyncActions } from '@/app/pull-requests/components/BranchSyncActions'
 import { useAppDispatch, useAppSelector } from '@/app/store/hooks'
@@ -197,40 +197,34 @@ export const MergeDrawer = memo(function MergeDrawer({
 
     const originalPr = pullRequest
 
-    dispatch(
-      pullRequestsActions.upsertItem({
-        ...pullRequest,
-        mergedAt: new Date().toISOString(),
-        state: 'MERGED'
-      })
-    )
+    runOptimisticMutation({
+      optimistic: () => {
+        dispatch(
+          pullRequestsActions.upsertItem({
+            ...pullRequest,
+            mergedAt: new Date().toISOString(),
+            state: 'MERGED'
+          })
+        )
 
-    onClose()
-
-    mergePullRequest({
-      ...(method === 'squash' && {
-        commitMessage,
-        commitTitle
-      }),
-      mergeMethod: method,
-      owner: pullRequest.repositoryOwner,
-      pullNumber: pullRequest.number,
-      pullRequestId: pullRequest.id,
-      repo: pullRequest.repositoryName
+        onClose()
+      },
+      request: () =>
+        mergePullRequest({
+          ...(method === 'squash' && {
+            commitMessage,
+            commitTitle
+          }),
+          mergeMethod: method,
+          owner: pullRequest.repositoryOwner,
+          pullNumber: pullRequest.number,
+          pullRequestId: pullRequest.id,
+          repo: pullRequest.repositoryName
+        }),
+      commit: (updated) => dispatch(pullRequestsActions.upsertItem(updated)),
+      rollback: () => dispatch(pullRequestsActions.upsertItem(originalPr)),
+      errorMessage: 'Failed to merge pull request'
     })
-      .then((updated) => {
-        dispatch(pullRequestsActions.upsertItem(updated))
-      })
-      .catch((error) => {
-        dispatch(pullRequestsActions.upsertItem(originalPr))
-
-        const message =
-          error instanceof Error
-            ? error.message
-            : 'Failed to merge pull request'
-
-        toast.error(message)
-      })
   }
 
   const handleMerge = () => {
