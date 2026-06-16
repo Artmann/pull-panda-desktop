@@ -1,4 +1,4 @@
-import { memo, useMemo, type ReactElement } from 'react'
+import { memo, useCallback, useMemo, type ReactElement } from 'react'
 import { shallowEqual } from 'react-redux'
 
 import type { PullRequest } from '@/types/pull-request'
@@ -9,6 +9,7 @@ import { UserAvatar } from '@/app/components/UserAvatar'
 import { Card, CardContent } from '@/app/components/ui/card'
 import { useAppSelector } from '@/app/store/hooks'
 import { useLandmark } from '@/app/pull-requests/PullRequestNavigationProvider'
+import { useVirtualList } from '@/app/pull-requests/use-virtual-list'
 
 import { CommentBody } from './CommentBody'
 import { CommentThreadCard, FileCommentThreadCard } from './CommentThread'
@@ -88,22 +89,55 @@ export function Activity({ pullRequest }: ActivityProps): ReactElement {
       )
   }, [comments, pullRequest, reviews])
 
-  return (
-    <div className="flex flex-col gap-4 w-full">
-      {sortedActivity.map((item) => (
-        <ActivityItemComponent
-          key={item.id}
-          allComments={comments}
-          item={item}
-          pullRequest={pullRequest}
-        />
-      ))}
+  const getItemKey = useCallback(
+    (index: number) => sortedActivity[index].id,
+    [sortedActivity]
+  )
 
-      {sortedActivity.length === 0 && (
-        <div className="text-center text-muted-foreground py-8">
-          No activity yet
-        </div>
-      )}
+  const estimateSize = useCallback(() => 160, [])
+
+  const { listRef, scrollMargin, virtualizer } = useVirtualList({
+    count: sortedActivity.length,
+    estimateSize,
+    getItemKey,
+    overscan: 6
+  })
+
+  if (sortedActivity.length === 0) {
+    return (
+      <div className="text-center text-muted-foreground py-8">
+        No activity yet
+      </div>
+    )
+  }
+
+  return (
+    <div
+      className="w-full"
+      ref={listRef}
+    >
+      <div
+        className="relative w-full"
+        style={{ height: virtualizer.getTotalSize() }}
+      >
+        {virtualizer.getVirtualItems().map((virtualItem) => (
+          <div
+            key={virtualItem.key}
+            className="absolute left-0 top-0 w-full pb-4"
+            data-index={virtualItem.index}
+            ref={virtualizer.measureElement}
+            style={{
+              transform: `translateY(${virtualItem.start - scrollMargin}px)`
+            }}
+          >
+            <ActivityItemComponent
+              allComments={comments}
+              item={sortedActivity[virtualItem.index]}
+              pullRequest={pullRequest}
+            />
+          </div>
+        ))}
+      </div>
     </div>
   )
 }

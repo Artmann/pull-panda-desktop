@@ -4,7 +4,7 @@ import {
   FolderIcon,
   FolderOpenIcon
 } from 'lucide-react'
-import { memo, useMemo, useState, type ReactElement } from 'react'
+import { memo, useCallback, useMemo, useState, type ReactElement } from 'react'
 import { shallowEqual } from 'react-redux'
 
 import type { PullRequest } from '@/types/pull-request'
@@ -12,9 +12,14 @@ import type { ModifiedFile } from '@/types/pull-request-details'
 
 import { Button } from '@/app/components/ui/button'
 import { useAppSelector } from '@/app/store/hooks'
+import { useVirtualList } from '@/app/pull-requests/use-virtual-list'
 
 import { createFileTree, extractGroupedFilesFromTree } from './files/file-tree'
 import { ModifiedFileCard } from './files/ModifiedFileCard'
+
+type FilesRow =
+  | { groupName: string; isCollapsed: boolean; type: 'group' }
+  | { filePath: string; type: 'file' }
 
 export const FilesView = memo(function FilesView({
   pullRequest
@@ -58,6 +63,49 @@ export const FilesView = memo(function FilesView({
     return extractGroupedFilesFromTree(tree)
   }, [sortedFiles])
 
+  const rows = useMemo(() => {
+    const result: FilesRow[] = []
+
+    for (const group of groupedFiles) {
+      const isCollapsed = collapsedGroups.has(group.groupName)
+
+      result.push({ groupName: group.groupName, isCollapsed, type: 'group' })
+
+      if (isCollapsed) {
+        continue
+      }
+
+      for (const groupFile of group.files) {
+        result.push({ filePath: groupFile.filePath, type: 'file' })
+      }
+    }
+
+    return result
+  }, [collapsedGroups, groupedFiles])
+
+  const getItemKey = useCallback(
+    (index: number) => {
+      const row = rows[index]
+
+      return row.type === 'group'
+        ? `group:${row.groupName}`
+        : `file:${row.filePath}`
+    },
+    [rows]
+  )
+
+  const estimateSize = useCallback(
+    (index: number) => (rows[index].type === 'group' ? 48 : 400),
+    [rows]
+  )
+
+  const { listRef, scrollMargin, virtualizer } = useVirtualList({
+    count: rows.length,
+    estimateSize,
+    getItemKey,
+    overscan: 4
+  })
+
   const toggleGroupCollapse = (groupName: string) => {
     setCollapsedGroups((previous) => {
       const newSet = new Set(previous)
@@ -81,63 +129,100 @@ export const FilesView = memo(function FilesView({
   }
 
   return (
-    <div className="py-4">
-      <div className="flex flex-col gap-6">
-        {groupedFiles.map((group) => {
-          const isCollapsed = collapsedGroups.has(group.groupName)
-          const CollapsibleFolderIcon = isCollapsed
-            ? FolderIcon
-            : FolderOpenIcon
+    <div
+      className="py-4"
+      ref={listRef}
+    >
+      <div
+        className="relative w-full"
+        style={{ height: virtualizer.getTotalSize() }}
+      >
+        {virtualizer.getVirtualItems().map((virtualItem) => {
+          const row = rows[virtualItem.index]
 
           return (
-            <section
-              key={group.groupName}
-              className="flex flex-col gap-3"
+            <div
+              key={virtualItem.key}
+              className="absolute left-0 top-0 w-full pb-6"
+              data-index={virtualItem.index}
+              ref={virtualizer.measureElement}
+              style={{
+                transform: `translateY(${virtualItem.start - scrollMargin}px)`
+              }}
             >
-              <Button
-                className="w-fit"
-                size="sm"
-                variant="ghost"
-                onClick={() => {
-                  toggleGroupCollapse(group.groupName)
-                }}
-              >
-                <div className="flex items-center gap-2 text-xs text-foreground transition-colors">
-                  {isCollapsed ? (
-                    <ChevronRightIcon className="size-4" />
-                  ) : (
-                    <ChevronDownIcon className="size-4" />
-                  )}
-                  <CollapsibleFolderIcon className="size-4" />
-
-                  <span className="select-none">{group.groupName}</span>
-                </div>
-              </Button>
-
-              {!isCollapsed && (
-                <div className="flex flex-col gap-6">
-                  {group.files.map((groupFile) => {
-                    const modifiedFile = filesByPath.get(groupFile.filePath)
-
-                    if (!modifiedFile) {
-                      return null
-                    }
-
-                    return (
-                      <ModifiedFileCard
-                        key={groupFile.filePath}
-                        eager={eagerFilePaths.has(groupFile.filePath)}
-                        file={modifiedFile}
-                        pullRequest={pullRequest}
-                      />
-                    )
-                  })}
-                </div>
+              {row.type === 'group' ? (
+                <GroupHeaderRow
+                  groupName={row.groupName}
+                  isCollapsed={row.isCollapsed}
+                  onToggle={toggleGroupCollapse}
+                />
+              ) : (
+                <FileRow
+                  eager={eagerFilePaths.has(row.filePath)}
+                  file={filesByPath.get(row.filePath)}
+                  pullRequest={pullRequest}
+                />
               )}
-            </section>
+            </div>
           )
         })}
       </div>
     </div>
   )
 })
+
+function GroupHeaderRow({
+  groupName,
+  isCollapsed,
+  onToggle
+}: {
+  groupName: string
+  isCollapsed: boolean
+  onToggle: (groupName: string) => void
+}): ReactElement {
+  const CollapsibleFolderIcon = isCollapsed ? FolderIcon : FolderOpenIcon
+
+  return (
+    <Button
+      className="w-fit"
+      size="sm"
+      variant="ghost"
+      onClick={() => {
+        onToggle(groupName)
+      }}
+    >
+      <div className="flex items-center gap-2 text-xs text-foreground transition-colors">
+        {isCollapsed ? (
+          <ChevronRightIcon className="size-4" />
+        ) : (
+          <ChevronDownIcon className="size-4" />
+        )}
+        <CollapsibleFolderIcon className="size-4" />
+
+        <span className="select-none">{groupName}</span>
+      </div>
+    </Button>
+  )
+}
+
+function FileRow({
+  eager,
+  file,
+  pullRequest
+}: {
+  eager: boolean
+  file: ModifiedFile | undefined
+  pullRequest: PullRequest
+}): ReactElement | null {
+  if (!file) {
+    return null
+  }
+
+  return (
+    <ModifiedFileCard
+      eager={eager}
+      file={file}
+      pullRequest={pullRequest}
+    />
+  )
+}
