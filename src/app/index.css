@@ -30,6 +30,10 @@
   --popover-foreground: oklch(0.22 0.01 95);
   --primary: oklch(0.55 0.14 260);
   --primary-foreground: oklch(0.985 0.003 95);
+  /* Brand call-to-action colour. Fixed across all app themes — never
+   * overridden by applyThemePalette, only varies between light and dark. */
+  --cta: oklch(0.55 0.14 260);
+  --cta-foreground: oklch(0.985 0.003 95);
   --secondary: oklch(0.955 0.005 95);
   --secondary-foreground: oklch(0.22 0.01 95);
   --muted: oklch(0.955 0.005 95);
@@ -84,6 +88,8 @@
   --popover-foreground: oklch(0.96 0.005 240);
   --primary: oklch(0.72 0.14 260);
   --primary-foreground: oklch(0.1 0 0);
+  --cta: oklch(0.62 0.16 260);
+  --cta-foreground: oklch(0.985 0.003 95);
   --secondary: oklch(0.24 0.008 240);
   --secondary-foreground: oklch(0.96 0.005 240);
   --muted: oklch(0.24 0.008 240);
@@ -136,6 +142,8 @@
   --color-popover-foreground: var(--popover-foreground);
   --color-primary: var(--primary);
   --color-primary-foreground: var(--primary-foreground);
+  --color-cta: var(--cta);
+  --color-cta-foreground: var(--cta-foreground);
   --color-secondary: var(--secondary);
   --color-secondary-foreground: var(--secondary-foreground);
   --color-muted: var(--muted);
