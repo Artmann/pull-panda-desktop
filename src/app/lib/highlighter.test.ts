@@ -1,6 +1,10 @@
 import { describe, expect, it } from 'vitest'
 
-import { getLanguageFromPath } from './highlighter'
+import {
+  ensureLanguageLoaded,
+  getLanguageFromPath,
+  getSharedHighlighter
+} from './highlighter'
 
 describe('getLanguageFromPath', () => {
   it.each([
@@ -11,21 +15,25 @@ describe('getLanguageFromPath', () => {
     ['script.py', 'python'],
     ['Main.java', 'java'],
     ['main.c', 'c'],
-    ['main.cpp', 'c'],
+    ['main.cpp', 'cpp'],
+    ['main.cc', 'cpp'],
+    ['main.cxx', 'cpp'],
     ['Program.cs', 'csharp'],
     ['header.h', 'c'],
-    ['header.hpp', 'c'],
+    ['header.hpp', 'cpp'],
     ['main.go', 'go'],
     ['app.rb', 'ruby'],
     ['index.php', 'php'],
     ['index.html', 'html'],
     ['index.htm', 'html'],
     ['styles.css', 'css'],
-    ['styles.scss', 'css'],
-    ['styles.sass', 'css'],
+    ['styles.scss', 'scss'],
+    ['styles.sass', 'sass'],
+    ['styles.less', 'less'],
     ['query.gql', 'graphql'],
     ['query.graphql', 'graphql'],
     ['package.json', 'json'],
+    ['tsconfig.jsonc', 'jsonc'],
     ['README.md', 'markdown'],
     ['lib.rs', 'rust'],
     ['run.sh', 'bash'],
@@ -33,7 +41,31 @@ describe('getLanguageFromPath', () => {
     ['run.zsh', 'bash'],
     ['schema.sql', 'sql'],
     ['config.yaml', 'yaml'],
-    ['config.yml', 'yaml']
+    ['config.yml', 'yaml'],
+    ['Main.kt', 'kotlin'],
+    ['App.swift', 'swift'],
+    ['main.dart', 'dart'],
+    ['Build.scala', 'scala'],
+    ['script.lua', 'lua'],
+    ['script.pl', 'perl'],
+    ['analysis.r', 'r'],
+    ['Main.hs', 'haskell'],
+    ['app.ex', 'elixir'],
+    ['module.erl', 'erlang'],
+    ['core.clj', 'clojure'],
+    ['deploy.ps1', 'powershell'],
+    ['Cargo.toml', 'toml'],
+    ['settings.ini', 'ini'],
+    ['data.xml', 'xml'],
+    ['App.vue', 'vue'],
+    ['App.svelte', 'svelte'],
+    ['changes.diff', 'diff'],
+    ['changes.patch', 'diff'],
+    ['service.proto', 'proto'],
+    ['main.tf', 'terraform'],
+    ['build.gradle', 'groovy'],
+    ['Main.zig', 'zig'],
+    ['Contract.sol', 'solidity']
   ])('maps %s to %s', (path, language) => {
     expect(getLanguageFromPath(path)).toEqual(language)
   })
@@ -64,5 +96,24 @@ describe('getLanguageFromPath', () => {
 
   it('returns undefined when no path is given', () => {
     expect(getLanguageFromPath()).toEqual(undefined)
+  })
+})
+
+describe('ensureLanguageLoaded', () => {
+  it('loads a bundled language on demand', async () => {
+    const highlighter = await getSharedHighlighter()
+
+    const language = await ensureLanguageLoaded(highlighter, 'csharp')
+
+    expect(language).toEqual('csharp')
+    expect(highlighter.getLoadedLanguages()).toContain('csharp')
+  })
+
+  it('falls back to text for an unknown language', async () => {
+    const highlighter = await getSharedHighlighter()
+
+    const language = await ensureLanguageLoaded(highlighter, 'not-a-language')
+
+    expect(language).toEqual('text')
   })
 })

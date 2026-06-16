@@ -20,6 +20,7 @@ import { useLazyRender } from '@/app/lib/lazy-render'
 import { useOpenExternalLinks } from '@/app/lib/useOpenExternalLinks'
 
 import {
+  ensureLanguageLoaded,
   getLanguageFromPath,
   getSharedHighlighter
 } from '@/app/lib/highlighter'
@@ -60,9 +61,8 @@ async function highlightCodeBlocks(
     )
     const lang = langClass?.replace('language-', '') ?? 'text'
 
-    // Check if language is supported, fallback to text
-    const loadedLangs = highlighter.getLoadedLanguages()
-    const effectiveLang = loadedLangs.includes(lang) ? lang : 'text'
+    // Load the language grammar on demand, falling back to text when unknown
+    const effectiveLang = await ensureLanguageLoaded(highlighter, lang)
 
     const highlighted = highlighter.codeToHtml(code, {
       lang: effectiveLang,
