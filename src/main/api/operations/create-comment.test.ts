@@ -8,7 +8,9 @@ import type {
 } from '../../../database/schema'
 import { NotFoundError } from '../../../sync/errors'
 import { Database } from '../../../sync/services/database'
+import { GitHubApi } from '../../services/github-api'
 import { Repository } from '../../services/repository'
+import { octokitErrorOf } from '../octokit-error'
 import { createComment, type CreateCommentInput } from './create-comment'
 
 const octokitMocks = vi.hoisted(() => ({
@@ -16,16 +18,26 @@ const octokitMocks = vi.hoisted(() => ({
   createReplyForReviewComment: vi.fn()
 }))
 
-vi.mock('@octokit/rest', () => ({
-  Octokit: class {
-    rest = {
-      issues: { createComment: octokitMocks.createIssueComment },
-      pulls: {
-        createReplyForReviewComment: octokitMocks.createReplyForReviewComment
-      }
+// A fake GitHubApi adapter: it runs the operation's call against a stub octokit
+// built from the mocks, reusing the real octokitErrorOf so error-classification
+// is exercised through the same mapping the Live adapter uses.
+const fakeOctokit = {
+  rest: {
+    issues: { createComment: octokitMocks.createIssueComment },
+    pulls: {
+      createReplyForReviewComment: octokitMocks.createReplyForReviewComment
     }
   }
-}))
+}
+
+const makeGitHubApiLayer = () =>
+  Layer.succeed(GitHubApi, {
+    run: (_token, operation, call, options) =>
+      Effect.tryPromise({
+        try: () => call(fakeOctokit as never),
+        catch: octokitErrorOf(operation, options)
+      })
+  })
 
 interface DatabaseState {
   inserted: NewComment[]
@@ -185,7 +197,11 @@ const runCreateComment = (
 ) =>
   Effect.provide(
     createComment(input),
-    Layer.mergeAll(makeDatabaseLayer(state), makeRepositoryLayer(pullRequest))
+    Layer.mergeAll(
+      makeDatabaseLayer(state),
+      makeRepositoryLayer(pullRequest),
+      makeGitHubApiLayer()
+    )
   )
 
 describe('createComment', () => {

@@ -2,12 +2,10 @@ import { Effect, Option } from 'effect'
 import { and, eq, isNotNull, isNull } from 'drizzle-orm'
 
 import {
-  commentReactions,
   comments,
   reviewThreads,
   reviews,
   type NewComment,
-  type NewCommentReaction,
   type NewReview
 } from '../../database/schema'
 import { SyncDetailFailedError, type SyncError } from '../errors'
@@ -23,6 +21,10 @@ import { Database } from '../services/database'
 import { EtagStore } from '../services/etag-store'
 import { GitHubRest } from '../services/github-rest'
 import { paginateRest } from '../shared/paginate'
+import {
+  reconcileBySoftDelete,
+  reconcileCommentReactions
+} from '../shared/reconcile'
 import {
   generateId,
   getLineTypeFromDiffHunk,
@@ -257,75 +259,23 @@ const upsertReviews = (
     const database = yield* Database
 
     return yield* database.use('syncReviews.upsertReviews', (db) => {
-      const existingReviews = db
-        .select()
-        .from(reviews)
-        .where(
-          and(
-            eq(reviews.pullRequestId, pullRequestId),
-            isNull(reviews.deletedAt)
-          )
-        )
-        .all()
-
-      const syncedReviewGitHubIds: string[] = []
-      const reviewIdMap = new Map<number, string>()
-
-      for (const reviewData of reviewsData) {
-        syncedReviewGitHubIds.push(reviewData.node_id)
-
-        const existingReview = existingReviews.find(
-          (row) => row.gitHubId === reviewData.node_id
-        )
-
-        const review = buildReview(
-          reviewData,
-          existingReview?.id,
-          pullRequestId,
-          now
-        )
-        reviewIdMap.set(reviewData.id, review.id)
-
-        db.insert(reviews)
-          .values(review)
-          .onConflictDoUpdate({
-            target: reviews.id,
-            set: {
-              gitHubNumericId: review.gitHubNumericId,
-              state: review.state,
-              body: review.body,
-              bodyHtml: review.bodyHtml,
-              url: review.url,
-              authorLogin: review.authorLogin,
-              authorAvatarUrl: review.authorAvatarUrl,
-              gitHubCreatedAt: review.gitHubCreatedAt,
-              gitHubSubmittedAt: review.gitHubSubmittedAt,
-              syncedAt: review.syncedAt,
-              deletedAt: null
-            }
-          })
-          .run()
-      }
-
-      for (const existingReview of existingReviews) {
-        if (syncedReviewGitHubIds.includes(existingReview.gitHubId)) {
-          continue
-        }
-
+      const entries = reconcileBySoftDelete(db, reviews, {
+        scope: [eq(reviews.pullRequestId, pullRequestId)],
+        items: reviewsData,
+        keyOfItem: (review) => review.node_id,
+        keyOfRow: (row) => row.gitHubId,
+        build: (review, existingId) =>
+          buildReview(review, existingId, pullRequestId, now),
         // PENDING reviews are user-private drafts owned by explicit
         // submit/cancel actions. Never soft-delete them based on a missing
         // entry in a list response.
-        if (existingReview.state === 'PENDING') {
-          continue
-        }
+        protectFromDelete: (row) => row.state === 'PENDING',
+        now
+      })
 
-        db.update(reviews)
-          .set({ deletedAt: now })
-          .where(eq(reviews.id, existingReview.id))
-          .run()
-      }
-
-      return reviewIdMap
+      return new Map<number, string>(
+        entries.map((entry) => [entry.item.id, entry.id])
+      )
     })
   })
 
@@ -366,160 +316,54 @@ const upsertReviewComments = (
 
     const commentEntries = yield* database.use(
       'syncReviews.upsertComments',
-      (db) => {
-        const existingComments = db
-          .select()
-          .from(comments)
-          .where(
-            and(
-              eq(comments.pullRequestId, params.pullRequestId),
-              isNull(comments.deletedAt)
+      (db) =>
+        reconcileBySoftDelete(db, comments, {
+          // Review comments only (path set) — issue comments are owned by syncComments.
+          scope: [
+            eq(comments.pullRequestId, params.pullRequestId),
+            isNotNull(comments.path)
+          ],
+          items: commentsData,
+          keyOfItem: (comment) => comment.node_id,
+          keyOfRow: (row) => row.gitHubId,
+          build: (commentData, existingId) => {
+            const reviewId = commentData.pull_request_review_id
+              ? (reviewIdMap.get(commentData.pull_request_review_id) ?? null)
+              : null
+
+            const parentCommentGitHubId = resolveParentCommentGitHubId(
+              commentData,
+              commentsData
             )
-          )
-          .all()
 
-        const syncedCommentGitHubIds: string[] = []
-        const entries: Array<{ commentId: string; comment: ReviewComment }> = []
-
-        for (const commentData of commentsData) {
-          syncedCommentGitHubIds.push(commentData.node_id)
-
-          const existingComment = existingComments.find(
-            (row) => row.gitHubId === commentData.node_id
-          )
-
-          const reviewId = commentData.pull_request_review_id
-            ? (reviewIdMap.get(commentData.pull_request_review_id) ?? null)
-            : null
-
-          const parentCommentGitHubId = resolveParentCommentGitHubId(
-            commentData,
-            commentsData
-          )
-
-          const comment = buildComment(
-            commentData,
-            existingComment?.id,
-            reviewId,
-            parentCommentGitHubId,
-            params.pullRequestId,
-            now
-          )
-
-          entries.push({ commentId: comment.id, comment: commentData })
-
-          db.insert(comments)
-            .values(comment)
-            .onConflictDoUpdate({
-              target: comments.id,
-              set: {
-                gitHubNumericId: comment.gitHubNumericId,
-                body: comment.body,
-                bodyHtml: comment.bodyHtml,
-                path: comment.path,
-                line: comment.line,
-                originalLine: comment.originalLine,
-                diffHunk: comment.diffHunk,
-                commitId: comment.commitId,
-                originalCommitId: comment.originalCommitId,
-                gitHubReviewId: comment.gitHubReviewId,
-                parentCommentGitHubId: comment.parentCommentGitHubId,
-                userLogin: comment.userLogin,
-                userAvatarUrl: comment.userAvatarUrl,
-                url: comment.url,
-                gitHubCreatedAt: comment.gitHubCreatedAt,
-                gitHubUpdatedAt: comment.gitHubUpdatedAt,
-                syncedAt: comment.syncedAt,
-                deletedAt: null
-              }
-            })
-            .run()
-        }
-
-        for (const existingComment of existingComments) {
-          if (
-            existingComment.path &&
-            !syncedCommentGitHubIds.includes(existingComment.gitHubId)
-          ) {
-            db.update(comments)
-              .set({ deletedAt: now })
-              .where(eq(comments.id, existingComment.id))
-              .run()
-          }
-        }
-
-        return entries
-      }
+            return buildComment(
+              commentData,
+              existingId,
+              reviewId,
+              parentCommentGitHubId,
+              params.pullRequestId,
+              now
+            )
+          },
+          now
+        })
     )
 
     for (const entry of commentEntries) {
       // Always reconcile reactions against the server, even when total_count is
       // zero — otherwise removed reactions stay around locally forever.
       const reactionsData =
-        entry.comment.reactions && entry.comment.reactions.total_count > 0
-          ? yield* fetchReviewCommentReactions(params, entry.comment.id)
+        entry.item.reactions && entry.item.reactions.total_count > 0
+          ? yield* fetchReviewCommentReactions(params, entry.item.id)
           : ([] as ReadonlyArray<Reaction>)
 
       yield* database.use('syncReviews.reactions', (db) => {
-        const existingReactions = db
-          .select()
-          .from(commentReactions)
-          .where(
-            and(
-              eq(commentReactions.commentId, entry.commentId),
-              isNull(commentReactions.deletedAt)
-            )
-          )
-          .all()
-
-        const syncedGitHubIds: string[] = []
-
-        for (const reactionData of reactionsData) {
-          if (!reactionData.user) {
-            continue
-          }
-
-          syncedGitHubIds.push(reactionData.node_id)
-
-          const existingReaction = existingReactions.find(
-            (row) => row.gitHubId === reactionData.node_id
-          )
-
-          const reaction: NewCommentReaction = {
-            id: existingReaction?.id ?? generateId(),
-            gitHubId: reactionData.node_id,
-            commentId: entry.commentId,
-            pullRequestId: params.pullRequestId,
-            content: reactionData.content,
-            userLogin: reactionData.user.login,
-            userId: String(reactionData.user.id),
-            syncedAt: now,
-            deletedAt: null
-          }
-
-          db.insert(commentReactions)
-            .values(reaction)
-            .onConflictDoUpdate({
-              target: commentReactions.id,
-              set: {
-                content: reaction.content,
-                userLogin: reaction.userLogin,
-                userId: reaction.userId,
-                syncedAt: reaction.syncedAt,
-                deletedAt: null
-              }
-            })
-            .run()
-        }
-
-        for (const existingReaction of existingReactions) {
-          if (!syncedGitHubIds.includes(existingReaction.gitHubId)) {
-            db.update(commentReactions)
-              .set({ deletedAt: now })
-              .where(eq(commentReactions.id, existingReaction.id))
-              .run()
-          }
-        }
+        reconcileCommentReactions(db, {
+          commentId: entry.id,
+          pullRequestId: params.pullRequestId,
+          reactions: reactionsData,
+          now
+        })
       })
     }
   })

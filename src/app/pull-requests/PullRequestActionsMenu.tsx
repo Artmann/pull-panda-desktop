@@ -1,6 +1,5 @@
 import { MoreVerticalIcon } from 'lucide-react'
 import { ReactElement } from 'react'
-import { toast } from 'sonner'
 
 import {
   DropdownMenu,
@@ -14,6 +13,7 @@ import {
   updatePullRequest,
   type MergeOptions
 } from '@/app/lib/api'
+import { runOptimisticMutation } from '@/app/lib/mutations/run-optimistic-mutation'
 import { useAppDispatch, useAppSelector } from '@/app/store/hooks'
 import { mergeOptionsActions } from '@/app/store/merge-options-slice'
 import { pullRequestsActions } from '@/app/store/pull-requests-slice'
@@ -35,57 +35,45 @@ export function PullRequestActionsMenu({
   const handleClose = () => {
     const originalPr = pullRequest
 
-    dispatch(
-      pullRequestsActions.upsertItem({ ...pullRequest, state: 'CLOSED' })
-    )
-
-    updatePullRequest({
-      owner: pullRequest.repositoryOwner,
-      pullNumber: pullRequest.number,
-      pullRequestId: pullRequest.id,
-      repo: pullRequest.repositoryName,
-      state: 'closed'
+    runOptimisticMutation({
+      optimistic: () =>
+        dispatch(
+          pullRequestsActions.upsertItem({ ...pullRequest, state: 'CLOSED' })
+        ),
+      request: () =>
+        updatePullRequest({
+          owner: pullRequest.repositoryOwner,
+          pullNumber: pullRequest.number,
+          pullRequestId: pullRequest.id,
+          repo: pullRequest.repositoryName,
+          state: 'closed'
+        }),
+      commit: (updated) => dispatch(pullRequestsActions.upsertItem(updated)),
+      rollback: () => dispatch(pullRequestsActions.upsertItem(originalPr)),
+      errorMessage: 'Failed to close pull request'
     })
-      .then((updated) => {
-        dispatch(pullRequestsActions.upsertItem(updated))
-      })
-      .catch((error) => {
-        dispatch(pullRequestsActions.upsertItem(originalPr))
-
-        const message =
-          error instanceof Error
-            ? error.message
-            : 'Failed to close pull request'
-
-        toast.error(message)
-      })
   }
 
   const handleReopen = () => {
     const originalPr = pullRequest
 
-    dispatch(pullRequestsActions.upsertItem({ ...pullRequest, state: 'OPEN' }))
-
-    updatePullRequest({
-      owner: pullRequest.repositoryOwner,
-      pullNumber: pullRequest.number,
-      pullRequestId: pullRequest.id,
-      repo: pullRequest.repositoryName,
-      state: 'open'
+    runOptimisticMutation({
+      optimistic: () =>
+        dispatch(
+          pullRequestsActions.upsertItem({ ...pullRequest, state: 'OPEN' })
+        ),
+      request: () =>
+        updatePullRequest({
+          owner: pullRequest.repositoryOwner,
+          pullNumber: pullRequest.number,
+          pullRequestId: pullRequest.id,
+          repo: pullRequest.repositoryName,
+          state: 'open'
+        }),
+      commit: (updated) => dispatch(pullRequestsActions.upsertItem(updated)),
+      rollback: () => dispatch(pullRequestsActions.upsertItem(originalPr)),
+      errorMessage: 'Failed to reopen pull request'
     })
-      .then((updated) => {
-        dispatch(pullRequestsActions.upsertItem(updated))
-      })
-      .catch((error) => {
-        dispatch(pullRequestsActions.upsertItem(originalPr))
-
-        const message =
-          error instanceof Error
-            ? error.message
-            : 'Failed to reopen pull request'
-
-        toast.error(message)
-      })
   }
 
   const handleToggleDraft = () => {
@@ -93,32 +81,35 @@ export function PullRequestActionsMenu({
     const originalMergeOptions = mergeOptions
     const newIsDraft = !pullRequest.isDraft
 
-    dispatch(
-      pullRequestsActions.upsertItem({ ...pullRequest, isDraft: newIsDraft })
-    )
+    runOptimisticMutation({
+      optimistic: () => {
+        dispatch(
+          pullRequestsActions.upsertItem({ ...pullRequest, isDraft: newIsDraft })
+        )
 
-    const optimisticMergeOptions = buildOptimisticMergeOptions(
-      mergeOptions,
-      newIsDraft
-    )
+        const optimisticMergeOptions = buildOptimisticMergeOptions(
+          mergeOptions,
+          newIsDraft
+        )
 
-    if (optimisticMergeOptions) {
-      dispatch(
-        mergeOptionsActions.setForPullRequest({
-          options: optimisticMergeOptions,
-          pullRequestId: pullRequest.id
-        })
-      )
-    }
-
-    updatePullRequest({
-      isDraft: newIsDraft,
-      owner: pullRequest.repositoryOwner,
-      pullNumber: pullRequest.number,
-      pullRequestId: pullRequest.id,
-      repo: pullRequest.repositoryName
-    })
-      .then((updated) => {
+        if (optimisticMergeOptions) {
+          dispatch(
+            mergeOptionsActions.setForPullRequest({
+              options: optimisticMergeOptions,
+              pullRequestId: pullRequest.id
+            })
+          )
+        }
+      },
+      request: () =>
+        updatePullRequest({
+          isDraft: newIsDraft,
+          owner: pullRequest.repositoryOwner,
+          pullNumber: pullRequest.number,
+          pullRequestId: pullRequest.id,
+          repo: pullRequest.repositoryName
+        }),
+      commit: (updated) => {
         dispatch(pullRequestsActions.upsertItem(updated))
 
         getMergeOptions(pullRequest.id)
@@ -134,8 +125,8 @@ export function PullRequestActionsMenu({
             // The optimistic update already reflects the new draft state;
             // the next page mount or merge-drawer open will reconcile.
           })
-      })
-      .catch((error) => {
+      },
+      rollback: () => {
         dispatch(pullRequestsActions.upsertItem(originalPr))
 
         if (originalMergeOptions) {
@@ -146,14 +137,9 @@ export function PullRequestActionsMenu({
             })
           )
         }
-
-        const message =
-          error instanceof Error
-            ? error.message
-            : 'Failed to update draft status'
-
-        toast.error(message)
-      })
+      },
+      errorMessage: 'Failed to update draft status'
+    })
   }
 
   return (

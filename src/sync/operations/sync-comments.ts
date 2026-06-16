@@ -1,12 +1,7 @@
 import { Effect, Option } from 'effect'
-import { and, eq, isNull } from 'drizzle-orm'
+import { eq, isNull } from 'drizzle-orm'
 
-import {
-  commentReactions,
-  comments,
-  type NewComment,
-  type NewCommentReaction
-} from '../../database/schema'
+import { comments, type NewComment } from '../../database/schema'
 import { SyncDetailFailedError, type SyncError } from '../errors'
 import {
   IssueCommentsResponseSchema,
@@ -17,6 +12,10 @@ import {
 import { Database } from '../services/database'
 import { GitHubRest } from '../services/github-rest'
 import { paginateRest } from '../shared/paginate'
+import {
+  reconcileBySoftDelete,
+  reconcileCommentReactions
+} from '../shared/reconcile'
 import { generateId, normalizeCommentBody } from '../shared/utils'
 
 export interface SyncCommentsParams {
@@ -118,140 +117,42 @@ export const syncComments = (
     const commentsData = result.value as ReadonlyArray<IssueComment>
     const now = new Date().toISOString()
 
-    const commentEntries: Array<{ id: string; comment: IssueComment }> = []
-
-    yield* database.use('syncComments.upsert', (db) => {
-      const existingComments = db
-        .select()
-        .from(comments)
-        .where(
-          and(
-            eq(comments.pullRequestId, params.pullRequestId),
-            isNull(comments.deletedAt),
-            isNull(comments.path)
-          )
-        )
-        .all()
-
-      const syncedGitHubIds: string[] = []
-
-      for (const commentData of commentsData) {
-        const gitHubId = commentData.node_id
-        syncedGitHubIds.push(gitHubId)
-
-        const existingComment = existingComments.find(
-          (row) => row.gitHubId === gitHubId
-        )
-
-        const commentId = existingComment?.id ?? generateId()
-
-        commentEntries.push({ id: commentId, comment: commentData })
-
-        const comment = buildIssueComment(
-          commentData,
-          commentId,
-          params.pullRequestId,
-          now
-        )
-
-        db.insert(comments)
-          .values(comment)
-          .onConflictDoUpdate({
-            target: comments.id,
-            set: {
-              gitHubNumericId: comment.gitHubNumericId,
-              body: comment.body,
-              bodyHtml: comment.bodyHtml,
-              userLogin: comment.userLogin,
-              userAvatarUrl: comment.userAvatarUrl,
-              url: comment.url,
-              gitHubCreatedAt: comment.gitHubCreatedAt,
-              gitHubUpdatedAt: comment.gitHubUpdatedAt,
-              syncedAt: comment.syncedAt,
-              deletedAt: null
-            }
-          })
-          .run()
-      }
-
-      for (const existingComment of existingComments) {
-        if (!syncedGitHubIds.includes(existingComment.gitHubId)) {
-          db.update(comments)
-            .set({ deletedAt: now })
-            .where(eq(comments.id, existingComment.id))
-            .run()
-        }
-      }
-    })
+    const commentEntries = yield* database.use('syncComments.upsert', (db) =>
+      reconcileBySoftDelete(db, comments, {
+        // Issue comments only — review comments (path set) are owned by syncReviews.
+        scope: [
+          eq(comments.pullRequestId, params.pullRequestId),
+          isNull(comments.path)
+        ],
+        items: commentsData,
+        keyOfItem: (comment) => comment.node_id,
+        keyOfRow: (row) => row.gitHubId,
+        build: (comment, existingId) =>
+          buildIssueComment(
+            comment,
+            existingId ?? generateId(),
+            params.pullRequestId,
+            now
+          ),
+        now
+      })
+    )
 
     for (const entry of commentEntries) {
       // Always reconcile reactions against the server, even when total_count is
       // zero — otherwise removed reactions stay around locally forever.
       const reactionsData =
-        entry.comment.reactions && entry.comment.reactions.total_count > 0
-          ? yield* fetchReactions(params, entry.comment.id)
+        entry.item.reactions && entry.item.reactions.total_count > 0
+          ? yield* fetchReactions(params, entry.item.id)
           : ([] as ReadonlyArray<Reaction>)
 
       yield* database.use('syncComments.reactions', (db) => {
-        const existingReactions = db
-          .select()
-          .from(commentReactions)
-          .where(
-            and(
-              eq(commentReactions.commentId, entry.id),
-              isNull(commentReactions.deletedAt)
-            )
-          )
-          .all()
-
-        const syncedGitHubIds: string[] = []
-
-        for (const reactionData of reactionsData) {
-          if (!reactionData.user) {
-            continue
-          }
-
-          syncedGitHubIds.push(reactionData.node_id)
-
-          const existingReaction = existingReactions.find(
-            (row) => row.gitHubId === reactionData.node_id
-          )
-
-          const reaction: NewCommentReaction = {
-            id: existingReaction?.id ?? generateId(),
-            gitHubId: reactionData.node_id,
-            commentId: entry.id,
-            pullRequestId: params.pullRequestId,
-            content: reactionData.content,
-            userLogin: reactionData.user.login,
-            userId: String(reactionData.user.id),
-            syncedAt: now,
-            deletedAt: null
-          }
-
-          db.insert(commentReactions)
-            .values(reaction)
-            .onConflictDoUpdate({
-              target: commentReactions.id,
-              set: {
-                content: reaction.content,
-                userLogin: reaction.userLogin,
-                userId: reaction.userId,
-                syncedAt: reaction.syncedAt,
-                deletedAt: null
-              }
-            })
-            .run()
-        }
-
-        for (const existingReaction of existingReactions) {
-          if (!syncedGitHubIds.includes(existingReaction.gitHubId)) {
-            db.update(commentReactions)
-              .set({ deletedAt: now })
-              .where(eq(commentReactions.id, existingReaction.id))
-              .run()
-          }
-        }
+        reconcileCommentReactions(db, {
+          commentId: entry.id,
+          pullRequestId: params.pullRequestId,
+          reactions: reactionsData,
+          now
+        })
       })
     }
   })

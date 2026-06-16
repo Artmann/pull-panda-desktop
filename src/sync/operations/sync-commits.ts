@@ -1,5 +1,5 @@
 import { Effect, Option } from 'effect'
-import { and, eq, isNull } from 'drizzle-orm'
+import { eq } from 'drizzle-orm'
 
 import { commits, type NewCommit } from '../../database/schema'
 import { SyncDetailFailedError, type SyncError } from '../errors'
@@ -7,6 +7,7 @@ import { CommitsResponseSchema, type Commit } from '../schemas/github-rest'
 import { Database } from '../services/database'
 import { GitHubRest } from '../services/github-rest'
 import { paginateRest } from '../shared/paginate'
+import { reconcileBySoftDelete } from '../shared/reconcile'
 import { generateId, normalizeCommentBody } from '../shared/utils'
 
 export interface SyncCommitsParams {
@@ -76,65 +77,18 @@ export const syncCommits = (
       return
     }
 
-    const commitsData = result.value
+    const commitsData = result.value as ReadonlyArray<Commit>
     const now = new Date().toISOString()
 
     yield* database.use('syncCommits', (db) => {
-      const existingCommits = db
-        .select()
-        .from(commits)
-        .where(
-          and(
-            eq(commits.pullRequestId, params.pullRequestId),
-            isNull(commits.deletedAt)
-          )
-        )
-        .all()
-
-      const syncedGitHubIds: string[] = []
-
-      for (const commitData of commitsData as ReadonlyArray<Commit>) {
-        const gitHubId = commitData.sha
-        syncedGitHubIds.push(gitHubId)
-
-        const existingCommit = existingCommits.find(
-          (row) => row.gitHubId === gitHubId
-        )
-
-        const commit = buildCommitRecord(
-          commitData,
-          existingCommit?.id,
-          params.pullRequestId,
-          now
-        )
-
-        db.insert(commits)
-          .values(commit)
-          .onConflictDoUpdate({
-            target: commits.id,
-            set: {
-              hash: commit.hash,
-              message: commit.message,
-              url: commit.url,
-              authorLogin: commit.authorLogin,
-              authorAvatarUrl: commit.authorAvatarUrl,
-              linesAdded: commit.linesAdded,
-              linesRemoved: commit.linesRemoved,
-              gitHubCreatedAt: commit.gitHubCreatedAt,
-              syncedAt: commit.syncedAt,
-              deletedAt: null
-            }
-          })
-          .run()
-      }
-
-      for (const existingCommit of existingCommits) {
-        if (!syncedGitHubIds.includes(existingCommit.gitHubId)) {
-          db.update(commits)
-            .set({ deletedAt: now })
-            .where(eq(commits.id, existingCommit.id))
-            .run()
-        }
-      }
+      reconcileBySoftDelete(db, commits, {
+        scope: [eq(commits.pullRequestId, params.pullRequestId)],
+        items: commitsData,
+        keyOfItem: (commit) => commit.sha,
+        keyOfRow: (row) => row.gitHubId,
+        build: (commit, existingId) =>
+          buildCommitRecord(commit, existingId, params.pullRequestId, now),
+        now
+      })
     })
   })

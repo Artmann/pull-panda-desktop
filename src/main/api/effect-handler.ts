@@ -50,7 +50,7 @@ export const effectHandler =
     })
   }
 
-export const parseJson = <Parsed>(
+const parseJson = <Parsed>(
   context: HonoContext<AppEnv>,
   validate: (raw: unknown) => Parsed
 ): Effect.Effect<Parsed, ValidationError> =>
@@ -65,6 +65,15 @@ export const parseJson = <Parsed>(
         message: cause instanceof Error ? cause.message : 'Invalid JSON body'
       })
   })
+
+// Reads the request body as a plain record so routes can pull and validate
+// individual fields with requireString/requireNumber. Removes the
+// `(input ?? {}) as Record<string, unknown>` cast every JSON route repeated,
+// while keeping per-field validation explicit at the call site.
+export const jsonBody = (
+  context: HonoContext<AppEnv>
+): Effect.Effect<Record<string, unknown>, ValidationError> =>
+  parseJson(context, (input) => (input ?? {}) as Record<string, unknown>)
 
 export const requireString = (
   value: unknown,

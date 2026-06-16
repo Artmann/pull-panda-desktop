@@ -13,6 +13,7 @@ import type { Comment } from '@/types/pull-request-details'
 import { Button } from '@/app/components/ui/button'
 import { Textarea } from '@/app/components/ui/textarea'
 import { createComment, syncPullRequestDetails } from '@/app/lib/api'
+import { runOptimisticMutation } from '@/app/lib/mutations/run-optimistic-mutation'
 import { useAuth } from '@/app/lib/store/authContext'
 import {
   commentsActions,
@@ -44,7 +45,7 @@ export const CommentReply = memo(function CommentReply({
     : undefined
 
   const handleSubmit = useCallback(
-    async (event: FormEvent) => {
+    (event: FormEvent) => {
       event.preventDefault()
 
       if (!body.trim() || isSubmitting || !user) {
@@ -62,38 +63,40 @@ export const CommentReply = memo(function CommentReply({
         gitHubReviewThreadId: comment.gitHubReviewThreadId ?? undefined
       })
 
-      dispatch(
-        commentsActions.addComment({
-          pullRequestId: pullRequest.id,
-          comment: optimisticComment
-        })
-      )
-
-      clearDraft()
       setIsSubmitting(true)
 
-      try {
-        await createComment({
-          body: trimmedBody,
-          owner: pullRequest.repositoryOwner,
-          pullNumber: pullRequest.number,
-          repo: pullRequest.repositoryName,
-          reviewCommentId
-        })
+      runOptimisticMutation({
+        optimistic: () => {
+          dispatch(
+            commentsActions.addComment({
+              pullRequestId: pullRequest.id,
+              comment: optimisticComment
+            })
+          )
 
-        syncPullRequestDetails(pullRequest.id)
-      } catch (error) {
-        console.error('Failed to post comment:', error)
-
-        dispatch(
-          commentsActions.removeComment({
-            pullRequestId: pullRequest.id,
-            commentId: optimisticComment.id
-          })
-        )
-      } finally {
-        setIsSubmitting(false)
-      }
+          clearDraft()
+        },
+        request: () =>
+          createComment({
+            body: trimmedBody,
+            owner: pullRequest.repositoryOwner,
+            pullNumber: pullRequest.number,
+            repo: pullRequest.repositoryName,
+            reviewCommentId
+          }),
+        commit: () => {
+          void syncPullRequestDetails(pullRequest.id)
+        },
+        rollback: () =>
+          dispatch(
+            commentsActions.removeComment({
+              pullRequestId: pullRequest.id,
+              commentId: optimisticComment.id
+            })
+          ),
+        settled: () => setIsSubmitting(false),
+        errorMessage: 'Failed to post comment'
+      })
     },
     [
       body,

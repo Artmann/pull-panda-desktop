@@ -34,6 +34,7 @@ import {
 } from '@/app/components/ui/card'
 import { Separator } from '@/app/components/ui/separator'
 import { resolveReviewThread, unresolveReviewThread } from '@/app/lib/api'
+import { runOptimisticMutation } from '@/app/lib/mutations/run-optimistic-mutation'
 import { useAppDispatch, useAppSelector } from '@/app/store/hooks'
 import { reviewThreadsActions } from '@/app/store/review-threads-slice'
 
@@ -300,55 +301,47 @@ const ResolveThreadButton = memo(function ResolveThreadButton({
 
     const wasResolved = thread.isResolved
     const previousResolvedByLogin = thread.resolvedByLogin
-
-    dispatch(
-      reviewThreadsActions.updateResolution({
-        gitHubId: thread.gitHubId,
-        isResolved: !wasResolved,
-        resolvedByLogin: wasResolved ? null : previousResolvedByLogin
-      })
-    )
+    const action = wasResolved ? unresolveReviewThread : resolveReviewThread
 
     setIsSubmitting(true)
 
-    const action = wasResolved ? unresolveReviewThread : resolveReviewThread
-
-    action({
-      owner: pullRequest.repositoryOwner,
-      pullNumber: pullRequest.number,
-      repo: pullRequest.repositoryName,
-      threadId: thread.gitHubId
-    })
-      .then((response) => {
+    runOptimisticMutation({
+      optimistic: () =>
+        dispatch(
+          reviewThreadsActions.updateResolution({
+            gitHubId: thread.gitHubId,
+            isResolved: !wasResolved,
+            resolvedByLogin: wasResolved ? null : previousResolvedByLogin
+          })
+        ),
+      request: () =>
+        action({
+          owner: pullRequest.repositoryOwner,
+          pullNumber: pullRequest.number,
+          repo: pullRequest.repositoryName,
+          threadId: thread.gitHubId
+        }),
+      commit: (response) =>
         dispatch(
           reviewThreadsActions.updateResolution({
             gitHubId: response.gitHubId,
             isResolved: response.isResolved,
             resolvedByLogin: response.resolvedByLogin
           })
-        )
-      })
-      .catch((error: unknown) => {
+        ),
+      rollback: () =>
         dispatch(
           reviewThreadsActions.updateResolution({
             gitHubId: thread.gitHubId,
             isResolved: wasResolved,
             resolvedByLogin: previousResolvedByLogin
           })
-        )
-
-        const message =
-          error instanceof Error
-            ? error.message
-            : wasResolved
-              ? 'Failed to unresolve thread'
-              : 'Failed to resolve thread'
-
-        toast.error(message)
-      })
-      .finally(() => {
-        setIsSubmitting(false)
-      })
+        ),
+      settled: () => setIsSubmitting(false),
+      errorMessage: wasResolved
+        ? 'Failed to unresolve thread'
+        : 'Failed to resolve thread'
+    })
   }, [dispatch, isSubmitting, pullRequest, thread])
 
   const display = resolveButtonDisplay(appearance, thread.isResolved)

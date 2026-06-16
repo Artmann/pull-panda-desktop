@@ -1,5 +1,5 @@
-import { Octokit, type RestEndpointMethodTypes } from '@octokit/rest'
-import { Effect } from 'effect'
+import { type RestEndpointMethodTypes } from '@octokit/rest'
+import { Context, Effect } from 'effect'
 import { eq } from 'drizzle-orm'
 
 import {
@@ -9,8 +9,8 @@ import {
 } from '../../../database/schema'
 import { Database } from '../../../sync/services/database'
 import { generateId, normalizeCommentBody } from '../../../sync/shared/utils'
+import { GitHubApi } from '../../services/github-api'
 import { Repository } from '../../services/repository'
-import { OctokitError } from '../errors'
 
 export interface CreateCommentInput {
   readonly body: string
@@ -26,21 +26,6 @@ type IssueCommentData =
 
 type ReviewCommentReplyData =
   RestEndpointMethodTypes['pulls']['createReplyForReviewComment']['response']['data']
-
-const statusOf = (cause: unknown) =>
-  typeof cause === 'object' &&
-  cause !== null &&
-  'status' in cause &&
-  typeof (cause as { status: unknown }).status === 'number'
-    ? (cause as { status: number }).status
-    : 500
-
-const octokitErrorOf = (operation: string) => (cause: unknown) => {
-  const message =
-    cause instanceof Error ? cause.message : 'Failed to create comment'
-
-  return new OctokitError({ message, operation, status: statusOf(cause) })
-}
 
 const userFields = (
   user: { avatar_url?: string; login?: string } | null | undefined
@@ -112,9 +97,14 @@ const toReplyCommentRow = (
   ...userFields(data.user)
 })
 
-const postIssueComment = (octokit: Octokit, input: CreateCommentInput) =>
-  Effect.tryPromise({
-    try: async () => {
+const postIssueComment = (
+  gitHub: Context.Tag.Service<GitHubApi>,
+  input: CreateCommentInput
+) =>
+  gitHub.run(
+    input.token,
+    'issues.createComment',
+    async (octokit) => {
       const response = await octokit.rest.issues.createComment({
         body: input.body,
         issue_number: input.pullNumber,
@@ -124,16 +114,18 @@ const postIssueComment = (octokit: Octokit, input: CreateCommentInput) =>
 
       return response.data
     },
-    catch: octokitErrorOf('issues.createComment')
-  })
+    { fallbackMessage: 'Failed to create comment' }
+  )
 
 const postReviewCommentReply = (
-  octokit: Octokit,
+  gitHub: Context.Tag.Service<GitHubApi>,
   input: CreateCommentInput,
   reviewCommentId: number
 ) =>
-  Effect.tryPromise({
-    try: async () => {
+  gitHub.run(
+    input.token,
+    'pulls.createReplyForReviewComment',
+    async (octokit) => {
       const response = await octokit.rest.pulls.createReplyForReviewComment({
         body: input.body,
         comment_id: reviewCommentId,
@@ -144,8 +136,8 @@ const postReviewCommentReply = (
 
       return response.data
     },
-    catch: octokitErrorOf('pulls.createReplyForReviewComment')
-  })
+    { fallbackMessage: 'Failed to create comment' }
+  )
 
 const findParentComment = (reviewCommentId: number) =>
   Effect.flatMap(Database, (database) =>
@@ -180,11 +172,11 @@ const persistComment = (
 
 const createIssueComment = (
   input: CreateCommentInput,
-  octokit: Octokit,
+  gitHub: Context.Tag.Service<GitHubApi>,
   pullRequestId: string
 ) =>
   Effect.gen(function* () {
-    const data = yield* postIssueComment(octokit, input)
+    const data = yield* postIssueComment(gitHub, input)
     const newComment = toIssueCommentRow(data, pullRequestId)
 
     return yield* persistComment(newComment, {
@@ -195,12 +187,12 @@ const createIssueComment = (
 
 const createReplyComment = (
   input: CreateCommentInput,
-  octokit: Octokit,
+  gitHub: Context.Tag.Service<GitHubApi>,
   pullRequestId: string,
   reviewCommentId: number
 ) =>
   Effect.gen(function* () {
-    const data = yield* postReviewCommentReply(octokit, input, reviewCommentId)
+    const data = yield* postReviewCommentReply(gitHub, input, reviewCommentId)
     const parentComment = yield* findParentComment(reviewCommentId)
     const newComment = toReplyCommentRow(data, parentComment, pullRequestId)
 
@@ -213,6 +205,7 @@ const createReplyComment = (
 export const createComment = (input: CreateCommentInput) =>
   Effect.gen(function* () {
     const repository = yield* Repository
+    const gitHub = yield* GitHubApi
 
     const pullRequest = yield* repository.requirePullRequestByCoords({
       number: input.pullNumber,
@@ -220,16 +213,14 @@ export const createComment = (input: CreateCommentInput) =>
       repo: input.repo
     })
 
-    const octokit = new Octokit({ auth: input.token })
-
     if (input.reviewCommentId !== undefined) {
       return yield* createReplyComment(
         input,
-        octokit,
+        gitHub,
         pullRequest.id,
         input.reviewCommentId
       )
     }
 
-    return yield* createIssueComment(input, octokit, pullRequest.id)
+    return yield* createIssueComment(input, gitHub, pullRequest.id)
   })

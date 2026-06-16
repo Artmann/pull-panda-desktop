@@ -3,7 +3,7 @@ import { Hono } from 'hono'
 
 import {
   effectHandler,
-  parseJson,
+  jsonBody,
   requireNumber,
   requireString,
   type AppEnv
@@ -16,19 +16,10 @@ import {
 import type { ValidationError } from '../errors'
 
 const parseInput = (
-  context: Parameters<typeof parseJson>[0]
+  context: Parameters<typeof jsonBody>[0]
 ): Effect.Effect<ToggleReviewThreadInput, ValidationError> =>
   Effect.gen(function* () {
-    const raw = yield* parseJson(context, (input) => {
-      const record = (input ?? {}) as Record<string, unknown>
-
-      return {
-        owner: record.owner,
-        pullNumber: record.pullNumber,
-        repo: record.repo,
-        threadId: record.threadId
-      }
-    })
+    const raw = yield* jsonBody(context)
 
     const owner = yield* requireString(raw.owner, 'owner')
     const repo = yield* requireString(raw.repo, 'repo')
