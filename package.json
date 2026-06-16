@@ -1,7 +1,7 @@
 {
   "name": "pull-panda",
   "productName": "Pull Panda",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "A delightful code review tool for the AI era",
   "main": ".vite/build/main.js",
   "author": {
