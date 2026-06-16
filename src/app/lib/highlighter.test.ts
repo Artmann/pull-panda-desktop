@@ -12,6 +12,7 @@ describe('getLanguageFromPath', () => {
     ['Main.java', 'java'],
     ['main.c', 'c'],
     ['main.cpp', 'c'],
+    ['Program.cs', 'csharp'],
     ['header.h', 'c'],
     ['header.hpp', 'c'],
     ['main.go', 'go'],

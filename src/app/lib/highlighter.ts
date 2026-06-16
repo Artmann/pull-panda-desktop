@@ -8,6 +8,7 @@ let highlighterPromise: Promise<Highlighter> | null = null
 const supportedLanguages = [
   'bash',
   'c',
+  'csharp',
   'css',
   'go',
   'graphql',
@@ -47,6 +48,8 @@ const languageByExtension: Record<string, string> = {
   bash: 'bash',
   c: 'c',
   cpp: 'c',
+  cs: 'csharp',
+  csharp: 'csharp',
   css: 'css',
   go: 'go',
   gql: 'graphql',
