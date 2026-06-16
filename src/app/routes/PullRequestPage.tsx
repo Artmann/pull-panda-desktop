@@ -209,12 +209,8 @@ export function PullRequestPage(): ReactElement {
   )
 
   const refreshMergeOptions = useCallback(() => {
-    if (pullRequest) {
-      dispatch(mergeOptionsActions.clearForPullRequest(pullRequest.id))
-    }
-
     setFetchGeneration((generation) => generation + 1)
-  }, [dispatch, pullRequest?.id])
+  }, [])
 
   const tabs: Array<{
     content: React.ComponentType<{
