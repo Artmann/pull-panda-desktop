@@ -287,7 +287,7 @@ export const MergeDrawer = memo(function MergeDrawer({
         </div>
       </SidePanelContent>
 
-      <SidePanelFooter>
+      <SidePanelFooter className="px-5">
         <MergeDrawerFooter
           allowedMethods={allowedMethods}
           canMerge={canMerge}
@@ -432,7 +432,7 @@ function MergeDrawerFooter({
   showSquashFields
 }: MergeDrawerFooterProps): ReactElement {
   return (
-    <div className="flex flex-col gap-6 max-w-72 mx-auto w-full">
+    <div className="flex flex-col gap-6 w-full">
       {allowedMethods.length > 0 && !showSquashFields && (
         <MergeMethodTabs
           allowedMethods={allowedMethods}
@@ -443,11 +443,9 @@ function MergeDrawerFooter({
 
       {canMerge && selectedMethod ? (
         <Button
-          className="w-full bg-status-success border border-status-success-border text-status-success-foreground hover:bg-status-success/90"
+          className="w-full font-semibold"
           onClick={onMerge}
-          size="sm"
         >
-          <GitMerge className="size-3" />
           {mergeMethodLabels[selectedMethod]}
         </Button>
       ) : (
@@ -486,7 +484,7 @@ function MergeMethodTabs({
               className={cn(
                 'flex-1 flex items-center justify-center gap-1.5 px-2 py-1.5 rounded-md border cursor-pointer transition-colors text-xs font-medium',
                 selectedMethod === method
-                  ? 'border-primary bg-primary/10 text-primary'
+                  ? 'border-cta bg-cta/10 text-cta'
                   : 'border-border hover:border-foreground/20'
               )}
               key={method}
