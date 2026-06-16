@@ -52,6 +52,18 @@ if (!app.isPackaged) {
   app.commandLine.appendSwitch('remote-debugging-port', '9222')
 }
 
+// In packaged builds the OS uses the icon baked in by Electron Forge
+// (`packagerConfig.icon`). When running unpackaged (e.g. `yarn start` or via
+// npx) that icon is not applied, so Electron falls back to its default icon.
+// Point at the icon files in the project root so dev builds show the Pull
+// Panda icon in the taskbar and dock.
+const developmentIconPath = app.isPackaged
+  ? null
+  : path.join(
+      app.getAppPath(),
+      process.platform === 'win32' ? 'icon.ico' : 'icon.png'
+    )
+
 app.commandLine.appendSwitch('font-render-hinting', 'none')
 
 function setupIpcHandlers(): void {
@@ -151,6 +163,7 @@ const createWindow = () => {
   mainWindow = new BrowserWindow({
     frame: false,
     height,
+    ...(developmentIconPath ? { icon: developmentIconPath } : {}),
     titleBarStyle: 'hidden',
     trafficLightPosition: { x: 12, y: 10 },
     webPreferences: {
@@ -332,6 +345,12 @@ async function getUserLogin(): Promise<string | undefined> {
 }
 
 app.on('ready', async () => {
+  // macOS shows the dock icon from the app bundle in packaged builds, but
+  // unpackaged dev builds need it set explicitly.
+  if (developmentIconPath && process.platform === 'darwin') {
+    app.dock?.setIcon(developmentIconPath)
+  }
+
   setupIpcHandlers()
 
   // Initialize database before anything else
