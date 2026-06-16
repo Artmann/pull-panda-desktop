@@ -51,7 +51,13 @@ function getWasmPath(): string {
     // Use Node.js module resolution to find sql.js regardless of npm
     // hoisting. sql.js main entry resolves to dist/sql-wasm.js, so
     // the WASM file is in the same directory.
-    const nodeRequire = createRequire(import.meta.url)
+    //
+    // Base the require on `__filename` rather than `import.meta.url`: the
+    // main process is bundled to CommonJS, where the bundler rewrites
+    // `import.meta.url` to `undefined` and `createRequire(undefined)` throws.
+    // `__filename` is provided by the CommonJS bundle (the same global
+    // `getPackageRoot` relies on) and always points at the bundled file.
+    const nodeRequire = createRequire(__filename)
     const sqlJsMain = nodeRequire.resolve('sql.js')
 
     return path.join(path.dirname(sqlJsMain), 'sql-wasm.wasm')
