@@ -185,6 +185,10 @@ const createWindow = () => {
     taskManager.setMainWindow(null)
   })
 
+  mainWindow.on('focus', () => {
+    maybeSyncOnFocus()
+  })
+
   // and load the index.html of the app.
   if (MAIN_WINDOW_VITE_DEV_SERVER_URL) {
     mainWindow.loadURL(MAIN_WINDOW_VITE_DEV_SERVER_URL)
@@ -392,6 +396,32 @@ let pullRequestSyncInFlight = false
 let staleSyncInFlight = false
 let lastSearchSyncedIds: Set<string> = new Set()
 
+// Trigger a sync when the window regains focus so the list is fresh exactly
+// when the user looks at the app. Debounced so rapid alt-tabbing doesn't fire a
+// burst of syncs.
+const focusSyncDebounceMs = 15 * 1000
+let lastFocusSyncAt = 0
+
+function maybeSyncOnFocus(): void {
+  const token = loadToken()
+
+  if (!token) {
+    return
+  }
+
+  const now = Date.now()
+
+  if (now - lastFocusSyncAt < focusSyncDebounceMs) {
+    return
+  }
+
+  lastFocusSyncAt = now
+
+  runPullRequestSync().catch((error) => {
+    console.error('Focus-triggered sync failed:', error)
+  })
+}
+
 async function rebuildBootstrapAndNotify(): Promise<void> {
   const userLogin = await getUserLogin()
   bootstrapData = await bootstrap(userLogin)
@@ -485,12 +515,12 @@ setInterval(() => {
 }, 30000)
 
 // Adaptive cadence for the main PR search:
-// - Default cadence is 2 min.
+// - Default cadence is 1 min.
 // - When the last run produced changes (or there is a focused PR), refresh
 //   sooner so the list stays responsive.
 // - Otherwise stretch the interval ×1.5 up to a 10 min ceiling.
 const minSyncDelayMs = 30 * 1000
-const baseSyncDelayMs = 2 * 60 * 1000
+const baseSyncDelayMs = 60 * 1000
 const maxSyncDelayMs = 10 * 60 * 1000
 const focusedSyncDelayMs = 60 * 1000
 
