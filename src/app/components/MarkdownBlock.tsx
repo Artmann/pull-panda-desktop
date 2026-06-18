@@ -108,15 +108,15 @@ export const MarkdownBlock = memo(function MarkdownBlock({
     ? appTheme.dark.background
     : appTheme.light.background
 
-  useEffect(() => {
-    if (lastContentRef.current === content) {
-      return
-    }
-
+  // Reset the derived markdown and highlight state during render when the
+  // `content` prop changes. Doing this inline (instead of in a useEffect) lets
+  // React fold the reset into the same commit, so users never see a frame of
+  // the previous content's stale highlight.
+  if (lastContentRef.current !== content) {
     lastContentRef.current = content
     resetMarkdownContent()
     setIsHighlighted(false)
-  }, [content, resetMarkdownContent])
+  }
 
   useEffect(() => {
     if (!shouldRender || result) {
