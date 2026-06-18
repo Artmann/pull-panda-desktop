@@ -102,13 +102,13 @@ export function HomePage(): ReactElement {
   )
 }
 
-function Greetings({ name }: { name: string }): ReactElement {
-  const greetings: Record<string, string> = {
-    morning: 'Good morning',
-    afternoon: 'Good afternoon',
-    evening: 'Good evening'
-  }
+const greetings: Record<string, string> = {
+  morning: 'Good morning',
+  afternoon: 'Good afternoon',
+  evening: 'Good evening'
+}
 
+function Greetings({ name }: { name: string }): ReactElement {
   const timeOfDay = getTimeOfDay()
 
   const greeting = greetings[timeOfDay] ?? greetings.morning

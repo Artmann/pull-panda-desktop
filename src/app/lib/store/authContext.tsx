@@ -4,6 +4,7 @@ import {
   useState,
   useEffect,
   useCallback,
+  useMemo,
   type ReactNode
 } from 'react'
 import type { AuthStatus, GitHubUser } from '@/types/auth'
@@ -126,24 +127,34 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setIsNewSignIn(false)
   }, [])
 
-  return (
-    <AuthContext.Provider
-      value={{
-        status,
-        user,
-        userCode,
-        verificationUri,
-        error,
-        isNewSignIn,
-        startLogin,
-        logout,
-        openVerificationUrl,
-        clearNewSignIn
-      }}
-    >
-      {children}
-    </AuthContext.Provider>
+  const value = useMemo(
+    () => ({
+      status,
+      user,
+      userCode,
+      verificationUri,
+      error,
+      isNewSignIn,
+      startLogin,
+      logout,
+      openVerificationUrl,
+      clearNewSignIn
+    }),
+    [
+      status,
+      user,
+      userCode,
+      verificationUri,
+      error,
+      isNewSignIn,
+      startLogin,
+      logout,
+      openVerificationUrl,
+      clearNewSignIn
+    ]
   )
+
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
 }
 
 export function useAuth() {

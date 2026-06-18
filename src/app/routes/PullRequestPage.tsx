@@ -55,6 +55,8 @@ import {
   useDerivedTaskGroups
 } from '../pull-requests/tasks/use-derived-tasks'
 
+const validTabs = ['overview', 'tasks', 'checks', 'files']
+
 export function PullRequestPage(): ReactElement {
   const containerRef = useRef<HTMLDivElement>(null)
   const [isMergeDrawerOpen, setIsMergeDrawerOpen] = useState(false)
@@ -85,7 +87,6 @@ export function PullRequestPage(): ReactElement {
   )
 
   const tabFromUrl = searchParams.get('tab')
-  const validTabs = ['overview', 'tasks', 'checks', 'files']
   const activeTab =
     tabFromUrl && validTabs.includes(tabFromUrl) ? tabFromUrl : 'overview'
 
@@ -279,7 +280,7 @@ export function PullRequestPage(): ReactElement {
         })
       }
 
-      scrollContainer.addEventListener('scroll', onScroll)
+      scrollContainer.addEventListener('scroll', onScroll, { passive: true })
 
       onScroll()
 

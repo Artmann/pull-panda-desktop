@@ -1,8 +1,10 @@
 import { ThemeProvider as NextThemesProvider, useTheme } from 'next-themes'
 import {
   createContext,
+  useCallback,
   useContext,
   useEffect,
+  useMemo,
   useState,
   type ReactNode
 } from 'react'
@@ -50,17 +52,20 @@ function ThemeProviderInner({ children }: { children: ReactNode }) {
   const activeValue = mode === 'dark' ? darkThemeValue : lightThemeValue
   const appTheme = getThemeByValue(activeValue)
 
-  const setAppTheme = (value: string) => {
-    const theme = getThemeByValue(value)
+  const setAppTheme = useCallback(
+    (value: string) => {
+      const theme = getThemeByValue(value)
 
-    if (mode === 'dark') {
-      setDarkThemeValue(theme.value)
-      localStorage.setItem(darkStorageKey, theme.value)
-    } else {
-      setLightThemeValue(theme.value)
-      localStorage.setItem(lightStorageKey, theme.value)
-    }
-  }
+      if (mode === 'dark') {
+        setDarkThemeValue(theme.value)
+        localStorage.setItem(darkStorageKey, theme.value)
+      } else {
+        setLightThemeValue(theme.value)
+        localStorage.setItem(lightStorageKey, theme.value)
+      }
+    },
+    [mode]
+  )
 
   // Apply the palette to CSS variables whenever the theme or mode changes.
   useEffect(() => {
@@ -80,10 +85,15 @@ function ThemeProviderInner({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     setAppThemeSetter('theme', setAppTheme)
-  }, [mode])
+  }, [setAppTheme])
+
+  const value = useMemo(
+    () => ({ appTheme, setAppTheme }),
+    [appTheme, setAppTheme]
+  )
 
   return (
-    <AppThemeContext.Provider value={{ appTheme, setAppTheme }}>
+    <AppThemeContext.Provider value={value}>
       {children}
     </AppThemeContext.Provider>
   )
