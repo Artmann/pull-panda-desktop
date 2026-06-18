@@ -203,9 +203,9 @@ function LinkedIssues({
       <SectionHeader>Linked Issues</SectionHeader>
 
       <div className="flex flex-col gap-2 w-full">
-        {issues.map((issue, index) => (
+        {issues.map((issue) => (
           <IssueCard
-            key={index}
+            key={issue.url}
             issue={issue}
           />
         ))}
