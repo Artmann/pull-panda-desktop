@@ -154,6 +154,7 @@ function WindowButton({
       data-testid={testId}
       onClick={onClick}
       style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}
+      type="button"
     >
       {children}
     </button>
@@ -184,6 +185,7 @@ function NavigationButton({
       data-testid={testId}
       disabled={disabled}
       onClick={onClick}
+      type="button"
     >
       {children}
     </button>
@@ -215,6 +217,7 @@ function TitleBarLink({
       )}
       data-testid={testId}
       onClick={() => navigate(to)}
+      type="button"
     >
       {children}
     </button>

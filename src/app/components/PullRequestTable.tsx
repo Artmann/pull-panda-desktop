@@ -119,6 +119,7 @@ export function PullRequestTable({
           <button
             className="text-xs text-primary hover:underline"
             onClick={() => handleFilterChange('')}
+            type="button"
           >
             Clear filter
           </button>

@@ -89,6 +89,7 @@ export const ModifiedFileCard = memo(function ModifiedFileCard({
               window.electron.openUrl(viewFileUrl)
             }}
             title="View file on GitHub"
+            type="button"
           >
             <ExternalLinkIcon className="size-3" />
           </button>

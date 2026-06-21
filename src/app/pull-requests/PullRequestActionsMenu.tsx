@@ -149,6 +149,7 @@ export function PullRequestActionsMenu({
           aria-label="More actions"
           className="p-1 rounded text-muted-foreground hover:text-foreground hover:bg-muted transition-colors cursor-pointer"
           title="More actions"
+          type="button"
         >
           <MoreVerticalIcon className="size-3" />
         </button>

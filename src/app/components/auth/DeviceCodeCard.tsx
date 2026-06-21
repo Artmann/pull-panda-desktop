@@ -34,12 +34,13 @@ export function DeviceCodeCard({
         <CardTitle>Sign in to GitHub</CardTitle>
         <CardDescription>
           Enter the code below at{' '}
-          <span
-            className="font-mono text-foreground text-xs cursor-pointer"
+          <button
+            className="font-mono text-foreground text-xs cursor-pointer underline-offset-2 hover:underline"
             onClick={onOpenUrl}
+            type="button"
           >
             {verificationUri}
-          </span>
+          </button>
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">

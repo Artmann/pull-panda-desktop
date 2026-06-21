@@ -167,6 +167,7 @@ export const ChecksView = memo(function ChecksView({
                             window.electron.openUrl(check.detailsUrl ?? '')
                           }}
                           title="Open on GitHub"
+                          type="button"
                         >
                           <ExternalLinkIcon className="size-3" />
                         </button>
