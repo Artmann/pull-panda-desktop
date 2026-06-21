@@ -109,13 +109,14 @@ const findPendingReviewForCurrentUser = async (
     readonly repo: string
   }
 ) => {
-  const { data: authenticatedUser } =
-    await octokit.rest.users.getAuthenticated()
-  const { data: reviews } = await octokit.rest.pulls.listReviews({
-    owner: args.owner,
-    pull_number: args.pullNumber,
-    repo: args.repo
-  })
+  const [{ data: authenticatedUser }, { data: reviews }] = await Promise.all([
+    octokit.rest.users.getAuthenticated(),
+    octokit.rest.pulls.listReviews({
+      owner: args.owner,
+      pull_number: args.pullNumber,
+      repo: args.repo
+    })
+  ])
 
   return (
     reviews.find(

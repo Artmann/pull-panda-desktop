@@ -36,8 +36,10 @@ export const ResourceEventBusLive: Layer.Layer<ResourceEventBus> =
     emitChecksUpdate: (pullRequestId) =>
       Effect.tryPromise({
         try: async () => {
-          const details = await getPullRequestDetails(pullRequestId)
-          const pullRequest = await getPullRequest(pullRequestId)
+          const [details, pullRequest] = await Promise.all([
+            getPullRequestDetails(pullRequestId),
+            getPullRequest(pullRequestId)
+          ])
 
           for (const window of BrowserWindow.getAllWindows()) {
             if (details) {
