@@ -467,13 +467,13 @@ interface MergeMethodTabsProps {
   selectedMethod: MergeMethod | null
 }
 
+const orderedMethods: MergeMethod[] = ['squash', 'merge', 'rebase']
+
 function MergeMethodTabs({
   allowedMethods,
   onTabClick,
   selectedMethod
 }: MergeMethodTabsProps): ReactElement {
-  const orderedMethods: MergeMethod[] = ['squash', 'merge', 'rebase']
-
   return (
     <div className="flex flex-col gap-2">
       <div className="flex gap-2">

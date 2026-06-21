@@ -1,4 +1,10 @@
-import { createContext, useContext, useEffect, type ReactNode } from 'react'
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useMemo,
+  type ReactNode
+} from 'react'
 
 import { useAppDispatch, useAppSelector } from '@/app/store/hooks'
 import { tasksActions } from '@/app/store/tasks-slice'
@@ -30,17 +36,20 @@ export function TasksProvider({ children }: { children: ReactNode }) {
     return cleanup
   }, [dispatch])
 
-  const runningTasks = tasks.filter((task) => task.status === 'running')
+  const value = useMemo(() => {
+    const runningTasks = tasks.filter((task) => task.status === 'running')
 
-  const hasSyncInProgress = runningTasks.some(
-    (task) =>
-      task.type === 'syncPullRequests' || task.type === 'syncPullRequestDetails'
-  )
+    const hasSyncInProgress = runningTasks.some(
+      (task) =>
+        task.type === 'syncPullRequests' ||
+        task.type === 'syncPullRequestDetails'
+    )
+
+    return { hasSyncInProgress, runningTasks, tasks }
+  }, [tasks])
 
   return (
-    <TasksContext.Provider value={{ hasSyncInProgress, runningTasks, tasks }}>
-      {children}
-    </TasksContext.Provider>
+    <TasksContext.Provider value={value}>{children}</TasksContext.Provider>
   )
 }
 

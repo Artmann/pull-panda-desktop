@@ -86,7 +86,7 @@ export function PullRequestNavigationProvider({
       })
     }
 
-    element.addEventListener('scroll', onScroll)
+    element.addEventListener('scroll', onScroll, { passive: true })
 
     scrollListenerCleanupRef.current = () => {
       element.removeEventListener('scroll', onScroll)

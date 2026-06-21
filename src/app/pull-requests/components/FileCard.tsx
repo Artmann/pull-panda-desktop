@@ -2,6 +2,7 @@ import { ChevronDownIcon, ChevronRightIcon } from 'lucide-react'
 import {
   createContext,
   useContext,
+  useMemo,
   useRef,
   useState,
   type ReactElement,
@@ -35,8 +36,13 @@ export function FileCard({ children, style }: FileCardProps): ReactElement {
   const [isCollapsed, setIsCollapsed] = useState(false)
   const cardRef = useRef<HTMLDivElement>(null)
 
+  const value = useMemo(
+    () => ({ cardRef, isCollapsed, setIsCollapsed }),
+    [isCollapsed]
+  )
+
   return (
-    <FileCardContext.Provider value={{ cardRef, isCollapsed, setIsCollapsed }}>
+    <FileCardContext.Provider value={value}>
       <div
         ref={cardRef}
         className={`
