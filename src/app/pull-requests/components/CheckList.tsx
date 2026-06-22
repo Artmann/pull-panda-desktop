@@ -10,6 +10,7 @@ import { useMemo, type ReactElement } from 'react'
 
 import type { Check } from '@/types/pull-request-details'
 
+import { Link } from '@/app/components/Link'
 import {
   Accordion,
   AccordionContent,
@@ -235,17 +236,9 @@ export function CheckList({ checks }: { checks: Check[] }): ReactElement {
                   >
                     <div className="flex items-center gap-2">
                       {getCheckIcon(check)}
-                      <a
+                      <Link
                         className="hover:underline flex items-baseline gap-2 cursor-pointer"
                         href={check.url ?? undefined}
-                        onClick={(event) => {
-                          if (check.url) {
-                            event.preventDefault()
-                            window.electron.openUrl(check.url)
-                          }
-                        }}
-                        rel="noopener noreferrer"
-                        target="_blank"
                       >
                         <span className="text-sm font-medium">
                           {check.name}
@@ -253,24 +246,15 @@ export function CheckList({ checks }: { checks: Check[] }): ReactElement {
                         <span className="text-xs text-muted-foreground">
                           {getStatusText(check)}
                         </span>
-                      </a>
+                      </Link>
                     </div>
                     {check.url && (
-                      <a
+                      <Link
                         className="text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
                         href={check.url}
-                        onClick={(event) => {
-                          event.preventDefault()
-
-                          if (check.url) {
-                            window.electron.openUrl(check.url)
-                          }
-                        }}
-                        rel="noopener noreferrer"
-                        target="_blank"
                       >
                         <ExternalLink className="size-3" />
-                      </a>
+                      </Link>
                     )}
                   </div>
                 )

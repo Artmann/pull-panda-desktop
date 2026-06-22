@@ -6,6 +6,7 @@ import {
   JiraLogoIcon,
   LinearLogoIcon
 } from '@/app/components/icons'
+import { Link } from '@/app/components/Link'
 
 export const IssueCard = memo(function IssueCard({
   issue
@@ -17,7 +18,7 @@ export const IssueCard = memo(function IssueCard({
   }
 }): ReactElement {
   return (
-    <a
+    <Link
       className={`
         flex items-center gap-4
         rounded-sm border border-border/50 hover:bg-muted
@@ -25,8 +26,6 @@ export const IssueCard = memo(function IssueCard({
         w-full max-w-2xl
       `}
       href={issue.url}
-      rel="noreferrer noopener"
-      target="_blank"
     >
       <div className="size-6 text-foreground">
         {issue.source === 'linear' ? (
@@ -46,6 +45,6 @@ export const IssueCard = memo(function IssueCard({
         )}
         <div className="truncate text-muted-foreground">{issue.url}</div>
       </div>
-    </a>
+    </Link>
   )
 })
