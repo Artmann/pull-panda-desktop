@@ -15,9 +15,9 @@ import remarkRehype, {
 import { type Plugin, unified } from 'unified'
 import { visit } from 'unist-util-visit'
 
+import { Link } from '@/app/components/Link'
 import { scheduleIdleTask } from '@/app/lib/idle-scheduler'
 import { useLazyRender } from '@/app/lib/lazy-render'
-import { useOpenExternalLinks } from '@/app/lib/useOpenExternalLinks'
 
 import {
   ensureLanguageLoaded,
@@ -26,6 +26,12 @@ import {
 } from '@/app/lib/highlighter'
 import { useAppTheme } from '@/app/lib/store/themeContext'
 import { cn } from '@/app/lib/utils'
+
+// Render markdown links with our external-link component so clicks open in the
+// user's browser instead of navigating inside the Electron window. Defined at
+// module scope so the reference stays stable across renders (it feeds the
+// memoised `createMarkdown` callback in `useRemark`).
+const markdownComponents = { a: Link }
 
 // Highlight code blocks in the DOM when they come into view
 async function highlightCodeBlocks(
@@ -93,9 +99,9 @@ export const MarkdownBlock = memo(function MarkdownBlock({
   path?: string
 }): ReactElement {
   const { ref: containerRef, shouldRender } = useLazyRender<HTMLDivElement>()
-  useOpenExternalLinks(containerRef)
   const [result, createMarkdownContent, resetMarkdownContent] = useRemark({
-    path
+    path,
+    rehypeReactOptions: { components: markdownComponents }
   })
   const [isHighlighted, setIsHighlighted] = useState(false)
   const lastContentRef = useRef<string | null>(null)
