@@ -45,7 +45,10 @@ export function startApiServer(getToken: () => string | null): Promise<number> {
       cors({
         origin: '*',
         allowMethods: ['DELETE', 'GET', 'OPTIONS', 'PATCH', 'POST', 'PUT'],
-        allowHeaders: ['Content-Type']
+        // The renderer is cross-origin to the local API server, so the trace
+        // context headers added by `tracedFetch` must be allowed or the CORS
+        // preflight blocks every request.
+        allowHeaders: ['Content-Type', traceIdHeader, parentSpanIdHeader]
       })
     )
 
