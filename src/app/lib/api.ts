@@ -770,6 +770,21 @@ export async function fetchCodeowners(args: {
   return data.owners
 }
 
+export async function getBlobImageUrl(request: {
+  filePath: string
+  owner: string
+  repo: string
+  sha: string
+}): Promise<string> {
+  const baseUrl = await getApiBaseUrl()
+  const params = new URLSearchParams({ path: request.filePath })
+  const owner = encodeURIComponent(request.owner)
+  const repo = encodeURIComponent(request.repo)
+  const sha = encodeURIComponent(request.sha)
+
+  return `${baseUrl}/api/repos/${owner}/${repo}/blobs/${sha}?${params}`
+}
+
 export async function triggerSync(): Promise<void> {
   const baseUrl = await getApiBaseUrl()
 

@@ -227,6 +227,7 @@ export const modifiedFiles = sqliteTable(
     changes: integer('changes'),
 
     diffHunk: text('diff_hunk'),
+    blobSha: text('blob_sha'),
 
     syncedAt: text('synced_at').notNull(),
     deletedAt: text('deleted_at')

@@ -11,9 +11,11 @@ import { CopyToClipboardButton } from '@/app/components/CopyToClipboardButton'
 import { useAppTheme } from '@/app/lib/store/themeContext'
 import { useAppSelector } from '@/app/store/hooks'
 import { type PendingReviewComment } from '@/app/store/pending-review-comments-slice'
+import { isImagePath } from '@/lib/images'
 import { useLandmark } from '@/app/pull-requests/PullRequestNavigationProvider'
 import { FileCard, FileCardBody, FileCardHeader } from '../components/FileCard'
 import { SimpleDiff } from '../diffs/SimpleDiff'
+import { ImageFileView } from './ImageFileView'
 
 const emptyPendingComments: PendingReviewComment[] = []
 
@@ -36,6 +38,7 @@ export const ModifiedFileCard = memo(function ModifiedFileCard({
     : appTheme.light.background
 
   const filePath = file.filePath
+  const isImage = isImagePath(filePath)
   const viewFileUrl = `https://github.com/${pullRequest.repositoryOwner}/${pullRequest.repositoryName}/blob/HEAD/${encodeURI(filePath)}`
 
   const allPendingComments = useAppSelector(
@@ -100,7 +103,12 @@ export const ModifiedFileCard = memo(function ModifiedFileCard({
           fallback={<DiffQueuedFallback />}
           lazy={Boolean(file.diffHunk)}
         >
-          {file.diffHunk ? (
+          {isImage ? (
+            <ImageFileView
+              file={file}
+              pullRequest={pullRequest}
+            />
+          ) : file.diffHunk ? (
             <SimpleDiff
               diffHunk={file.diffHunk}
               filePath={file.filePath}

@@ -288,6 +288,7 @@ describe('PullRequestPage', () => {
             deletions: 5,
             changes: 15,
             diffHunk: null,
+            blobSha: null,
             syncedAt: '2024-01-01T00:00:00Z'
           },
           {
@@ -300,6 +301,7 @@ describe('PullRequestPage', () => {
             deletions: 0,
             changes: 20,
             diffHunk: null,
+            blobSha: null,
             syncedAt: '2024-01-01T00:00:00Z'
           }
         ]

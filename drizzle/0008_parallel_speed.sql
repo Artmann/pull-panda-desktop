@@ -1,0 +1,1 @@
+ALTER TABLE `modified_files` ADD `blob_sha` text;
