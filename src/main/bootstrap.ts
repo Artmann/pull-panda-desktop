@@ -419,6 +419,7 @@ export async function getPullRequestDetails(
     deletions: row.deletions,
     changes: row.changes,
     diffHunk: row.diffHunk,
+    blobSha: row.blobSha,
     syncedAt: row.syncedAt
   }))
 

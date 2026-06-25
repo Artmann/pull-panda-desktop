@@ -93,6 +93,7 @@ export interface ModifiedFile {
   deletions: number | null
   changes: number | null
   diffHunk: string | null
+  blobSha: string | null
   syncedAt: string
 }
 

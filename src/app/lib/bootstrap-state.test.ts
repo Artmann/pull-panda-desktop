@@ -75,6 +75,7 @@ const commit: Commit = {
 
 const modifiedFile: ModifiedFile = {
   additions: 1,
+  blobSha: null,
   changes: 1,
   deletions: 0,
   diffHunk: null,

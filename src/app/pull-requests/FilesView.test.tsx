@@ -59,6 +59,7 @@ function createMockFile(overrides: Partial<ModifiedFile> = {}): ModifiedFile {
     deletions: 5,
     changes: 15,
     diffHunk: '@@ -1,5 +1,5 @@\n context\n-old line\n+new line',
+    blobSha: null,
     syncedAt: '2024-01-01T00:00:00Z',
     ...overrides
   }
@@ -276,6 +277,41 @@ describe('FilesView', () => {
     })
 
     expect(screen.getByText('No changes to display.')).toBeInTheDocument()
+  })
+
+  it('renders an image preview for image files instead of the diff', async () => {
+    window.electron = {
+      getApiPort: vi.fn().mockResolvedValue(54321)
+    } as unknown as typeof window.electron
+
+    const pullRequest = createMockPullRequest({
+      repositoryOwner: 'octocat',
+      repositoryName: 'demo'
+    })
+    const files = [
+      createMockFile({
+        id: 'f1',
+        filename: 'logo.png',
+        filePath: 'assets/logo.png',
+        status: 'added',
+        diffHunk: null,
+        blobSha: 'abc123'
+      })
+    ]
+    const store = createTestStore({
+      modifiedFiles: files
+    })
+
+    await act(async () => {
+      renderWithProviders(<FilesView pullRequest={pullRequest} />, { store })
+    })
+
+    const image = await screen.findByAltText('assets/logo.png')
+
+    expect(image.getAttribute('src')).toEqual(
+      'http://localhost:54321/api/repos/octocat/demo/blobs/abc123?path=assets%2Flogo.png'
+    )
+    expect(screen.queryByText('No changes to display.')).not.toBeInTheDocument()
   })
 
   it('sorts dotfiles and dotfolders after regular files', async () => {

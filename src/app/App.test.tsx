@@ -271,6 +271,7 @@ describe('App', () => {
               deletions: 5,
               changes: 15,
               diffHunk: null,
+              blobSha: null,
               syncedAt: '2024-01-01T00:00:00Z'
             }
           ]

@@ -57,6 +57,13 @@
       "when": 1778826598223,
       "tag": "0007_far_storm",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "6",
+      "when": 1782395857698,
+      "tag": "0008_parallel_speed",
+      "breakpoints": true
     }
   ]
 }

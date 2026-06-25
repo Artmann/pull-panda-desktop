@@ -32,6 +32,7 @@ const buildModifiedFileRecord = (
   deletions: fileData.deletions ?? null,
   changes: fileData.changes ?? null,
   diffHunk: fileData.patch ?? null,
+  blobSha: fileData.sha ?? null,
   syncedAt: now,
   deletedAt: null
 })
