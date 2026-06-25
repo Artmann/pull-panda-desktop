@@ -92,6 +92,7 @@ typings/
 out/
 
 pull-panda.db
+pull-panda-telemetry.db
 
 bin/
 .fallow/

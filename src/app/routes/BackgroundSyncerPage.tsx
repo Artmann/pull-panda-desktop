@@ -69,7 +69,19 @@ export function BackgroundSyncerPage(): ReactElement {
           </Button>
         </Link>
 
-        <h1 className="text-2xl font-bold">Background Syncer Monitor</h1>
+        <div className="flex items-center justify-between">
+          <h1 className="text-2xl font-bold">Background Syncer Monitor</h1>
+
+          <Link to="/telemetry">
+            <Button
+              variant="outline"
+              size="sm"
+            >
+              <Activity className="h-4 w-4 mr-2" />
+              Telemetry
+            </Button>
+          </Link>
+        </div>
         <p className="text-muted-foreground text-sm">
           Real-time monitoring of sync operations and rate limits.
         </p>

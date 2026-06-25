@@ -192,7 +192,18 @@ export const GitHubGraphQLLive: Layer.Layer<
           )
         })
 
-        return retryTransport(broker.withSlot('graphql', performRequest))
+        const operationName =
+          /(?:query|mutation)\s+(\w+)/.exec(queryText)?.[1] ?? 'anonymous'
+
+        return retryTransport(broker.withSlot('graphql', performRequest)).pipe(
+          Effect.withSpan(`github.graphql ${operationName}`, {
+            kind: 'client',
+            attributes: {
+              'github.api': 'graphql',
+              'graphql.operation': operationName
+            }
+          })
+        )
       }
     }
   })

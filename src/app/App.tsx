@@ -30,7 +30,12 @@ import { PullRequestNavigationProvider } from '@/app/pull-requests/PullRequestNa
 import { PullRequestPage } from '@/app/routes/PullRequestPage'
 import { SettingsPage } from '@/app/routes/SettingsPage'
 import { SignInPage } from '@/app/routes/SignInPage'
+import { TelemetryPage } from '@/app/routes/TelemetryPage'
 import { getSavedRoute, saveRoute } from '@/app/lib/routePersistence'
+import {
+  initializeRendererTelemetry,
+  startSpan
+} from '@/app/lib/telemetry/tracer'
 import { useAppDispatch } from '@/app/store/hooks'
 import { resourceEventToAction } from '@/app/store/resource-event-to-action'
 import { AppFooter } from './AppFooter'
@@ -67,6 +72,22 @@ function AppContent(): ReactElement {
   const { status, isNewSignIn } = useAuth()
   const dispatch = useAppDispatch()
   const navigate = useNavigate()
+  const location = useLocation()
+
+  // Enable renderer telemetry once (no-ops in packaged builds).
+  useEffect(() => {
+    initializeRendererTelemetry().catch(() => {
+      // Telemetry is best-effort and must never disrupt app startup.
+    })
+  }, [])
+
+  // Record a renderer span for each navigation so the dashboard shows a
+  // timeline of which views the user moved between.
+  useEffect(() => {
+    startSpan(`navigate ${location.pathname}`, {
+      attributes: { path: location.pathname }
+    }).end()
+  }, [location.pathname])
 
   // Listen for navigation requests from the main process
   useEffect(() => {
@@ -177,6 +198,12 @@ function AppRoutes({
         path="/settings"
         element={
           isAuthenticated ? <SettingsPage /> : <Navigate to="/sign-in" />
+        }
+      />
+      <Route
+        path="/telemetry"
+        element={
+          isAuthenticated ? <TelemetryPage /> : <Navigate to="/sign-in" />
         }
       />
     </Routes>

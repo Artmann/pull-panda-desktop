@@ -2,6 +2,15 @@ import { contextBridge, ipcRenderer } from 'electron'
 
 import { ipcChannels } from './lib/ipc/channels'
 import type { BootstrapData } from './main/bootstrap'
+import type {
+  LogRecord,
+  QueryLogsParams,
+  QueryTracesParams,
+  TelemetryBatch,
+  TelemetryStats,
+  TraceDetail,
+  TraceSummary
+} from './telemetry/types'
 import type { DeviceCodeResponse, GitHubUser } from './types/auth'
 import type { ResourceUpdatedEvent } from './types/ipc-events'
 import type { MonitoringData } from './types/syncer-monitoring'
@@ -74,6 +83,26 @@ const electronApi = {
     ipcRenderer.invoke(ipcChannels.GetSyncerStats)
 }
 
+const telemetryApi = {
+  isEnabled: (): Promise<boolean> =>
+    ipcRenderer.invoke(ipcChannels.TelemetryEnabled),
+
+  record: (batch: TelemetryBatch): Promise<void> =>
+    ipcRenderer.invoke(ipcChannels.TelemetryRecord, batch),
+
+  queryTraces: (params: QueryTracesParams): Promise<TraceSummary[]> =>
+    ipcRenderer.invoke(ipcChannels.TelemetryQueryTraces, params),
+
+  getTrace: (traceId: string): Promise<TraceDetail> =>
+    ipcRenderer.invoke(ipcChannels.TelemetryGetTrace, traceId),
+
+  queryLogs: (params: QueryLogsParams): Promise<LogRecord[]> =>
+    ipcRenderer.invoke(ipcChannels.TelemetryQueryLogs, params),
+
+  getStats: (): Promise<TelemetryStats> =>
+    ipcRenderer.invoke(ipcChannels.TelemetryGetStats)
+}
+
 const authApi = {
   requestDeviceCode: (): Promise<DeviceCodeResponse> =>
     ipcRenderer.invoke(ipcChannels.AuthRequestDeviceCode),
@@ -99,11 +128,13 @@ const authApi = {
 
 contextBridge.exposeInMainWorld('electron', electronApi)
 contextBridge.exposeInMainWorld('auth', authApi)
+contextBridge.exposeInMainWorld('telemetry', telemetryApi)
 
 // TypeScript declarations for the exposed API
 declare global {
   interface Window {
     auth: typeof authApi
     electron: typeof electronApi
+    telemetry: typeof telemetryApi
   }
 }

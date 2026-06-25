@@ -76,6 +76,30 @@ write "None").
 - `bun run inspect-pr <number>` - Dump all local DB data for a PR (reviews,
   comments, checks, commits, files). Use `--brief` for just the PR record,
   `--repo owner/name` to disambiguate across repos.
+- `bun run inspect-traces` - Query the local OTEL-style telemetry (see
+  Observability below). Lists recent traces; `--trace <id>` prints the span
+  waterfall + correlated logs, `--slow` sorts by duration, `--errors` filters to
+  error traces, `--op <name>` filters by operation, `--since 5m` bounds the
+  window, `--stats` shows per-operation p50/p95, and `--json` emits
+  machine-readable output for agents.
+
+## Observability (local OTEL-style telemetry)
+
+Dev builds capture OTEL-shaped spans and logs locally — nothing is sent to any
+server. The Effect sync layer, GitHub REST/GraphQL calls, DB queries, IPC
+handlers, the HTTP API, and renderer navigation/fetches are all instrumented,
+and trace context propagates renderer → HTTP → Effect so one user action forms a
+single trace.
+
+- Spans/logs are stored in `pull-panda-telemetry.db` (separate from
+  `pull-panda.db`), gated on `!app.isPackaged` so end users are never traced.
+- Instrument new Effect code with `Effect.withSpan('name', { attributes })`;
+  `Effect.logInfo/logError` are captured automatically. Non-Effect main code
+  uses `withSpan`/`startSpan` from `src/telemetry/span.ts`; the renderer uses
+  `startSpan` from `src/app/lib/telemetry/tracer.ts` and `tracedFetch`.
+- View it in the app at `/telemetry` (command palette → "Open Telemetry
+  Dashboard", or a link from `/bg`), or query it from the terminal with
+  `bun run inspect-traces`.
 
 ## Driving the running app with agent-browser
 
