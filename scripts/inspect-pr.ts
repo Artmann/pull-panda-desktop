@@ -3,7 +3,7 @@ import path from 'node:path'
 
 import { drizzle, type SQLJsDatabase } from 'drizzle-orm/sql-js'
 import { and, eq, isNull } from 'drizzle-orm'
-import initSqlJs, { type Database } from 'sql.js'
+import { type Database } from 'sql.js'
 
 import {
   checks,
@@ -14,17 +14,9 @@ import {
   pullRequests,
   reviews
 } from '../src/database/schema'
+import { bold, cyan, dim, green, loadSqlJs, red, yellow } from './cli-utils'
 
 type PullRequest = typeof pullRequests.$inferSelect
-
-// ANSI colors
-
-const bold = (text: string) => `\x1b[1m${text}\x1b[0m`
-const cyan = (text: string) => `\x1b[36m${text}\x1b[0m`
-const dim = (text: string) => `\x1b[2m${text}\x1b[0m`
-const green = (text: string) => `\x1b[32m${text}\x1b[0m`
-const red = (text: string) => `\x1b[31m${text}\x1b[0m`
-const yellow = (text: string) => `\x1b[33m${text}\x1b[0m`
 
 // Fields to omit from JSON output (replaced with length placeholder)
 
@@ -156,20 +148,7 @@ async function openDatabase(): Promise<{
     process.exit(1)
   }
 
-  const wasmPath = path.join(
-    process.cwd(),
-    'node_modules',
-    'sql.js',
-    'dist',
-    'sql-wasm.wasm'
-  )
-  const wasmBuffer = fs.readFileSync(wasmPath)
-  const wasmBinary = wasmBuffer.buffer.slice(
-    wasmBuffer.byteOffset,
-    wasmBuffer.byteOffset + wasmBuffer.byteLength
-  ) as ArrayBuffer
-
-  const SQL = await initSqlJs({ wasmBinary })
+  const SQL = await loadSqlJs()
   const fileBuffer = fs.readFileSync(databasePath)
   const sqlite = new SQL.Database(fileBuffer)
   const database = drizzle(sqlite)

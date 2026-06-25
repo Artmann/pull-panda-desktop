@@ -14,6 +14,12 @@ export const ipcChannels = {
   ResourceUpdated: 'resource:updated',
   SyncComplete: 'sync:complete',
   TaskUpdate: 'tasks:update',
+  TelemetryEnabled: 'telemetry:enabled',
+  TelemetryGetStats: 'telemetry:get-stats',
+  TelemetryGetTrace: 'telemetry:get-trace',
+  TelemetryQueryLogs: 'telemetry:query-logs',
+  TelemetryQueryTraces: 'telemetry:query-traces',
+  TelemetryRecord: 'telemetry:record',
   WindowClose: 'window:close',
   WindowMaximize: 'window:maximize',
   WindowMinimize: 'window:minimize'

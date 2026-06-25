@@ -1,4 +1,11 @@
-import { app, BrowserWindow, ipcMain, screen, shell } from 'electron'
+import {
+  app,
+  BrowserWindow,
+  ipcMain,
+  screen,
+  shell,
+  type IpcMainInvokeEvent
+} from 'electron'
 import { Effect } from 'effect'
 import started from 'electron-squirrel-startup'
 import path from 'node:path'
@@ -31,6 +38,14 @@ import {
   tryGetAppRuntime
 } from './sync/runtime'
 import { BackgroundSyncer } from './sync/services/background-syncer'
+import { initializeTelemetry, shutdownTelemetry } from './telemetry/lifecycle'
+import { withSpan } from './telemetry/span'
+import { getTelemetryStore } from './telemetry/store'
+import type {
+  QueryLogsParams,
+  QueryTracesParams,
+  TelemetryBatch
+} from './telemetry/types'
 import { loadToken } from './auth'
 import {
   clearStoredToken,
@@ -66,26 +81,41 @@ const developmentIconPath = app.isPackaged
 
 app.commandLine.appendSwitch('font-render-hinting', 'none')
 
+// Registers an IPC handler whose invocation is recorded as a telemetry span, so
+// the time spent handling each renderer request shows up in the dashboard.
+function handleWithSpan<Args extends unknown[], Result>(
+  channel: string,
+  handler: (event: IpcMainInvokeEvent, ...args: Args) => Result
+): void {
+  ipcMain.handle(channel, (event, ...args: Args) =>
+    withSpan(
+      `ipc ${channel}`,
+      { kind: 'server', attributes: { 'ipc.channel': channel } },
+      () => handler(event, ...args)
+    )
+  )
+}
+
 function setupIpcHandlers(): void {
-  ipcMain.handle(ipcChannels.ApiGetPort, () => {
+  handleWithSpan(ipcChannels.ApiGetPort, () => {
     return getApiPort()
   })
 
-  ipcMain.handle(ipcChannels.GetBootstrapData, () => {
+  handleWithSpan(ipcChannels.GetBootstrapData, () => {
     return bootstrapData
   })
 
-  ipcMain.handle(ipcChannels.GetTasks, () => {
+  handleWithSpan(ipcChannels.GetTasks, () => {
     return taskManager.getTasks()
   })
 
-  ipcMain.handle(ipcChannels.AuthRequestDeviceCode, () => {
+  handleWithSpan(ipcChannels.AuthRequestDeviceCode, () => {
     const runtime = getAppRuntime()
 
     return runtime.runPromise(requestDeviceCodeOperation)
   })
 
-  ipcMain.handle(
+  handleWithSpan(
     ipcChannels.AuthPollToken,
     (_event, deviceCode: string, interval: number) => {
       const runtime = getAppRuntime()
@@ -94,13 +124,13 @@ function setupIpcHandlers(): void {
     }
   )
 
-  ipcMain.handle(ipcChannels.AuthGetToken, () => {
+  handleWithSpan(ipcChannels.AuthGetToken, () => {
     const runtime = getAppRuntime()
 
     return runtime.runPromise(loadStoredToken)
   })
 
-  ipcMain.handle(ipcChannels.AuthClearToken, () => {
+  handleWithSpan(ipcChannels.AuthClearToken, () => {
     const runtime = getAppRuntime()
 
     setCachedUserLogin(undefined)
@@ -108,19 +138,19 @@ function setupIpcHandlers(): void {
     return runtime.runPromise(clearStoredToken)
   })
 
-  ipcMain.handle(ipcChannels.AuthOpenUrl, async (_event, url: string) => {
+  handleWithSpan(ipcChannels.AuthOpenUrl, async (_event, url: string) => {
     await shell.openExternal(url)
 
     return { success: true }
   })
 
-  ipcMain.handle(ipcChannels.OpenUrl, async (_event, url: string) => {
+  handleWithSpan(ipcChannels.OpenUrl, async (_event, url: string) => {
     await shell.openExternal(url)
 
     return { success: true }
   })
 
-  ipcMain.handle(ipcChannels.AuthGetUser, async () => {
+  handleWithSpan(ipcChannels.AuthGetUser, async () => {
     const runtime = getAppRuntime()
     const user = await runtime.runPromise(getCurrentUser)
 
@@ -129,11 +159,11 @@ function setupIpcHandlers(): void {
     return user
   })
 
-  ipcMain.handle(ipcChannels.WindowClose, () => {
+  handleWithSpan(ipcChannels.WindowClose, () => {
     mainWindow?.close()
   })
 
-  ipcMain.handle(ipcChannels.WindowMaximize, () => {
+  handleWithSpan(ipcChannels.WindowMaximize, () => {
     if (mainWindow?.isMaximized()) {
       mainWindow.unmaximize()
     } else {
@@ -141,15 +171,71 @@ function setupIpcHandlers(): void {
     }
   })
 
-  ipcMain.handle(ipcChannels.WindowMinimize, () => {
+  handleWithSpan(ipcChannels.WindowMinimize, () => {
     mainWindow?.minimize()
   })
 
-  ipcMain.handle(ipcChannels.GetSyncerStats, () => {
+  handleWithSpan(ipcChannels.GetSyncerStats, () => {
     const runtime = getAppRuntime()
 
     return runtime.runPromise(
       Effect.flatMap(BackgroundSyncer, (syncer) => syncer.getMonitoringData)
+    )
+  })
+
+  // Telemetry handlers are registered directly (not via handleWithSpan) so that
+  // observing the telemetry does not itself generate telemetry.
+  ipcMain.handle(ipcChannels.TelemetryEnabled, () => {
+    return getTelemetryStore() !== null
+  })
+
+  ipcMain.handle(
+    ipcChannels.TelemetryRecord,
+    (_event, batch: TelemetryBatch) => {
+      const store = getTelemetryStore()
+
+      if (!store) {
+        return
+      }
+
+      store.recordSpans(batch.spans)
+      store.recordLogs(batch.logs)
+    }
+  )
+
+  ipcMain.handle(
+    ipcChannels.TelemetryQueryTraces,
+    (_event, params: QueryTracesParams) => {
+      return getTelemetryStore()?.queryTraces(params) ?? []
+    }
+  )
+
+  ipcMain.handle(ipcChannels.TelemetryGetTrace, (_event, traceId: string) => {
+    return (
+      getTelemetryStore()?.getTrace(traceId) ?? {
+        traceId,
+        spans: [],
+        logs: []
+      }
+    )
+  })
+
+  ipcMain.handle(
+    ipcChannels.TelemetryQueryLogs,
+    (_event, params: QueryLogsParams) => {
+      return getTelemetryStore()?.queryLogs(params) ?? []
+    }
+  )
+
+  ipcMain.handle(ipcChannels.TelemetryGetStats, () => {
+    return (
+      getTelemetryStore()?.stats() ?? {
+        traceCount: 0,
+        spanCount: 0,
+        logCount: 0,
+        errorTraceCount: 0,
+        operations: []
+      }
     )
   })
 }
@@ -359,6 +445,10 @@ app.on('ready', async () => {
 
   // Initialize database before anything else
   await initializeDatabase()
+
+  // Initialize local telemetry (dev-only) before the runtime so the Effect
+  // tracer/logger can write spans and logs from the very first sync.
+  await initializeTelemetry()
 
   // Initialize the sync runtime now that the database is ready.
   const runtime = initializeAppRuntime(loadToken)
@@ -591,6 +681,7 @@ app.on('before-quit', (event) => {
 
   if (!runtime) {
     stopApiServer()
+    shutdownTelemetry()
     closeDatabase()
     app.quit()
 
@@ -613,6 +704,7 @@ app.on('before-quit', (event) => {
     )
     .finally(() => {
       stopApiServer()
+      shutdownTelemetry()
       closeDatabase()
       app.quit()
     })

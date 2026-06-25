@@ -29,6 +29,7 @@
     "fallow": "fallow",
     "format": "prettier --write .",
     "inspect-pr": "bun scripts/inspect-pr.ts",
+    "inspect-traces": "bun scripts/inspect-traces.ts",
     "lint": "eslint --ext .ts,.tsx .",
     "make": "electron-forge make",
     "package": "electron-forge package",

@@ -31,5 +31,10 @@ export const DatabaseLive: Layer.Layer<Database> = Layer.succeed(Database, {
           catch: (cause) => new DatabaseQueryError({ operation, cause })
         })
       }
+    ).pipe(
+      Effect.withSpan(`db.${operation}`, {
+        kind: 'client',
+        attributes: { 'db.operation': operation }
+      })
     )
 })

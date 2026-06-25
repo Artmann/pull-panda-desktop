@@ -46,7 +46,7 @@ function getMigrationsPath(): string {
   return path.join(process.resourcesPath, 'drizzle')
 }
 
-function getWasmPath(): string {
+export function getWasmPath(): string {
   if (isCliMode()) {
     // Use Node.js module resolution to find sql.js regardless of npm
     // hoisting. sql.js main entry resolves to dist/sql-wasm.js, so

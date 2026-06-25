@@ -8,6 +8,12 @@ import { Hono } from 'hono'
 import { cors } from 'hono/cors'
 import type { ContentfulStatusCode } from 'hono/utils/http-status'
 
+import {
+  childContext,
+  parentSpanIdHeader,
+  startSpan,
+  traceIdHeader
+} from '../../telemetry/span'
 import { type AppEnv } from './effect-handler'
 import { getApiMainWindow, setApiMainWindow } from './main-window-ref'
 import { checksRoute } from './routes/checks'
@@ -39,7 +45,10 @@ export function startApiServer(getToken: () => string | null): Promise<number> {
       cors({
         origin: '*',
         allowMethods: ['DELETE', 'GET', 'OPTIONS', 'PATCH', 'POST', 'PUT'],
-        allowHeaders: ['Content-Type']
+        // The renderer is cross-origin to the local API server, so the trace
+        // context headers added by `tracedFetch` must be allowed or the CORS
+        // preflight blocks every request.
+        allowHeaders: ['Content-Type', traceIdHeader, parentSpanIdHeader]
       })
     )
 
@@ -52,6 +61,46 @@ export function startApiServer(getToken: () => string | null): Promise<number> {
 
       context.set('token', token)
       await next()
+    })
+
+    // Open a span per request, parented to the renderer span when the trace
+    // context headers are present, and expose its child context so the route's
+    // Effect work nests under it (see `effectHandler`).
+    app.use('*', async (context, next) => {
+      const traceId = context.req.header(traceIdHeader)
+      const parentSpanId = context.req.header(parentSpanIdHeader)
+      const span = startSpan(
+        `http ${context.req.method} ${context.req.path}`,
+        {
+          kind: 'server',
+          attributes: {
+            'http.method': context.req.method,
+            'http.path': context.req.path
+          },
+          parent: traceId && parentSpanId ? { traceId, parentSpanId } : null
+        }
+      )
+
+      context.set('traceContext', childContext(span))
+
+      try {
+        await next()
+
+        span.setAttribute('http.status', context.res.status)
+
+        if (context.res.status >= 500) {
+          span.setStatus('error', `HTTP ${context.res.status}`)
+        }
+      } catch (error) {
+        span.setStatus(
+          'error',
+          error instanceof Error ? error.message : String(error)
+        )
+
+        throw error
+      } finally {
+        span.end()
+      }
     })
 
     app.route('/api/checks', checksRoute)

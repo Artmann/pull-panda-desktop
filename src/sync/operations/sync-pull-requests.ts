@@ -477,7 +477,7 @@ export const syncPullRequests: Effect.Effect<
     errors,
     hasChanges
   }
-})
+}).pipe(Effect.withSpan('sync.pullRequests'))
 
 export const syncStalePullRequests = (
   syncedIds: ReadonlySet<string>
@@ -549,4 +549,4 @@ export const syncStalePullRequests = (
     }
 
     return updated + deleted
-  })
+  }).pipe(Effect.withSpan('sync.stalePullRequests'))

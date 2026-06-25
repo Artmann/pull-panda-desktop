@@ -31,16 +31,56 @@ export interface NamedOperation {
   >
 }
 
+const spanAttributes = (params: SyncPullRequestDetailsParams) => ({
+  'pr.id': params.pullRequestId,
+  'pr.number': params.pullNumber,
+  repository: `${params.owner}/${params.repositoryName}`
+})
+
 const buildOperations = (
   params: SyncPullRequestDetailsParams
-): ReadonlyArray<NamedOperation> => [
-  { name: 'Checks', effect: syncChecks(params) },
-  { name: 'Commits', effect: syncCommits(params) },
-  { name: 'Files', effect: syncFiles(params) },
-  { name: 'Reviews', effect: syncReviews(params) },
-  { name: 'Comments', effect: syncComments(params) },
-  { name: 'ReviewThreads', effect: syncReviewThreads(params) }
-]
+): ReadonlyArray<NamedOperation> => {
+  const attributes = spanAttributes(params)
+
+  return [
+    {
+      name: 'Checks',
+      effect: syncChecks(params).pipe(
+        Effect.withSpan('sync.checks', { attributes })
+      )
+    },
+    {
+      name: 'Commits',
+      effect: syncCommits(params).pipe(
+        Effect.withSpan('sync.commits', { attributes })
+      )
+    },
+    {
+      name: 'Files',
+      effect: syncFiles(params).pipe(
+        Effect.withSpan('sync.files', { attributes })
+      )
+    },
+    {
+      name: 'Reviews',
+      effect: syncReviews(params).pipe(
+        Effect.withSpan('sync.reviews', { attributes })
+      )
+    },
+    {
+      name: 'Comments',
+      effect: syncComments(params).pipe(
+        Effect.withSpan('sync.comments', { attributes })
+      )
+    },
+    {
+      name: 'ReviewThreads',
+      effect: syncReviewThreads(params).pipe(
+        Effect.withSpan('sync.reviewThreads', { attributes })
+      )
+    }
+  ]
+}
 
 const isNotFoundCause = (cause: unknown): boolean => {
   if (!cause || typeof cause !== 'object') {
@@ -132,7 +172,10 @@ const runDetails = (
   SyncPullRequestDetailsResult,
   never,
   Database | GitHubRest | GitHubGraphQL | EtagStore
-> => runDetailsWithOperations(params, buildOperations(params))
+> =>
+  runDetailsWithOperations(params, buildOperations(params)).pipe(
+    Effect.withSpan('sync.pullRequestDetails', { attributes: spanAttributes(params) })
+  )
 
 type DetailsFiber = Fiber.RuntimeFiber<SyncPullRequestDetailsResult, never>
 

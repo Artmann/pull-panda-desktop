@@ -282,7 +282,12 @@ export const GitHubRestLive: Layer.Layer<
           return Option.some(decoded)
         })
 
-        return retryTransport(broker.withSlot('rest', performRequest))
+        return retryTransport(broker.withSlot('rest', performRequest)).pipe(
+          Effect.withSpan(`github.rest ${route}`, {
+            kind: 'client',
+            attributes: { 'github.api': 'rest', 'http.route': route }
+          })
+        )
       }
     }
   })

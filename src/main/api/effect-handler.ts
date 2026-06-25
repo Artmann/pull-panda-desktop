@@ -1,9 +1,10 @@
-import { Cause, Effect, Exit, Option } from 'effect'
+import { Cause, Effect, Exit, Option, Tracer } from 'effect'
 import type { Context as HonoContext } from 'hono'
 import type { ContentfulStatusCode } from 'hono/utils/http-status'
 
 import type { AppLayer } from '../../sync/layer'
 import { getAppRuntime } from '../../sync/runtime'
+import type { TraceContext } from '../../telemetry/types'
 import { errorToHttp, ValidationError, type RouteError } from './errors'
 import type { Layer } from 'effect'
 
@@ -12,6 +13,7 @@ export type AppServices = Layer.Layer.Success<AppLayer>
 export type AppEnv = {
   Variables: {
     token: string
+    traceContext?: TraceContext
   }
 }
 
@@ -21,7 +23,22 @@ export const effectHandler =
   ) =>
   async (context: HonoContext<AppEnv>) => {
     const runtime = getAppRuntime()
-    const exit = await runtime.runPromiseExit(make(context))
+
+    // Link the route's Effect spans to the HTTP request span (and, through it,
+    // to the originating renderer span) so the whole chain forms one trace.
+    const traceContext = context.get('traceContext')
+    const effect = traceContext
+      ? make(context).pipe(
+          Effect.withParentSpan(
+            Tracer.externalSpan({
+              traceId: traceContext.traceId,
+              spanId: traceContext.parentSpanId
+            })
+          )
+        )
+      : make(context)
+
+    const exit = await runtime.runPromiseExit(effect)
 
     return Exit.match(exit, {
       onSuccess: (value) => {

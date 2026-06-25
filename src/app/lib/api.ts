@@ -1,3 +1,4 @@
+import { tracedFetch } from '@/app/lib/telemetry/traced-fetch'
 import type { PullRequest } from '@/types/pull-request'
 import type {
   CheckoutPullRequestResult,
@@ -100,7 +101,7 @@ export async function createReview(
 ): Promise<CreateReviewResponse> {
   const baseUrl = await getApiBaseUrl()
 
-  const response = await fetch(`${baseUrl}/api/reviews`, {
+  const response = await tracedFetch(`${baseUrl}/api/reviews`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json'
@@ -127,7 +128,7 @@ export async function getPendingReview(
     repo: request.repo
   })
 
-  const response = await fetch(`${baseUrl}/api/reviews/pending?${params}`)
+  const response = await tracedFetch(`${baseUrl}/api/reviews/pending?${params}`)
 
   if (!response.ok) {
     const error = await response.json()
@@ -145,7 +146,7 @@ export async function submitReview(
 ): Promise<void> {
   const baseUrl = await getApiBaseUrl()
 
-  const response = await fetch(
+  const response = await tracedFetch(
     `${baseUrl}/api/reviews/${request.reviewId}/submit`,
     {
       method: 'POST',
@@ -180,7 +181,7 @@ export async function deleteReview(
     repo: request.repo
   })
 
-  const response = await fetch(
+  const response = await tracedFetch(
     `${baseUrl}/api/reviews/${request.reviewId}?${params}`,
     {
       method: 'DELETE',
@@ -215,7 +216,7 @@ export async function resolveReviewThread(
 ): Promise<ReviewThreadResolutionResponse> {
   const baseUrl = await getApiBaseUrl()
 
-  const response = await fetch(`${baseUrl}/api/review-threads/resolve`, {
+  const response = await tracedFetch(`${baseUrl}/api/review-threads/resolve`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json'
@@ -239,7 +240,7 @@ export async function unresolveReviewThread(
 ): Promise<ReviewThreadResolutionResponse> {
   const baseUrl = await getApiBaseUrl()
 
-  const response = await fetch(`${baseUrl}/api/review-threads/unresolve`, {
+  const response = await tracedFetch(`${baseUrl}/api/review-threads/unresolve`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json'
@@ -263,7 +264,7 @@ export async function createComment(
 ): Promise<CreateCommentResponse> {
   const baseUrl = await getApiBaseUrl()
 
-  const response = await fetch(`${baseUrl}/api/comments`, {
+  const response = await tracedFetch(`${baseUrl}/api/comments`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json'
@@ -287,7 +288,7 @@ export async function markPullRequestActive(
 ): Promise<void> {
   const baseUrl = await getApiBaseUrl()
 
-  const response = await fetch(
+  const response = await tracedFetch(
     `${baseUrl}/api/pull-requests/${pullRequestId}/activate`,
     {
       method: 'POST',
@@ -316,7 +317,7 @@ export async function setFocusedPullRequest(
 ): Promise<void> {
   const baseUrl = await getApiBaseUrl()
 
-  const response = await fetch(
+  const response = await tracedFetch(
     `${baseUrl}/api/pull-requests/${pullRequestId}/focus`,
     {
       method: 'POST',
@@ -334,7 +335,7 @@ export async function setFocusedPullRequest(
 export async function clearFocusedPullRequest(): Promise<void> {
   const baseUrl = await getApiBaseUrl()
 
-  const response = await fetch(`${baseUrl}/api/pull-requests/focus/clear`, {
+  const response = await tracedFetch(`${baseUrl}/api/pull-requests/focus/clear`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json'
@@ -351,7 +352,7 @@ export async function syncPullRequestDetails(
 ): Promise<void> {
   const baseUrl = await getApiBaseUrl()
 
-  const response = await fetch(
+  const response = await tracedFetch(
     `${baseUrl}/api/pull-requests/${pullRequestId}/sync`,
     {
       method: 'POST',
@@ -391,7 +392,7 @@ export async function getMergeOptions(
 ): Promise<MergeOptions> {
   const baseUrl = await getApiBaseUrl()
 
-  const response = await fetch(
+  const response = await tracedFetch(
     `${baseUrl}/api/pull-requests/${pullRequestId}/merge-options`,
     {
       method: 'GET',
@@ -427,7 +428,7 @@ export async function mergePullRequest(
 ): Promise<PullRequest> {
   const baseUrl = await getApiBaseUrl()
 
-  const response = await fetch(
+  const response = await tracedFetch(
     `${baseUrl}/api/pull-requests/${request.pullRequestId}/merge`,
     {
       method: 'POST',
@@ -473,7 +474,7 @@ export async function updatePullRequestBranch(
 ): Promise<void> {
   const baseUrl = await getApiBaseUrl()
 
-  const response = await fetch(
+  const response = await tracedFetch(
     `${baseUrl}/api/pull-requests/${request.pullRequestId}/update-branch`,
     {
       method: 'POST',
@@ -516,7 +517,7 @@ export async function updatePullRequest(
 ): Promise<PullRequest> {
   const baseUrl = await getApiBaseUrl()
 
-  const response = await fetch(
+  const response = await tracedFetch(
     `${baseUrl}/api/pull-requests/${request.pullRequestId}`,
     {
       method: 'PATCH',
@@ -549,7 +550,7 @@ export async function updatePullRequest(
 export async function pickRepoFolder(): Promise<PickFolderResult> {
   const baseUrl = await getApiBaseUrl()
 
-  const response = await fetch(`${baseUrl}/api/repo-checkout/pick-folder`, {
+  const response = await tracedFetch(`${baseUrl}/api/repo-checkout/pick-folder`, {
     method: 'POST'
   })
 
@@ -566,7 +567,7 @@ export async function verifyConnectedRepo(args: {
 }): Promise<VerifyRepoResult> {
   const baseUrl = await getApiBaseUrl()
 
-  const response = await fetch(`${baseUrl}/api/repo-checkout/verify`, {
+  const response = await tracedFetch(`${baseUrl}/api/repo-checkout/verify`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json'
@@ -591,7 +592,7 @@ export async function cloneConnectedRepo(args: {
 }): Promise<CloneRepoResult> {
   const baseUrl = await getApiBaseUrl()
 
-  const response = await fetch(`${baseUrl}/api/repo-checkout/clone`, {
+  const response = await tracedFetch(`${baseUrl}/api/repo-checkout/clone`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json'
@@ -616,7 +617,7 @@ export async function setConnectedRepo(args: {
 }): Promise<void> {
   const baseUrl = await getApiBaseUrl()
 
-  const response = await fetch(`${baseUrl}/api/repo-checkout/set`, {
+  const response = await tracedFetch(`${baseUrl}/api/repo-checkout/set`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json'
@@ -638,7 +639,7 @@ export async function checkoutPullRequestBranch(
 ): Promise<CheckoutPullRequestResult> {
   const baseUrl = await getApiBaseUrl()
 
-  const response = await fetch(`${baseUrl}/api/repo-checkout/checkout`, {
+  const response = await tracedFetch(`${baseUrl}/api/repo-checkout/checkout`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json'
@@ -667,7 +668,7 @@ export async function requestReviewers(
 ): Promise<PullRequest> {
   const baseUrl = await getApiBaseUrl()
 
-  const response = await fetch(
+  const response = await tracedFetch(
     `${baseUrl}/api/pull-requests/${request.pullRequestId}/reviewers`,
     {
       method: 'POST',
@@ -692,7 +693,7 @@ export async function removeReviewers(
 ): Promise<PullRequest> {
   const baseUrl = await getApiBaseUrl()
 
-  const response = await fetch(
+  const response = await tracedFetch(
     `${baseUrl}/api/pull-requests/${request.pullRequestId}/reviewers`,
     {
       method: 'DELETE',
@@ -723,7 +724,7 @@ export async function fetchCollaborators(args: {
 }): Promise<Collaborator[]> {
   const baseUrl = await getApiBaseUrl()
 
-  const response = await fetch(
+  const response = await tracedFetch(
     `${baseUrl}/api/repos/${args.owner}/${args.repo}/collaborators`
   )
 
@@ -753,7 +754,7 @@ export async function fetchCodeowners(args: {
   const baseUrl = await getApiBaseUrl()
 
   const params = new URLSearchParams({ pullRequestId: args.pullRequestId })
-  const response = await fetch(
+  const response = await tracedFetch(
     `${baseUrl}/api/repos/${args.owner}/${args.repo}/codeowners?${params}`
   )
 
@@ -773,7 +774,7 @@ export async function fetchCodeowners(args: {
 export async function triggerSync(): Promise<void> {
   const baseUrl = await getApiBaseUrl()
 
-  const response = await fetch(`${baseUrl}/api/syncs`, {
+  const response = await tracedFetch(`${baseUrl}/api/syncs`, {
     method: 'POST'
   })
 

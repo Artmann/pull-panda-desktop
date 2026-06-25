@@ -1,5 +1,7 @@
-import { Layer } from 'effect'
+import { Layer, Logger } from 'effect'
 
+import { makeTelemetryLogger } from '../telemetry/effect-logger'
+import { makeTelemetryTracer } from '../telemetry/effect-tracer'
 import { AuthStoreLive } from '../main/services/auth-store'
 import { CodeownersLive } from '../main/services/codeowners'
 import { GitLive } from '../main/services/git'
@@ -59,7 +61,22 @@ export const makeAppLayer = (getToken: () => string | null) => {
     TaskManagerLive
   )
 
-  return Layer.mergeAll(supportServices, scheduler, repository, apiServices)
+  // Local OTEL-style telemetry: a custom tracer records spans from every
+  // `Effect.withSpan`, and a custom logger mirrors `Effect.log*` output into the
+  // telemetry store. Both no-op when the store is disabled (packaged builds).
+  // `Logger.add` keeps the default console logger intact.
+  const telemetry = Layer.mergeAll(
+    Layer.setTracer(makeTelemetryTracer()),
+    Logger.add(makeTelemetryLogger())
+  )
+
+  return Layer.mergeAll(
+    supportServices,
+    scheduler,
+    repository,
+    apiServices,
+    telemetry
+  )
 }
 
 export type AppLayer = ReturnType<typeof makeAppLayer>
