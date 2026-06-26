@@ -79,6 +79,13 @@ const developmentIconPath = app.isPackaged
       process.platform === 'win32' ? 'icon.ico' : 'icon.png'
     )
 
+// Unpackaged dev builds report the app name as "Electron" (it comes from the
+// Electron binary's bundle, not package.json), which shows up in the dock
+// tooltip and menu bar. Set it explicitly so dev matches the packaged name.
+if (!app.isPackaged) {
+  app.setName('Pull Panda')
+}
+
 app.commandLine.appendSwitch('font-render-hinting', 'none')
 
 // Registers an IPC handler whose invocation is recorded as a telemetry span, so
