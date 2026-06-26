@@ -33,6 +33,7 @@
     "lint": "eslint --ext .ts,.tsx .",
     "make": "electron-forge make",
     "package": "electron-forge package",
+    "postinstall": "node scripts/rename-dev-app.mjs",
     "publish": "electron-forge publish",
     "start": "electron-forge start",
     "storybook": "storybook dev -p 6006",
