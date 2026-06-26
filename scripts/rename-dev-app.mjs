@@ -49,4 +49,18 @@ for (const key of ['CFBundleName', 'CFBundleDisplayName']) {
   ])
 }
 
+// macOS caches the bundle name in the LaunchServices database (keyed by the
+// shared com.github.Electron identifier), so the dock tooltip keeps showing the
+// stale name until the bundle is re-registered. Force a refresh; ignore
+// failures since this is a best-effort cosmetic fix.
+const bundlePath = path.join(electronDistPath, 'dist', 'Electron.app')
+const launchServicesRegister =
+  '/System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchServices.framework/Support/lsregister'
+
+try {
+  execFileSync(launchServicesRegister, ['-f', bundlePath])
+} catch {
+  // lsregister isn't critical; the plist change still applies on next launch.
+}
+
 console.log(`Renamed dev Electron bundle to "${applicationName}".`)
