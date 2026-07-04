@@ -143,11 +143,15 @@ export const FilesView = memo(function FilesView({
           return (
             <div
               key={virtualItem.key}
-              className="absolute left-0 top-0 w-full pb-6"
+              // Rows are offset with `top` rather than `transform` because a
+              // transformed ancestor becomes the containing block for the
+              // sticky file headers, pinning them inside the row instead of
+              // the scroll viewport.
+              className="absolute left-0 w-full pb-6"
               data-index={virtualItem.index}
               ref={virtualizer.measureElement}
               style={{
-                transform: `translateY(${virtualItem.start - scrollMargin}px)`
+                top: virtualItem.start - scrollMargin
               }}
             >
               {row.type === 'group' ? (

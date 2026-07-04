@@ -71,7 +71,9 @@ export function FileCardHeader({
   return (
     <header
       className={cn(
-        'flex items-center gap-2 pl-3 pr-4 py-1 border-border cursor-pointer sticky top-[76px] z-10 bg-background',
+        // The offset matches the height of the fixed StickyPullRequestHeader
+        // (75px) so the pinned header sits flush against it with no seam.
+        'flex items-center gap-2 pl-3 pr-4 py-1 border-border cursor-pointer sticky top-[75px] z-10 bg-background',
         isCollapsed ? 'border-0' : 'border-b'
       )}
       onClick={(event) => {
@@ -92,7 +94,7 @@ export function FileCardHeader({
               const cardRect = card.getBoundingClientRect()
               const containerRect = scrollContainer.getBoundingClientRect()
 
-              scrollContainer.scrollTop += cardRect.top - containerRect.top - 76
+              scrollContainer.scrollTop += cardRect.top - containerRect.top - 75
             }
           })
 

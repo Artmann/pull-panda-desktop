@@ -123,11 +123,15 @@ export function Activity({ pullRequest }: ActivityProps): ReactElement {
         {virtualizer.getVirtualItems().map((virtualItem) => (
           <div
             key={virtualItem.key}
-            className="absolute left-0 top-0 w-full pb-4"
+            // Rows are offset with `top` rather than `transform` because a
+            // transformed ancestor becomes the containing block for sticky
+            // content inside the cards, pinning it to the row instead of the
+            // scroll viewport.
+            className="absolute left-0 w-full pb-4"
             data-index={virtualItem.index}
             ref={virtualizer.measureElement}
             style={{
-              transform: `translateY(${virtualItem.start - scrollMargin}px)`
+              top: virtualItem.start - scrollMargin
             }}
           >
             <ActivityItemComponent
