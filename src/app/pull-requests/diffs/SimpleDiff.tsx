@@ -12,6 +12,7 @@ import {
 import { shallowEqual } from 'react-redux'
 
 import {
+  ensureLanguageLoaded,
   getLanguageFromPath,
   getSharedHighlighter
 } from '@/app/lib/highlighter'
@@ -43,8 +44,7 @@ async function highlightLines(
   darkTheme: string
 ): Promise<Map<number, string>> {
   const highlighter = await getSharedHighlighter()
-  const loadedLangs = highlighter.getLoadedLanguages()
-  const effectiveLang = loadedLangs.includes(language) ? language : 'text'
+  const effectiveLang = await ensureLanguageLoaded(highlighter, language)
 
   if (effectiveLang === 'text') {
     return new Map()
