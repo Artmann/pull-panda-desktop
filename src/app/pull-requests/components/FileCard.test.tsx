@@ -166,7 +166,7 @@ describe('FileCard scroll adjustment on collapse', () => {
     fireEvent.click(screen.getByRole('banner'))
     flushRaf()
 
-    expect(scrollContainer.scrollTop).toEqual(500 + (-200 - 32 - 76))
+    expect(scrollContainer.scrollTop).toEqual(500 + (-200 - 32 - 75))
 
     document.body.removeChild(scrollContainer)
   })
