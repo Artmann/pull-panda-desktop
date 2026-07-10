@@ -16,6 +16,8 @@ import { useVirtualList } from '@/app/pull-requests/use-virtual-list'
 
 import { createFileTree, extractGroupedFilesFromTree } from './files/file-tree'
 import { ModifiedFileCard } from './files/ModifiedFileCard'
+import type { DiffLayout } from './diffs/PierreDiff'
+import { useDiffLayout } from './diffs/use-diff-layout'
 
 type FilesRow =
   | { groupName: string; isCollapsed: boolean; type: 'group' }
@@ -35,6 +37,7 @@ export const FilesView = memo(function FilesView({
   )
 
   const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(new Set())
+  const [layout, setLayout] = useDiffLayout()
 
   const sortedFiles = useMemo(() => {
     return [...files].sort((a, b) => {
@@ -129,47 +132,54 @@ export const FilesView = memo(function FilesView({
   }
 
   return (
-    <div
-      className="py-4"
-      ref={listRef}
-    >
-      <div
-        className="relative w-full"
-        style={{ height: virtualizer.getTotalSize() }}
-      >
-        {virtualizer.getVirtualItems().map((virtualItem) => {
-          const row = rows[virtualItem.index]
+    <div className="py-4">
+      <div className="mb-3 flex justify-end px-1">
+        <DiffLayoutToggle
+          layout={layout}
+          onChange={setLayout}
+        />
+      </div>
 
-          return (
-            <div
-              key={virtualItem.key}
-              // Rows are offset with `top` rather than `transform` because a
-              // transformed ancestor becomes the containing block for the
-              // sticky file headers, pinning them inside the row instead of
-              // the scroll viewport.
-              className="absolute left-0 w-full pb-6"
-              data-index={virtualItem.index}
-              ref={virtualizer.measureElement}
-              style={{
-                top: virtualItem.start - scrollMargin
-              }}
-            >
-              {row.type === 'group' ? (
-                <GroupHeaderRow
-                  groupName={row.groupName}
-                  isCollapsed={row.isCollapsed}
-                  onToggle={toggleGroupCollapse}
-                />
-              ) : (
-                <FileRow
-                  eager={eagerFilePaths.has(row.filePath)}
-                  file={filesByPath.get(row.filePath)}
-                  pullRequest={pullRequest}
-                />
-              )}
-            </div>
-          )
-        })}
+      <div ref={listRef}>
+        <div
+          className="relative w-full"
+          style={{ height: virtualizer.getTotalSize() }}
+        >
+          {virtualizer.getVirtualItems().map((virtualItem) => {
+            const row = rows[virtualItem.index]
+
+            return (
+              <div
+                key={virtualItem.key}
+                // Rows are offset with `top` rather than `transform` because a
+                // transformed ancestor becomes the containing block for the
+                // sticky file headers, pinning them inside the row instead of
+                // the scroll viewport.
+                className="absolute left-0 w-full pb-6"
+                data-index={virtualItem.index}
+                ref={virtualizer.measureElement}
+                style={{
+                  top: virtualItem.start - scrollMargin
+                }}
+              >
+                {row.type === 'group' ? (
+                  <GroupHeaderRow
+                    groupName={row.groupName}
+                    isCollapsed={row.isCollapsed}
+                    onToggle={toggleGroupCollapse}
+                  />
+                ) : (
+                  <FileRow
+                    eager={eagerFilePaths.has(row.filePath)}
+                    file={filesByPath.get(row.filePath)}
+                    layout={layout}
+                    pullRequest={pullRequest}
+                  />
+                )}
+              </div>
+            )
+          })}
+        </div>
       </div>
     </div>
   )
@@ -212,10 +222,12 @@ function GroupHeaderRow({
 function FileRow({
   eager,
   file,
+  layout,
   pullRequest
 }: {
   eager: boolean
   file: ModifiedFile | undefined
+  layout: DiffLayout
   pullRequest: PullRequest
 }): ReactElement | null {
   if (!file) {
@@ -226,7 +238,36 @@ function FileRow({
     <ModifiedFileCard
       eager={eager}
       file={file}
+      layout={layout}
       pullRequest={pullRequest}
     />
+  )
+}
+
+function DiffLayoutToggle({
+  layout,
+  onChange
+}: {
+  layout: DiffLayout
+  onChange: (layout: DiffLayout) => void
+}): ReactElement {
+  return (
+    <div className="inline-flex items-center gap-0.5 rounded-md border border-border p-0.5">
+      <Button
+        onClick={() => onChange('unified')}
+        size="sm"
+        variant={layout === 'unified' ? 'secondary' : 'ghost'}
+      >
+        Unified
+      </Button>
+
+      <Button
+        onClick={() => onChange('split')}
+        size="sm"
+        variant={layout === 'split' ? 'secondary' : 'ghost'}
+      >
+        Split
+      </Button>
+    </div>
   )
 }

@@ -266,6 +266,7 @@ describe('App', () => {
               pullRequestId: 'pr-123',
               filename: 'test.ts',
               filePath: 'src/test.ts',
+              previousFilename: null,
               status: 'modified',
               additions: 10,
               deletions: 5,

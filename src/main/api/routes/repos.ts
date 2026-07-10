@@ -4,6 +4,7 @@ import type { ContentfulStatusCode } from 'hono/utils/http-status'
 
 import { effectHandler, requireString, type AppEnv } from '../effect-handler'
 import { getBlobImage, type BlobImage } from '../operations/get-blob-image'
+import { getFileContents } from '../operations/get-file-contents'
 import { listCollaborators } from '../operations/list-collaborators'
 import { listCodeowners } from '../operations/list-codeowners'
 
@@ -89,6 +90,45 @@ reposRoute.get('/:owner/:name/blobs/:sha', async (context) => {
     return context.json({ error: { message } }, statusFromCause(cause))
   }
 })
+
+reposRoute.get(
+  '/:owner/:name/pulls/:pullNumber/file-contents',
+  async (context) => {
+    const owner = context.req.param('owner')
+    const repo = context.req.param('name')
+    const pullNumber = Number(context.req.param('pullNumber'))
+    const path = context.req.query('path')
+
+    if (!owner || !repo || !path || Number.isNaN(pullNumber)) {
+      return context.json(
+        {
+          error: { message: 'owner, name, pullNumber and path are required' }
+        },
+        400
+      )
+    }
+
+    try {
+      const contents = await getFileContents({
+        blobSha: context.req.query('blobSha') ?? null,
+        owner,
+        path,
+        previousFilename: context.req.query('previousFilename') ?? null,
+        pullNumber,
+        repo,
+        status: context.req.query('status') ?? null,
+        token: context.get('token')
+      })
+
+      return context.json(contents, 200)
+    } catch (cause) {
+      const message =
+        cause instanceof Error ? cause.message : 'Failed to load file contents'
+
+      return context.json({ error: { message } }, statusFromCause(cause))
+    }
+  }
+)
 
 reposRoute.get(
   '/:owner/:name/collaborators',

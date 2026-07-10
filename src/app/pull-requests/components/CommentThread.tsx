@@ -40,7 +40,7 @@ import { reviewThreadsActions } from '@/app/store/review-threads-slice'
 
 import { CommentBody } from './CommentBody'
 import { CommentReply } from './CommentReply'
-import { SimpleDiff } from '../diffs/SimpleDiff'
+import { PierreDiff } from '../diffs/PierreDiff'
 
 interface CommentThreadProps {
   anchorHeaderExtra?: ReactNode
@@ -444,37 +444,19 @@ function OutdatedBadge(): ReactElement {
 
 function renderCommentDiff(
   comment: Comment,
-  isInline: boolean,
-  isOutdated: boolean
+  isInline: boolean
 ): ReactElement | null {
   if (!comment.diffHunk) {
     return null
   }
 
-  const className = isInline ? 'text-xs leading-6' : 'text-sm leading-7'
-
-  if (isOutdated) {
-    return (
-      <SimpleDiff
-        className={className}
-        diffHunk={comment.diffHunk}
-        filePath={comment.path ?? undefined}
-      />
-    )
-  }
-
-  const numberOfLinesToShow = 3
-  const line = comment.line ? comment.line : (comment.originalLine ?? 0)
-  const lineStart = Math.max(0, line - numberOfLinesToShow)
-  const lineEnd = Math.max(0, line)
+  const className = isInline ? 'text-xs' : 'text-sm'
 
   return (
-    <SimpleDiff
+    <PierreDiff
       className={className}
-      diffHunk={comment.diffHunk}
-      filePath={comment.path ?? undefined}
-      lineStart={lineStart}
-      lineEnd={lineEnd}
+      file={{ diffHunk: comment.diffHunk, filePath: comment.path ?? '' }}
+      hideHeader
     />
   )
 }
@@ -603,7 +585,7 @@ export const FileCommentThreadCard = memo(function FileCommentThreadCard({
   const isCollapsible = collapseWhenOutdated && isOutdated && !isInline
   const [isExpanded, setIsExpanded] = useState(false)
   const showContent = !isCollapsible || isExpanded
-  const diff = renderCommentDiff(comment, isInline, isOutdated)
+  const diff = renderCommentDiff(comment, isInline)
 
   const resolveIconButton = pullRequest && thread && (
     <ResolveThreadButton

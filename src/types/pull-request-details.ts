@@ -88,6 +88,7 @@ export interface ModifiedFile {
   pullRequestId: string
   filename: string
   filePath: string
+  previousFilename: string | null
   status: string | null
   additions: number | null
   deletions: number | null

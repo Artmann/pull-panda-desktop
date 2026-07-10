@@ -11,21 +11,22 @@ import { pendingReviewCommentsActions } from '@/app/store/pending-review-comment
 import { useDraft } from '@/app/store/use-draft'
 import type { PullRequest } from '@/types/pull-request'
 
-import type { DiffHunkLine } from './hunks'
-import { getLinePosition } from './hunks'
+import type { GitHubSide } from './position'
 
 interface InlineCommentInputProps {
   filePath: string
-  line: DiffHunkLine
+  line: number
   onCancel: () => void
   pullRequest: PullRequest
+  side: GitHubSide
 }
 
 export const InlineCommentInput = memo(function InlineCommentInput({
   filePath,
   line,
   onCancel,
-  pullRequest
+  pullRequest,
+  side
 }: InlineCommentInputProps): ReactElement | null {
   const dispatch = useAppDispatch()
   const { user } = useAuth()
@@ -34,16 +35,12 @@ export const InlineCommentInput = memo(function InlineCommentInput({
     (state) => state.pendingReviews[pullRequest.id]
   )
 
-  const linePosition = getLinePosition(line)
-
-  const draftKey = linePosition
-    ? getDraftKeyForInlineComment(
-        pullRequest.id,
-        filePath,
-        linePosition.line,
-        linePosition.side
-      )
-    : ''
+  const draftKey = getDraftKeyForInlineComment(
+    pullRequest.id,
+    filePath,
+    line,
+    side
+  )
 
   // Use draft for persistence, but local state for fast typing
   const {
@@ -53,10 +50,6 @@ export const InlineCommentInput = memo(function InlineCommentInput({
   } = useDraft(draftKey)
   const [localBody, setLocalBody] = useState(draftBody)
   const [isSubmitting, setIsSubmitting] = useState(false)
-
-  if (!linePosition) {
-    return null
-  }
 
   const syncDraft = () => {
     // Sync to draft store for persistence
@@ -103,9 +96,9 @@ export const InlineCommentInput = memo(function InlineCommentInput({
         comment: {
           body: trimmedBody,
           id: commentId,
-          line: linePosition.line,
+          line,
           path: filePath,
-          side: linePosition.side
+          side
         }
       })
     )

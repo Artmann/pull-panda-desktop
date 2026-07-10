@@ -26,6 +26,7 @@ import { ThemeProvider } from '@/app/lib/store/themeContext'
 import { BackgroundSyncerPage } from '@/app/routes/BackgroundSyncerPage'
 import { HomePage } from '@/app/routes/HomePage'
 import { OnboardingPage } from '@/app/routes/OnboardingPage'
+import { DiffsWorkerPoolProvider } from '@/app/pull-requests/diffs/diffs-provider'
 import { PullRequestNavigationProvider } from '@/app/pull-requests/PullRequestNavigationProvider'
 import { PullRequestPage } from '@/app/routes/PullRequestPage'
 import { SettingsPage } from '@/app/routes/SettingsPage'
@@ -49,19 +50,21 @@ export function App({ store }: AppProps): ReactElement {
     <Provider store={store}>
       <HashRouter>
         <ThemeProvider>
-          <TasksProvider>
-            <AuthProvider>
-              <CommandContextProvider>
-                <PullRequestNavigationProvider>
-                  <ShortcutListener />
-                  <CommandPalette />
-                  <FpsCounter />
-                  <AppContent />
-                </PullRequestNavigationProvider>
-              </CommandContextProvider>
-            </AuthProvider>
-          </TasksProvider>
-          <Toaster />
+          <DiffsWorkerPoolProvider>
+            <TasksProvider>
+              <AuthProvider>
+                <CommandContextProvider>
+                  <PullRequestNavigationProvider>
+                    <ShortcutListener />
+                    <CommandPalette />
+                    <FpsCounter />
+                    <AppContent />
+                  </PullRequestNavigationProvider>
+                </CommandContextProvider>
+              </AuthProvider>
+            </TasksProvider>
+            <Toaster />
+          </DiffsWorkerPoolProvider>
         </ThemeProvider>
       </HashRouter>
     </Provider>
@@ -165,7 +168,11 @@ function AppRoutes({
       <Route
         path="/sign-in"
         element={
-          isAuthenticated ? <Navigate to={postSignInRedirect} /> : <SignInPage />
+          isAuthenticated ? (
+            <Navigate to={postSignInRedirect} />
+          ) : (
+            <SignInPage />
+          )
         }
       />
       <Route
