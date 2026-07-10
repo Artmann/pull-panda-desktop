@@ -280,33 +280,6 @@ samp {
   font-weight: normal;
 }
 
-/* Diff highlighting */
-.diff-highlight {
-  color: inherit;
-  padding: 0.1em 0;
-}
-
-.diff-highlight-add {
-  background-color: rgba(0, 255, 0, 0.15);
-}
-
-.diff-highlight-remove {
-  background-color: rgba(255, 0, 0, 0.15);
-}
-
-.dark .diff-highlight-add {
-  background-color: rgba(0, 255, 0, 0.2);
-}
-
-.dark .diff-highlight-remove {
-  background-color: rgba(255, 0, 0, 0.2);
-}
-
-/* Syntax highlighting in diffs - dark mode support */
-.dark .diff-table span[style] {
-  color: var(--shiki-dark) !important;
-}
-
 /* Remove default backticks added by Tailwind typography plugin */
 .prose
   :where(code):not(

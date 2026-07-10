@@ -9,7 +9,8 @@ const config: StorybookConfig = {
   framework: { name: '@storybook/react-vite', options: {} },
   stories: [
     '../src/app/components/ui/**/*.stories.@(ts|tsx|mdx)',
-    '../src/app/components/**/*.stories.@(ts|tsx|mdx)'
+    '../src/app/components/**/*.stories.@(ts|tsx|mdx)',
+    '../src/app/pull-requests/**/*.stories.@(ts|tsx|mdx)'
   ],
   addons: ['@storybook/addon-a11y', '@storybook/addon-themes'],
   viteFinal: async (config) => {

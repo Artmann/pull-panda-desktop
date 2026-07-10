@@ -122,6 +122,7 @@ const seededFile = (overrides: Partial<ModifiedFile>): ModifiedFile => ({
   pullRequestId: params.pullRequestId,
   filename: 'a.ts',
   filePath: 'a.ts',
+  previousFilename: null,
   status: 'modified',
   additions: 1,
   deletions: 0,

@@ -414,6 +414,7 @@ export async function getPullRequestDetails(
     pullRequestId: row.pullRequestId,
     filename: row.filename,
     filePath: row.filePath,
+    previousFilename: row.previousFilename,
     status: row.status,
     additions: row.additions,
     deletions: row.deletions,

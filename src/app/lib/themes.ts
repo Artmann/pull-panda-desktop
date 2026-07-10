@@ -1059,24 +1059,3 @@ export const allShikiThemeValues = [
     appThemes.flatMap((theme) => [theme.lightShikiTheme, theme.darkShikiTheme])
   )
 ]
-
-// Diff color generation (moved from codeThemes.ts).
-type ThemeDiffColors = {
-  diffAdd: string
-  diffRemove: string
-}
-
-const additionBase = 'rgb(0, 255, 0)'
-const deletionBase = 'rgb(255, 0, 0)'
-
-export function getDiffColors(
-  background: string,
-  isDark: boolean
-): ThemeDiffColors {
-  const ratio = isDark ? '80%' : '88%'
-
-  return {
-    diffAdd: `color-mix(in lab, ${background} ${ratio}, ${additionBase})`,
-    diffRemove: `color-mix(in lab, ${background} ${ratio}, ${deletionBase})`
-  }
-}

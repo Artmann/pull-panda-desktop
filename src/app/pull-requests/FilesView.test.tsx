@@ -54,6 +54,7 @@ function createMockFile(overrides: Partial<ModifiedFile> = {}): ModifiedFile {
     pullRequestId: 'pr-1',
     filename: 'index.ts',
     filePath: 'src/index.ts',
+    previousFilename: null,
     status: 'modified',
     additions: 10,
     deletions: 5,
@@ -213,7 +214,7 @@ describe('FilesView', () => {
     expect(screen.getByText('src/index.ts')).toBeInTheDocument()
   })
 
-  it('displays diff content for files with diffHunk', async () => {
+  it('renders a diff for files with a diffHunk', async () => {
     const pullRequest = createMockPullRequest()
     const files = [
       createMockFile({
@@ -231,9 +232,11 @@ describe('FilesView', () => {
       renderWithProviders(<FilesView pullRequest={pullRequest} />, { store })
     })
 
-    expect(screen.getByText('context')).toBeInTheDocument()
-    expect(screen.getByText('removed')).toBeInTheDocument()
-    expect(screen.getByText('added')).toBeInTheDocument()
+    // The diff itself is rendered by `@pierre/diffs` inside a shadow DOM via a
+    // web worker, so its line contents are not queryable here. Assert instead
+    // that the file card mounted a diff rather than the empty-state message.
+    expect(screen.getByText('src/index.ts')).toBeInTheDocument()
+    expect(screen.queryByText('No changes to display.')).not.toBeInTheDocument()
   })
 
   it('defers diff rendering after the initial eager files', async () => {

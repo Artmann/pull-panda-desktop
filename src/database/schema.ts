@@ -220,6 +220,7 @@ export const modifiedFiles = sqliteTable(
 
     filename: text('filename').notNull(),
     filePath: text('file_path').notNull(),
+    previousFilename: text('previous_filename'),
     status: text('status'),
 
     additions: integer('additions'),
