@@ -484,7 +484,7 @@ function MergeMethodTabs({
               className={cn(
                 'flex-1 flex items-center justify-center gap-1.5 px-2 py-1.5 rounded-md border cursor-pointer transition-colors text-xs font-medium',
                 selectedMethod === method
-                  ? 'border-cta bg-cta/10 text-cta'
+                  ? 'border-primary bg-primary/10 text-primary'
                   : 'border-border hover:border-foreground/20'
               )}
               key={method}
@@ -860,7 +860,9 @@ function MergeRequirementsChecklist({
               <span
                 className={cn(
                   'truncate',
-                  requirement.satisfied ? 'text-foreground' : 'text-red-500'
+                  requirement.satisfied
+                    ? 'text-foreground'
+                    : 'text-status-danger-foreground'
                 )}
               >
                 {requirement.label}
@@ -886,7 +888,9 @@ function RequirementIcon({ satisfied }: { satisfied: boolean }): ReactElement {
     )
   }
 
-  return <XCircle className="size-4 text-red-500 shrink-0 mt-0.5" />
+  return (
+    <XCircle className="size-4 text-status-danger-foreground shrink-0 mt-0.5" />
+  )
 }
 
 interface SquashCommitSectionProps {

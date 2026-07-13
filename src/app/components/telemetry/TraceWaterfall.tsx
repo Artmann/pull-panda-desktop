@@ -56,7 +56,7 @@ function barColor(span: SpanRecord): string {
     return 'bg-destructive'
   }
 
-  return span.source === 'renderer' ? 'bg-violet-500' : 'bg-sky-500'
+  return span.source === 'renderer' ? 'bg-chart-5' : 'bg-chart-2'
 }
 
 export function TraceWaterfall({ spans }: TraceWaterfallProps): ReactElement {

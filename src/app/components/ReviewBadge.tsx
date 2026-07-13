@@ -26,12 +26,12 @@ const fallbackVariant: ReviewBadgeVariant = {
 
 const variantsByState: Record<string, ReviewBadgeVariant | undefined> = {
   APPROVED: {
-    colorClass: 'text-[var(--status-success-foreground)]',
+    colorClass: 'text-status-success-foreground',
     label: 'Approved',
     tooltipSuffix: 'approved these changes'
   },
   CHANGES_REQUESTED: {
-    colorClass: 'text-[var(--status-danger-foreground)]',
+    colorClass: 'text-status-danger-foreground',
     label: 'Requested changes',
     tooltipSuffix: 'requested changes'
   }

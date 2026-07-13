@@ -246,7 +246,19 @@ export const PierreDiff = memo(function PierreDiff({
       lineHoverHighlight: 'both',
       onLineNumberClick: ({ annotationSide, lineNumber }) => {
         setActiveCommentSlot({ lineNumber, side: annotationSide })
-      }
+      },
+      // The gutter comment button overlays the hovered line-number cell, so
+      // hide the number underneath instead of letting the two fight, and
+      // align the button with the right-aligned digits (the cell has 0.6em of
+      // right padding); the package default pins it to the top-right corner.
+      unsafeCSS: `
+        [data-column-number][data-hovered] { color: transparent; }
+        [data-gutter-utility-slot] {
+          inset: 0;
+          justify-content: flex-end;
+          padding-right: 0.6em;
+        }
+      `
     }
   }, [
     canComment,
@@ -279,23 +291,25 @@ export const PierreDiff = memo(function PierreDiff({
     (
       getHoveredLine: () => GetHoveredLineResult<'diff'> | undefined
     ): ReactNode => (
-      <button
-        className="flex size-4 items-center justify-center rounded bg-cyan-500 text-white"
-        onClick={() => {
-          const hovered = getHoveredLine()
+      <div className="flex h-full items-center justify-center">
+        <button
+          className="flex size-4 items-center justify-center rounded bg-primary text-primary-foreground"
+          onClick={() => {
+            const hovered = getHoveredLine()
 
-          if (hovered) {
-            setActiveCommentSlot({
-              lineNumber: hovered.lineNumber,
-              side: hovered.side
-            })
-          }
-        }}
-        title="Add a comment"
-        type="button"
-      >
-        <Plus className="size-3" />
-      </button>
+            if (hovered) {
+              setActiveCommentSlot({
+                lineNumber: hovered.lineNumber,
+                side: hovered.side
+              })
+            }
+          }}
+          title="Add a comment"
+          type="button"
+        >
+          <Plus className="size-3" />
+        </button>
+      </div>
     ),
     []
   )
@@ -408,7 +422,7 @@ function DiffCommentSlot({
             ))}
 
             {canReply && (
-              <div className="border-l-3 border-l-blue-500 border-border border-y bg-background px-3 py-2 font-sans">
+              <div className="border-l-3 border-l-primary border-border border-y bg-background px-3 py-2 font-sans">
                 {isReplyOpen ? (
                   <CommentReply
                     comment={rootComment}

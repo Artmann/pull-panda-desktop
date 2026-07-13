@@ -18,18 +18,16 @@ const statusStyles: Record<
   { background: string; ring: string }
 > = {
   approved: {
-    background:
-      'bg-[var(--status-success-foreground)] text-[var(--status-success)]',
-    ring: 'ring-[var(--status-success)]'
+    background: 'bg-status-success-foreground text-status-success',
+    ring: 'ring-status-success'
   },
   'changes-requested': {
-    background:
-      'bg-[var(--status-danger-foreground)] text-[var(--status-danger)]',
-    ring: 'ring-[var(--status-danger)]'
+    background: 'bg-status-danger-foreground text-status-danger',
+    ring: 'ring-status-danger'
   },
   commented: {
-    background: 'bg-amber-500 text-amber-50',
-    ring: 'ring-amber-500'
+    background: 'bg-status-warning-foreground text-status-warning',
+    ring: 'ring-status-warning'
   }
 }
 

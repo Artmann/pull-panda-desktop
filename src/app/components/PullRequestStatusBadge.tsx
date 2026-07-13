@@ -19,12 +19,12 @@ export function PullRequestStatusBadge({
 
   const colorClass = useMemo((): string => {
     const map: Record<PullRequestStatus, string> = {
-      Approved: 'text-[var(--status-success-foreground)]',
-      'Changes Requested': 'text-[var(--status-danger-foreground)]',
-      Closed: 'text-[var(--status-danger-foreground)]',
+      Approved: 'text-status-success-foreground',
+      'Changes Requested': 'text-status-danger-foreground',
+      Closed: 'text-status-danger-foreground',
       Draft: 'text-muted-foreground',
-      Merged: 'text-[var(--status-merged-foreground)]',
-      Pending: 'text-[var(--status-warning-foreground)]'
+      Merged: 'text-status-merged-foreground',
+      Pending: 'text-status-warning-foreground'
     }
 
     return map[status]
