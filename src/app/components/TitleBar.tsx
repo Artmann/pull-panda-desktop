@@ -119,7 +119,7 @@ export function TitleBar(): ReactElement {
             </WindowButton>
 
             <WindowButton
-              className="hover:bg-red-500 hover:text-white"
+              className="hover:bg-destructive hover:text-destructive-foreground"
               onClick={handleClose}
               testId="title-bar-close"
             >

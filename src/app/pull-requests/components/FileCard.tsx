@@ -29,10 +29,9 @@ const FileCardContext = createContext<FileCardContextValue>({
 
 interface FileCardProps {
   children?: React.ReactNode | string
-  style?: React.CSSProperties
 }
 
-export function FileCard({ children, style }: FileCardProps): ReactElement {
+export function FileCard({ children }: FileCardProps): ReactElement {
   const [isCollapsed, setIsCollapsed] = useState(false)
   const cardRef = useRef<HTMLDivElement>(null)
 
@@ -46,10 +45,9 @@ export function FileCard({ children, style }: FileCardProps): ReactElement {
       <div
         ref={cardRef}
         className={`
-          border border-border rounded-md
+          border border-border rounded-md bg-card
           text-xs text-foreground font-mono
         `}
-        style={style}
       >
         {children}
       </div>
@@ -73,7 +71,7 @@ export function FileCardHeader({
       className={cn(
         // The offset matches the height of the fixed StickyPullRequestHeader
         // (75px) so the pinned header sits flush against it with no seam.
-        'flex items-center gap-2 pl-3 pr-4 py-1 border-border cursor-pointer sticky top-[75px] z-10 bg-background',
+        'flex items-center gap-2 pl-3 pr-4 py-1 border-border cursor-pointer sticky top-[75px] z-10 bg-card rounded-t-md',
         isCollapsed ? 'border-0' : 'border-b'
       )}
       onClick={(event) => {
@@ -143,7 +141,7 @@ export function FileCardBody({
   return (
     <div
       ref={ref}
-      className="w-full"
+      className="w-full overflow-hidden rounded-b-md"
     >
       {shouldRender ? children : fallback}
     </div>

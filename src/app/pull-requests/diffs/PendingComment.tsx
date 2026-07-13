@@ -73,7 +73,7 @@ export const PendingComment = memo(function PendingComment({
   }
 
   return (
-    <div className="border-l-3 border-l-amber-500 bg-amber-50 dark:bg-amber-950/30 p-3 font-normal font-sans">
+    <div className="border-l-3 border-l-status-warning-foreground bg-status-warning p-3 font-normal font-sans">
       <div className="flex gap-3">
         {user && (
           <Avatar className="size-6 shrink-0">

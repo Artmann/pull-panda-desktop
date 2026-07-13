@@ -135,7 +135,7 @@ export const ReviewerBar = memo(function ReviewerBar({
   const isEmpty = entries.length === 0
 
   return (
-    <div className="flex items-center gap-2.5 rounded-lg border border-border bg-muted/30 px-3.5 py-2">
+    <div className="flex items-center gap-2.5 rounded-lg border border-border bg-card px-3.5 py-2">
       {!isEmpty && (
         <>
           <span className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">

@@ -69,7 +69,7 @@ function PullRequestCard({
 
   return (
     <Card
-      className="cursor-pointer hover:border-gray-300"
+      className="cursor-pointer hover:border-foreground/20"
       onClick={handleClick}
     >
       <CardContent>

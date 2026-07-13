@@ -103,7 +103,7 @@ export function TelemetryPage(): ReactElement {
           value={stats?.traceCount ?? 0}
         />
         <SummaryCard
-          icon={<AlertTriangle className="h-4 w-4 text-red-500" />}
+          icon={<AlertTriangle className="h-4 w-4 text-status-danger-foreground" />}
           label="Error traces"
           value={stats?.errorTraceCount ?? 0}
         />
@@ -393,7 +393,7 @@ function TraceDetailPanel({
                   <span
                     className={
                       log.level === 'error' || log.level === 'fatal'
-                        ? 'text-red-500'
+                        ? 'text-status-danger-foreground'
                         : 'text-muted-foreground'
                     }
                   >

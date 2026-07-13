@@ -1,5 +1,4 @@
 import { ExternalLinkIcon, Loader2, UnfoldVertical } from 'lucide-react'
-import { useTheme } from 'next-themes'
 import { memo, useMemo, useState, type ReactElement } from 'react'
 import { shallowEqual } from 'react-redux'
 import { toast } from 'sonner'
@@ -10,7 +9,6 @@ import type { PullRequest } from '@/types/pull-request'
 import { Badge } from '@/app/components/ui/badge'
 import { CopyToClipboardButton } from '@/app/components/CopyToClipboardButton'
 import { getFileContents } from '@/app/lib/api'
-import { useAppTheme } from '@/app/lib/store/themeContext'
 import { useAppSelector } from '@/app/store/hooks'
 import { type PendingReviewComment } from '@/app/store/pending-review-comments-slice'
 import { isImagePath } from '@/lib/images'
@@ -43,13 +41,6 @@ export const ModifiedFileCard = memo(function ModifiedFileCard({
   layout = 'unified',
   pullRequest
 }: ModifiedFileCardProps): ReactElement {
-  const { appTheme } = useAppTheme()
-  const { resolvedTheme } = useTheme()
-  const isDark = resolvedTheme === 'dark'
-  const backgroundColor = isDark
-    ? appTheme.dark.background
-    : appTheme.light.background
-
   const filePath = file.filePath
   const isImage = isImagePath(filePath)
   const viewFileUrl = `https://github.com/${pullRequest.repositoryOwner}/${pullRequest.repositoryName}/blob/HEAD/${encodeURI(filePath)}`
@@ -115,7 +106,7 @@ export const ModifiedFileCard = memo(function ModifiedFileCard({
 
   return (
     <div ref={landmarkRef}>
-      <FileCard style={{ backgroundColor }}>
+      <FileCard>
         <FileCardHeader>
           <div className="flex-1 flex items-center gap-2 font-mono text-xs">
             <span className="truncate">{file.filePath}</span>
@@ -134,6 +125,18 @@ export const ModifiedFileCard = memo(function ModifiedFileCard({
               </Badge>
             )}
           </div>
+
+          {(file.additions ?? 0) > 0 && (
+            <span className="text-status-success-foreground">
+              +{file.additions}
+            </span>
+          )}
+
+          {(file.deletions ?? 0) > 0 && (
+            <span className="text-status-danger-foreground">
+              -{file.deletions}
+            </span>
+          )}
 
           {(canExpand || isExpanding) && (
             <button
@@ -177,6 +180,7 @@ export const ModifiedFileCard = memo(function ModifiedFileCard({
             <PierreDiff
               file={file}
               fullFile={fullFile ?? undefined}
+              hideHeader
               layout={layout}
               pendingComments={filePendingComments}
               pullRequest={pullRequest}

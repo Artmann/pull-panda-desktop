@@ -26,7 +26,6 @@
  * ```
  */
 
-import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 
 import { App } from './app/App'
@@ -43,11 +42,11 @@ async function main() {
     throw new Error('Root element not found')
   }
 
-  createRoot(root).render(
-    <StrictMode>
-      <App store={store} />
-    </StrictMode>
-  )
+  // NOTE: StrictMode is intentionally NOT used here. Its dev-only double
+  // mounting breaks @pierre/diffs' imperative instance lifecycle: the
+  // syntax-highlight worker response is delivered to the first (unmounted)
+  // instance, so diffs always render without highlighting in development.
+  createRoot(root).render(<App store={store} />)
 }
 
 main()

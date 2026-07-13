@@ -10,7 +10,10 @@ import {
   SelectValue
 } from '../components/ui/select'
 
-import { getSharedHighlighter } from '@/app/lib/highlighter'
+import {
+  ensureLanguageLoaded,
+  getSharedHighlighter
+} from '@/app/lib/highlighter'
 import { useAppTheme } from '@/app/lib/store/themeContext'
 import { getThemesForMode, type AppTheme } from '@/app/lib/themes'
 
@@ -93,9 +96,10 @@ function CodePreview({ appTheme }: { appTheme: AppTheme }): ReactElement {
   useEffect(() => {
     async function highlight() {
       const highlighter = await getSharedHighlighter()
+      const language = await ensureLanguageLoaded(highlighter, 'typescript')
 
       const html = highlighter.codeToHtml(sampleCode, {
-        lang: 'typescript',
+        lang: language,
         themes: {
           dark: appTheme.darkShikiTheme,
           light: appTheme.lightShikiTheme
