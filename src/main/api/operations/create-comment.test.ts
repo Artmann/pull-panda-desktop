@@ -95,6 +95,8 @@ const makeRepositoryLayer = (pullRequest: PullRequest | null) => {
     findReviewThreadById: () => Effect.succeed(null),
     requirePullRequestByCoords: requirePullRequest,
     requirePullRequestById: requirePullRequest,
+    softDeletePendingReviews: () =>
+      Effect.die('softDeletePendingReviews is not used in these tests'),
     upsertReview: () => Effect.die('upsertReview is not used in these tests')
   })
 }
