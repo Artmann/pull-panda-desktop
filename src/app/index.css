@@ -266,6 +266,7 @@ samp {
 .pierre-diff {
   /* One pixel below the package default of 13px. */
   --diffs-font-size: 12px;
+  --diffs-line-height: 20px;
 
   --diffs-light-bg: var(--card);
   --diffs-dark-bg: var(--card);
@@ -281,6 +282,13 @@ samp {
   --diffs-addition-color-override: var(--status-success-foreground);
   --diffs-deletion-color-override: var(--status-danger-foreground);
   --diffs-modified-color-override: var(--primary);
+}
+
+/* Comment threads embed a small excerpt of the diff for context; render it a
+ * step smaller than the full file view so it reads as a quote, not a diff. */
+.pierre-diff--compact {
+  --diffs-font-size: 11px;
+  --diffs-line-height: 17px;
 }
 
 /* Markdown code blocks without Shiki */

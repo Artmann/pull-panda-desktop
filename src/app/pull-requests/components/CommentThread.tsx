@@ -103,7 +103,7 @@ interface CommentItemProps {
 function commentItemClassName(variant: 'card' | 'inline'): string {
   const horizontalPadding = variant === 'inline' ? 'px-3.5' : 'px-4'
 
-  return cn('flex flex-col w-full pt-4 pb-5 gap-1.5', horizontalPadding)
+  return cn('relative flex flex-col w-full pt-4 pb-5 gap-1.5', horizontalPadding)
 }
 
 const CommentItem = memo(function CommentItem({
@@ -153,7 +153,12 @@ function CommentItemHeader({
   )
 
   if (hideAuthor) {
-    return actions ? <div className="flex justify-end">{actions}</div> : null
+    // Without an author row there is nothing else on this line — overlay the
+    // actions in the corner instead of reserving an empty row of whitespace
+    // between the diff excerpt and the comment body.
+    return actions ? (
+      <div className="absolute top-2 right-2">{actions}</div>
+    ) : null
   }
 
   return (
@@ -442,22 +447,22 @@ function OutdatedBadge(): ReactElement {
   )
 }
 
-function renderCommentDiff(
-  comment: Comment,
-  isInline: boolean
-): ReactElement | null {
+function renderCommentDiff(comment: Comment): ReactElement | null {
   if (!comment.diffHunk) {
     return null
   }
 
-  const className = isInline ? 'text-xs' : 'text-sm'
-
   return (
-    <PierreDiff
-      className={className}
-      file={{ diffHunk: comment.diffHunk, filePath: comment.path ?? '' }}
-      hideHeader
-    />
+    // Show at most a handful of context lines, anchored to the bottom of the
+    // hunk — that is where the commented line sits. Mirrors GitHub, which
+    // never renders a comment's full stored hunk.
+    <div className="flex max-h-44 flex-col justify-end overflow-hidden">
+      <PierreDiff
+        className="pierre-diff--compact"
+        file={{ diffHunk: comment.diffHunk, filePath: comment.path ?? '' }}
+        hideHeader
+      />
+    </div>
   )
 }
 
@@ -538,7 +543,9 @@ export const CommentThreadCard = memo(function CommentThreadCard({
   return (
     <Card
       className={cn(
-        'p-0 w-full gap-0 shadow-none',
+        // overflow-hidden clips the square-cornered file header (and diff
+        // excerpt) to the card's rounded corners.
+        'p-0 w-full gap-0 shadow-none overflow-hidden',
         thread?.isResolved && 'opacity-70'
       )}
     >
@@ -585,7 +592,7 @@ export const FileCommentThreadCard = memo(function FileCommentThreadCard({
   const isCollapsible = collapseWhenOutdated && isOutdated && !isInline
   const [isExpanded, setIsExpanded] = useState(false)
   const showContent = !isCollapsible || isExpanded
-  const diff = renderCommentDiff(comment, isInline)
+  const diff = renderCommentDiff(comment)
 
   const resolveIconButton = pullRequest && thread && (
     <ResolveThreadButton
@@ -643,7 +650,9 @@ export const FileCommentThreadCard = memo(function FileCommentThreadCard({
   return (
     <Card
       className={cn(
-        'p-0 w-full gap-0 shadow-none',
+        // overflow-hidden clips the square-cornered file header (and diff
+        // excerpt) to the card's rounded corners.
+        'p-0 w-full gap-0 shadow-none overflow-hidden',
         thread?.isResolved && 'opacity-70'
       )}
     >
