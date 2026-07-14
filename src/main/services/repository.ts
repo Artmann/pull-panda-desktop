@@ -55,6 +55,9 @@ export class Repository extends Context.Tag('main/Repository')<
     readonly requirePullRequestById: (
       id: string
     ) => Effect.Effect<PullRequest, RepoError | SyncNotFoundError>
+    readonly softDeletePendingReviews: (input: {
+      readonly pullRequestId: string
+    }) => Effect.Effect<number, RepoError>
     readonly upsertReview: (input: {
       readonly pullRequestId: string
       readonly review: UpsertReviewInput
@@ -162,6 +165,45 @@ export const RepositoryLive: Layer.Layer<Repository, never, Database> =
               )
         )
 
+      // PENDING reviews are protected from the regular sync clean-up (GitHub
+      // hides other users' pending reviews, so a missing review does not mean
+      // it was deleted). When the app itself deletes or replaces a pending
+      // review on GitHub, this removes the now-stale local rows so they do
+      // not resurface as zombie drafts on the next launch.
+      const softDeletePendingReviews = ({
+        pullRequestId
+      }: {
+        pullRequestId: string
+      }) =>
+        database.use('repository.softDeletePendingReviews', (db) => {
+          const stale = db
+            .select({ id: reviews.id })
+            .from(reviews)
+            .where(
+              and(
+                eq(reviews.pullRequestId, pullRequestId),
+                eq(reviews.state, 'PENDING'),
+                isNull(reviews.deletedAt)
+              )
+            )
+            .all()
+
+          if (stale.length === 0) {
+            return 0
+          }
+
+          const now = new Date().toISOString()
+
+          for (const row of stale) {
+            db.update(reviews)
+              .set({ deletedAt: now })
+              .where(eq(reviews.id, row.id))
+              .run()
+          }
+
+          return stale.length
+        })
+
       const upsertReview = ({
         pullRequestId,
         review
@@ -243,6 +285,7 @@ export const RepositoryLive: Layer.Layer<Repository, never, Database> =
         findReviewThreadById,
         requirePullRequestByCoords,
         requirePullRequestById,
+        softDeletePendingReviews,
         upsertReview
       }
     })
