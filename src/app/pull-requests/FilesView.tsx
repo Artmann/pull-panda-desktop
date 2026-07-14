@@ -37,7 +37,7 @@ export const FilesView = memo(function FilesView({
   )
 
   const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(new Set())
-  const [layout, setLayout] = useDiffLayout()
+  const [layout] = useDiffLayout()
 
   const sortedFiles = useMemo(() => {
     return [...files].sort((a, b) => {
@@ -133,13 +133,6 @@ export const FilesView = memo(function FilesView({
 
   return (
     <div className="py-4">
-      <div className="mb-3 flex justify-end px-1">
-        <DiffLayoutToggle
-          layout={layout}
-          onChange={setLayout}
-        />
-      </div>
-
       <div ref={listRef}>
         <div
           className="relative w-full"
@@ -244,30 +237,3 @@ function FileRow({
   )
 }
 
-function DiffLayoutToggle({
-  layout,
-  onChange
-}: {
-  layout: DiffLayout
-  onChange: (layout: DiffLayout) => void
-}): ReactElement {
-  return (
-    <div className="inline-flex items-center gap-0.5 rounded-md border border-border p-0.5">
-      <Button
-        onClick={() => onChange('unified')}
-        size="sm"
-        variant={layout === 'unified' ? 'secondary' : 'ghost'}
-      >
-        Unified
-      </Button>
-
-      <Button
-        onClick={() => onChange('split')}
-        size="sm"
-        variant={layout === 'split' ? 'secondary' : 'ghost'}
-      >
-        Split
-      </Button>
-    </div>
-  )
-}
