@@ -16,6 +16,7 @@ import {
 } from '@/app/lib/highlighter'
 import { useAppTheme } from '@/app/lib/store/themeContext'
 import { getThemesForMode, type AppTheme } from '@/app/lib/themes'
+import { useDiffLayout } from '@/app/pull-requests/diffs/use-diff-layout'
 
 const sampleCode = `function greet(name: string): string {
   const message = \`Hello, \${name}!\`
@@ -28,6 +29,7 @@ const sampleCode = `function greet(name: string): string {
 export function AppearanceSettings(): ReactElement {
   const { resolvedTheme, theme, setTheme } = useTheme()
   const { appTheme, setAppTheme } = useAppTheme()
+  const [diffLayout, setDiffLayout] = useDiffLayout()
   const mode = resolvedTheme === 'dark' ? 'dark' : 'light'
   const availableThemes = getThemesForMode(mode)
 
@@ -76,6 +78,26 @@ export function AppearanceSettings(): ReactElement {
                 <SelectItem value="dark">Dark</SelectItem>
                 <SelectItem value="light">Light</SelectItem>
                 <SelectItem value="system">System preference</SelectItem>
+              </SelectContent>
+            </Select>
+          </SettingItem>
+
+          <SettingItem
+            description="How file diffs are laid out by default. Each file has a toggle to override it."
+            label="Diff layout"
+          >
+            <Select
+              value={diffLayout}
+              onValueChange={(value) => {
+                setDiffLayout(value === 'split' ? 'split' : 'unified')
+              }}
+            >
+              <SelectTrigger className="w-52">
+                <SelectValue placeholder="Diff layout" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="unified">Unified</SelectItem>
+                <SelectItem value="split">Split</SelectItem>
               </SelectContent>
             </Select>
           </SettingItem>

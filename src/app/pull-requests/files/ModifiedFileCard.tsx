@@ -1,4 +1,10 @@
-import { ExternalLinkIcon, Loader2, UnfoldVertical } from 'lucide-react'
+import {
+  Columns2Icon,
+  ExternalLinkIcon,
+  Loader2,
+  Rows3Icon,
+  UnfoldVertical
+} from 'lucide-react'
 import { memo, useMemo, useState, type ReactElement } from 'react'
 import { shallowEqual } from 'react-redux'
 import { toast } from 'sonner'
@@ -41,6 +47,12 @@ export const ModifiedFileCard = memo(function ModifiedFileCard({
   layout = 'unified',
   pullRequest
 }: ModifiedFileCardProps): ReactElement {
+  // Per-file layout override. Most files follow the global setting; this lets
+  // a single diff be flipped between unified and split without affecting the
+  // rest of the view. Session-only on purpose.
+  const [layoutOverride, setLayoutOverride] = useState<DiffLayout | null>(null)
+  const effectiveLayout = layoutOverride ?? layout
+
   const filePath = file.filePath
   const isImage = isImagePath(filePath)
   const viewFileUrl = `https://github.com/${pullRequest.repositoryOwner}/${pullRequest.repositoryName}/blob/HEAD/${encodeURI(filePath)}`
@@ -113,29 +125,23 @@ export const ModifiedFileCard = memo(function ModifiedFileCard({
 
             <CopyToClipboardButton value={file.filePath} />
 
-            {file.status === 'added' && (
-              <Badge className="bg-status-success text-status-success-foreground border-status-success-border uppercase text-[0.6rem]">
-                New
-              </Badge>
-            )}
-
-            {file.status === 'removed' && (
-              <Badge className="bg-status-danger text-status-danger-foreground border-status-danger-border uppercase text-[0.6rem]">
-                Deleted
-              </Badge>
-            )}
+            <FileStatusBadge status={file.status} />
           </div>
 
-          {(file.additions ?? 0) > 0 && (
-            <span className="text-status-success-foreground">
-              +{file.additions}
-            </span>
-          )}
+          <FileChangeStats
+            additions={file.additions}
+            deletions={file.deletions}
+          />
 
-          {(file.deletions ?? 0) > 0 && (
-            <span className="text-status-danger-foreground">
-              -{file.deletions}
-            </span>
+          {!isImage && Boolean(file.diffHunk) && (
+            <LayoutToggleButton
+              layout={effectiveLayout}
+              onToggle={() => {
+                setLayoutOverride(
+                  effectiveLayout === 'unified' ? 'split' : 'unified'
+                )
+              }}
+            />
           )}
 
           {(canExpand || isExpanding) && (
@@ -181,7 +187,7 @@ export const ModifiedFileCard = memo(function ModifiedFileCard({
               file={file}
               fullFile={fullFile ?? undefined}
               hideHeader
-              layout={layout}
+              layout={effectiveLayout}
               pendingComments={filePendingComments}
               pullRequest={pullRequest}
               registerCommentLandmarks={true}
@@ -203,5 +209,78 @@ function DiffQueuedFallback(): ReactElement {
     <div className="px-3 py-3 text-xs text-muted-foreground">
       Diff rendering queued.
     </div>
+  )
+}
+
+function FileChangeStats({
+  additions,
+  deletions
+}: {
+  additions: number | null
+  deletions: number | null
+}): ReactElement {
+  return (
+    <>
+      {(additions ?? 0) > 0 && (
+        <span className="text-status-success-foreground">+{additions}</span>
+      )}
+
+      {(deletions ?? 0) > 0 && (
+        <span className="text-status-danger-foreground">-{deletions}</span>
+      )}
+    </>
+  )
+}
+
+function FileStatusBadge({
+  status
+}: {
+  status: string | null
+}): ReactElement | null {
+  if (status === 'added') {
+    return (
+      <Badge className="bg-status-success text-status-success-foreground border-status-success-border uppercase text-[0.6rem]">
+        New
+      </Badge>
+    )
+  }
+
+  if (status === 'removed') {
+    return (
+      <Badge className="bg-status-danger text-status-danger-foreground border-status-danger-border uppercase text-[0.6rem]">
+        Deleted
+      </Badge>
+    )
+  }
+
+  return null
+}
+
+function LayoutToggleButton({
+  layout,
+  onToggle
+}: {
+  layout: DiffLayout
+  onToggle: () => void
+}): ReactElement {
+  const isUnified = layout === 'unified'
+
+  return (
+    <button
+      className="text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+      onClick={onToggle}
+      title={
+        isUnified
+          ? 'Switch this file to split view'
+          : 'Switch this file to unified view'
+      }
+      type="button"
+    >
+      {isUnified ? (
+        <Columns2Icon className="size-3" />
+      ) : (
+        <Rows3Icon className="size-3" />
+      )}
+    </button>
   )
 }
