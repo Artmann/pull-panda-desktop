@@ -260,6 +260,11 @@ const createWindow = () => {
     titleBarStyle: 'hidden',
     trafficLightPosition: { x: 12, y: 10 },
     webPreferences: {
+      // Dev builds are driven over CDP (agent-browser); with throttling on,
+      // Chromium freezes rAF and IntersectionObserver while the window is
+      // hidden, which breaks that automation. Packaged builds keep the
+      // battery-friendly default.
+      backgroundThrottling: app.isPackaged,
       contextIsolation: true,
       nodeIntegration: false,
       preload: path.join(__dirname, 'preload.js')
