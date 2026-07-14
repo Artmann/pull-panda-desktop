@@ -33,7 +33,7 @@ describe('ReviewBadge', () => {
 
     const badge = screen.getByText('Approved')
 
-    expect(badge).toHaveClass('text-[var(--status-success-foreground)]')
+    expect(badge).toHaveClass('text-status-success-foreground')
   })
 
   it('renders a changes requested badge with the danger color', () => {
@@ -41,7 +41,7 @@ describe('ReviewBadge', () => {
 
     const badge = screen.getByText('Requested changes')
 
-    expect(badge).toHaveClass('text-[var(--status-danger-foreground)]')
+    expect(badge).toHaveClass('text-status-danger-foreground')
   })
 
   it('renders a commented badge with the muted color for other states', () => {
