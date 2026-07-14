@@ -60,6 +60,26 @@ export function useVirtualList({
     )
   }, [])
 
+  const measureElement = useCallback(
+    (element: Element) => {
+      const height = element.getBoundingClientRect().height
+
+      if (height > 0) {
+        return height
+      }
+
+      // The list lives inside a tab panel that stays mounted while hidden.
+      // Hidden rows measure 0, and recording that would poison the size
+      // cache for the whole list (every row collapses to the same offset and
+      // tall cards paint over each other). Fall back to the estimate; the
+      // resize observer re-measures with real sizes once visible again.
+      const index = Number(element.getAttribute('data-index'))
+
+      return Number.isNaN(index) ? 0 : estimateSize(index)
+    },
+    [estimateSize]
+  )
+
   const virtualizer = useVirtualizer({
     count,
     estimateSize,
@@ -69,6 +89,7 @@ export function useVirtualList({
     // is measured) renders a screenful instead of flashing empty. The real
     // size replaces this as soon as the layout effect measures the container.
     initialRect: { height: initialViewportHeight(), width: 0 },
+    measureElement,
     overscan,
     scrollMargin
   })
