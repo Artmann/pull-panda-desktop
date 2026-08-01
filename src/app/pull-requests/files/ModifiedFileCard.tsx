@@ -13,6 +13,12 @@ import type { Comment, ModifiedFile } from '@/types/pull-request-details'
 import type { PullRequest } from '@/types/pull-request'
 
 import { Badge } from '@/app/components/ui/badge'
+import { Button } from '@/app/components/ui/button'
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger
+} from '@/app/components/ui/tooltip'
 import { CopyToClipboardButton } from '@/app/components/CopyToClipboardButton'
 import { getFileContents } from '@/app/lib/api'
 import { useAppSelector } from '@/app/store/hooks'
@@ -64,6 +70,12 @@ export const ModifiedFileCard = memo(function ModifiedFileCard({
 
   const canExpand = hasTextDiff && !fullFile
 
+  // Split view has nothing to show for fully added or deleted files — the
+  // other side would be empty, so the package renders a single column and
+  // the toggle looks like a no-op. Hide it for those files.
+  const canToggleLayout =
+    hasTextDiff && file.status !== 'added' && file.status !== 'removed'
+
   const handleExpand = () => {
     expandFullFile({
       file,
@@ -109,7 +121,11 @@ export const ModifiedFileCard = memo(function ModifiedFileCard({
           <div className="flex-1 flex items-center gap-2 font-mono text-xs">
             <span className="truncate">{file.filePath}</span>
 
-            <CopyToClipboardButton value={file.filePath} />
+            <CopyToClipboardButton
+              label="Copy file path"
+              size="icon-xs"
+              value={file.filePath}
+            />
 
             <FileStatusBadge status={file.status} />
           </div>
@@ -119,29 +135,38 @@ export const ModifiedFileCard = memo(function ModifiedFileCard({
             deletions={file.deletions}
           />
 
-          {hasTextDiff && (
-            <LayoutToggleButton
-              layout={effectiveLayout}
-              onToggle={handleToggleLayout}
+          <div className="flex items-center gap-1">
+            {canToggleLayout && (
+              <LayoutToggleButton
+                layout={effectiveLayout}
+                onToggle={handleToggleLayout}
+              />
+            )}
+
+            <ExpandFullFileButton
+              canExpand={canExpand}
+              isExpanding={isExpanding}
+              onExpand={handleExpand}
             />
-          )}
 
-          <ExpandFullFileButton
-            canExpand={canExpand}
-            isExpanding={isExpanding}
-            onExpand={handleExpand}
-          />
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  aria-label="View file on GitHub"
+                  className="text-muted-foreground hover:text-foreground"
+                  onClick={() => {
+                    window.electron.openUrl(viewFileUrl)
+                  }}
+                  size="icon-xs"
+                  variant="ghost"
+                >
+                  <ExternalLinkIcon className="size-3" />
+                </Button>
+              </TooltipTrigger>
 
-          <button
-            className="text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
-            onClick={() => {
-              window.electron.openUrl(viewFileUrl)
-            }}
-            title="View file on GitHub"
-            type="button"
-          >
-            <ExternalLinkIcon className="size-3" />
-          </button>
+              <TooltipContent>View file on GitHub</TooltipContent>
+            </Tooltip>
+          </div>
         </FileCardHeader>
 
         <FileCardBody
@@ -228,19 +253,26 @@ function ExpandFullFileButton({
   }
 
   return (
-    <button
-      className="text-muted-foreground hover:text-foreground transition-colors cursor-pointer disabled:opacity-50"
-      disabled={isExpanding}
-      onClick={onExpand}
-      title="Load full file to expand unchanged lines"
-      type="button"
-    >
-      {isExpanding ? (
-        <Loader2 className="size-3 animate-spin" />
-      ) : (
-        <UnfoldVertical className="size-3" />
-      )}
-    </button>
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <Button
+          aria-label="Load full file to expand unchanged lines"
+          className="text-muted-foreground hover:text-foreground"
+          disabled={isExpanding}
+          onClick={onExpand}
+          size="icon-xs"
+          variant="ghost"
+        >
+          {isExpanding ? (
+            <Loader2 className="size-3 animate-spin" />
+          ) : (
+            <UnfoldVertical className="size-3" />
+          )}
+        </Button>
+      </TooltipTrigger>
+
+      <TooltipContent>Load full file to expand unchanged lines</TooltipContent>
+    </Tooltip>
   )
 }
 
@@ -298,22 +330,33 @@ function LayoutToggleButton({
   const isUnified = layout === 'unified'
 
   return (
-    <button
-      className="text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
-      onClick={onToggle}
-      title={
-        isUnified
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <Button
+          aria-label={
+            isUnified
+              ? 'Switch this file to split view'
+              : 'Switch this file to unified view'
+          }
+          className="text-muted-foreground hover:text-foreground"
+          onClick={onToggle}
+          size="icon-xs"
+          variant="ghost"
+        >
+          {isUnified ? (
+            <Columns2Icon className="size-3" />
+          ) : (
+            <Rows3Icon className="size-3" />
+          )}
+        </Button>
+      </TooltipTrigger>
+
+      <TooltipContent>
+        {isUnified
           ? 'Switch this file to split view'
-          : 'Switch this file to unified view'
-      }
-      type="button"
-    >
-      {isUnified ? (
-        <Columns2Icon className="size-3" />
-      ) : (
-        <Rows3Icon className="size-3" />
-      )}
-    </button>
+          : 'Switch this file to unified view'}
+      </TooltipContent>
+    </Tooltip>
   )
 }
 

@@ -216,9 +216,9 @@ const pullPandaPaperPalette: ThemePalette = {
   statusNeutral: 'oklch(0.955 0.007 255)',
   statusNeutralBorder: 'oklch(0.88 0.013 255)',
   statusNeutralForeground: 'oklch(0.45 0.02 264)',
-  statusSuccess: 'oklch(0.96 0.05 150)',
-  statusSuccessBorder: 'oklch(0.88 0.1 150)',
-  statusSuccessForeground: 'oklch(0.48 0.14 150)',
+  statusSuccess: 'oklch(0.96 0.05 160)',
+  statusSuccessBorder: 'oklch(0.88 0.1 160)',
+  statusSuccessForeground: 'oklch(0.5 0.16 160)',
   statusWarning: 'oklch(0.955 0.03 80)',
   statusWarningBorder: 'oklch(0.88 0.05 80)',
   statusWarningForeground: 'oklch(0.42 0.1 80)',
@@ -284,10 +284,10 @@ export const appThemes: AppTheme[] = [
   // --- Paper Panda (light) - signature light theme matching index.css :root ---
   {
     dark: catppuccinMochaPalette,
-    darkShikiTheme: 'vitesse-light',
+    darkShikiTheme: 'github-light',
     label: 'Paper Panda',
     light: pullPandaPaperPalette,
-    lightShikiTheme: 'vitesse-light',
+    lightShikiTheme: 'github-light',
     modes: 'light',
     value: 'paper-panda'
   },

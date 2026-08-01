@@ -66,9 +66,9 @@
   --status-neutral: oklch(0.955 0.007 255);
   --status-neutral-border: oklch(0.88 0.013 255);
   --status-neutral-foreground: oklch(0.45 0.02 264);
-  --status-success: oklch(0.96 0.05 150);
-  --status-success-border: oklch(0.88 0.1 150);
-  --status-success-foreground: oklch(0.48 0.14 150);
+  --status-success: oklch(0.96 0.05 160);
+  --status-success-border: oklch(0.88 0.1 160);
+  --status-success-foreground: oklch(0.5 0.16 160);
   --status-warning: oklch(0.955 0.03 80);
   --status-warning-border: oklch(0.88 0.05 80);
   --status-warning-foreground: oklch(0.42 0.1 80);
@@ -294,6 +294,40 @@ samp {
 .pierre-diff--compact {
   --diffs-font-size: 11px;
   --diffs-line-height: 17px;
+}
+
+/* Fully-added and fully-deleted files: every line is a change, so per-line
+ * green/red paint is pure noise — the file card's status badge and border
+ * carry the state instead, and the lines render like a plain file. The
+ * number colour repeats the package's --diffs-fg-number formula because the
+ * addition/deletion slots otherwise fall back to the green/red base. */
+.pierre-diff--file-added {
+  /* The change bar runs the full card height here, and in the strong
+   * foreground green it casts a perceived tint over the whole card
+   * (simultaneous contrast). The pale border tone still reads as "added"
+   * without bleeding; per-line bars in modified files keep the strong
+   * colour, where they must stand out between context lines. */
+  --diffs-addition-color-override: var(--status-success-border);
+  --diffs-bg-addition-emphasis-override: transparent;
+  --diffs-bg-addition-number-override: var(--card);
+  --diffs-bg-addition-override: var(--card);
+  --diffs-fg-number-addition-override: color-mix(
+    in lab,
+    var(--foreground) 65%,
+    var(--card)
+  );
+}
+
+.pierre-diff--file-removed {
+  --diffs-bg-deletion-emphasis-override: transparent;
+  --diffs-bg-deletion-number-override: var(--card);
+  --diffs-bg-deletion-override: var(--card);
+  --diffs-deletion-color-override: var(--status-danger-border);
+  --diffs-fg-number-deletion-override: color-mix(
+    in lab,
+    var(--foreground) 65%,
+    var(--card)
+  );
 }
 
 /* Markdown code blocks without Shiki */
