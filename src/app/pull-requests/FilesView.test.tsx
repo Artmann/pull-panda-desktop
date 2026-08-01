@@ -297,7 +297,7 @@ describe('FilesView', () => {
       renderWithProviders(<FilesView pullRequest={pullRequest} />, store)
     })
 
-    const button = screen.getByTitle('View file on GitHub')
+    const button = screen.getByRole('button', { name: 'View file on GitHub' })
     fireEvent.click(button)
 
     expect(openUrl).toHaveBeenCalledWith(

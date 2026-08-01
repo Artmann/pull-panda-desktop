@@ -82,6 +82,23 @@ function toggleSetMember(set: Set<string>, key: string): Set<string> {
   return next
 }
 
+// The package pads the top and bottom of the code block by --diffs-gap-block,
+// and renders the "N unmodified lines" separator as an inset rounded pill.
+// The surrounding card already frames the diff, so strip the padding and
+// flatten the separator into a full-width square band. Injected because both
+// live inside the shadow root, !important because the package rules win on
+// stylesheet order otherwise.
+const flushCodeCSS = `
+  [data-code] { padding-block: 0 !important; }
+  [data-separator=line-info] { margin-block: 0 !important; }
+  [data-separator-wrapper] {
+    border-radius: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+  [data-separator-content] { border-radius: 0 !important; }
+`
+
 // Assembles the @pierre/diffs options object; the commenting-related handlers
 // and CSS only apply when the diff belongs to a pull request.
 function buildFileDiffOptions(input: {
@@ -99,7 +116,8 @@ function buildFileDiffOptions(input: {
     disableFileHeader: input.hideHeader,
     expandUnchanged: input.showFullFile,
     theme: { dark: input.darkTheme, light: input.lightTheme },
-    themeType: input.themeType
+    themeType: input.themeType,
+    unsafeCSS: flushCodeCSS
   }
 
   if (!input.canComment) {
@@ -118,6 +136,7 @@ function buildFileDiffOptions(input: {
     // align the button with the right-aligned digits (the cell has 0.6em of
     // right padding); the package default pins it to the top-right corner.
     unsafeCSS: `
+      ${flushCodeCSS}
       [data-column-number][data-hovered] { color: transparent; }
       [data-gutter-utility-slot] {
         inset: 0;
@@ -447,7 +466,12 @@ export const PierreDiff = memo(function PierreDiff({
   )
 
   const sharedProps = {
-    className: cn('pierre-diff', className),
+    className: cn(
+      'pierre-diff',
+      file.status === 'added' && 'pierre-diff--file-added',
+      file.status === 'removed' && 'pierre-diff--file-removed',
+      className
+    ),
     lineAnnotations,
     options,
     renderAnnotation,

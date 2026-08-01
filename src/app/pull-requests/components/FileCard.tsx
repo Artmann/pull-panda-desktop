@@ -11,6 +11,11 @@ import {
 } from 'react'
 
 import { Button } from '@/app/components/ui/button'
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger
+} from '@/app/components/ui/tooltip'
 import { useLazyRender } from '@/app/lib/lazy-render'
 import { cn } from '@/app/lib/utils'
 
@@ -149,14 +154,22 @@ export function FileCardHeader({
           setIsCollapsed(false)
         }}
       >
-        <Button
-          data-chevron
-          size="icon"
-          variant="ghost"
-          className="size-6"
-        >
-          <ChevronIcon className="size-3 mt-0.5" />
-        </Button>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              aria-label={isCollapsed ? 'Expand file' : 'Collapse file'}
+              data-chevron
+              size="icon-xs"
+              variant="ghost"
+            >
+              <ChevronIcon className="size-3" />
+            </Button>
+          </TooltipTrigger>
+
+          <TooltipContent>
+            {isCollapsed ? 'Expand file' : 'Collapse file'}
+          </TooltipContent>
+        </Tooltip>
         {children}
       </header>
     </>
