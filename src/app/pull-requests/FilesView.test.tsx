@@ -1,105 +1,35 @@
 /**
  * @vitest-environment jsdom
  */
-import { render, screen, fireEvent, act } from '@testing-library/react'
-import { Provider } from 'react-redux'
+import { screen, fireEvent, act } from '@testing-library/react'
 import { configureStore } from '@reduxjs/toolkit'
 import { describe, it, expect, beforeAll, vi } from 'vitest'
 
 import type { ModifiedFile } from '@/types/pull-request-details'
 import type { PullRequest } from '@/types/pull-request'
 
-import { ThemeProvider } from '@/app/lib/store/themeContext'
 import commentsReducer from '@/app/store/comments-slice'
 import modifiedFilesReducer from '@/app/store/modified-files-slice'
 import pendingReviewCommentsReducer from '@/app/store/pending-review-comments-slice'
 
+import {
+  createMockModifiedFile,
+  createMockPullRequest
+} from './__test-helpers__/pull-request-fixtures'
+import {
+  installObserverStubs,
+  renderWithProviders
+} from './__test-helpers__/test-utils'
 import { FilesView } from './FilesView'
 
 beforeAll(() => {
-  global.IntersectionObserver = class IntersectionObserver {
-    constructor() {
-      // Mock
-    }
-    disconnect() {
-      // Mock
-    }
-    observe() {
-      // Mock
-    }
-    unobserve() {
-      // Mock
-    }
-  } as unknown as typeof IntersectionObserver
-
-  global.ResizeObserver = class ResizeObserver {
-    constructor() {
-      // Mock
-    }
-    disconnect() {
-      // Mock
-    }
-    observe() {
-      // Mock
-    }
-    unobserve() {
-      // Mock
-    }
-  } as unknown as typeof ResizeObserver
+  installObserverStubs()
 })
 
-function createMockFile(overrides: Partial<ModifiedFile> = {}): ModifiedFile {
-  return {
-    id: 'file-1',
-    pullRequestId: 'pr-1',
-    filename: 'index.ts',
-    filePath: 'src/index.ts',
-    previousFilename: null,
-    status: 'modified',
-    additions: 10,
-    deletions: 5,
-    changes: 15,
-    diffHunk: '@@ -1,5 +1,5 @@\n context\n-old line\n+new line',
-    blobSha: null,
-    syncedAt: '2024-01-01T00:00:00Z',
-    ...overrides
-  }
-}
-
-function createMockPullRequest(
+function createFilesViewPullRequest(
   overrides: Partial<PullRequest> = {}
 ): PullRequest {
-  return {
-    id: 'pr-1',
-    number: 42,
-    title: 'Test PR',
-    state: 'OPEN',
-    url: 'https://github.com/owner/repo/pull/42',
-    repositoryOwner: 'owner',
-    repositoryName: 'repo',
-    authorLogin: 'testuser',
-    authorAvatarUrl: 'https://example.com/avatar.png',
-    createdAt: '2024-01-01T00:00:00Z',
-    updatedAt: '2024-01-01T00:00:00Z',
-    closedAt: null,
-    mergedAt: null,
-    body: 'Test PR body',
-    bodyHtml: null,
-    headRefName: null,
-    isDraft: false,
-    isAuthor: true,
-    isAssignee: false,
-    isReviewer: false,
-    labels: [],
-    assignees: [],
-    requestedReviewers: [],
-    syncedAt: '2024-01-01T00:00:00Z',
-    detailsSyncedAt: null,
-    commentCount: 0,
-    approvalCount: 0,
-    changesRequestedCount: 0,
-    ...overrides
-  }
+  return createMockPullRequest({ isAuthor: true, ...overrides })
 }
 
 function createTestStore(
@@ -121,45 +51,34 @@ function createTestStore(
   })
 }
 
-function renderWithProviders(
-  ui: React.ReactElement,
-  { store = createTestStore() } = {}
-) {
-  return render(
-    <Provider store={store}>
-      <ThemeProvider>{ui}</ThemeProvider>
-    </Provider>
-  )
-}
-
 describe('FilesView', () => {
   it('renders empty state when no files', async () => {
-    const pullRequest = createMockPullRequest()
+    const pullRequest = createFilesViewPullRequest()
     const store = createTestStore({
       modifiedFiles: []
     })
 
     await act(async () => {
-      renderWithProviders(<FilesView pullRequest={pullRequest} />, { store })
+      renderWithProviders(<FilesView pullRequest={pullRequest} />, store)
     })
 
     expect(screen.getByText('No files found.')).toBeInTheDocument()
   })
 
   it('renders files grouped by directory', async () => {
-    const pullRequest = createMockPullRequest()
+    const pullRequest = createFilesViewPullRequest()
     const files = [
-      createMockFile({
+      createMockModifiedFile({
         id: 'f1',
         filename: 'index.ts',
         filePath: 'src/index.ts'
       }),
-      createMockFile({
+      createMockModifiedFile({
         id: 'f2',
         filename: 'utils.ts',
         filePath: 'src/utils.ts'
       }),
-      createMockFile({
+      createMockModifiedFile({
         id: 'f3',
         filename: 'README.md',
         filePath: 'docs/README.md'
@@ -170,7 +89,7 @@ describe('FilesView', () => {
     })
 
     await act(async () => {
-      renderWithProviders(<FilesView pullRequest={pullRequest} />, { store })
+      renderWithProviders(<FilesView pullRequest={pullRequest} />, store)
     })
 
     expect(screen.getByText('src')).toBeInTheDocument()
@@ -181,9 +100,9 @@ describe('FilesView', () => {
   })
 
   it('collapses and expands folder sections', async () => {
-    const pullRequest = createMockPullRequest()
+    const pullRequest = createFilesViewPullRequest()
     const files = [
-      createMockFile({
+      createMockModifiedFile({
         id: 'f1',
         filename: 'index.ts',
         filePath: 'src/index.ts'
@@ -194,7 +113,7 @@ describe('FilesView', () => {
     })
 
     await act(async () => {
-      renderWithProviders(<FilesView pullRequest={pullRequest} />, { store })
+      renderWithProviders(<FilesView pullRequest={pullRequest} />, store)
     })
 
     expect(screen.getByText('src/index.ts')).toBeInTheDocument()
@@ -215,9 +134,9 @@ describe('FilesView', () => {
   })
 
   it('renders a diff for files with a diffHunk', async () => {
-    const pullRequest = createMockPullRequest()
+    const pullRequest = createFilesViewPullRequest()
     const files = [
-      createMockFile({
+      createMockModifiedFile({
         id: 'f1',
         filename: 'index.ts',
         filePath: 'src/index.ts',
@@ -229,7 +148,7 @@ describe('FilesView', () => {
     })
 
     await act(async () => {
-      renderWithProviders(<FilesView pullRequest={pullRequest} />, { store })
+      renderWithProviders(<FilesView pullRequest={pullRequest} />, store)
     })
 
     // The diff itself is rendered by `@pierre/diffs` inside a shadow DOM via a
@@ -240,9 +159,9 @@ describe('FilesView', () => {
   })
 
   it('defers diff rendering after the initial eager files', async () => {
-    const pullRequest = createMockPullRequest()
+    const pullRequest = createFilesViewPullRequest()
     const files = Array.from({ length: 4 }, (_, index) =>
-      createMockFile({
+      createMockModifiedFile({
         id: `f${index + 1}`,
         filename: `file-${index + 1}.ts`,
         filePath: `src/file-${index + 1}.ts`,
@@ -254,7 +173,7 @@ describe('FilesView', () => {
     })
 
     await act(async () => {
-      renderWithProviders(<FilesView pullRequest={pullRequest} />, { store })
+      renderWithProviders(<FilesView pullRequest={pullRequest} />, store)
     })
 
     expect(screen.getByText('src/file-4.ts')).toBeInTheDocument()
@@ -262,9 +181,9 @@ describe('FilesView', () => {
   })
 
   it('displays "No changes" message for files without diffHunk', async () => {
-    const pullRequest = createMockPullRequest()
+    const pullRequest = createFilesViewPullRequest()
     const files = [
-      createMockFile({
+      createMockModifiedFile({
         id: 'f1',
         filename: 'index.ts',
         filePath: 'src/index.ts',
@@ -276,7 +195,7 @@ describe('FilesView', () => {
     })
 
     await act(async () => {
-      renderWithProviders(<FilesView pullRequest={pullRequest} />, { store })
+      renderWithProviders(<FilesView pullRequest={pullRequest} />, store)
     })
 
     expect(screen.getByText('No changes to display.')).toBeInTheDocument()
@@ -287,12 +206,12 @@ describe('FilesView', () => {
       getApiPort: vi.fn().mockResolvedValue(54321)
     } as unknown as typeof window.electron
 
-    const pullRequest = createMockPullRequest({
+    const pullRequest = createFilesViewPullRequest({
       repositoryOwner: 'octocat',
       repositoryName: 'demo'
     })
     const files = [
-      createMockFile({
+      createMockModifiedFile({
         id: 'f1',
         filename: 'logo.png',
         filePath: 'assets/logo.png',
@@ -306,7 +225,7 @@ describe('FilesView', () => {
     })
 
     await act(async () => {
-      renderWithProviders(<FilesView pullRequest={pullRequest} />, { store })
+      renderWithProviders(<FilesView pullRequest={pullRequest} />, store)
     })
 
     const image = await screen.findByAltText('assets/logo.png')
@@ -318,19 +237,19 @@ describe('FilesView', () => {
   })
 
   it('sorts dotfiles and dotfolders after regular files', async () => {
-    const pullRequest = createMockPullRequest()
+    const pullRequest = createFilesViewPullRequest()
     const files = [
-      createMockFile({
+      createMockModifiedFile({
         id: 'f1',
         filename: 'controlled-step-mode.md',
         filePath: '.changeset/controlled-step-mode.md'
       }),
-      createMockFile({
+      createMockModifiedFile({
         id: 'f2',
         filename: 'index.ts',
         filePath: 'src/index.ts'
       }),
-      createMockFile({
+      createMockModifiedFile({
         id: 'f3',
         filename: '.env.example',
         filePath: '.env.example'
@@ -341,7 +260,7 @@ describe('FilesView', () => {
     })
 
     await act(async () => {
-      renderWithProviders(<FilesView pullRequest={pullRequest} />, { store })
+      renderWithProviders(<FilesView pullRequest={pullRequest} />, store)
     })
 
     const sections = screen.getAllByRole('button')
@@ -359,12 +278,12 @@ describe('FilesView', () => {
     const openUrl = vi.fn()
     window.electron = { openUrl } as unknown as typeof window.electron
 
-    const pullRequest = createMockPullRequest({
+    const pullRequest = createFilesViewPullRequest({
       repositoryOwner: 'testowner',
       repositoryName: 'testrepo'
     })
     const files = [
-      createMockFile({
+      createMockModifiedFile({
         id: 'f1',
         filename: 'index.ts',
         filePath: 'src/index.ts'
@@ -375,7 +294,7 @@ describe('FilesView', () => {
     })
 
     await act(async () => {
-      renderWithProviders(<FilesView pullRequest={pullRequest} />, { store })
+      renderWithProviders(<FilesView pullRequest={pullRequest} />, store)
     })
 
     const button = screen.getByTitle('View file on GitHub')
