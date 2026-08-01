@@ -219,7 +219,7 @@ function useRemark({
         const newClassName = `language-${suggestedLanguage}`
 
         if (isString(node.properties.className)) {
-          node.properties.className = `${node.properties.className} ${newClassName}`
+          node.properties.className = [node.properties.className, newClassName]
         }
 
         if (Array.isArray(node.properties.className)) {

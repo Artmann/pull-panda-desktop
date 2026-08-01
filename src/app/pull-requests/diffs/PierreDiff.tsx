@@ -65,6 +65,102 @@ const emptyComments: Comment[] = []
 const emptyPendingComments: PendingReviewComment[] = []
 const emptySubmittedComments: Comment[] = []
 
+// Maps each root comment's GitHub id to its replies, oldest first.
+function groupRepliesByParent(comments: Comment[]): Map<string, Comment[]> {
+  const map = new Map<string, Comment[]>()
+
+  for (const comment of comments) {
+    const parentId = comment.parentCommentGitHubId
+
+    if (!parentId) {
+      continue
+    }
+
+    const existing = map.get(parentId)
+
+    if (existing) {
+      existing.push(comment)
+    } else {
+      map.set(parentId, [comment])
+    }
+  }
+
+  for (const replies of map.values()) {
+    replies.sort((a, b) => {
+      const aTime = new Date(a.gitHubCreatedAt ?? a.syncedAt).getTime()
+      const bTime = new Date(b.gitHubCreatedAt ?? b.syncedAt).getTime()
+
+      return aTime - bTime
+    })
+  }
+
+  return map
+}
+
+// Groups submitted and pending comments, plus the open comment input when
+// there is one, into a single annotation per (side, line) slot of the diff.
+function buildCommentSlotAnnotations(
+  submittedComments: Comment[],
+  pendingComments: PendingReviewComment[],
+  activeCommentSlot: ActiveCommentSlot | null
+): DiffLineAnnotation<CommentSlot>[] {
+  const slots = new Map<string, CommentSlot>()
+
+  const ensureSlot = (
+    side: AnnotationSide,
+    lineNumber: number
+  ): CommentSlot => {
+    const key = `${side}:${String(lineNumber)}`
+    const existing = slots.get(key)
+
+    if (existing) {
+      return existing
+    }
+
+    const slot: CommentSlot = {
+      key,
+      lineNumber,
+      pending: [],
+      showInput: false,
+      side,
+      submitted: []
+    }
+
+    slots.set(key, slot)
+
+    return slot
+  }
+
+  for (const comment of submittedComments) {
+    if (comment.parentCommentGitHubId) {
+      continue
+    }
+
+    if (comment.line !== null) {
+      ensureSlot('additions', comment.line).submitted.push(comment)
+    } else if (comment.originalLine !== null) {
+      ensureSlot('deletions', comment.originalLine).submitted.push(comment)
+    }
+  }
+
+  for (const comment of pendingComments) {
+    ensureSlot(toAnnotationSide(comment.side), comment.line).pending.push(
+      comment
+    )
+  }
+
+  if (activeCommentSlot) {
+    ensureSlot(activeCommentSlot.side, activeCommentSlot.lineNumber).showInput =
+      true
+  }
+
+  return [...slots.values()].map((slot) => ({
+    lineNumber: slot.lineNumber,
+    metadata: slot,
+    side: slot.side
+  }))
+}
+
 interface PierreDiffProps {
   className?: string
   file: BuildPatchFile
@@ -113,36 +209,10 @@ export const PierreDiff = memo(function PierreDiff({
     return state.comments.items.filter((c) => c.pullRequestId === pullRequestId)
   }, shallowEqual)
 
-  const childrenByParentGitHubId = useMemo(() => {
-    const map = new Map<string, Comment[]>()
-
-    for (const comment of allPullRequestComments) {
-      const parentId = comment.parentCommentGitHubId
-
-      if (!parentId) {
-        continue
-      }
-
-      const existing = map.get(parentId)
-
-      if (existing) {
-        existing.push(comment)
-      } else {
-        map.set(parentId, [comment])
-      }
-    }
-
-    for (const replies of map.values()) {
-      replies.sort((a, b) => {
-        const aTime = new Date(a.gitHubCreatedAt ?? a.syncedAt).getTime()
-        const bTime = new Date(b.gitHubCreatedAt ?? b.syncedAt).getTime()
-
-        return aTime - bTime
-      })
-    }
-
-    return map
-  }, [allPullRequestComments])
+  const childrenByParentGitHubId = useMemo(
+    () => groupRepliesByParent(allPullRequestComments),
+    [allPullRequestComments]
+  )
 
   const toggleReplyForm = useCallback((threadKey: string) => {
     setExpandedReplyThreads((previous) => {
@@ -167,65 +237,15 @@ export const PierreDiff = memo(function PierreDiff({
     [file.diffHunk, file.filePath, file.previousFilename, file.status]
   )
 
-  const lineAnnotations = useMemo<DiffLineAnnotation<CommentSlot>[]>(() => {
-    const slots = new Map<string, CommentSlot>()
-
-    const ensureSlot = (
-      side: AnnotationSide,
-      lineNumber: number
-    ): CommentSlot => {
-      const key = `${side}:${String(lineNumber)}`
-      const existing = slots.get(key)
-
-      if (existing) {
-        return existing
-      }
-
-      const slot: CommentSlot = {
-        key,
-        lineNumber,
-        pending: [],
-        showInput: false,
-        side,
-        submitted: []
-      }
-
-      slots.set(key, slot)
-
-      return slot
-    }
-
-    for (const comment of submittedComments) {
-      if (comment.parentCommentGitHubId) {
-        continue
-      }
-
-      if (comment.line !== null) {
-        ensureSlot('additions', comment.line).submitted.push(comment)
-      } else if (comment.originalLine !== null) {
-        ensureSlot('deletions', comment.originalLine).submitted.push(comment)
-      }
-    }
-
-    for (const comment of pendingComments) {
-      ensureSlot(toAnnotationSide(comment.side), comment.line).pending.push(
-        comment
-      )
-    }
-
-    if (activeCommentSlot) {
-      ensureSlot(
-        activeCommentSlot.side,
-        activeCommentSlot.lineNumber
-      ).showInput = true
-    }
-
-    return [...slots.values()].map((slot) => ({
-      lineNumber: slot.lineNumber,
-      metadata: slot,
-      side: slot.side
-    }))
-  }, [submittedComments, pendingComments, activeCommentSlot])
+  const lineAnnotations = useMemo(
+    () =>
+      buildCommentSlotAnnotations(
+        submittedComments,
+        pendingComments,
+        activeCommentSlot
+      ),
+    [submittedComments, pendingComments, activeCommentSlot]
+  )
 
   const options = useMemo<FileDiffOptions<CommentSlot>>(() => {
     const base: FileDiffOptions<CommentSlot> = {
