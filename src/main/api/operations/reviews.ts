@@ -172,7 +172,14 @@ const cleanUpStalePendingReviews = (pullRequestId: string) =>
     }
   })
 
-export const createPendingReview = (input: CreateReviewInput) =>
+// Both pending-review operations start from the same place: the local
+// pull-request row behind the route coordinates plus an authenticated client.
+const resolveReviewContext = (input: {
+  readonly owner: string
+  readonly pullNumber: number
+  readonly repo: string
+  readonly token: string
+}) =>
   Effect.gen(function* () {
     const repository = yield* Repository
 
@@ -183,6 +190,34 @@ export const createPendingReview = (input: CreateReviewInput) =>
     })
 
     const octokit = new Octokit({ auth: input.token })
+
+    return { octokit, pullRequest }
+  })
+
+// Persist the GitHub review locally, notify the renderer, and shape the
+// response the review routes return.
+const persistReviewAndBroadcast = (
+  pullRequestId: string,
+  data: OctokitReviewData
+) =>
+  Effect.gen(function* () {
+    const repository = yield* Repository
+
+    const persisted = yield* repository.upsertReview({
+      pullRequestId,
+      review: toUpsertReviewInput(data)
+    })
+
+    yield* Effect.promise(() =>
+      broadcastPullRequestResourceEvents(pullRequestId)
+    )
+
+    return toCreateReviewResult(persisted, data.id)
+  })
+
+export const createPendingReview = (input: CreateReviewInput) =>
+  Effect.gen(function* () {
+    const { octokit, pullRequest } = yield* resolveReviewContext(input)
 
     const data = yield* Effect.tryPromise({
       try: async () => {
@@ -222,29 +257,12 @@ export const createPendingReview = (input: CreateReviewInput) =>
       })
     })
 
-    const persisted = yield* repository.upsertReview({
-      pullRequestId: pullRequest.id,
-      review: toUpsertReviewInput(data)
-    })
-
-    yield* Effect.promise(() =>
-      broadcastPullRequestResourceEvents(pullRequest.id)
-    )
-
-    return toCreateReviewResult(persisted, data.id)
+    return yield* persistReviewAndBroadcast(pullRequest.id, data)
   })
 
 export const getOrSyncPendingReview = (input: GetPendingReviewInput) =>
   Effect.gen(function* () {
-    const repository = yield* Repository
-
-    const pullRequest = yield* repository.requirePullRequestByCoords({
-      number: input.pullNumber,
-      owner: input.owner,
-      repo: input.repo
-    })
-
-    const octokit = new Octokit({ auth: input.token })
+    const { octokit, pullRequest } = yield* resolveReviewContext(input)
 
     const existing = yield* Effect.tryPromise({
       try: () =>
@@ -265,16 +283,7 @@ export const getOrSyncPendingReview = (input: GetPendingReviewInput) =>
       return null
     }
 
-    const persisted = yield* repository.upsertReview({
-      pullRequestId: pullRequest.id,
-      review: toUpsertReviewInput(existing)
-    })
-
-    yield* Effect.promise(() =>
-      broadcastPullRequestResourceEvents(pullRequest.id)
-    )
-
-    return toCreateReviewResult(persisted, existing.id)
+    return yield* persistReviewAndBroadcast(pullRequest.id, existing)
   })
 
 export const deletePendingReview = (input: DeleteReviewInput) =>

@@ -2,18 +2,11 @@ import fs from 'node:fs'
 import path from 'node:path'
 
 import { drizzle, type SQLJsDatabase } from 'drizzle-orm/sql-js'
-import { and, eq, isNull } from 'drizzle-orm'
+import { and, eq } from 'drizzle-orm'
 import { type Database } from 'sql.js'
 
-import {
-  checks,
-  commentReactions,
-  comments,
-  commits,
-  modifiedFiles,
-  pullRequests,
-  reviews
-} from '../src/database/schema'
+import { loadPullRequestRows } from '../src/database/pull-request-rows'
+import { pullRequests } from '../src/database/schema'
 import { bold, cyan, dim, green, loadSqlJs, red, yellow } from './cli-utils'
 
 type PullRequest = typeof pullRequests.$inferSelect
@@ -238,66 +231,14 @@ function printRelatedSections(
   database: SQLJsDatabase,
   pullRequestId: PullRequest['id']
 ) {
-  const reviewRows = database
-    .select()
-    .from(reviews)
-    .where(
-      and(eq(reviews.pullRequestId, pullRequestId), isNull(reviews.deletedAt))
-    )
-    .all()
+  const rows = loadPullRequestRows(database, pullRequestId)
 
-  const commentRows = database
-    .select()
-    .from(comments)
-    .where(
-      and(eq(comments.pullRequestId, pullRequestId), isNull(comments.deletedAt))
-    )
-    .all()
-
-  const reactionRows = database
-    .select()
-    .from(commentReactions)
-    .where(
-      and(
-        eq(commentReactions.pullRequestId, pullRequestId),
-        isNull(commentReactions.deletedAt)
-      )
-    )
-    .all()
-
-  const checkRows = database
-    .select()
-    .from(checks)
-    .where(
-      and(eq(checks.pullRequestId, pullRequestId), isNull(checks.deletedAt))
-    )
-    .all()
-
-  const commitRows = database
-    .select()
-    .from(commits)
-    .where(
-      and(eq(commits.pullRequestId, pullRequestId), isNull(commits.deletedAt))
-    )
-    .all()
-
-  const fileRows = database
-    .select()
-    .from(modifiedFiles)
-    .where(
-      and(
-        eq(modifiedFiles.pullRequestId, pullRequestId),
-        isNull(modifiedFiles.deletedAt)
-      )
-    )
-    .all()
-
-  printSection('Reviews', reviewRows)
-  printSection('Comments', commentRows)
-  printSection('Reactions', reactionRows)
-  printSection('Checks', checkRows)
-  printSection('Commits', commitRows)
-  printSection('Modified Files', fileRows)
+  printSection('Reviews', rows.reviewRows)
+  printSection('Comments', rows.commentRows)
+  printSection('Reactions', rows.reactionRows)
+  printSection('Checks', rows.checkRows)
+  printSection('Commits', rows.commitRows)
+  printSection('Modified Files', rows.fileRows)
 }
 
 async function main() {

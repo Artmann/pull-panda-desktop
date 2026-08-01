@@ -1,78 +1,14 @@
-import { Effect, Layer, Option, Ref } from 'effect'
+import { Effect, Layer, Ref } from 'effect'
 import { describe, expect, it } from 'vitest'
 
 import { commits, type Commit } from '../../database/schema'
-import { Database } from '../services/database'
-import { GitHubRest } from '../services/github-rest'
+import {
+  makeDatabaseLayerFactory,
+  makeRestLayer,
+  pullRequestSyncParams,
+  type MutationLog
+} from './__test-helpers__/stub-layers'
 import { syncCommits, type SyncCommitsParams } from './sync-commits'
-
-interface InsertRecord {
-  table: string
-  values: Record<string, unknown>
-  conflictUpdateKeys: string[]
-}
-
-interface UpdateRecord {
-  table: string
-  set: Record<string, unknown>
-}
-
-interface MutationLog {
-  inserts: InsertRecord[]
-  updates: UpdateRecord[]
-}
-
-// Build a fake drizzle `db` instance that records inserts/updates and returns
-// pre-seeded rows from `select(...).from(table).where(...).all()`. The cast to
-// `never` matches the `Database.use<A>(_, fn: (db: never) => A)` shape used by
-// the stub Layer.
-const makeFakeDb = (selectRows: ReadonlyArray<Commit>, log: MutationLog) => {
-  const fakeDb = {
-    select: () => ({
-      from: () => ({
-        where: () => ({
-          all: () => selectRows
-        })
-      })
-    }),
-    insert: (table: unknown) => ({
-      values: (values: Record<string, unknown>) => ({
-        onConflictDoUpdate: (config: { set: Record<string, unknown> }) => ({
-          run: () => {
-            log.inserts.push({
-              table: table === commits ? 'commits' : 'unknown',
-              values,
-              conflictUpdateKeys: Object.keys(config.set)
-            })
-          }
-        })
-      })
-    }),
-    update: (table: unknown) => ({
-      set: (set: Record<string, unknown>) => ({
-        where: () => ({
-          run: () => {
-            log.updates.push({
-              table: table === commits ? 'commits' : 'unknown',
-              set
-            })
-          }
-        })
-      })
-    })
-  }
-
-  return fakeDb as never
-}
-
-const makeDatabaseLayer = (
-  selectRows: ReadonlyArray<Commit>,
-  log: MutationLog
-) =>
-  Layer.succeed(Database, {
-    use: <A>(_operation: string, fn: (db: never) => A) =>
-      Effect.sync(() => fn(makeFakeDb(selectRows, log)))
-  })
 
 interface CommitResponseEntry {
   sha: string
@@ -84,41 +20,12 @@ interface CommitResponseEntry {
   author?: { login?: string; avatar_url?: string } | null
 }
 
-const makeRestLayer = (
-  pages: ReadonlyArray<ReadonlyArray<CommitResponseEntry>> | 'none',
-  callsRef: Ref.Ref<number>
-) =>
-  Layer.succeed(GitHubRest, {
-    request: <A>(
-      _route: string,
-      params: Record<string, unknown>,
-      _schema: unknown,
-      _options?: unknown
-    ) =>
-      Effect.gen(function* () {
-        yield* Ref.update(callsRef, (count) => count + 1)
+const makeDatabaseLayer = makeDatabaseLayerFactory<Commit>({
+  table: commits,
+  tableName: 'commits'
+})
 
-        if (pages === 'none') {
-          return Option.none<A>()
-        }
-
-        const pageNumber = (params.page as number | undefined) ?? 1
-        const page = pages[pageNumber - 1]
-
-        if (!page) {
-          return Option.some([] as unknown as A)
-        }
-
-        return Option.some(page as unknown as A)
-      })
-  })
-
-const params: SyncCommitsParams = {
-  pullRequestId: 'PR_1',
-  owner: 'octocat',
-  repositoryName: 'demo',
-  pullNumber: 42
-}
+const params: SyncCommitsParams = pullRequestSyncParams
 
 const seededCommit = (overrides: Partial<Commit>): Commit => ({
   id: 'cm_existing',

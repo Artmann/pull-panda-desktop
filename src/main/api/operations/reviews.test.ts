@@ -9,6 +9,10 @@ import { GitHubGraphQL } from '../../../sync/services/github-graphql'
 import { GitHubRest } from '../../../sync/services/github-rest'
 import type { UpsertReviewInput } from '../../services/repository'
 import { Repository } from '../../services/repository'
+import {
+  createPullRequestFixture,
+  createRepositoryStub
+} from './__test-helpers__/fixtures'
 import type { CreateReviewResult, OctokitReviewData } from './reviews'
 import {
   createPendingReview,
@@ -59,33 +63,7 @@ interface RepositoryState {
   }>
 }
 
-const pullRequestFixture: PullRequest = {
-  assignees: null,
-  authorAvatarUrl: null,
-  authorLogin: 'octocat',
-  body: null,
-  bodyHtml: null,
-  closedAt: null,
-  createdAt: '2026-01-01T00:00:00Z',
-  detailsSyncedAt: null,
-  headRefName: 'feature',
-  id: 'pr_1',
-  isAssignee: false,
-  isAuthor: true,
-  isDraft: false,
-  isReviewer: false,
-  labels: null,
-  mergedAt: null,
-  number: 42,
-  repositoryName: 'demo',
-  repositoryOwner: 'octocat',
-  requestedReviewers: null,
-  state: 'open',
-  syncedAt: '2026-01-01T00:00:00Z',
-  title: 'Demo PR',
-  updatedAt: '2026-01-01T00:00:00Z',
-  url: 'https://github.com/octocat/demo/pull/42'
-}
+const pullRequestFixture = createPullRequestFixture()
 
 const persistedReviewFixture: Review = {
   authorAvatarUrl: 'https://example.com/octocat.png',
@@ -137,45 +115,30 @@ const unusedServicesLayer = Layer.mergeAll(
 const makeRepositoryLayer = (
   state: RepositoryState,
   pullRequest: PullRequest | null = pullRequestFixture
-) => {
-  const requirePullRequest = () =>
-    pullRequest
-      ? Effect.succeed(pullRequest)
-      : Effect.fail(
-          new NotFoundError({
-            resourceId: 'octocat/demo#42',
-            route: 'repository.requirePullRequestByCoords'
+) =>
+  Layer.mergeAll(
+    Layer.succeed(
+      Repository,
+      createRepositoryStub(pullRequest, {
+        softDeletePendingReviews: ({ pullRequestId }) =>
+          Effect.sync(() => {
+            state.softDeleteCalls = [
+              ...(state.softDeleteCalls ?? []),
+              pullRequestId
+            ]
+
+            return state.softDeleteResult ?? 0
+          }),
+        upsertReview: (input) =>
+          Effect.sync(() => {
+            state.upsertCalls.push(input)
+
+            return persistedReviewFixture
           })
-        )
-
-  return Layer.mergeAll(
-    Layer.succeed(Repository, {
-      findCommentById: () => Effect.succeed(null),
-      findPullRequestByCoords: () => Effect.succeed(pullRequest),
-      findPullRequestById: () => Effect.succeed(pullRequest),
-      findReviewById: () => Effect.succeed(null),
-      findReviewThreadById: () => Effect.succeed(null),
-      requirePullRequestByCoords: requirePullRequest,
-      requirePullRequestById: requirePullRequest,
-      softDeletePendingReviews: ({ pullRequestId }) =>
-        Effect.sync(() => {
-          state.softDeleteCalls = [
-            ...(state.softDeleteCalls ?? []),
-            pullRequestId
-          ]
-
-          return state.softDeleteResult ?? 0
-        }),
-      upsertReview: (input) =>
-        Effect.sync(() => {
-          state.upsertCalls.push(input)
-
-          return persistedReviewFixture
-        })
-    }),
+      })
+    ),
     unusedServicesLayer
   )
-}
 
 const baseInput = {
   owner: 'octocat',
@@ -239,9 +202,9 @@ describe('reviews operations', () => {
         repo: 'demo'
       })
       expect(state.upsertCalls).toEqual([expectedUpsertCall])
-      expect(
-        mocks.broadcastPullRequestResourceEvents
-      ).toHaveBeenCalledWith('pr_1')
+      expect(mocks.broadcastPullRequestResourceEvents).toHaveBeenCalledWith(
+        'pr_1'
+      )
       expect(result).toEqual(expectedCreateReviewResult)
     })
 
@@ -406,9 +369,9 @@ describe('reviews operations', () => {
 
       expect(result).toEqual(null)
       expect(state.softDeleteCalls).toEqual(['pr_1'])
-      expect(
-        mocks.broadcastPullRequestResourceEvents
-      ).toHaveBeenCalledWith('pr_1')
+      expect(mocks.broadcastPullRequestResourceEvents).toHaveBeenCalledWith(
+        'pr_1'
+      )
     })
 
     it('persists and returns the pending review owned by the current user', async () => {
@@ -425,9 +388,9 @@ describe('reviews operations', () => {
       )
 
       expect(state.upsertCalls).toEqual([expectedUpsertCall])
-      expect(
-        mocks.broadcastPullRequestResourceEvents
-      ).toHaveBeenCalledWith('pr_1')
+      expect(mocks.broadcastPullRequestResourceEvents).toHaveBeenCalledWith(
+        'pr_1'
+      )
       expect(result).toEqual(expectedCreateReviewResult)
     })
 
@@ -488,9 +451,9 @@ describe('reviews operations', () => {
         review_id: 900
       })
       expect(state.softDeleteCalls).toEqual(['pr_1'])
-      expect(
-        mocks.broadcastPullRequestResourceEvents
-      ).toHaveBeenCalledWith('pr_1')
+      expect(mocks.broadcastPullRequestResourceEvents).toHaveBeenCalledWith(
+        'pr_1'
+      )
       expect(result).toEqual({ success: true })
     })
 

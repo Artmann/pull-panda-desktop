@@ -1,16 +1,16 @@
 import { Effect, Layer } from 'effect'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-import type {
-  Comment,
-  NewComment,
-  PullRequest
-} from '../../../database/schema'
+import type { Comment, NewComment, PullRequest } from '../../../database/schema'
 import { NotFoundError } from '../../../sync/errors'
 import { Database } from '../../../sync/services/database'
 import { GitHubApi } from '../../services/github-api'
 import { Repository } from '../../services/repository'
 import { octokitErrorOf } from '../octokit-error'
+import {
+  createPullRequestFixture,
+  createRepositoryStub
+} from './__test-helpers__/fixtures'
 import { createComment, type CreateCommentInput } from './create-comment'
 
 const octokitMocks = vi.hoisted(() => ({
@@ -76,58 +76,10 @@ const makeDatabaseLayer = (state: DatabaseState) =>
       Effect.sync(() => fn(makeFakeDb(operation, state) as never))
   })
 
-const makeRepositoryLayer = (pullRequest: PullRequest | null) => {
-  const requirePullRequest = () =>
-    pullRequest
-      ? Effect.succeed(pullRequest)
-      : Effect.fail(
-          new NotFoundError({
-            resourceId: 'octocat/demo#42',
-            route: 'repository.requirePullRequestByCoords'
-          })
-        )
+const makeRepositoryLayer = (pullRequest: PullRequest | null) =>
+  Layer.succeed(Repository, createRepositoryStub(pullRequest))
 
-  return Layer.succeed(Repository, {
-    findCommentById: () => Effect.succeed(null),
-    findPullRequestByCoords: () => Effect.succeed(pullRequest),
-    findPullRequestById: () => Effect.succeed(pullRequest),
-    findReviewById: () => Effect.succeed(null),
-    findReviewThreadById: () => Effect.succeed(null),
-    requirePullRequestByCoords: requirePullRequest,
-    requirePullRequestById: requirePullRequest,
-    softDeletePendingReviews: () =>
-      Effect.die('softDeletePendingReviews is not used in these tests'),
-    upsertReview: () => Effect.die('upsertReview is not used in these tests')
-  })
-}
-
-const pullRequestFixture: PullRequest = {
-  assignees: null,
-  authorAvatarUrl: null,
-  authorLogin: 'octocat',
-  body: null,
-  bodyHtml: null,
-  closedAt: null,
-  createdAt: '2026-01-01T00:00:00Z',
-  detailsSyncedAt: null,
-  headRefName: 'feature',
-  id: 'pr_1',
-  isAssignee: false,
-  isAuthor: true,
-  isDraft: false,
-  isReviewer: false,
-  labels: null,
-  mergedAt: null,
-  number: 42,
-  repositoryName: 'demo',
-  repositoryOwner: 'octocat',
-  requestedReviewers: null,
-  state: 'open',
-  syncedAt: '2026-01-01T00:00:00Z',
-  title: 'Demo PR',
-  updatedAt: '2026-01-01T00:00:00Z',
-  url: 'https://github.com/octocat/demo/pull/42'
-}
+const pullRequestFixture = createPullRequestFixture()
 
 const parentCommentFixture: Comment = {
   body: 'parent body',
