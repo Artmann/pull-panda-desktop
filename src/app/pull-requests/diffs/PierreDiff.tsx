@@ -69,6 +69,20 @@ function resolveThemeType(resolvedTheme: string | undefined): ThemeTypes {
   return resolvedTheme === 'dark' ? 'dark' : 'light'
 }
 
+// Fully added and deleted files render without per-line change paint; the
+// modifier classes hook up the CSS overrides in index.css.
+function fileStatusClass(status?: string | null): string | undefined {
+  if (status === 'added') {
+    return 'pierre-diff--file-added'
+  }
+
+  if (status === 'removed') {
+    return 'pierre-diff--file-removed'
+  }
+
+  return
+}
+
 // Returns a copy of the set with the key toggled in or out.
 function toggleSetMember(set: Set<string>, key: string): Set<string> {
   const next = new Set(set)
@@ -466,12 +480,7 @@ export const PierreDiff = memo(function PierreDiff({
   )
 
   const sharedProps = {
-    className: cn(
-      'pierre-diff',
-      file.status === 'added' && 'pierre-diff--file-added',
-      file.status === 'removed' && 'pierre-diff--file-removed',
-      className
-    ),
+    className: cn('pierre-diff', fileStatusClass(file.status), className),
     lineAnnotations,
     options,
     renderAnnotation,

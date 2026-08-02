@@ -800,7 +800,7 @@ function FileCommentHeader({
 }: FileCommentHeaderProps): ReactElement {
   const inner = (
     <>
-      <Code2 className="w-4 h-4 text-muted-foreground shrink-0" />
+      <Code2 className="size-3.5 text-muted-foreground shrink-0" />
       <CardTitle className="min-w-0 flex-1 text-xs text-foreground/80 font-mono truncate">
         {comment.path}
       </CardTitle>
@@ -824,9 +824,9 @@ function FileCommentHeader({
         onClick={onToggle}
         className={cn(
           'w-full text-left',
-          'px-4 py-3 bg-muted flex items-center gap-3',
-          'cursor-pointer hover:bg-muted/70 transition-colors',
-          isExpanded && 'pb-4 border-b border-border'
+          'px-3 py-2 flex items-center gap-2',
+          'cursor-pointer hover:bg-muted/50 transition-colors',
+          isExpanded && 'border-b border-border'
         )}
       >
         {inner}
@@ -835,7 +835,7 @@ function FileCommentHeader({
   }
 
   return (
-    <CardHeader className="px-4 py-3 pb-4! bg-muted border-b border-border flex items-center gap-3">
+    <CardHeader className="px-3 py-2 pb-2! border-b border-border flex items-center gap-2">
       {inner}
     </CardHeader>
   )
