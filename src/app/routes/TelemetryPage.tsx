@@ -32,6 +32,27 @@ import type {
 
 const refreshInterval = 2000
 
+interface TelemetrySnapshot {
+  stats: TelemetryStats
+  traces: TraceSummary[]
+}
+
+async function fetchTelemetrySnapshot(
+  errorsOnly: boolean,
+  search: string
+): Promise<TelemetrySnapshot> {
+  const [stats, traces] = await Promise.all([
+    window.telemetry.getStats(),
+    window.telemetry.queryTraces({
+      limit: 100,
+      search: search || undefined,
+      status: errorsOnly ? 'error' : 'all'
+    })
+  ])
+
+  return { stats, traces }
+}
+
 function formatTime(timestamp: number): string {
   return new Date(timestamp).toLocaleTimeString([], { hour12: false })
 }
@@ -49,17 +70,10 @@ export function TelemetryPage(): ReactElement {
   }, [])
 
   const refresh = useCallback(async () => {
-    const [nextStats, nextTraces] = await Promise.all([
-      window.telemetry.getStats(),
-      window.telemetry.queryTraces({
-        limit: 100,
-        search: search || undefined,
-        status: errorsOnly ? 'error' : 'all'
-      })
-    ])
+    const snapshot = await fetchTelemetrySnapshot(errorsOnly, search)
 
-    setStats(nextStats)
-    setTraces(nextTraces)
+    setStats(snapshot.stats)
+    setTraces(snapshot.traces)
   }, [errorsOnly, search])
 
   useEffect(
@@ -96,28 +110,7 @@ export function TelemetryPage(): ReactElement {
 
   return (
     <PageShell>
-      <div className="grid grid-cols-4 gap-4 mb-6">
-        <SummaryCard
-          icon={<Layers className="h-4 w-4" />}
-          label="Traces"
-          value={stats?.traceCount ?? 0}
-        />
-        <SummaryCard
-          icon={<AlertTriangle className="h-4 w-4 text-status-danger-foreground" />}
-          label="Error traces"
-          value={stats?.errorTraceCount ?? 0}
-        />
-        <SummaryCard
-          icon={<Activity className="h-4 w-4" />}
-          label="Spans"
-          value={stats?.spanCount ?? 0}
-        />
-        <SummaryCard
-          icon={<ScrollText className="h-4 w-4" />}
-          label="Logs"
-          value={stats?.logCount ?? 0}
-        />
-      </div>
+      <SummaryGrid stats={stats} />
 
       {selected ? (
         <TraceDetailPanel detail={selected} onClose={() => setSelected(null)} />
@@ -144,21 +137,12 @@ export function TelemetryPage(): ReactElement {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="flex items-center gap-2 mb-3">
-              <Input
-                placeholder="Filter by operation or trace id..."
-                value={search}
-                onChange={(event) => setSearch(event.target.value)}
-              />
-              <Button
-                type="button"
-                variant={errorsOnly ? 'default' : 'outline'}
-                size="sm"
-                onClick={() => setErrorsOnly((previous) => !previous)}
-              >
-                Errors
-              </Button>
-            </div>
+            <TraceFilters
+              errorsOnly={errorsOnly}
+              onErrorsOnlyToggle={() => setErrorsOnly((previous) => !previous)}
+              onSearchChange={setSearch}
+              search={search}
+            />
 
             <TraceTable traces={traces} onSelect={openTrace} />
           </CardContent>
@@ -212,6 +196,69 @@ function SummaryCard({ icon, label, value }: SummaryCardProps): ReactElement {
         <CardTitle className="text-lg">{value}</CardTitle>
       </CardHeader>
     </Card>
+  )
+}
+
+function SummaryGrid({
+  stats
+}: {
+  stats: TelemetryStats | null
+}): ReactElement {
+  return (
+    <div className="grid grid-cols-4 gap-4 mb-6">
+      <SummaryCard
+        icon={<Layers className="h-4 w-4" />}
+        label="Traces"
+        value={stats?.traceCount ?? 0}
+      />
+      <SummaryCard
+        icon={<AlertTriangle className="h-4 w-4 text-status-danger-foreground" />}
+        label="Error traces"
+        value={stats?.errorTraceCount ?? 0}
+      />
+      <SummaryCard
+        icon={<Activity className="h-4 w-4" />}
+        label="Spans"
+        value={stats?.spanCount ?? 0}
+      />
+      <SummaryCard
+        icon={<ScrollText className="h-4 w-4" />}
+        label="Logs"
+        value={stats?.logCount ?? 0}
+      />
+    </div>
+  )
+}
+
+interface TraceFiltersProps {
+  errorsOnly: boolean
+  onErrorsOnlyToggle: () => void
+  onSearchChange: (value: string) => void
+  search: string
+}
+
+function TraceFilters({
+  errorsOnly,
+  onErrorsOnlyToggle,
+  onSearchChange,
+  search
+}: TraceFiltersProps): ReactElement {
+  return (
+    <div className="flex items-center gap-2 mb-3">
+      <Input
+        placeholder="Filter by operation or trace id..."
+        value={search}
+        onChange={(event) => onSearchChange(event.target.value)}
+      />
+      <Button
+        type="button"
+        variant={errorsOnly ? 'default' : 'outline'}
+        size="sm"
+        onClick={onErrorsOnlyToggle}
+      >
+        Errors
+      </Button>
+    </div>
   )
 }
 

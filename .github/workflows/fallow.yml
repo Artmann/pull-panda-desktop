@@ -24,4 +24,4 @@ jobs:
           review-comments: true
           # Pin to the version in devDependencies so CI findings match what
           # `yarn fallow` reports locally instead of floating to latest.
-          version: 2.45.1
+          version: 3.11.0

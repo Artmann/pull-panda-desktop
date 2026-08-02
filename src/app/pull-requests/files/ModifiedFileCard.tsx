@@ -54,7 +54,7 @@ export const ModifiedFileCard = memo(function ModifiedFileCard({
   const effectiveLayout = layoutOverride ?? layout
 
   const filePath = file.filePath
-  const isImage = isImagePath(filePath)
+  const hasTextDiff = !isImagePath(filePath) && Boolean(file.diffHunk)
   const viewFileUrl = `https://github.com/${pullRequest.repositoryOwner}/${pullRequest.repositoryName}/blob/HEAD/${encodeURI(filePath)}`
 
   const [fullFile, setFullFile] = useState<FullFileContents | null>(
@@ -62,35 +62,21 @@ export const ModifiedFileCard = memo(function ModifiedFileCard({
   )
   const [isExpanding, setIsExpanding] = useState(false)
 
-  const canExpand = !isImage && Boolean(file.diffHunk) && !fullFile
+  const canExpand = hasTextDiff && !fullFile
 
   const handleExpand = () => {
-    if (fullFile || isExpanding) {
-      return
-    }
-
-    setIsExpanding(true)
-
-    getFileContents({
-      blobSha: file.blobSha,
-      owner: pullRequest.repositoryOwner,
-      path: file.filePath,
-      previousFilename: file.previousFilename,
-      pullNumber: pullRequest.number,
-      repo: pullRequest.repositoryName,
-      status: file.status
+    expandFullFile({
+      file,
+      fullFile,
+      isExpanding,
+      pullRequest,
+      setFullFile,
+      setIsExpanding
     })
-      .then((contents) => {
-        fullFileCache.set(file.id, contents)
-        setFullFile(contents)
-        setIsExpanding(false)
-      })
-      .catch((error: unknown) => {
-        setIsExpanding(false)
-        toast.error(
-          error instanceof Error ? error.message : 'Failed to load full file'
-        )
-      })
+  }
+
+  const handleToggleLayout = () => {
+    setLayoutOverride(toggleLayout(effectiveLayout))
   }
 
   const allPendingComments = useAppSelector(
@@ -133,32 +119,18 @@ export const ModifiedFileCard = memo(function ModifiedFileCard({
             deletions={file.deletions}
           />
 
-          {!isImage && Boolean(file.diffHunk) && (
+          {hasTextDiff && (
             <LayoutToggleButton
               layout={effectiveLayout}
-              onToggle={() => {
-                setLayoutOverride(
-                  effectiveLayout === 'unified' ? 'split' : 'unified'
-                )
-              }}
+              onToggle={handleToggleLayout}
             />
           )}
 
-          {(canExpand || isExpanding) && (
-            <button
-              className="text-muted-foreground hover:text-foreground transition-colors cursor-pointer disabled:opacity-50"
-              disabled={isExpanding}
-              onClick={handleExpand}
-              title="Load full file to expand unchanged lines"
-              type="button"
-            >
-              {isExpanding ? (
-                <Loader2 className="size-3 animate-spin" />
-              ) : (
-                <UnfoldVertical className="size-3" />
-              )}
-            </button>
-          )}
+          <ExpandFullFileButton
+            canExpand={canExpand}
+            isExpanding={isExpanding}
+            onExpand={handleExpand}
+          />
 
           <button
             className="text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
@@ -177,27 +149,14 @@ export const ModifiedFileCard = memo(function ModifiedFileCard({
           fallback={<DiffQueuedFallback />}
           lazy={Boolean(file.diffHunk)}
         >
-          {isImage ? (
-            <ImageFileView
-              file={file}
-              pullRequest={pullRequest}
-            />
-          ) : file.diffHunk ? (
-            <PierreDiff
-              file={file}
-              fullFile={fullFile ?? undefined}
-              hideHeader
-              layout={effectiveLayout}
-              pendingComments={filePendingComments}
-              pullRequest={pullRequest}
-              registerCommentLandmarks={true}
-              submittedComments={fileSubmittedComments}
-            />
-          ) : (
-            <div className="py-2 px-3 text-muted-foreground">
-              No changes to display.
-            </div>
-          )}
+          <ModifiedFileBody
+            file={file}
+            fullFile={fullFile}
+            layout={effectiveLayout}
+            pendingComments={filePendingComments}
+            pullRequest={pullRequest}
+            submittedComments={fileSubmittedComments}
+          />
         </FileCardBody>
       </FileCard>
     </div>
@@ -209,6 +168,79 @@ function DiffQueuedFallback(): ReactElement {
     <div className="px-3 py-3 text-xs text-muted-foreground">
       Diff rendering queued.
     </div>
+  )
+}
+
+function expandFullFile({
+  file,
+  fullFile,
+  isExpanding,
+  pullRequest,
+  setFullFile,
+  setIsExpanding
+}: {
+  file: ModifiedFile
+  fullFile: FullFileContents | null
+  isExpanding: boolean
+  pullRequest: PullRequest
+  setFullFile: (contents: FullFileContents) => void
+  setIsExpanding: (isExpanding: boolean) => void
+}): void {
+  if (fullFile || isExpanding) {
+    return
+  }
+
+  setIsExpanding(true)
+
+  getFileContents({
+    blobSha: file.blobSha,
+    owner: pullRequest.repositoryOwner,
+    path: file.filePath,
+    previousFilename: file.previousFilename,
+    pullNumber: pullRequest.number,
+    repo: pullRequest.repositoryName,
+    status: file.status
+  })
+    .then((contents) => {
+      fullFileCache.set(file.id, contents)
+      setFullFile(contents)
+      setIsExpanding(false)
+    })
+    .catch((error: unknown) => {
+      setIsExpanding(false)
+      toast.error(
+        error instanceof Error ? error.message : 'Failed to load full file'
+      )
+    })
+}
+
+function ExpandFullFileButton({
+  canExpand,
+  isExpanding,
+  onExpand
+}: {
+  canExpand: boolean
+  isExpanding: boolean
+  onExpand: () => void
+}): ReactElement | null {
+  if (!canExpand && !isExpanding) {
+    return null
+  }
+
+  return (
+    <button
+      className="text-muted-foreground hover:text-foreground transition-colors cursor-pointer disabled:opacity-50"
+      disabled={isExpanding}
+      onClick={onExpand}
+      title="Load full file to expand unchanged lines"
+      type="button"
+    >
+      {isExpanding ? (
+        <Loader2 className="size-3 animate-spin" />
+      ) : (
+        <UnfoldVertical className="size-3" />
+      )}
+    </button>
   )
 }
 
@@ -283,4 +315,54 @@ function LayoutToggleButton({
       )}
     </button>
   )
+}
+
+function ModifiedFileBody({
+  file,
+  fullFile,
+  layout,
+  pendingComments,
+  pullRequest,
+  submittedComments
+}: {
+  file: ModifiedFile
+  fullFile: FullFileContents | null
+  layout: DiffLayout
+  pendingComments: PendingReviewComment[]
+  pullRequest: PullRequest
+  submittedComments: Comment[]
+}): ReactElement {
+  if (isImagePath(file.filePath)) {
+    return (
+      <ImageFileView
+        file={file}
+        pullRequest={pullRequest}
+      />
+    )
+  }
+
+  if (!file.diffHunk) {
+    return (
+      <div className="py-2 px-3 text-muted-foreground">
+        No changes to display.
+      </div>
+    )
+  }
+
+  return (
+    <PierreDiff
+      file={file}
+      fullFile={fullFile ?? undefined}
+      hideHeader
+      layout={layout}
+      pendingComments={pendingComments}
+      pullRequest={pullRequest}
+      registerCommentLandmarks={true}
+      submittedComments={submittedComments}
+    />
+  )
+}
+
+function toggleLayout(layout: DiffLayout): DiffLayout {
+  return layout === 'unified' ? 'split' : 'unified'
 }

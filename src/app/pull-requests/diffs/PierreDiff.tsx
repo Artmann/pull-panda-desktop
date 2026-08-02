@@ -65,6 +65,98 @@ const emptyComments: Comment[] = []
 const emptyPendingComments: PendingReviewComment[] = []
 const emptySubmittedComments: Comment[] = []
 
+function resolveThemeType(resolvedTheme: string | undefined): ThemeTypes {
+  return resolvedTheme === 'dark' ? 'dark' : 'light'
+}
+
+// Returns a copy of the set with the key toggled in or out.
+function toggleSetMember(set: Set<string>, key: string): Set<string> {
+  const next = new Set(set)
+
+  if (next.has(key)) {
+    next.delete(key)
+  } else {
+    next.add(key)
+  }
+
+  return next
+}
+
+// Assembles the @pierre/diffs options object; the commenting-related handlers
+// and CSS only apply when the diff belongs to a pull request.
+function buildFileDiffOptions(input: {
+  canComment: boolean
+  darkTheme: string
+  hideHeader: boolean
+  layout: DiffLayout
+  lightTheme: string
+  onSelectSlot: (slot: ActiveCommentSlot) => void
+  showFullFile: boolean
+  themeType: ThemeTypes
+}): FileDiffOptions<CommentSlot> {
+  const base: FileDiffOptions<CommentSlot> = {
+    diffStyle: input.layout,
+    disableFileHeader: input.hideHeader,
+    expandUnchanged: input.showFullFile,
+    theme: { dark: input.darkTheme, light: input.lightTheme },
+    themeType: input.themeType
+  }
+
+  if (!input.canComment) {
+    return base
+  }
+
+  return {
+    ...base,
+    enableGutterUtility: true,
+    lineHoverHighlight: 'both',
+    onLineNumberClick: ({ annotationSide, lineNumber }) => {
+      input.onSelectSlot({ lineNumber, side: annotationSide })
+    },
+    // The gutter comment button overlays the hovered line-number cell, so
+    // hide the number underneath instead of letting the two fight, and
+    // align the button with the right-aligned digits (the cell has 0.6em of
+    // right padding); the package default pins it to the top-right corner.
+    unsafeCSS: `
+      [data-column-number][data-hovered] { color: transparent; }
+      [data-gutter-utility-slot] {
+        inset: 0;
+        justify-content: flex-end;
+        padding-right: 0.6em;
+      }
+    `
+  }
+}
+
+// The add-a-comment button shown over the hovered line number; rendered by
+// the diff package through the gutter utility slot.
+function GutterCommentButton({
+  getHoveredLine,
+  onSelectSlot
+}: {
+  getHoveredLine: () => GetHoveredLineResult<'diff'> | undefined
+  onSelectSlot: (slot: ActiveCommentSlot) => void
+}): ReactElement {
+  return (
+    <div className="flex h-full items-center justify-center">
+      <button
+        className="flex size-4 items-center justify-center rounded bg-primary text-primary-foreground"
+        onClick={() => {
+          const hovered = getHoveredLine()
+
+          if (hovered) {
+            onSelectSlot({ lineNumber: hovered.lineNumber, side: hovered.side })
+          }
+        }}
+        title="Add a comment"
+        type="button"
+      >
+        <Plus className="size-3" />
+      </button>
+    </div>
+  )
+}
+
 // Maps each root comment's GitHub id to its replies, oldest first.
 function groupRepliesByParent(comments: Comment[]): Map<string, Comment[]> {
   const map = new Map<string, Comment[]>()
@@ -173,6 +265,99 @@ interface PierreDiffProps {
   submittedComments?: Comment[]
 }
 
+// Bundles the reply-thread state for a diff: every comment on the pull
+// request grouped by parent, plus which threads have their reply form open.
+function useReplyThreads(pullRequest: PullRequest | undefined) {
+  const pullRequestId = pullRequest?.id ?? null
+
+  const [expandedReplyThreads, setExpandedReplyThreads] = useState<Set<string>>(
+    new Set()
+  )
+
+  const allPullRequestComments = useAppSelector((state) => {
+    if (!pullRequestId) {
+      return emptyComments
+    }
+
+    return state.comments.items.filter((c) => c.pullRequestId === pullRequestId)
+  }, shallowEqual)
+
+  const childrenByParentGitHubId = useMemo(
+    () => groupRepliesByParent(allPullRequestComments),
+    [allPullRequestComments]
+  )
+
+  const toggleReplyForm = useCallback((threadKey: string) => {
+    setExpandedReplyThreads((previous) => toggleSetMember(previous, threadKey))
+  }, [])
+
+  return { childrenByParentGitHubId, expandedReplyThreads, toggleReplyForm }
+}
+
+// Bundles the per-line comment-slot state for a diff: the slot annotations
+// the package renders, the open input, and the hover gutter button. The
+// gutter button render prop is undefined when commenting is unavailable so
+// the package skips the gutter slot entirely.
+function useCommentSlots(
+  submittedComments: Comment[],
+  pendingComments: PendingReviewComment[],
+  canComment: boolean
+) {
+  const [activeCommentSlot, setActiveCommentSlot] =
+    useState<ActiveCommentSlot | null>(null)
+
+  const handleCloseComment = useCallback(() => {
+    setActiveCommentSlot(null)
+  }, [])
+
+  const lineAnnotations = useMemo(
+    () =>
+      buildCommentSlotAnnotations(
+        submittedComments,
+        pendingComments,
+        activeCommentSlot
+      ),
+    [submittedComments, pendingComments, activeCommentSlot]
+  )
+
+  const renderGutterUtility = useCallback(
+    (
+      getHoveredLine: () => GetHoveredLineResult<'diff'> | undefined
+    ): ReactNode => (
+      <GutterCommentButton
+        getHoveredLine={getHoveredLine}
+        onSelectSlot={setActiveCommentSlot}
+      />
+    ),
+    []
+  )
+
+  return {
+    handleCloseComment,
+    lineAnnotations,
+    renderGutterUtility: canComment ? renderGutterUtility : undefined,
+    setActiveCommentSlot
+  }
+}
+
+// Builds the old/new file pair for `MultiFileDiff` once full contents load.
+function buildFullFilePair(
+  fullFile: FullFileContents | undefined,
+  file: BuildPatchFile
+): { newFile: FileContents; oldFile: FileContents } | null {
+  if (!fullFile) {
+    return null
+  }
+
+  return {
+    newFile: { contents: fullFile.newContents, name: file.filePath },
+    oldFile: {
+      contents: fullFile.oldContents,
+      name: file.previousFilename ?? file.filePath
+    }
+  }
+}
+
 export const PierreDiff = memo(function PierreDiff({
   className,
   file,
@@ -189,170 +374,67 @@ export const PierreDiff = memo(function PierreDiff({
 
   const darkTheme = appTheme.darkShikiTheme
   const lightTheme = appTheme.lightShikiTheme
-  const themeType: ThemeTypes = resolvedTheme === 'dark' ? 'dark' : 'light'
+  const themeType = resolveThemeType(resolvedTheme)
 
   const canComment = Boolean(pullRequest)
 
-  const [activeCommentSlot, setActiveCommentSlot] =
-    useState<ActiveCommentSlot | null>(null)
-  const [expandedReplyThreads, setExpandedReplyThreads] = useState<Set<string>>(
-    new Set()
-  )
+  const { childrenByParentGitHubId, expandedReplyThreads, toggleReplyForm } =
+    useReplyThreads(pullRequest)
 
-  const pullRequestId = pullRequest?.id ?? null
-
-  const allPullRequestComments = useAppSelector((state) => {
-    if (!pullRequestId) {
-      return emptyComments
-    }
-
-    return state.comments.items.filter((c) => c.pullRequestId === pullRequestId)
-  }, shallowEqual)
-
-  const childrenByParentGitHubId = useMemo(
-    () => groupRepliesByParent(allPullRequestComments),
-    [allPullRequestComments]
-  )
-
-  const toggleReplyForm = useCallback((threadKey: string) => {
-    setExpandedReplyThreads((previous) => {
-      const next = new Set(previous)
-
-      if (next.has(threadKey)) {
-        next.delete(threadKey)
-      } else {
-        next.add(threadKey)
-      }
-
-      return next
-    })
-  }, [])
-
-  const handleCloseComment = useCallback(() => {
-    setActiveCommentSlot(null)
-  }, [])
+  const {
+    handleCloseComment,
+    lineAnnotations,
+    renderGutterUtility,
+    setActiveCommentSlot
+  } = useCommentSlots(submittedComments, pendingComments, canComment)
 
   const patch = useMemo(
     () => buildPatch(file),
     [file.diffHunk, file.filePath, file.previousFilename, file.status]
   )
 
-  const lineAnnotations = useMemo(
+  const options = useMemo<FileDiffOptions<CommentSlot>>(
     () =>
-      buildCommentSlotAnnotations(
-        submittedComments,
-        pendingComments,
-        activeCommentSlot
-      ),
-    [submittedComments, pendingComments, activeCommentSlot]
+      buildFileDiffOptions({
+        canComment,
+        darkTheme,
+        hideHeader,
+        layout,
+        lightTheme,
+        onSelectSlot: setActiveCommentSlot,
+        showFullFile: Boolean(fullFile),
+        themeType
+      }),
+    [
+      canComment,
+      darkTheme,
+      fullFile,
+      hideHeader,
+      layout,
+      lightTheme,
+      setActiveCommentSlot,
+      themeType
+    ]
   )
 
-  const options = useMemo<FileDiffOptions<CommentSlot>>(() => {
-    const base: FileDiffOptions<CommentSlot> = {
-      diffStyle: layout,
-      disableFileHeader: hideHeader,
-      expandUnchanged: Boolean(fullFile),
-      theme: { dark: darkTheme, light: lightTheme },
-      themeType
-    }
-
-    if (!canComment) {
-      return base
-    }
-
-    return {
-      ...base,
-      enableGutterUtility: true,
-      lineHoverHighlight: 'both',
-      onLineNumberClick: ({ annotationSide, lineNumber }) => {
-        setActiveCommentSlot({ lineNumber, side: annotationSide })
-      },
-      // The gutter comment button overlays the hovered line-number cell, so
-      // hide the number underneath instead of letting the two fight, and
-      // align the button with the right-aligned digits (the cell has 0.6em of
-      // right padding); the package default pins it to the top-right corner.
-      unsafeCSS: `
-        [data-column-number][data-hovered] { color: transparent; }
-        [data-gutter-utility-slot] {
-          inset: 0;
-          justify-content: flex-end;
-          padding-right: 0.6em;
-        }
-      `
-    }
-  }, [
-    canComment,
-    darkTheme,
-    fullFile,
-    hideHeader,
-    layout,
-    lightTheme,
-    themeType
-  ])
-
-  const files = useMemo<{
-    newFile: FileContents
-    oldFile: FileContents
-  } | null>(() => {
-    if (!fullFile) {
-      return null
-    }
-
-    return {
-      newFile: { contents: fullFile.newContents, name: file.filePath },
-      oldFile: {
-        contents: fullFile.oldContents,
-        name: file.previousFilename ?? file.filePath
-      }
-    }
-  }, [fullFile, file.filePath, file.previousFilename])
-
-  const renderGutterUtility = useCallback(
-    (
-      getHoveredLine: () => GetHoveredLineResult<'diff'> | undefined
-    ): ReactNode => (
-      <div className="flex h-full items-center justify-center">
-        <button
-          className="flex size-4 items-center justify-center rounded bg-primary text-primary-foreground"
-          onClick={() => {
-            const hovered = getHoveredLine()
-
-            if (hovered) {
-              setActiveCommentSlot({
-                lineNumber: hovered.lineNumber,
-                side: hovered.side
-              })
-            }
-          }}
-          title="Add a comment"
-          type="button"
-        >
-          <Plus className="size-3" />
-        </button>
-      </div>
-    ),
-    []
+  const files = useMemo(
+    () => buildFullFilePair(fullFile, file),
+    [fullFile, file.filePath, file.previousFilename]
   )
 
   const renderAnnotation = useCallback(
-    (annotation: DiffLineAnnotation<CommentSlot>): ReactNode => {
-      if (!pullRequest) {
-        return null
-      }
-
-      return (
-        <DiffCommentSlot
-          childrenByParentGitHubId={childrenByParentGitHubId}
-          expandedReplyThreads={expandedReplyThreads}
-          filePath={file.filePath}
-          onCloseInput={handleCloseComment}
-          onToggleReply={toggleReplyForm}
-          pullRequest={pullRequest}
-          registerCommentLandmarks={registerCommentLandmarks}
-          slot={annotation.metadata}
-        />
-      )
-    },
+    (annotation: DiffLineAnnotation<CommentSlot>): ReactNode => (
+      <DiffCommentSlot
+        childrenByParentGitHubId={childrenByParentGitHubId}
+        expandedReplyThreads={expandedReplyThreads}
+        filePath={file.filePath}
+        onCloseInput={handleCloseComment}
+        onToggleReply={toggleReplyForm}
+        pullRequest={pullRequest}
+        registerCommentLandmarks={registerCommentLandmarks}
+        slot={annotation.metadata}
+      />
+    ),
     [
       childrenByParentGitHubId,
       expandedReplyThreads,
@@ -369,7 +451,7 @@ export const PierreDiff = memo(function PierreDiff({
     lineAnnotations,
     options,
     renderAnnotation,
-    renderGutterUtility: canComment ? renderGutterUtility : undefined
+    renderGutterUtility
   }
 
   if (files) {
@@ -396,7 +478,7 @@ interface DiffCommentSlotProps {
   filePath: string
   onCloseInput: () => void
   onToggleReply: (threadKey: string) => void
-  pullRequest: PullRequest
+  pullRequest?: PullRequest
   registerCommentLandmarks: boolean
   slot: CommentSlot
 }
@@ -410,7 +492,13 @@ function DiffCommentSlot({
   pullRequest,
   registerCommentLandmarks,
   slot
-}: DiffCommentSlotProps): ReactElement {
+}: DiffCommentSlotProps): ReactElement | null {
+  // Comment slots only exist for pull-request diffs; excerpts rendered
+  // without one (e.g. comment threads) never produce annotations.
+  if (!pullRequest) {
+    return null
+  }
+
   return (
     <div className="font-sans">
       {slot.submitted.map((rootComment) => {

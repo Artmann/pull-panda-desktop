@@ -134,7 +134,7 @@
     "eslint": "^8.57.1",
     "eslint-import-resolver-typescript": "^4.4.4",
     "eslint-plugin-import": "^2.32.0",
-    "fallow": "^2.45.1",
+    "fallow": "^3.11.0",
     "jsdom": "^27.4.0",
     "prettier": "^3.7.4",
     "storybook": "^10.3.5",

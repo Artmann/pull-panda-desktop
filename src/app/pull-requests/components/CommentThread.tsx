@@ -103,7 +103,10 @@ interface CommentItemProps {
 function commentItemClassName(variant: 'card' | 'inline'): string {
   const horizontalPadding = variant === 'inline' ? 'px-3.5' : 'px-4'
 
-  return cn('relative flex flex-col w-full pt-4 pb-5 gap-1.5', horizontalPadding)
+  return cn(
+    'relative flex flex-col w-full pt-4 pb-5 gap-1.5',
+    horizontalPadding
+  )
 }
 
 const CommentItem = memo(function CommentItem({
@@ -587,65 +590,123 @@ export const FileCommentThreadCard = memo(function FileCommentThreadCard({
   variant = 'card'
 }: FileCommentThreadCardProps): ReactElement {
   const thread = useReviewThread(comment.gitHubReviewThreadId)
-  const isInline = variant === 'inline'
   const isOutdated = isCommentOutdated(comment)
-  const isCollapsible = collapseWhenOutdated && isOutdated && !isInline
   const [isExpanded, setIsExpanded] = useState(false)
-  const showContent = !isCollapsible || isExpanded
-  const diff = renderCommentDiff(comment)
 
-  const resolveIconButton = pullRequest && thread && (
-    <ResolveThreadButton
-      appearance="icon"
+  const handleToggle = useCallback(() => {
+    setIsExpanded((value) => !value)
+  }, [])
+
+  if (variant === 'inline') {
+    return (
+      <FileCommentInlineView
+        comment={comment}
+        allComments={allComments}
+        hideAuthor={hideAuthor}
+        isOutdated={isOutdated}
+        pullRequest={pullRequest}
+        showPromptButton={showPromptButton}
+        thread={thread}
+      />
+    )
+  }
+
+  return (
+    <FileCommentCardView
+      comment={comment}
+      allComments={allComments}
+      hideAuthor={hideAuthor}
+      isCollapsible={collapseWhenOutdated && isOutdated}
+      isExpanded={isExpanded}
+      isOutdated={isOutdated}
+      onToggle={handleToggle}
       pullRequest={pullRequest}
+      showPromptButton={showPromptButton}
       thread={thread}
     />
   )
+})
 
-  const cardFooter = pullRequest && (
-    <>
-      {thread?.isResolved && <ResolvedBadge thread={thread} />}
-      <CommentReply
-        comment={comment}
-        pullRequest={pullRequest}
-      />
-    </>
-  )
+interface FileCommentInlineViewProps {
+  comment: Comment
+  allComments: Comment[]
+  hideAuthor: boolean
+  isOutdated: boolean
+  pullRequest?: PullRequest
+  showPromptButton: boolean
+  thread: ReviewThread | null
+}
 
-  if (isInline) {
-    return (
-      <div className={cn('w-full', thread?.isResolved && 'opacity-70')}>
-        <div className="flex items-center gap-2 px-3.5 pt-3 pb-3 pr-12 text-xs font-mono text-muted-foreground">
-          <Code2 className="size-3.5 shrink-0" />
-          <span
-            className="min-w-0 flex-1 truncate"
-            title={comment.path ?? undefined}
-          >
-            {comment.path}
-          </span>
-          {isOutdated && <OutdatedBadge />}
-        </div>
-
-        {diff}
-
-        <CommentThread
-          anchorHeaderExtra={resolveIconButton}
-          comment={comment}
-          allComments={allComments}
-          hideAuthor={hideAuthor}
-          showPromptButton={showPromptButton}
-          variant="inline"
-        />
-
-        {pullRequest && (
-          <InlineFooter
-            comment={comment}
-            pullRequest={pullRequest}
-          />
-        )}
+function FileCommentInlineView({
+  comment,
+  allComments,
+  hideAuthor,
+  isOutdated,
+  pullRequest,
+  showPromptButton,
+  thread
+}: FileCommentInlineViewProps): ReactElement {
+  return (
+    <div className={cn('w-full', thread?.isResolved && 'opacity-70')}>
+      <div className="flex items-center gap-2 px-3.5 pt-3 pb-3 pr-12 text-xs font-mono text-muted-foreground">
+        <Code2 className="size-3.5 shrink-0" />
+        <span
+          className="min-w-0 flex-1 truncate"
+          title={comment.path ?? undefined}
+        >
+          {comment.path}
+        </span>
+        {isOutdated && <OutdatedBadge />}
       </div>
-    )
-  }
+
+      {renderCommentDiff(comment)}
+
+      <CommentThread
+        anchorHeaderExtra={renderResolveIconButton(pullRequest, thread)}
+        comment={comment}
+        allComments={allComments}
+        hideAuthor={hideAuthor}
+        showPromptButton={showPromptButton}
+        variant="inline"
+      />
+
+      {pullRequest && (
+        <InlineFooter
+          comment={comment}
+          pullRequest={pullRequest}
+        />
+      )}
+    </div>
+  )
+}
+
+interface FileCommentCardViewProps {
+  comment: Comment
+  allComments: Comment[]
+  hideAuthor: boolean
+  isCollapsible: boolean
+  isExpanded: boolean
+  isOutdated: boolean
+  onToggle: () => void
+  pullRequest?: PullRequest
+  showPromptButton: boolean
+  thread: ReviewThread | null
+}
+
+function FileCommentCardView({
+  comment,
+  allComments,
+  hideAuthor,
+  isCollapsible,
+  isExpanded,
+  isOutdated,
+  onToggle,
+  pullRequest,
+  showPromptButton,
+  thread
+}: FileCommentCardViewProps): ReactElement {
+  const cardFooter = renderFileCardFooter(comment, pullRequest, thread)
+  const showContent = !isCollapsible || isExpanded
 
   return (
     <Card
@@ -661,14 +722,14 @@ export const FileCommentThreadCard = memo(function FileCommentThreadCard({
         isCollapsible={isCollapsible}
         isExpanded={isExpanded}
         isOutdated={isOutdated}
-        onToggle={() => setIsExpanded((value) => !value)}
+        onToggle={onToggle}
       />
 
       {showContent && (
         <CardContent className="p-0 w-full">
-          {diff}
+          {renderCommentDiff(comment)}
           <CommentThread
-            anchorHeaderExtra={resolveIconButton}
+            anchorHeaderExtra={renderResolveIconButton(pullRequest, thread)}
             comment={comment}
             allComments={allComments}
             hideAuthor={hideAuthor}
@@ -683,7 +744,44 @@ export const FileCommentThreadCard = memo(function FileCommentThreadCard({
       )}
     </Card>
   )
-})
+}
+
+function renderFileCardFooter(
+  comment: Comment,
+  pullRequest: PullRequest | undefined,
+  thread: ReviewThread | null
+): ReactElement | null {
+  if (!pullRequest) {
+    return null
+  }
+
+  return (
+    <>
+      {thread?.isResolved && <ResolvedBadge thread={thread} />}
+      <CommentReply
+        comment={comment}
+        pullRequest={pullRequest}
+      />
+    </>
+  )
+}
+
+function renderResolveIconButton(
+  pullRequest: PullRequest | undefined,
+  thread: ReviewThread | null
+): ReactElement | null {
+  if (!pullRequest || !thread) {
+    return null
+  }
+
+  return (
+    <ResolveThreadButton
+      appearance="icon"
+      pullRequest={pullRequest}
+      thread={thread}
+    />
+  )
+}
 
 interface FileCommentHeaderProps {
   comment: Comment
