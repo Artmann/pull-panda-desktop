@@ -17,11 +17,12 @@ jobs:
         with:
           fetch-depth: 0
 
-      - uses: fallow-rs/fallow@v2
+      # Pin the action tag and CLI version together (and to the version in
+      # devDependencies) so CI findings match what `yarn fallow` reports
+      # locally, and the action's binary verifier matches the CLI layout.
+      - uses: fallow-rs/fallow@v3.11.0
         with:
           command: audit
           comment: true
           review-comments: true
-          # Pin to the version in devDependencies so CI findings match what
-          # `yarn fallow` reports locally instead of floating to latest.
           version: 3.11.0
