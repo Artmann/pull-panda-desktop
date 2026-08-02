@@ -271,7 +271,7 @@ function FileStatusBadge({
 }): ReactElement | null {
   if (status === 'added') {
     return (
-      <Badge className="bg-status-success text-status-success-foreground border-status-success-border uppercase text-[0.6rem]">
+      <Badge className="bg-status-success text-status-success-foreground border-status-success-border uppercase text-2xs">
         New
       </Badge>
     )
@@ -279,7 +279,7 @@ function FileStatusBadge({
 
   if (status === 'removed') {
     return (
-      <Badge className="bg-status-danger text-status-danger-foreground border-status-danger-border uppercase text-[0.6rem]">
+      <Badge className="bg-status-danger text-status-danger-foreground border-status-danger-border uppercase text-2xs">
         Deleted
       </Badge>
     )

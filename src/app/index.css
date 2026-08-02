@@ -180,6 +180,11 @@
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
   --radius-xl: calc(var(--radius) + 4px);
+  /* Height of the fixed StickyPullRequestHeader; pinned file card headers
+   * sit flush below it via `top-sticky-header`. */
+  --spacing-sticky-header: 75px;
+  /* One step below text-xs, used by the tiny status badges. */
+  --text-2xs: 0.6rem;
 }
 
 html,
