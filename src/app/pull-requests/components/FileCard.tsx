@@ -114,8 +114,9 @@ export function FileCardHeader({
       <header
         className={cn(
           // The offset matches the height of the fixed StickyPullRequestHeader
-          // (75px) so the pinned header sits flush against it with no seam.
-          'flex items-center gap-2 pl-3 pr-4 py-1 border-border cursor-pointer sticky top-[75px] z-10 bg-card',
+          // (the sticky-header spacing token) so the pinned header sits flush
+          // against it with no seam.
+          'flex items-center gap-2 pl-3 pr-4 py-1 border-border cursor-pointer sticky top-sticky-header z-10 bg-card',
           isStuck ? 'rounded-t-none' : 'rounded-t-md',
           isCollapsed ? 'border-0' : 'border-b'
         )}
