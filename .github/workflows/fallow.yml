@@ -17,6 +17,16 @@ jobs:
         with:
           fetch-depth: 0
 
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+
+      # The audit resolves imports against node_modules; without an install
+      # every package import (for example the Vite ?worker specifier) shows
+      # up as unresolved dead code.
+      - name: Install dependencies
+        run: yarn install --frozen-lockfile
+
       # Pin the action tag and CLI version together (and to the version in
       # devDependencies) so CI findings match what `yarn fallow` reports
       # locally, and the action's binary verifier matches the CLI layout.
