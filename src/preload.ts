@@ -103,6 +103,14 @@ const telemetryApi = {
     ipcRenderer.invoke(ipcChannels.TelemetryGetStats)
 }
 
+const usageApi = {
+  getReportingEnabled: (): Promise<boolean> =>
+    ipcRenderer.invoke(ipcChannels.UsageGetReportingEnabled),
+
+  setReportingEnabled: (enabled: boolean): Promise<void> =>
+    ipcRenderer.invoke(ipcChannels.UsageSetReportingEnabled, enabled)
+}
+
 const authApi = {
   requestDeviceCode: (): Promise<DeviceCodeResponse> =>
     ipcRenderer.invoke(ipcChannels.AuthRequestDeviceCode),
@@ -129,6 +137,7 @@ const authApi = {
 contextBridge.exposeInMainWorld('electron', electronApi)
 contextBridge.exposeInMainWorld('auth', authApi)
 contextBridge.exposeInMainWorld('telemetry', telemetryApi)
+contextBridge.exposeInMainWorld('usage', usageApi)
 
 // TypeScript declarations for the exposed API
 declare global {
@@ -136,5 +145,6 @@ declare global {
     auth: typeof authApi
     electron: typeof electronApi
     telemetry: typeof telemetryApi
+    usage: typeof usageApi
   }
 }

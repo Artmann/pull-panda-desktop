@@ -25,6 +25,11 @@ import {
   setCachedUserLogin
 } from './main/send-resource-events'
 import { taskManager } from './main/task-manager'
+import { startUsagePingScheduler } from './main/usage-ping'
+import {
+  isUsageReportingEnabled,
+  setUsageReportingEnabled
+} from './main/usage-settings'
 import { deletePullRequestData } from './sync/operations/delete-pull-request'
 import {
   syncPullRequests,
@@ -189,6 +194,17 @@ function setupIpcHandlers(): void {
       Effect.flatMap(BackgroundSyncer, (syncer) => syncer.getMonitoringData)
     )
   })
+
+  handleWithSpan(ipcChannels.UsageGetReportingEnabled, () => {
+    return isUsageReportingEnabled()
+  })
+
+  handleWithSpan(
+    ipcChannels.UsageSetReportingEnabled,
+    (_event, enabled: boolean) => {
+      setUsageReportingEnabled(enabled)
+    }
+  )
 
   // Telemetry handlers are registered directly (not via handleWithSpan) so that
   // observing the telemetry does not itself generate telemetry.
@@ -503,6 +519,8 @@ app.on('ready', async () => {
   }
 
   await startBackgroundSync(runtime)
+
+  startUsagePingScheduler()
 })
 
 let pullRequestSyncInFlight = false

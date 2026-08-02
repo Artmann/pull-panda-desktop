@@ -20,6 +20,8 @@ export const ipcChannels = {
   TelemetryQueryLogs: 'telemetry:query-logs',
   TelemetryQueryTraces: 'telemetry:query-traces',
   TelemetryRecord: 'telemetry:record',
+  UsageGetReportingEnabled: 'usage:get-reporting-enabled',
+  UsageSetReportingEnabled: 'usage:set-reporting-enabled',
   WindowClose: 'window:close',
   WindowMaximize: 'window:maximize',
   WindowMinimize: 'window:minimize'
