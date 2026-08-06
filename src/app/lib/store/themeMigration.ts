@@ -1,4 +1,4 @@
-import { appThemes } from '@/app/lib/themes'
+import { appThemes, type AppTheme } from '@/app/lib/themes'
 
 export const darkStorageKey = 'app-theme-dark'
 export const lightStorageKey = 'app-theme-light'
@@ -30,12 +30,20 @@ function migrateCodeThemeKeys(): void {
   }
 
   const candidate = oldDark ?? oldLight
-  const match = appThemes.find(
-    (theme) =>
-      theme.darkShikiTheme === candidate ||
-      theme.lightShikiTheme === candidate ||
-      theme.value === candidate
-  )
+
+  const matchesCandidate = (theme: AppTheme) =>
+    theme.darkShikiTheme === candidate ||
+    theme.lightShikiTheme === candidate ||
+    theme.value === candidate
+
+  // Several app themes can share a Shiki theme (Paper Panda also renders code
+  // with github-light), so prefer the theme the stored name is derived from —
+  // "github-dark" should map to the GitHub theme, not whichever theme happens
+  // to list it first.
+  const match =
+    appThemes.find(
+      (theme) => candidate?.startsWith(theme.value) && matchesCandidate(theme)
+    ) ?? appThemes.find(matchesCandidate)
 
   if (match && !localStorage.getItem(darkStorageKey)) {
     localStorage.setItem(darkStorageKey, match.value)

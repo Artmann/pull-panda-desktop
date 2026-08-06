@@ -101,7 +101,7 @@ export function BackgroundSyncerPage(): ReactElement {
         <Card>
           <CardHeader className="pb-2">
             <CardDescription className="flex items-center gap-2">
-              <CheckCircle className="h-4 w-4 text-green-500" />
+              <CheckCircle className="h-4 w-4 text-status-success-foreground" />
               Successful Syncs
             </CardDescription>
             <CardTitle className="text-2xl">{successCount}</CardTitle>
@@ -111,7 +111,7 @@ export function BackgroundSyncerPage(): ReactElement {
         <Card>
           <CardHeader className="pb-2">
             <CardDescription className="flex items-center gap-2">
-              <XCircle className="h-4 w-4 text-red-500" />
+              <XCircle className="h-4 w-4 text-status-danger-foreground" />
               Failed Syncs
             </CardDescription>
             <CardTitle className="text-2xl">{errorCount}</CardTitle>
@@ -133,7 +133,7 @@ export function BackgroundSyncerPage(): ReactElement {
                 data={chartData}
                 xKey="time"
                 yKey="syncs"
-                barColor="hsl(142.1 76.2% 36.3%)"
+                barColor="var(--chart-4)"
                 formatTooltip={(value) => `${value} syncs`}
               />
             ) : (
@@ -162,12 +162,12 @@ export function BackgroundSyncerPage(): ReactElement {
                   {
                     key: 'restRateLimit',
                     label: 'REST',
-                    color: 'hsl(221.2 83.2% 53.3%)'
+                    color: 'var(--chart-5)'
                   },
                   {
                     key: 'graphqlRateLimit',
                     label: 'GraphQL',
-                    color: 'hsl(262.1 83.3% 57.8%)'
+                    color: 'var(--chart-2)'
                   }
                 ]}
                 referenceLine={100}
@@ -238,13 +238,13 @@ function SyncRow({ sync }: { sync: SyncRecord }): ReactElement {
       </td>
       <td className="py-2">
         {sync.success ? (
-          <span className="flex items-center gap-1 text-green-600">
+          <span className="flex items-center gap-1 text-status-success-foreground">
             <CheckCircle className="h-3 w-3" />
             OK
           </span>
         ) : (
           <span
-            className="flex items-center gap-1 text-red-600"
+            className="flex items-center gap-1 text-status-danger-foreground"
             title={sync.error}
           >
             <XCircle className="h-3 w-3" />

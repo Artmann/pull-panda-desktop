@@ -13,7 +13,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        node: [20, 22, 24, 25]
+        node: [22, 24, 25]
     steps:
       - uses: actions/checkout@v5
 
@@ -22,7 +22,7 @@ jobs:
           node-version: ${{ matrix.node }}
 
       - name: Install dependencies
-        run: npm install
+        run: yarn install --frozen-lockfile
 
       - name: Typecheck
         run: npm run typecheck
@@ -33,7 +33,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        node: [20, 22, 24, 25]
+        node: [22, 24, 25]
     steps:
       - uses: actions/checkout@v5
 
@@ -42,7 +42,7 @@ jobs:
           node-version: ${{ matrix.node }}
 
       - name: Install dependencies
-        run: npm install
+        run: yarn install --frozen-lockfile
 
       - name: Lint
         run: npm run lint
@@ -53,7 +53,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        node: [20, 22, 24, 25]
+        node: [22, 24, 25]
     steps:
       - uses: actions/checkout@v5
 
@@ -62,7 +62,7 @@ jobs:
           node-version: ${{ matrix.node }}
 
       - name: Install dependencies
-        run: npm install
+        run: yarn install --frozen-lockfile
 
       - name: Test
         run: npm run test:run
@@ -73,7 +73,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        node: [20, 22, 24, 25]
+        node: [22, 24, 25]
     steps:
       - uses: actions/checkout@v5
 
@@ -82,7 +82,7 @@ jobs:
           node-version: ${{ matrix.node }}
 
       - name: Install dependencies
-        run: npm install
+        run: yarn install --frozen-lockfile
 
       - name: Build
         run: npm run package

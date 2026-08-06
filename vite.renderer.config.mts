@@ -10,5 +10,10 @@ export default defineConfig({
     alias: {
       '@': path.resolve(__dirname, './src')
     }
+  },
+  // The @pierre/diffs highlight worker lazy-loads Shiki themes and grammars
+  // with dynamic imports, which the default iife worker format cannot bundle.
+  worker: {
+    format: 'es'
   }
 })

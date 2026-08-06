@@ -144,7 +144,7 @@ export const PullRequestHeader = memo(function PullRequestHeader({
       </div>
 
       {commits.length > 0 && (
-        <div className="flex items-center gap-2.5 rounded-lg border border-border bg-muted/30 px-3.5 py-2.5 text-xs text-muted-foreground">
+        <div className="flex items-center gap-2.5 rounded-lg border border-border bg-card px-3.5 py-2.5 text-xs text-muted-foreground">
           <GitCommitIcon className="size-3.5 shrink-0" />
 
           <span className="font-mono shrink-0">

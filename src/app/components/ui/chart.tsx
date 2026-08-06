@@ -54,7 +54,7 @@ export function BarChart<T extends object>({
   xKey,
   yKey,
   className,
-  barColor = 'hsl(var(--chart-1))',
+  barColor = 'var(--chart-1)',
   showGrid = true,
   formatXAxis,
   formatTooltip
@@ -65,20 +65,20 @@ export function BarChart<T extends object>({
         {showGrid && (
           <CartesianGrid
             strokeDasharray="3 3"
-            stroke="hsl(var(--border))"
+            stroke="var(--border)"
             vertical={false}
           />
         )}
         <XAxis
           dataKey={xKey}
-          stroke="hsl(var(--muted-foreground))"
+          stroke="var(--muted-foreground)"
           fontSize={12}
           tickLine={false}
           axisLine={false}
           tickFormatter={formatXAxis}
         />
         <YAxis
-          stroke="hsl(var(--muted-foreground))"
+          stroke="var(--muted-foreground)"
           fontSize={12}
           tickLine={false}
           axisLine={false}
@@ -133,7 +133,7 @@ export function MultiLineChart<T extends object>({
   className,
   showGrid = true,
   referenceLine,
-  referenceLineColor = 'hsl(var(--destructive))',
+  referenceLineColor = 'var(--destructive)',
   formatXAxis
 }: MultiLineChartProps<T>): React.ReactElement {
   return (
@@ -142,20 +142,20 @@ export function MultiLineChart<T extends object>({
         {showGrid && (
           <CartesianGrid
             strokeDasharray="3 3"
-            stroke="hsl(var(--border))"
+            stroke="var(--border)"
             vertical={false}
           />
         )}
         <XAxis
           dataKey={xKey}
-          stroke="hsl(var(--muted-foreground))"
+          stroke="var(--muted-foreground)"
           fontSize={12}
           tickLine={false}
           axisLine={false}
           tickFormatter={formatXAxis}
         />
         <YAxis
-          stroke="hsl(var(--muted-foreground))"
+          stroke="var(--muted-foreground)"
           fontSize={12}
           tickLine={false}
           axisLine={false}

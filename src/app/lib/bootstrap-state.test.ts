@@ -82,6 +82,7 @@ const modifiedFile: ModifiedFile = {
   filename: 'index.ts',
   filePath: 'src/index.ts',
   id: 'file-1',
+  previousFilename: null,
   pullRequestId: 'pr-1',
   status: 'modified',
   syncedAt: '2026-01-01T00:00:00Z'

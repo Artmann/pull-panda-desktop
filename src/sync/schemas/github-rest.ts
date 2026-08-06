@@ -58,6 +58,7 @@ export const CommitsResponseSchema = Schema.Array(CommitSchema)
 
 const FileSchema = Schema.Struct({
   filename: Schema.String,
+  previous_filename: Schema.optional(Schema.String),
   sha: Schema.optional(Schema.String),
   status: Schema.optional(Schema.String),
   additions: Schema.optional(Schema.Number),

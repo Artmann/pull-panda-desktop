@@ -27,6 +27,7 @@ const buildModifiedFileRecord = (
   pullRequestId,
   filename: fileData.filename,
   filePath: fileData.filename,
+  previousFilename: fileData.previous_filename ?? null,
   status: fileData.status ?? null,
   additions: fileData.additions ?? null,
   deletions: fileData.deletions ?? null,

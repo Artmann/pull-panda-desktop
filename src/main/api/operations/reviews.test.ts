@@ -9,6 +9,10 @@ import { GitHubGraphQL } from '../../../sync/services/github-graphql'
 import { GitHubRest } from '../../../sync/services/github-rest'
 import type { UpsertReviewInput } from '../../services/repository'
 import { Repository } from '../../services/repository'
+import {
+  createPullRequestFixture,
+  createRepositoryStub
+} from './__test-helpers__/fixtures'
 import type { CreateReviewResult, OctokitReviewData } from './reviews'
 import {
   createPendingReview,
@@ -51,39 +55,15 @@ vi.mock('../../../sync/operations/sync-pull-request-details', () => ({
 }))
 
 interface RepositoryState {
+  softDeleteCalls?: string[]
+  softDeleteResult?: number
   upsertCalls: Array<{
     pullRequestId: string
     review: UpsertReviewInput
   }>
 }
 
-const pullRequestFixture: PullRequest = {
-  assignees: null,
-  authorAvatarUrl: null,
-  authorLogin: 'octocat',
-  body: null,
-  bodyHtml: null,
-  closedAt: null,
-  createdAt: '2026-01-01T00:00:00Z',
-  detailsSyncedAt: null,
-  headRefName: 'feature',
-  id: 'pr_1',
-  isAssignee: false,
-  isAuthor: true,
-  isDraft: false,
-  isReviewer: false,
-  labels: null,
-  mergedAt: null,
-  number: 42,
-  repositoryName: 'demo',
-  repositoryOwner: 'octocat',
-  requestedReviewers: null,
-  state: 'open',
-  syncedAt: '2026-01-01T00:00:00Z',
-  title: 'Demo PR',
-  updatedAt: '2026-01-01T00:00:00Z',
-  url: 'https://github.com/octocat/demo/pull/42'
-}
+const pullRequestFixture = createPullRequestFixture()
 
 const persistedReviewFixture: Review = {
   authorAvatarUrl: 'https://example.com/octocat.png',
@@ -135,36 +115,30 @@ const unusedServicesLayer = Layer.mergeAll(
 const makeRepositoryLayer = (
   state: RepositoryState,
   pullRequest: PullRequest | null = pullRequestFixture
-) => {
-  const requirePullRequest = () =>
-    pullRequest
-      ? Effect.succeed(pullRequest)
-      : Effect.fail(
-          new NotFoundError({
-            resourceId: 'octocat/demo#42',
-            route: 'repository.requirePullRequestByCoords'
+) =>
+  Layer.mergeAll(
+    Layer.succeed(
+      Repository,
+      createRepositoryStub(pullRequest, {
+        softDeletePendingReviews: ({ pullRequestId }) =>
+          Effect.sync(() => {
+            state.softDeleteCalls = [
+              ...(state.softDeleteCalls ?? []),
+              pullRequestId
+            ]
+
+            return state.softDeleteResult ?? 0
+          }),
+        upsertReview: (input) =>
+          Effect.sync(() => {
+            state.upsertCalls.push(input)
+
+            return persistedReviewFixture
           })
-        )
-
-  return Layer.mergeAll(
-    Layer.succeed(Repository, {
-      findCommentById: () => Effect.succeed(null),
-      findPullRequestByCoords: () => Effect.succeed(pullRequest),
-      findPullRequestById: () => Effect.succeed(pullRequest),
-      findReviewById: () => Effect.succeed(null),
-      findReviewThreadById: () => Effect.succeed(null),
-      requirePullRequestByCoords: requirePullRequest,
-      requirePullRequestById: requirePullRequest,
-      upsertReview: (input) =>
-        Effect.sync(() => {
-          state.upsertCalls.push(input)
-
-          return persistedReviewFixture
-        })
-    }),
+      })
+    ),
     unusedServicesLayer
   )
-}
 
 const baseInput = {
   owner: 'octocat',
@@ -228,9 +202,9 @@ describe('reviews operations', () => {
         repo: 'demo'
       })
       expect(state.upsertCalls).toEqual([expectedUpsertCall])
-      expect(
-        mocks.broadcastPullRequestResourceEvents
-      ).toHaveBeenCalledWith('pr_1')
+      expect(mocks.broadcastPullRequestResourceEvents).toHaveBeenCalledWith(
+        'pr_1'
+      )
       expect(result).toEqual(expectedCreateReviewResult)
     })
 
@@ -376,7 +350,28 @@ describe('reviews operations', () => {
 
       expect(result).toEqual(null)
       expect(state.upsertCalls).toEqual([])
+      expect(state.softDeleteCalls).toEqual(['pr_1'])
       expect(mocks.broadcastPullRequestResourceEvents).not.toHaveBeenCalled()
+    })
+
+    it('broadcasts after cleaning up stale local pending reviews', async () => {
+      const state: RepositoryState = { softDeleteResult: 1, upsertCalls: [] }
+
+      mocks.getAuthenticated.mockResolvedValue({ data: { login: 'octocat' } })
+      mocks.listReviews.mockResolvedValue({ data: [] })
+
+      const result = await Effect.runPromise(
+        Effect.provide(
+          getOrSyncPendingReview(baseInput),
+          makeRepositoryLayer(state)
+        )
+      )
+
+      expect(result).toEqual(null)
+      expect(state.softDeleteCalls).toEqual(['pr_1'])
+      expect(mocks.broadcastPullRequestResourceEvents).toHaveBeenCalledWith(
+        'pr_1'
+      )
     })
 
     it('persists and returns the pending review owned by the current user', async () => {
@@ -393,9 +388,9 @@ describe('reviews operations', () => {
       )
 
       expect(state.upsertCalls).toEqual([expectedUpsertCall])
-      expect(
-        mocks.broadcastPullRequestResourceEvents
-      ).toHaveBeenCalledWith('pr_1')
+      expect(mocks.broadcastPullRequestResourceEvents).toHaveBeenCalledWith(
+        'pr_1'
+      )
       expect(result).toEqual(expectedCreateReviewResult)
     })
 
@@ -431,12 +426,23 @@ describe('reviews operations', () => {
   })
 
   describe('deletePendingReview', () => {
-    it('deletes the pending review on GitHub', async () => {
+    const runDelete = (
+      state: RepositoryState,
+      pullRequest: PullRequest | null = pullRequestFixture
+    ) =>
+      Effect.runPromise(
+        Effect.provide(
+          deletePendingReview({ ...baseInput, reviewId: 900 }),
+          makeRepositoryLayer(state, pullRequest)
+        )
+      )
+
+    it('deletes the review on GitHub, cleans up locally, and broadcasts', async () => {
+      const state: RepositoryState = { softDeleteResult: 1, upsertCalls: [] }
+
       mocks.deletePendingReview.mockResolvedValue({})
 
-      const result = await Effect.runPromise(
-        deletePendingReview({ ...baseInput, reviewId: 900 })
-      )
+      const result = await runDelete(state)
 
       expect(mocks.deletePendingReview).toHaveBeenCalledWith({
         owner: 'octocat',
@@ -444,29 +450,66 @@ describe('reviews operations', () => {
         repo: 'demo',
         review_id: 900
       })
+      expect(state.softDeleteCalls).toEqual(['pr_1'])
+      expect(mocks.broadcastPullRequestResourceEvents).toHaveBeenCalledWith(
+        'pr_1'
+      )
       expect(result).toEqual({ success: true })
     })
 
-    it('classifies delete failures as an OctokitError', async () => {
+    it('treats a 404 from GitHub as success and still cleans up locally', async () => {
+      const state: RepositoryState = { upsertCalls: [] }
+
       mocks.deletePendingReview.mockRejectedValue(
         Object.assign(new Error('Not Found'), { status: 404 })
       )
 
+      const result = await runDelete(state)
+
+      expect(state.softDeleteCalls).toEqual(['pr_1'])
+      expect(result).toEqual({ success: true })
+    })
+
+    it('skips local clean-up when the pull request is unknown', async () => {
+      const state: RepositoryState = { upsertCalls: [] }
+
+      mocks.deletePendingReview.mockResolvedValue({})
+
+      const result = await runDelete(state, null)
+
+      expect(state.softDeleteCalls ?? []).toEqual([])
+      expect(mocks.broadcastPullRequestResourceEvents).not.toHaveBeenCalled()
+      expect(result).toEqual({ success: true })
+    })
+
+    it('classifies non-404 delete failures as an OctokitError', async () => {
+      const state: RepositoryState = { upsertCalls: [] }
+
+      mocks.deletePendingReview.mockRejectedValue(
+        Object.assign(new Error('Forbidden'), { status: 403 })
+      )
+
       const error = await Effect.runPromise(
-        Effect.flip(deletePendingReview({ ...baseInput, reviewId: 900 }))
+        Effect.flip(
+          Effect.provide(
+            deletePendingReview({ ...baseInput, reviewId: 900 }),
+            makeRepositoryLayer(state)
+          )
+        )
       )
 
       expect({
         message: error.message,
-        operation: error.operation,
-        status: error.status,
+        operation: 'operation' in error ? error.operation : null,
+        status: 'status' in error ? error.status : null,
         tag: error._tag
       }).toEqual({
-        message: 'Not Found',
+        message: 'Forbidden',
         operation: 'pulls.deletePendingReview',
-        status: 404,
+        status: 403,
         tag: 'OctokitError'
       })
+      expect(state.softDeleteCalls ?? []).toEqual([])
     })
   })
 
@@ -496,6 +539,10 @@ describe('reviews operations', () => {
         review_id: 900
       })
       expect(result).toEqual({ success: true })
+
+      // The review kept its id on GitHub, so the local row must survive for
+      // the detail sync to update in place.
+      expect(state.softDeleteCalls ?? []).toEqual([])
 
       await vi.waitFor(() => {
         expect(mocks.syncPullRequestDetails).toHaveBeenCalledWith({
@@ -602,6 +649,49 @@ describe('reviews operations', () => {
         repo: 'demo'
       })
       expect(mocks.submitReview).not.toHaveBeenCalled()
+      expect(result).toEqual({ success: true })
+    })
+
+    it('cleans up the stale local pending review after replacing it with comments', async () => {
+      const state: RepositoryState = { upsertCalls: [] }
+
+      mocks.deletePendingReview.mockResolvedValue({})
+      mocks.createReview.mockResolvedValue({})
+
+      const result = await Effect.runPromise(
+        Effect.provide(
+          submitReview({
+            ...submitInput,
+            comments: [
+              {
+                body: 'Rename this',
+                line: 12,
+                path: 'src/index.ts',
+                side: 'RIGHT'
+              }
+            ]
+          }),
+          makeRepositoryLayer(state)
+        )
+      )
+
+      expect(state.softDeleteCalls).toEqual(['pr_1'])
+      expect(result).toEqual({ success: true })
+    })
+
+    it('cleans up the stale local pending review after the 404 fallback', async () => {
+      const state: RepositoryState = { upsertCalls: [] }
+
+      mocks.submitReview.mockRejectedValue(
+        Object.assign(new Error('Not Found'), { status: 404 })
+      )
+      mocks.createReview.mockResolvedValue({})
+
+      const result = await Effect.runPromise(
+        Effect.provide(submitReview(submitInput), makeRepositoryLayer(state))
+      )
+
+      expect(state.softDeleteCalls).toEqual(['pr_1'])
       expect(result).toEqual({ success: true })
     })
 

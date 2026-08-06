@@ -55,7 +55,7 @@ export function DeviceCodeCard({
             className="shrink-0"
           >
             {copied ? (
-              <Check className="h-4 w-4 text-green-500" />
+              <Check className="h-4 w-4 text-status-success-foreground" />
             ) : (
               <Copy className="h-4 w-4" />
             )}

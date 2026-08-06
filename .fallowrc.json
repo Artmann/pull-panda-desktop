@@ -8,5 +8,10 @@
     "vite.renderer.config.mts",
     ".github/scripts/robot-review/index.ts"
   ],
-  "ignoreDependencies": ["@tailwindcss/typography", "agent-browser"]
+  "ignoreDependencies": [
+    "@fontsource/ibm-plex-mono",
+    "@fontsource/ibm-plex-sans",
+    "@tailwindcss/typography",
+    "agent-browser"
+  ]
 }

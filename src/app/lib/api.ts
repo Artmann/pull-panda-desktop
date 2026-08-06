@@ -240,13 +240,16 @@ export async function unresolveReviewThread(
 ): Promise<ReviewThreadResolutionResponse> {
   const baseUrl = await getApiBaseUrl()
 
-  const response = await tracedFetch(`${baseUrl}/api/review-threads/unresolve`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json'
-    },
-    body: JSON.stringify(request)
-  })
+  const response = await tracedFetch(
+    `${baseUrl}/api/review-threads/unresolve`,
+    {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(request)
+    }
+  )
 
   if (!response.ok) {
     const error = await response.json()
@@ -335,12 +338,15 @@ export async function setFocusedPullRequest(
 export async function clearFocusedPullRequest(): Promise<void> {
   const baseUrl = await getApiBaseUrl()
 
-  const response = await tracedFetch(`${baseUrl}/api/pull-requests/focus/clear`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json'
+  const response = await tracedFetch(
+    `${baseUrl}/api/pull-requests/focus/clear`,
+    {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      }
     }
-  })
+  )
 
   if (!response.ok) {
     throw new Error('Failed to clear focused pull request')
@@ -550,9 +556,12 @@ export async function updatePullRequest(
 export async function pickRepoFolder(): Promise<PickFolderResult> {
   const baseUrl = await getApiBaseUrl()
 
-  const response = await tracedFetch(`${baseUrl}/api/repo-checkout/pick-folder`, {
-    method: 'POST'
-  })
+  const response = await tracedFetch(
+    `${baseUrl}/api/repo-checkout/pick-folder`,
+    {
+      method: 'POST'
+    }
+  )
 
   if (!response.ok) {
     throw new Error('Failed to open folder picker')
@@ -784,6 +793,53 @@ export async function getBlobImageUrl(request: {
   const sha = encodeURIComponent(request.sha)
 
   return `${baseUrl}/api/repos/${owner}/${repo}/blobs/${sha}?${params}`
+}
+
+interface FileContentsResult {
+  newContents: string
+  oldContents: string
+}
+
+export async function getFileContents(request: {
+  blobSha: string | null
+  owner: string
+  path: string
+  previousFilename: string | null
+  pullNumber: number
+  repo: string
+  status: string | null
+}): Promise<FileContentsResult> {
+  const baseUrl = await getApiBaseUrl()
+  const owner = encodeURIComponent(request.owner)
+  const repo = encodeURIComponent(request.repo)
+
+  const params = new URLSearchParams({ path: request.path })
+
+  if (request.blobSha) {
+    params.set('blobSha', request.blobSha)
+  }
+
+  if (request.previousFilename) {
+    params.set('previousFilename', request.previousFilename)
+  }
+
+  if (request.status) {
+    params.set('status', request.status)
+  }
+
+  const response = await tracedFetch(
+    `${baseUrl}/api/repos/${owner}/${repo}/pulls/${String(request.pullNumber)}/file-contents?${params}`
+  )
+
+  if (!response.ok) {
+    const error = await response.json()
+
+    throw new Error(
+      extractErrorMessage(error.error, 'Failed to load file contents')
+    )
+  }
+
+  return response.json()
 }
 
 export async function triggerSync(): Promise<void> {

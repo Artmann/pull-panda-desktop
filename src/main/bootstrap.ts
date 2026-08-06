@@ -1,16 +1,8 @@
 import { eq, and, isNull } from 'drizzle-orm'
 
 import { getDatabase } from '../database'
-import {
-  pullRequests,
-  reviews,
-  reviewThreads,
-  comments,
-  commentReactions,
-  checks,
-  commits,
-  modifiedFiles
-} from '../database/schema'
+import { loadPullRequestRows } from '../database/pull-request-rows'
+import { comments, pullRequests, reviews } from '../database/schema'
 import { loadAll as loadConnectedRepos } from './connected-repos'
 import type {
   PullRequest,
@@ -259,70 +251,15 @@ export async function getPullRequestDetails(
 ): Promise<PullRequestDetails | null> {
   const database = getDatabase()
 
-  const reviewRows = database
-    .select()
-    .from(reviews)
-    .where(
-      and(eq(reviews.pullRequestId, pullRequestId), isNull(reviews.deletedAt))
-    )
-    .all()
-
-  const commentRows = database
-    .select()
-    .from(comments)
-    .where(
-      and(eq(comments.pullRequestId, pullRequestId), isNull(comments.deletedAt))
-    )
-    .all()
-
-  const reactionRows = database
-    .select()
-    .from(commentReactions)
-    .where(
-      and(
-        eq(commentReactions.pullRequestId, pullRequestId),
-        isNull(commentReactions.deletedAt)
-      )
-    )
-    .all()
-
-  const checkRows = database
-    .select()
-    .from(checks)
-    .where(
-      and(eq(checks.pullRequestId, pullRequestId), isNull(checks.deletedAt))
-    )
-    .all()
-
-  const commitRows = database
-    .select()
-    .from(commits)
-    .where(
-      and(eq(commits.pullRequestId, pullRequestId), isNull(commits.deletedAt))
-    )
-    .all()
-
-  const fileRows = database
-    .select()
-    .from(modifiedFiles)
-    .where(
-      and(
-        eq(modifiedFiles.pullRequestId, pullRequestId),
-        isNull(modifiedFiles.deletedAt)
-      )
-    )
-    .all()
-
-  const reviewThreadRows = database
-    .select()
-    .from(reviewThreads)
-    .where(
-      and(
-        eq(reviewThreads.pullRequestId, pullRequestId),
-        isNull(reviewThreads.deletedAt)
-      )
-    )
-    .all()
+  const {
+    checkRows,
+    commentRows,
+    commitRows,
+    fileRows,
+    reactionRows,
+    reviewRows,
+    reviewThreadRows
+  } = loadPullRequestRows(database, pullRequestId)
 
   const parsedReviews: Review[] = reviewRows.map((row) => ({
     id: row.id,
@@ -414,6 +351,7 @@ export async function getPullRequestDetails(
     pullRequestId: row.pullRequestId,
     filename: row.filename,
     filePath: row.filePath,
+    previousFilename: row.previousFilename,
     status: row.status,
     additions: row.additions,
     deletions: row.deletions,

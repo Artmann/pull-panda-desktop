@@ -29,6 +29,8 @@ import tasksReducer from '@/app/store/tasks-slice'
 
 import { AuthProvider } from '@/app/lib/store/authContext'
 import { ThemeProvider } from '@/app/lib/store/themeContext'
+import { createMockPullRequest } from '@/app/pull-requests/__test-helpers__/pull-request-fixtures'
+import { installObserverStubs } from '@/app/pull-requests/__test-helpers__/test-utils'
 import { PullRequestNavigationProvider } from '@/app/pull-requests/PullRequestNavigationProvider'
 
 import { PullRequestPage } from './PullRequestPage'
@@ -44,35 +46,7 @@ vi.mock('@/app/lib/api', () => ({
 }))
 
 beforeAll(() => {
-  global.IntersectionObserver = class IntersectionObserver {
-    constructor() {
-      // Mock
-    }
-    disconnect() {
-      // Mock
-    }
-    observe() {
-      // Mock
-    }
-    unobserve() {
-      // Mock
-    }
-  } as unknown as typeof IntersectionObserver
-
-  global.ResizeObserver = class ResizeObserver {
-    constructor() {
-      // Mock
-    }
-    disconnect() {
-      // Mock
-    }
-    observe() {
-      // Mock
-    }
-    unobserve() {
-      // Mock
-    }
-  } as unknown as typeof ResizeObserver
+  installObserverStubs()
 })
 
 beforeEach(() => {
@@ -98,42 +72,6 @@ beforeEach(() => {
     })
   })
 })
-
-function createMockPullRequest(
-  overrides: Partial<PullRequest> = {}
-): PullRequest {
-  return {
-    id: 'pr-1',
-    number: 42,
-    title: 'Test PR',
-    state: 'OPEN',
-    url: 'https://github.com/owner/repo/pull/42',
-    repositoryOwner: 'owner',
-    repositoryName: 'repo',
-    authorLogin: 'testuser',
-    authorAvatarUrl: 'https://example.com/avatar.png',
-    createdAt: '2024-01-01T00:00:00Z',
-    updatedAt: '2024-01-01T00:00:00Z',
-    closedAt: null,
-    mergedAt: null,
-    body: 'Test PR body',
-    bodyHtml: null,
-    headRefName: null,
-    isDraft: false,
-    isAuthor: true,
-    isAssignee: false,
-    isReviewer: false,
-    labels: [],
-    assignees: [],
-    requestedReviewers: [],
-    syncedAt: '2024-01-01T00:00:00Z',
-    detailsSyncedAt: null,
-    commentCount: 0,
-    approvalCount: 0,
-    changesRequestedCount: 0,
-    ...overrides
-  }
-}
 
 function createTestStore(
   options: {
@@ -220,7 +158,7 @@ function renderWithProviders(
 describe('PullRequestPage', () => {
   describe('tab item counts', () => {
     it('displays item counts for checks and files tabs', async () => {
-      const pullRequest = createMockPullRequest({ id: 'pr-1' })
+      const pullRequest = createMockPullRequest({ id: 'pr-1', isAuthor: true })
 
       const store = createTestStore({
         pullRequests: [pullRequest],
@@ -283,6 +221,7 @@ describe('PullRequestPage', () => {
             pullRequestId: 'pr-1',
             filename: 'index.ts',
             filePath: 'src/index.ts',
+            previousFilename: null,
             status: 'modified',
             additions: 10,
             deletions: 5,
@@ -296,6 +235,7 @@ describe('PullRequestPage', () => {
             pullRequestId: 'pr-1',
             filename: 'utils.ts',
             filePath: 'src/utils.ts',
+            previousFilename: null,
             status: 'added',
             additions: 20,
             deletions: 0,
@@ -316,7 +256,7 @@ describe('PullRequestPage', () => {
     })
 
     it('displays zero counts when no details are loaded', async () => {
-      const pullRequest = createMockPullRequest({ id: 'pr-1' })
+      const pullRequest = createMockPullRequest({ id: 'pr-1', isAuthor: true })
 
       const store = createTestStore({
         pullRequests: [pullRequest]
@@ -334,7 +274,7 @@ describe('PullRequestPage', () => {
     })
 
     it('does not display count badge for Overview tab', async () => {
-      const pullRequest = createMockPullRequest({ id: 'pr-1' })
+      const pullRequest = createMockPullRequest({ id: 'pr-1', isAuthor: true })
 
       const store = createTestStore({
         pullRequests: [pullRequest]

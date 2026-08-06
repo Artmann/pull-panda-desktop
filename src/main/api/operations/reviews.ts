@@ -127,7 +127,59 @@ const findPendingReviewForCurrentUser = async (
   )
 }
 
-export const createPendingReview = (input: CreateReviewInput) =>
+// Deletes the pending review on GitHub, treating "already gone" (404) as
+// success so a stale local draft can still be cleaned up afterwards.
+const deletePendingReviewIgnoringMissing = async (
+  octokit: Octokit,
+  args: {
+    readonly owner: string
+    readonly pullNumber: number
+    readonly repo: string
+    readonly reviewId: number
+  }
+) => {
+  try {
+    await octokit.rest.pulls.deletePendingReview({
+      owner: args.owner,
+      pull_number: args.pullNumber,
+      repo: args.repo,
+      review_id: args.reviewId
+    })
+  } catch (deleteError) {
+    const status = (deleteError as { status?: number }).status
+
+    if (status !== 404) {
+      throw deleteError
+    }
+  }
+}
+
+// PENDING review rows are protected from the regular sync clean-up, so once
+// the review stops existing on GitHub the local rows must be removed here or
+// they resurface as zombie drafts on the next launch.
+const cleanUpStalePendingReviews = (pullRequestId: string) =>
+  Effect.gen(function* () {
+    const repository = yield* Repository
+
+    const removed = yield* repository.softDeletePendingReviews({
+      pullRequestId
+    })
+
+    if (removed > 0) {
+      yield* Effect.promise(() =>
+        broadcastPullRequestResourceEvents(pullRequestId)
+      )
+    }
+  })
+
+// Both pending-review operations start from the same place: the local
+// pull-request row behind the route coordinates plus an authenticated client.
+const resolveReviewContext = (input: {
+  readonly owner: string
+  readonly pullNumber: number
+  readonly repo: string
+  readonly token: string
+}) =>
   Effect.gen(function* () {
     const repository = yield* Repository
 
@@ -138,6 +190,34 @@ export const createPendingReview = (input: CreateReviewInput) =>
     })
 
     const octokit = new Octokit({ auth: input.token })
+
+    return { octokit, pullRequest }
+  })
+
+// Persist the GitHub review locally, notify the renderer, and shape the
+// response the review routes return.
+const persistReviewAndBroadcast = (
+  pullRequestId: string,
+  data: OctokitReviewData
+) =>
+  Effect.gen(function* () {
+    const repository = yield* Repository
+
+    const persisted = yield* repository.upsertReview({
+      pullRequestId,
+      review: toUpsertReviewInput(data)
+    })
+
+    yield* Effect.promise(() =>
+      broadcastPullRequestResourceEvents(pullRequestId)
+    )
+
+    return toCreateReviewResult(persisted, data.id)
+  })
+
+export const createPendingReview = (input: CreateReviewInput) =>
+  Effect.gen(function* () {
+    const { octokit, pullRequest } = yield* resolveReviewContext(input)
 
     const data = yield* Effect.tryPromise({
       try: async () => {
@@ -177,29 +257,12 @@ export const createPendingReview = (input: CreateReviewInput) =>
       })
     })
 
-    const persisted = yield* repository.upsertReview({
-      pullRequestId: pullRequest.id,
-      review: toUpsertReviewInput(data)
-    })
-
-    yield* Effect.promise(() =>
-      broadcastPullRequestResourceEvents(pullRequest.id)
-    )
-
-    return toCreateReviewResult(persisted, data.id)
+    return yield* persistReviewAndBroadcast(pullRequest.id, data)
   })
 
 export const getOrSyncPendingReview = (input: GetPendingReviewInput) =>
   Effect.gen(function* () {
-    const repository = yield* Repository
-
-    const pullRequest = yield* repository.requirePullRequestByCoords({
-      number: input.pullNumber,
-      owner: input.owner,
-      repo: input.repo
-    })
-
-    const octokit = new Octokit({ auth: input.token })
+    const { octokit, pullRequest } = yield* resolveReviewContext(input)
 
     const existing = yield* Effect.tryPromise({
       try: () =>
@@ -212,36 +275,36 @@ export const getOrSyncPendingReview = (input: GetPendingReviewInput) =>
     })
 
     if (!existing) {
+      // GitHub has no pending review for this user, so any local PENDING
+      // rows are stale drafts. Clean them up so a zombie draft does not
+      // linger in the UI.
+      yield* cleanUpStalePendingReviews(pullRequest.id)
+
       return null
     }
 
-    const persisted = yield* repository.upsertReview({
-      pullRequestId: pullRequest.id,
-      review: toUpsertReviewInput(existing)
-    })
-
-    yield* Effect.promise(() =>
-      broadcastPullRequestResourceEvents(pullRequest.id)
-    )
-
-    return toCreateReviewResult(persisted, existing.id)
+    return yield* persistReviewAndBroadcast(pullRequest.id, existing)
   })
 
 export const deletePendingReview = (input: DeleteReviewInput) =>
   Effect.gen(function* () {
+    const repository = yield* Repository
     const octokit = new Octokit({ auth: input.token })
 
     yield* Effect.tryPromise({
-      try: async () => {
-        await octokit.rest.pulls.deletePendingReview({
-          owner: input.owner,
-          pull_number: input.pullNumber,
-          repo: input.repo,
-          review_id: input.reviewId
-        })
-      },
+      try: () => deletePendingReviewIgnoringMissing(octokit, input),
       catch: octokitErrorOf('pulls.deletePendingReview')
     })
+
+    const pullRequest = yield* repository.findPullRequestByCoords({
+      number: input.pullNumber,
+      owner: input.owner,
+      repo: input.repo
+    })
+
+    if (pullRequest) {
+      yield* cleanUpStalePendingReviews(pullRequest.id)
+    }
 
     return { success: true } as const
   })
@@ -285,23 +348,17 @@ export const submitReview = (input: SubmitReviewInput) =>
 
     const hasComments = !!input.comments && input.comments.length > 0
 
+    // Set when the pending review stops existing under its original id on
+    // GitHub (deleted and recreated, or already gone). The matching local
+    // PENDING rows must then be removed — the sync never deletes them.
+    let pendingReviewReplaced = false
+
     if (hasComments) {
+      pendingReviewReplaced = true
+
       yield* Effect.tryPromise({
         try: async () => {
-          try {
-            await octokit.rest.pulls.deletePendingReview({
-              owner: input.owner,
-              pull_number: input.pullNumber,
-              repo: input.repo,
-              review_id: input.reviewId
-            })
-          } catch (deleteError) {
-            const status = (deleteError as { status?: number }).status
-
-            if (status !== 404) {
-              throw deleteError
-            }
-          }
+          await deletePendingReviewIgnoringMissing(octokit, input)
 
           await octokit.rest.pulls.createReview({
             body: input.body ?? '',
@@ -320,7 +377,7 @@ export const submitReview = (input: SubmitReviewInput) =>
         catch: octokitErrorOf('pulls.createReview (with comments)')
       })
     } else {
-      yield* Effect.tryPromise({
+      pendingReviewReplaced = yield* Effect.tryPromise({
         try: async () => {
           try {
             await octokit.rest.pulls.submitReview({
@@ -331,6 +388,8 @@ export const submitReview = (input: SubmitReviewInput) =>
               repo: input.repo,
               review_id: input.reviewId
             })
+
+            return false
           } catch (submitError) {
             const status = (submitError as { status?: number }).status
 
@@ -343,7 +402,7 @@ export const submitReview = (input: SubmitReviewInput) =>
                 repo: input.repo
               })
 
-              return
+              return true
             }
 
             throw submitError
@@ -358,6 +417,10 @@ export const submitReview = (input: SubmitReviewInput) =>
       owner: input.owner,
       repo: input.repo
     })
+
+    if (pullRequest && pendingReviewReplaced) {
+      yield* cleanUpStalePendingReviews(pullRequest.id)
+    }
 
     if (pullRequest) {
       yield* triggerDetailSync({

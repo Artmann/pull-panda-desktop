@@ -19,26 +19,22 @@
 }
 
 /* Pull Panda — Paper (Light Theme)
- * Warm off-white paper, green accent.
+ * Warm off-white paper, blue accent.
  */
 :root {
   --background: oklch(0.985 0.003 95);
   --foreground: oklch(0.22 0.01 95);
-  --card: oklch(1 0 0);
+  --card: oklch(0.997 0.003 95);
   --card-foreground: oklch(0.22 0.01 95);
   --popover: oklch(1 0 0);
   --popover-foreground: oklch(0.22 0.01 95);
   --primary: oklch(0.55 0.14 260);
   --primary-foreground: oklch(0.985 0.003 95);
-  /* Brand call-to-action colour. Fixed across all app themes — never
-   * overridden by applyThemePalette, only varies between light and dark. */
-  --cta: oklch(0.55 0.14 260);
-  --cta-foreground: oklch(0.985 0.003 95);
   --secondary: oklch(0.955 0.005 95);
   --secondary-foreground: oklch(0.22 0.01 95);
-  --muted: oklch(0.955 0.005 95);
+  --muted: oklch(0.945 0.009 95);
   --muted-foreground: oklch(0.45 0.008 95);
-  --accent: oklch(0.93 0.008 95);
+  --accent: oklch(0.925 0.011 95);
   --accent-foreground: oklch(0.22 0.01 95);
   --destructive: oklch(0.55 0.16 25);
   --destructive-foreground: oklch(0.985 0.003 95);
@@ -52,27 +48,27 @@
   --chart-4: oklch(0.6 0.18 155);
   --chart-5: oklch(0.55 0.2 260);
   --radius: 0.625rem;
-  --sidebar: oklch(0.93 0.009 255);
-  --sidebar-foreground: oklch(0.395 0.026 266);
-  --sidebar-primary: oklch(0.55 0.2 260);
-  --sidebar-primary-foreground: oklch(0.955 0.007 255);
-  --sidebar-accent: oklch(0.845 0.013 257);
-  --sidebar-accent-foreground: oklch(0.395 0.026 266);
-  --sidebar-border: oklch(0.876 0.017 268);
-  --sidebar-ring: oklch(0.65 0.15 275);
+  --sidebar: oklch(0.955 0.006 95);
+  --sidebar-foreground: oklch(0.36 0.012 95);
+  --sidebar-primary: oklch(0.55 0.14 260);
+  --sidebar-primary-foreground: oklch(0.985 0.003 95);
+  --sidebar-accent: oklch(0.9 0.009 95);
+  --sidebar-accent-foreground: oklch(0.32 0.012 95);
+  --sidebar-border: oklch(0.88 0.008 95);
+  --sidebar-ring: oklch(0.55 0.14 260);
 
-  --status-danger: oklch(0.955 0.02 25);
-  --status-danger-border: oklch(0.88 0.05 25);
-  --status-danger-foreground: oklch(0.42 0.12 25);
+  --status-danger: oklch(0.95 0.035 25);
+  --status-danger-border: oklch(0.86 0.08 25);
+  --status-danger-foreground: oklch(0.4 0.14 25);
   --status-merged: oklch(0.955 0.02 300);
   --status-merged-border: oklch(0.88 0.05 300);
   --status-merged-foreground: oklch(0.42 0.12 300);
   --status-neutral: oklch(0.955 0.007 255);
   --status-neutral-border: oklch(0.88 0.013 255);
   --status-neutral-foreground: oklch(0.45 0.02 264);
-  --status-success: oklch(0.955 0.02 150);
-  --status-success-border: oklch(0.88 0.04 150);
-  --status-success-foreground: oklch(0.42 0.1 150);
+  --status-success: oklch(0.96 0.05 160);
+  --status-success-border: oklch(0.88 0.1 160);
+  --status-success-foreground: oklch(0.5 0.16 160);
   --status-warning: oklch(0.955 0.03 80);
   --status-warning-border: oklch(0.88 0.05 80);
   --status-warning-foreground: oklch(0.42 0.1 80);
@@ -88,8 +84,6 @@
   --popover-foreground: oklch(0.96 0.005 240);
   --primary: oklch(0.72 0.14 260);
   --primary-foreground: oklch(0.1 0 0);
-  --cta: oklch(0.62 0.16 260);
-  --cta-foreground: oklch(0.985 0.003 95);
   --secondary: oklch(0.24 0.008 240);
   --secondary-foreground: oklch(0.96 0.005 240);
   --muted: oklch(0.24 0.008 240);
@@ -107,14 +101,14 @@
   --chart-3: oklch(0.85 0.12 95);
   --chart-4: oklch(0.7 0.16 155);
   --chart-5: oklch(0.77 0.12 255);
-  --sidebar: oklch(0.19 0.02 280);
-  --sidebar-foreground: oklch(0.87 0.03 275);
-  --sidebar-primary: oklch(0.77 0.12 255);
-  --sidebar-primary-foreground: oklch(0.22 0.02 280);
-  --sidebar-accent: oklch(0.29 0.02 275);
-  --sidebar-accent-foreground: oklch(0.87 0.03 275);
-  --sidebar-border: oklch(0.36 0.02 275);
-  --sidebar-ring: oklch(0.8 0.1 275);
+  --sidebar: oklch(0.16 0.008 240);
+  --sidebar-foreground: oklch(0.9 0.006 240);
+  --sidebar-primary: oklch(0.72 0.14 260);
+  --sidebar-primary-foreground: oklch(0.1 0 0);
+  --sidebar-accent: oklch(0.26 0.008 240);
+  --sidebar-accent-foreground: oklch(0.96 0.005 240);
+  --sidebar-border: oklch(0.3 0.008 240);
+  --sidebar-ring: oklch(0.72 0.14 260);
 
   --status-danger: oklch(0.27 0.03 25);
   --status-danger-border: oklch(0.38 0.05 25);
@@ -142,8 +136,6 @@
   --color-popover-foreground: var(--popover-foreground);
   --color-primary: var(--primary);
   --color-primary-foreground: var(--primary-foreground);
-  --color-cta: var(--cta);
-  --color-cta-foreground: var(--cta-foreground);
   --color-secondary: var(--secondary);
   --color-secondary-foreground: var(--secondary-foreground);
   --color-muted: var(--muted);
@@ -188,6 +180,11 @@
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
   --radius-xl: calc(var(--radius) + 4px);
+  /* Height of the fixed StickyPullRequestHeader; pinned file card headers
+   * sit flush below it via `top-sticky-header`. */
+  --spacing-sticky-header: 75px;
+  /* One step below text-xs, used by the tiny status badges. */
+  --text-2xs: 0.6rem;
 }
 
 html,
@@ -264,6 +261,75 @@ samp {
   background-color: var(--shiki-dark-bg) !important;
 }
 
+/* File diff styling (@pierre/diffs)
+ *
+ * The diff renders inside a shadow DOM and defaults to the Shiki theme's
+ * hardcoded background and git colours. These override variables inherit into
+ * the shadow root, so the diff always matches the app theme. Both the -light
+ * and -dark slots point at the same app token because the token itself already
+ * flips with the active theme. */
+.pierre-diff {
+  /* One pixel below the package default of 13px. */
+  --diffs-font-size: 12px;
+  --diffs-line-height: 20px;
+
+  --diffs-light-bg: var(--card);
+  --diffs-dark-bg: var(--card);
+  --diffs-light: var(--foreground);
+  --diffs-dark: var(--foreground);
+
+  /* Base add/remove/modified colours. The package derives everything else
+   * from these — line fills are mixed into the background at calibrated
+   * strengths and word-diff emphasis uses a translucent layer — so feed it
+   * the strong foreground tokens, not the pale surface tokens. The -override
+   * variants are required: the plain -color slots lose to the colours the
+   * renderer derives from the active Shiki theme. */
+  --diffs-addition-color-override: var(--status-success-foreground);
+  --diffs-deletion-color-override: var(--status-danger-foreground);
+  --diffs-modified-color-override: var(--primary);
+}
+
+/* Comment threads embed a small excerpt of the diff for context; render it a
+ * step smaller than the full file view so it reads as a quote, not a diff. */
+.pierre-diff--compact {
+  --diffs-font-size: 11px;
+  --diffs-line-height: 17px;
+}
+
+/* Fully-added and fully-deleted files: every line is a change, so per-line
+ * green/red paint is pure noise — the file card's status badge and border
+ * carry the state instead, and the lines render like a plain file. The
+ * number colour repeats the package's --diffs-fg-number formula because the
+ * addition/deletion slots otherwise fall back to the green/red base. */
+.pierre-diff--file-added {
+  /* The change bar runs the full card height here, and in the strong
+   * foreground green it casts a perceived tint over the whole card
+   * (simultaneous contrast). The pale border tone still reads as "added"
+   * without bleeding; per-line bars in modified files keep the strong
+   * colour, where they must stand out between context lines. */
+  --diffs-addition-color-override: var(--status-success-border);
+  --diffs-bg-addition-emphasis-override: transparent;
+  --diffs-bg-addition-number-override: var(--card);
+  --diffs-bg-addition-override: var(--card);
+  --diffs-fg-number-addition-override: color-mix(
+    in lab,
+    var(--foreground) 65%,
+    var(--card)
+  );
+}
+
+.pierre-diff--file-removed {
+  --diffs-bg-deletion-emphasis-override: transparent;
+  --diffs-bg-deletion-number-override: var(--card);
+  --diffs-bg-deletion-override: var(--card);
+  --diffs-deletion-color-override: var(--status-danger-border);
+  --diffs-fg-number-deletion-override: color-mix(
+    in lab,
+    var(--foreground) 65%,
+    var(--card)
+  );
+}
+
 /* Markdown code blocks without Shiki */
 .markdown-block pre:not(.shiki) {
   background-color: var(--muted);
@@ -278,33 +344,6 @@ samp {
   border-radius: 0.25rem;
   font-size: 0.875em;
   font-weight: normal;
-}
-
-/* Diff highlighting */
-.diff-highlight {
-  color: inherit;
-  padding: 0.1em 0;
-}
-
-.diff-highlight-add {
-  background-color: rgba(0, 255, 0, 0.15);
-}
-
-.diff-highlight-remove {
-  background-color: rgba(255, 0, 0, 0.15);
-}
-
-.dark .diff-highlight-add {
-  background-color: rgba(0, 255, 0, 0.2);
-}
-
-.dark .diff-highlight-remove {
-  background-color: rgba(255, 0, 0, 0.2);
-}
-
-/* Syntax highlighting in diffs - dark mode support */
-.dark .diff-table span[style] {
-  color: var(--shiki-dark) !important;
 }
 
 /* Remove default backticks added by Tailwind typography plugin */

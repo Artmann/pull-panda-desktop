@@ -25,6 +25,11 @@ import {
   setCachedUserLogin
 } from './main/send-resource-events'
 import { taskManager } from './main/task-manager'
+import { startUsagePingScheduler } from './main/usage-ping'
+import {
+  isUsageReportingEnabled,
+  setUsageReportingEnabled
+} from './main/usage-settings'
 import { deletePullRequestData } from './sync/operations/delete-pull-request'
 import {
   syncPullRequests,
@@ -190,6 +195,17 @@ function setupIpcHandlers(): void {
     )
   })
 
+  handleWithSpan(ipcChannels.UsageGetReportingEnabled, () => {
+    return isUsageReportingEnabled()
+  })
+
+  handleWithSpan(
+    ipcChannels.UsageSetReportingEnabled,
+    (_event, enabled: boolean) => {
+      setUsageReportingEnabled(enabled)
+    }
+  )
+
   // Telemetry handlers are registered directly (not via handleWithSpan) so that
   // observing the telemetry does not itself generate telemetry.
   ipcMain.handle(ipcChannels.TelemetryEnabled, () => {
@@ -260,6 +276,11 @@ const createWindow = () => {
     titleBarStyle: 'hidden',
     trafficLightPosition: { x: 12, y: 10 },
     webPreferences: {
+      // Dev builds are driven over CDP (agent-browser); with throttling on,
+      // Chromium freezes rAF and IntersectionObserver while the window is
+      // hidden, which breaks that automation. Packaged builds keep the
+      // battery-friendly default.
+      backgroundThrottling: app.isPackaged,
       contextIsolation: true,
       nodeIntegration: false,
       preload: path.join(__dirname, 'preload.js')
@@ -441,37 +462,29 @@ async function getUserLogin(): Promise<string | undefined> {
   return login
 }
 
-app.on('ready', async () => {
-  // macOS shows the dock icon from the app bundle in packaged builds, but
-  // unpackaged dev builds need it set explicitly.
-  if (developmentIconPath && process.platform === 'darwin') {
-    app.dock?.setIcon(developmentIconPath)
-  }
-
+// Boot the persistence and service layer in dependency order: the database
+// before anything else, telemetry (dev-only) before the runtime so the Effect
+// tracer/logger can write spans and logs from the very first sync.
+async function initializeServices(): Promise<
+  ReturnType<typeof initializeAppRuntime>
+> {
   setupIpcHandlers()
 
-  // Initialize database before anything else
   await initializeDatabase()
-
-  // Initialize local telemetry (dev-only) before the runtime so the Effect
-  // tracer/logger can write spans and logs from the very first sync.
   await initializeTelemetry()
 
-  // Initialize the sync runtime now that the database is ready.
   const runtime = initializeAppRuntime(loadToken)
 
   await startApiServer(loadToken)
 
-  const userLogin = await getUserLogin()
-  bootstrapData = await bootstrap(userLogin)
+  return runtime
+}
 
-  createWindow()
-
-  if (mainWindow) {
-    setApiMainWindow(mainWindow)
-  }
-
-  // Start the background syncer fiber via the runtime.
+// Start the background syncer fiber via the runtime, then kick off an initial
+// pull-request sync when a token is already stored.
+async function startBackgroundSync(
+  runtime: ReturnType<typeof initializeAppRuntime>
+): Promise<void> {
   await runtime.runPromise(
     Effect.flatMap(BackgroundSyncer, (syncer) => syncer.start).pipe(
       Effect.catchAll((error) => {
@@ -482,11 +495,32 @@ app.on('ready', async () => {
     )
   )
 
-  const token = loadToken()
-
-  if (token) {
+  if (loadToken()) {
     runPullRequestSync()
   }
+}
+
+app.on('ready', async () => {
+  // macOS shows the dock icon from the app bundle in packaged builds, but
+  // unpackaged dev builds need it set explicitly.
+  if (developmentIconPath && process.platform === 'darwin') {
+    app.dock?.setIcon(developmentIconPath)
+  }
+
+  const runtime = await initializeServices()
+
+  const userLogin = await getUserLogin()
+  bootstrapData = await bootstrap(userLogin)
+
+  createWindow()
+
+  if (mainWindow) {
+    setApiMainWindow(mainWindow)
+  }
+
+  await startBackgroundSync(runtime)
+
+  startUsagePingScheduler()
 })
 
 let pullRequestSyncInFlight = false

@@ -4,6 +4,7 @@ import type { ContentfulStatusCode } from 'hono/utils/http-status'
 
 import { effectHandler, requireString, type AppEnv } from '../effect-handler'
 import { getBlobImage, type BlobImage } from '../operations/get-blob-image'
+import { getFileContents } from '../operations/get-file-contents'
 import { listCollaborators } from '../operations/list-collaborators'
 import { listCodeowners } from '../operations/list-codeowners'
 
@@ -31,6 +32,41 @@ function readBlobRequest(context: HonoContext<AppEnv>): BlobRequest | null {
   return { filePath, owner, repo, sha }
 }
 
+interface FileContentsRequest {
+  blobSha: string | null
+  owner: string
+  path: string
+  previousFilename: string | null
+  pullNumber: number
+  repo: string
+  status: string | null
+}
+
+// Pulls the route params and query needed to fetch file contents, returning
+// null when any required part is missing so the caller can answer with a 400.
+function readFileContentsRequest(
+  context: HonoContext<AppEnv>
+): FileContentsRequest | null {
+  const owner = context.req.param('owner')
+  const repo = context.req.param('name')
+  const pullNumber = Number(context.req.param('pullNumber'))
+  const path = context.req.query('path')
+
+  if (!owner || !repo || !path || Number.isNaN(pullNumber)) {
+    return null
+  }
+
+  return {
+    blobSha: context.req.query('blobSha') ?? null,
+    owner,
+    path,
+    previousFilename: context.req.query('previousFilename') ?? null,
+    pullNumber,
+    repo,
+    status: context.req.query('status') ?? null
+  }
+}
+
 function statusFromCause(cause: unknown): ContentfulStatusCode {
   if (
     typeof cause === 'object' &&
@@ -42,6 +78,16 @@ function statusFromCause(cause: unknown): ContentfulStatusCode {
   }
 
   return 502
+}
+
+function toErrorResponse(
+  context: HonoContext<AppEnv>,
+  cause: unknown,
+  fallbackMessage: string
+) {
+  const message = cause instanceof Error ? cause.message : fallbackMessage
+
+  return context.json({ error: { message } }, statusFromCause(cause))
 }
 
 // Copies the blob into a standalone ArrayBuffer so the response body owns its
@@ -83,12 +129,36 @@ reposRoute.get('/:owner/:name/blobs/:sha', async (context) => {
       'Content-Type': image.contentType
     })
   } catch (cause) {
-    const message =
-      cause instanceof Error ? cause.message : 'Failed to load image'
-
-    return context.json({ error: { message } }, statusFromCause(cause))
+    return toErrorResponse(context, cause, 'Failed to load image')
   }
 })
+
+reposRoute.get(
+  '/:owner/:name/pulls/:pullNumber/file-contents',
+  async (context) => {
+    const request = readFileContentsRequest(context)
+
+    if (!request) {
+      return context.json(
+        {
+          error: { message: 'owner, name, pullNumber and path are required' }
+        },
+        400
+      )
+    }
+
+    try {
+      const contents = await getFileContents({
+        ...request,
+        token: context.get('token')
+      })
+
+      return context.json(contents, 200)
+    } catch (cause) {
+      return toErrorResponse(context, cause, 'Failed to load file contents')
+    }
+  }
+)
 
 reposRoute.get(
   '/:owner/:name/collaborators',
