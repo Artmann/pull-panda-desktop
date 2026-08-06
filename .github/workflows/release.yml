@@ -1,22 +1,55 @@
 name: Release
 
 on:
-  release:
-    types: [created]
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description:
+          'Existing semver tag to rebuild and upload (e.g. v1.2.0). Leave empty
+          for a build-only smoke test.'
+        required: false
+        default: ''
 
 permissions:
   contents: write
+  pull-requests: write
 
 jobs:
-  publish:
+  release-please:
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    outputs:
+      release_created: ${{ steps.release.outputs.release_created }}
+      tag_name: ${{ steps.release.outputs.tag_name }}
+    steps:
+      - uses: googleapis/release-please-action@v4
+        id: release
+        with:
+          config-file: release-please-config.json
+          manifest-file: .release-please-manifest.json
+
+  build:
+    needs: release-please
+    if: >-
+      !cancelled() && (
+        needs.release-please.outputs.release_created == 'true' ||
+        github.event_name == 'workflow_dispatch'
+      )
     strategy:
+      fail-fast: false
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
-
     runs-on: ${{ matrix.os }}
-
+    env:
+      RELEASE_TAG:
+        ${{ github.event_name == 'workflow_dispatch' && inputs.tag ||
+        needs.release-please.outputs.tag_name }}
     steps:
       - uses: actions/checkout@v5
+        with:
+          ref: ${{ env.RELEASE_TAG }}
 
       - uses: actions/setup-node@v5
         with:
@@ -26,9 +59,14 @@ jobs:
       - name: Install dependencies
         run: yarn install
 
-      - name: Set version from tag
+      - name: Ensure package.json version matches tag
+        if: env.RELEASE_TAG != ''
         shell: bash
-        run: npm pkg set version=${GITHUB_REF_NAME#v}.0
+        run: |
+          VERSION="${RELEASE_TAG#v}"
+          if [[ "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+([-.].*)?$ ]]; then
+            npm pkg set version="$VERSION"
+          fi
 
       - name: Import Apple certificate
         if: matrix.os == 'macos-latest'
@@ -65,10 +103,11 @@ jobs:
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
 
       - name: Upload to release
+        if: env.RELEASE_TAG != ''
         shell: bash
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run:
           find out/make -type f \( -name "*.exe" -o -name "*.dmg" -o -name
-          "*.deb" -o -name "*.rpm" -o -name "*.nupkg" -o -name "RELEASES" \)
-          -exec gh release upload ${{ github.ref_name }} {} --clobber \;
+          "*.zip" -o -name "*.deb" -o -name "*.rpm" -o -name "*.nupkg" -o -name
+          "RELEASES" \) -exec gh release upload "$RELEASE_TAG" {} --clobber \;
