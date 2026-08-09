@@ -16,8 +16,10 @@ import {
 } from '../../telemetry/span'
 import { type AppEnv } from './effect-handler'
 import { getApiMainWindow, setApiMainWindow } from './main-window-ref'
+import { getMcpToken } from './mcp-token'
 import { checksRoute } from './routes/checks'
 import { commentsRoute } from './routes/comments'
+import { mcpRoute } from './routes/mcp'
 import { navigateRoute } from './routes/navigate'
 import { pullRequestsRoute } from './routes/pull-requests'
 import { repoCheckoutRoute } from './routes/repo-checkout'
@@ -55,11 +57,33 @@ export function startApiServer(getToken: () => string | null): Promise<number> {
     app.use('*', async (context, next) => {
       const token = getToken()
 
+      // The MCP endpoint is called by a spawned agent process that has no
+      // GitHub token; it authenticates with the per-launch bearer token
+      // below instead. The GitHub token is still attached when present so
+      // MCP tools that reach GitHub can use it.
+      if (context.req.path.startsWith('/api/mcp')) {
+        if (token) {
+          context.set('token', token)
+        }
+
+        return next()
+      }
+
       if (!token) {
         return context.json({ error: 'Not authenticated' }, 401)
       }
 
       context.set('token', token)
+      await next()
+    })
+
+    app.use('/api/mcp/*', async (context, next) => {
+      const authorization = context.req.header('Authorization')
+
+      if (authorization !== `Bearer ${getMcpToken()}`) {
+        return context.json({ error: 'Unauthorized' }, 401)
+      }
+
       await next()
     })
 
@@ -69,17 +93,14 @@ export function startApiServer(getToken: () => string | null): Promise<number> {
     app.use('*', async (context, next) => {
       const traceId = context.req.header(traceIdHeader)
       const parentSpanId = context.req.header(parentSpanIdHeader)
-      const span = startSpan(
-        `http ${context.req.method} ${context.req.path}`,
-        {
-          kind: 'server',
-          attributes: {
-            'http.method': context.req.method,
-            'http.path': context.req.path
-          },
-          parent: traceId && parentSpanId ? { traceId, parentSpanId } : null
-        }
-      )
+      const span = startSpan(`http ${context.req.method} ${context.req.path}`, {
+        kind: 'server',
+        attributes: {
+          'http.method': context.req.method,
+          'http.path': context.req.path
+        },
+        parent: traceId && parentSpanId ? { traceId, parentSpanId } : null
+      })
 
       context.set('traceContext', childContext(span))
 
@@ -105,6 +126,7 @@ export function startApiServer(getToken: () => string | null): Promise<number> {
 
     app.route('/api/checks', checksRoute)
     app.route('/api/comments', commentsRoute)
+    app.route('/api/mcp', mcpRoute)
     app.route('/api/navigate', navigateRoute)
     app.route('/api/pull-requests', pullRequestsRoute)
     app.route('/api/repo-checkout', repoCheckoutRoute)
