@@ -1,5 +1,6 @@
 import { type ReactElement } from 'react'
 import { AccountSettings } from '../settings/account'
+import { AgentsSettings } from '../settings/agents'
 import { AppearanceSettings } from '../settings/appearance'
 import { PrivacySettings } from '../settings/privacy'
 
@@ -11,6 +12,7 @@ export function SettingsPage(): ReactElement {
           <h1 className="text-2xl font-medium">Settings</h1>
 
           <AccountSettings />
+          <AgentsSettings />
           <AppearanceSettings />
           <PrivacySettings />
         </section>
