@@ -4,8 +4,16 @@ import {
   FolderIcon,
   FolderOpenIcon
 } from 'lucide-react'
-import { memo, useCallback, useMemo, useState, type ReactElement } from 'react'
+import {
+  memo,
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+  type ReactElement
+} from 'react'
 import { shallowEqual } from 'react-redux'
+import { useSearchParams } from 'react-router'
 
 import type { PullRequest } from '@/types/pull-request'
 import type { ModifiedFile } from '@/types/pull-request-details'
@@ -22,6 +30,10 @@ import { useDiffLayout } from './diffs/use-diff-layout'
 type FilesRow =
   | { groupName: string; isCollapsed: boolean; type: 'group' }
   | { filePath: string; type: 'file' }
+
+// Matches --spacing-sticky-header in index.css; scrolled-to file cards would
+// otherwise start underneath the sticky pull request header.
+const stickyHeaderHeight = 75
 
 export const FilesView = memo(function FilesView({
   pullRequest
@@ -108,6 +120,52 @@ export const FilesView = memo(function FilesView({
     getItemKey,
     overscan: 4
   })
+
+  const [searchParams, setSearchParams] = useSearchParams()
+  const targetFilePath = searchParams.get('file')
+
+  useEffect(
+    function scrollToTargetFile() {
+      if (!targetFilePath) {
+        return
+      }
+
+      const index = rows.findIndex(
+        (row) => row.type === 'file' && row.filePath === targetFilePath
+      )
+
+      if (index === -1) {
+        return
+      }
+
+      // Wait a frame so the page's per-tab scroll restore (a layout effect in
+      // PullRequestPage) runs first instead of clobbering this scroll.
+      const frame = requestAnimationFrame(() => {
+        virtualizer.scrollToIndex(index, { align: 'start' })
+
+        const scrollElement = virtualizer.scrollElement
+
+        if (scrollElement) {
+          scrollElement.scrollTop -= stickyHeaderHeight
+        }
+
+        // Clear the parameter so following the same link scrolls again.
+        setSearchParams(
+          (params) => {
+            params.delete('file')
+
+            return params
+          },
+          { replace: true }
+        )
+      })
+
+      return () => {
+        cancelAnimationFrame(frame)
+      }
+    },
+    [rows, setSearchParams, targetFilePath, virtualizer]
+  )
 
   const toggleGroupCollapse = (groupName: string) => {
     setCollapsedGroups((previous) => {
@@ -236,4 +294,3 @@ function FileRow({
     />
   )
 }
-

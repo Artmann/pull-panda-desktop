@@ -13,7 +13,7 @@ import { getStore } from '../store-accessor'
 import type { PullRequest } from '@/types/pull-request'
 
 // Tab names as used in the app
-const tabs = ['overview', 'tasks', 'checks', 'files'] as const
+const tabs = ['overview', 'tasks', 'checks', 'files', 'chat'] as const
 
 // Tab navigation commands (1-4 keys on PR detail view)
 tabs.forEach((tab, index) => {

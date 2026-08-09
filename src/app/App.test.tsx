@@ -8,6 +8,7 @@ import { describe, it, expect, vi, beforeAll, beforeEach } from 'vitest'
 import type { PullRequest } from '@/types/pull-request'
 import type { ResourceUpdatedEvent } from '@/types/ipc-events'
 
+import chatReducer from '@/app/store/chat-slice'
 import checksReducer from '@/app/store/checks-slice'
 import commentsReducer from '@/app/store/comments-slice'
 import commitsReducer from '@/app/store/commits-slice'
@@ -76,6 +77,7 @@ beforeAll(() => {
 function createTestStore() {
   return configureStore({
     reducer: {
+      chat: chatReducer,
       checks: checksReducer,
       comments: commentsReducer,
       commits: commitsReducer,
@@ -94,6 +96,12 @@ function createTestStore() {
       tasks: tasksReducer
     },
     preloadedState: {
+      chat: {
+        activeSessionIdByPullRequest: {},
+        messagesBySession: {},
+        sessionsByPullRequest: {},
+        streamingBySession: {}
+      },
       checks: { items: [] },
       comments: { items: [] },
       commits: { items: [] },
@@ -197,6 +205,16 @@ describe('App', () => {
           login: 'testuser',
           avatarUrl: 'https://example.com/avatar.png'
         })
+      })
+
+      vi.stubGlobal('chat', {
+        getMessages: vi.fn().mockResolvedValue([]),
+        getSessions: vi.fn().mockResolvedValue([]),
+        onChatEvent: vi.fn().mockReturnValue(() => {
+          // Unsubscribe mock
+        }),
+        send: vi.fn().mockResolvedValue(null),
+        stop: vi.fn().mockResolvedValue(undefined)
       })
     })
 

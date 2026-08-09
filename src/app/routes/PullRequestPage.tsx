@@ -1,5 +1,6 @@
 import {
   ArrowLeft,
+  BotMessageSquareIcon,
   FileCodeIcon,
   ListCheckIcon,
   ListTodoIcon,
@@ -49,13 +50,14 @@ import {
 } from '../pull-requests/PullRequestHeader'
 import { PullRequestToolbar } from '../pull-requests/PullRequestToolbar'
 import { ReviewDrawer } from '../pull-requests/ReviewDrawer'
+import { ChatTab } from '../pull-requests/chat/ChatTab'
 import { TasksTab } from '../pull-requests/tasks/TasksTab'
 import {
   countOpenBlockers,
   useDerivedTaskGroups
 } from '../pull-requests/tasks/use-derived-tasks'
 
-const validTabs = ['overview', 'tasks', 'checks', 'files']
+const validTabs = ['overview', 'tasks', 'checks', 'files', 'chat']
 
 export function PullRequestPage(): ReactElement {
   const containerRef = useRef<HTMLDivElement>(null)
@@ -249,6 +251,12 @@ export function PullRequestPage(): ReactElement {
         id: 'files',
         itemCount: filesCount,
         label: 'Files'
+      },
+      {
+        content: ChatTab,
+        icon: BotMessageSquareIcon,
+        id: 'chat',
+        label: 'Chat'
       }
     ],
     [checksCount, filesCount, openBlockerCount]

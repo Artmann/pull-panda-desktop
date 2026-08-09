@@ -1,5 +1,6 @@
 import { configureStore } from '@reduxjs/toolkit'
 
+import chatReducer, { ChatState } from './chat-slice'
 import checksReducer, { ChecksState } from './checks-slice'
 import commentsReducer, { CommentsState } from './comments-slice'
 import commitsReducer, { CommitsState } from './commits-slice'
@@ -40,6 +41,7 @@ import reviewThreadsReducer, {
 import tasksReducer, { TasksState } from './tasks-slice'
 
 export interface PreloadedState {
+  chat?: ChatState
   checks: ChecksState
   comments: CommentsState
   commits: CommitsState
@@ -72,6 +74,7 @@ export function createStore(preloadedState?: PreloadedState) {
       recentReviewers: loadRecentReviewersFromStorage()
     },
     reducer: {
+      chat: chatReducer,
       checks: checksReducer,
       comments: commentsReducer,
       commits: commitsReducer,

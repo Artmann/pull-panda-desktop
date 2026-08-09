@@ -91,17 +91,23 @@ async function highlightCodeBlocks(
 
 export const MarkdownBlock = memo(function MarkdownBlock({
   className,
+  components,
   content,
   path
 }: {
   className?: string
+  components?: RehypeReactOptions['components']
   content: string
   path?: string
 }): ReactElement {
   const { ref: containerRef, shouldRender } = useLazyRender<HTMLDivElement>()
   const [result, createMarkdownContent, resetMarkdownContent] = useRemark({
     path,
-    rehypeReactOptions: { components: markdownComponents }
+    rehypeReactOptions: {
+      components: components
+        ? { ...markdownComponents, ...components }
+        : markdownComponents
+    }
   })
   const [isHighlighted, setIsHighlighted] = useState(false)
   const lastContentRef = useRef<string | null>(null)
