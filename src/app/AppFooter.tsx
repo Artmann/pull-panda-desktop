@@ -4,6 +4,10 @@ import { Loader2 } from 'lucide-react'
 import { useAuth } from './lib/store/authContext'
 import { useTasks } from './lib/store/tasksContext'
 
+// Pages portal contextual actions (e.g. the pull request toolbar) into this
+// element so they live in the footer instead of floating over the content.
+export const appFooterActionsSlotId = 'app-footer-actions'
+
 export function AppFooter(): ReactElement {
   const { runningTasks } = useTasks()
   const { user } = useAuth()
@@ -24,11 +28,13 @@ export function AppFooter(): ReactElement {
     <footer
       className="
         w-full bg-titlebar border-t border-border
-        flex items-center gap-3 px-3 h-6
+        flex items-center gap-4 px-4 h-12
         font-mono text-[10px] text-muted-foreground
         select-none
       "
     >
+      {user?.login ? <span>{user.login}</span> : null}
+
       <div className="flex items-center gap-1.5">
         {isBusy ? (
           <>
@@ -48,7 +54,10 @@ export function AppFooter(): ReactElement {
 
       <div className="flex-1" />
 
-      {user?.login ? <span>{user.login}</span> : null}
+      <div
+        className="flex items-center gap-2"
+        id={appFooterActionsSlotId}
+      />
     </footer>
   )
 }

@@ -8,6 +8,7 @@ import { MemoryRouter } from 'react-router'
 import { configureStore } from '@reduxjs/toolkit'
 import { describe, it, expect, vi } from 'vitest'
 
+import { appFooterActionsSlotId } from '@/app/AppFooter'
 import type { MergeOptions } from '@/app/lib/api'
 
 import connectedReposReducer from '@/app/store/connected-repos-slice'
@@ -54,10 +55,14 @@ function renderWithProviders(
   ui: React.ReactElement,
   { store = createTestStore() } = {}
 ) {
+  // The toolbar portals its content into the footer's actions slot.
   return render(
     <Provider store={store}>
       <MemoryRouter>
-        <PullRequestNavigationProvider>{ui}</PullRequestNavigationProvider>
+        <PullRequestNavigationProvider>
+          {ui}
+          <div id={appFooterActionsSlotId} />
+        </PullRequestNavigationProvider>
       </MemoryRouter>
     </Provider>
   )
