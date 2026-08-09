@@ -1,6 +1,8 @@
 import { ChevronDown, ChevronUp, GitMergeIcon, Loader2 } from 'lucide-react'
-import { memo, ReactElement } from 'react'
+import { memo, ReactElement, useEffect, useState } from 'react'
+import { createPortal } from 'react-dom'
 
+import { appFooterActionsSlotId } from '@/app/AppFooter'
 import { Button } from '@/app/components/ui/button'
 import { Separator } from '@/app/components/ui/separator'
 import type { MergeOptions } from '@/app/lib/api'
@@ -16,123 +18,158 @@ interface PullRequestToolbarProps {
   pullRequest: PullRequest
 }
 
-export const PullRequestToolbar = memo(function PullRequestToolbar({
-  onOpenMergeDrawer,
-  pullRequest
-}: PullRequestToolbarProps): ReactElement {
-  const dispatch = useAppDispatch()
+function LandmarkNavigationButtons(): ReactElement {
   const navigation = usePullRequestNavigation()
+
+  return (
+    <div className="flex items-center gap-1">
+      <Button
+        onClick={() => navigation.jumpToPreviousLandmark()}
+        size="icon-xs"
+        title="Previous landmark (k)"
+        variant="outline"
+      >
+        <ChevronUp className="size-3" />
+      </Button>
+
+      <Button
+        onClick={() => navigation.jumpToNextLandmark()}
+        size="icon-xs"
+        title="Next landmark (j)"
+        variant="outline"
+      >
+        <ChevronDown className="size-3" />
+      </Button>
+    </div>
+  )
+}
+
+function ReviewSection({
+  pullRequest
+}: {
+  pullRequest: PullRequest
+}): ReactElement | null {
+  const dispatch = useAppDispatch()
 
   const pendingReview = useAppSelector(
     (state) => state.pendingReviews[pullRequest.id]
   )
 
-  const hasPendingReview = Boolean(pendingReview)
   const isDrawerCollapsed = pendingReview?.isCollapsed ?? false
 
+  if (pendingReview) {
+    return (
+      <>
+        <Separator orientation="vertical" />
+        <div className="flex items-center gap-1">
+          <Button
+            onClick={() =>
+              dispatch(
+                pendingReviewsActions.setCollapsed({
+                  collapsed: !isDrawerCollapsed,
+                  pullRequestId: pullRequest.id
+                })
+              )
+            }
+            size="xs"
+            variant="outline"
+          >
+            {isDrawerCollapsed ? 'Resume review' : 'Review in progress'}
+          </Button>
+        </div>
+      </>
+    )
+  }
+
+  if (pullRequest.isAuthor) {
+    return null
+  }
+
+  return (
+    <>
+      <Separator orientation="vertical" />
+      <div className="flex items-center gap-1">
+        <Button
+          onClick={() => {
+            startPendingReview({ dispatch, pullRequest }).catch(() => {
+              // startPendingReview surfaces its own error toast.
+            })
+          }}
+          size="xs"
+        >
+          Start review
+        </Button>
+      </div>
+    </>
+  )
+}
+
+function MergeSection({
+  onOpenMergeDrawer,
+  pullRequest
+}: PullRequestToolbarProps): ReactElement | null {
   const mergeOptions = useAppSelector(
     (state) => state.mergeOptions[pullRequest.id] ?? null
   )
 
-  const handleStartReview = async () => {
-    if (hasPendingReview) {
-      return
-    }
-
-    await startPendingReview({ dispatch, pullRequest })
+  if (pullRequest.state !== 'OPEN') {
+    return null
   }
 
-  const mergeButtonLabel = getMergeButtonLabel(mergeOptions)
   const mergeReady = mergeOptions?.mergeable === true
-  const showMerge = pullRequest.state === 'OPEN'
 
   return (
-    <div
-      className={`
-        fixed bottom-10 left-1/2 -translate-x-1/2 z-30
-        bg-background
-        rounded-sm border border-border shadow-sm
-        p-1.5
-        flex items-center gap-2
-    `}
-    >
-      <div className="flex items-center gap-1">
-        <Button
-          onClick={() => navigation.jumpToPreviousLandmark()}
-          size="icon-xs"
-          title="Previous landmark (k)"
-          variant="outline"
-        >
-          <ChevronUp className="size-3" />
-        </Button>
+    <>
+      <Separator orientation="vertical" />
 
-        <Button
-          onClick={() => navigation.jumpToNextLandmark()}
-          size="icon-xs"
-          title="Next landmark (j)"
-          variant="outline"
-        >
-          <ChevronDown className="size-3" />
-        </Button>
-      </div>
+      <Button
+        onClick={onOpenMergeDrawer}
+        size="xs"
+        variant={mergeReady ? 'default' : 'outline'}
+      >
+        {mergeOptions?.mergeable === null ? (
+          <Loader2 className="size-3 animate-spin" />
+        ) : (
+          <GitMergeIcon className="size-3" />
+        )}
+        {getMergeButtonLabel(mergeOptions)}
+      </Button>
+    </>
+  )
+}
+
+export const PullRequestToolbar = memo(function PullRequestToolbar({
+  onOpenMergeDrawer,
+  pullRequest
+}: PullRequestToolbarProps): ReactElement | null {
+  // The footer renders the slot in the same commit as this page, so the
+  // element exists by the time effects run.
+  const [slot, setSlot] = useState<HTMLElement | null>(null)
+
+  useEffect(() => {
+    setSlot(document.getElementById(appFooterActionsSlotId))
+  }, [])
+
+  if (!slot) {
+    return null
+  }
+
+  return createPortal(
+    <div className="flex items-center gap-2 font-sans">
+      <LandmarkNavigationButtons />
 
       <Separator orientation="vertical" />
 
       <CheckoutBranchButton pullRequest={pullRequest} />
 
-      {hasPendingReview ? (
-        <>
-          <Separator orientation="vertical" />
-          <div className="flex items-center gap-1">
-            <Button
-              onClick={() =>
-                dispatch(
-                  pendingReviewsActions.setCollapsed({
-                    collapsed: !isDrawerCollapsed,
-                    pullRequestId: pullRequest.id
-                  })
-                )
-              }
-              size="xs"
-              variant="outline"
-            >
-              {isDrawerCollapsed ? 'Resume review' : 'Review in progress'}
-            </Button>
-          </div>
-        </>
-      ) : !pullRequest.isAuthor ? (
-        <>
-          <Separator orientation="vertical" />
-          <div className="flex items-center gap-1">
-            <Button
-              onClick={handleStartReview}
-              size="xs"
-            >
-              Start review
-            </Button>
-          </div>
-        </>
-      ) : null}
+      <ReviewSection pullRequest={pullRequest} />
 
-      {showMerge && (
-        <>
-          <Separator orientation="vertical" />
-
-          <Button
-            onClick={onOpenMergeDrawer}
-            size="xs"
-            variant={mergeReady ? 'default' : 'outline'}
-          >
-            {mergeOptions?.mergeable === null ? (
-              <Loader2 className="size-3 animate-spin" />
-            ) : (
-              <GitMergeIcon className="size-3" />
-            )}
-            {mergeButtonLabel}
-          </Button>
-        </>
-      )}
-    </div>
+      <MergeSection
+        onOpenMergeDrawer={onOpenMergeDrawer}
+        pullRequest={pullRequest}
+      />
+    </div>,
+    slot
   )
 })
 

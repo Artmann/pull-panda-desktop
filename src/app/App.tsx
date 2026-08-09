@@ -38,6 +38,7 @@ import {
   startSpan
 } from '@/app/lib/telemetry/tracer'
 import { useAppDispatch } from '@/app/store/hooks'
+import { chatEventToAction } from '@/app/store/chat-event-to-action'
 import { resourceEventToAction } from '@/app/store/resource-event-to-action'
 import { AppFooter } from './AppFooter'
 
@@ -105,6 +106,16 @@ function AppContent(): ReactElement {
   useEffect(() => {
     const unsubscribe = window.electron.onResourceUpdated((event) => {
       dispatch(resourceEventToAction(event))
+    })
+
+    return unsubscribe
+  }, [dispatch])
+
+  // Listen for chat agent events from the main process. Subscribed app-wide so
+  // streaming survives tab switches.
+  useEffect(() => {
+    const unsubscribe = window.chat.onChatEvent((event) => {
+      dispatch(chatEventToAction(event))
     })
 
     return unsubscribe

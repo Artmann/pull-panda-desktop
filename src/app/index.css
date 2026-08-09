@@ -475,3 +475,49 @@ samp {
     margin: 1.5rem 0;
   }
 }
+
+/* Utilities the shadcn chat components (message-scroller, marker) expect.
+ * They normally ship with shadcn/tailwind.css, which this project does not
+ * import, so the ones we use are defined here. */
+
+/* Fades out content at the bottom edge of a scroll container. */
+@utility scroll-fade-b {
+  mask-image: linear-gradient(
+    to bottom,
+    black calc(100% - 2.5rem),
+    transparent 100%
+  );
+}
+
+@utility scrollbar-gutter-stable {
+  scrollbar-gutter: stable;
+}
+
+@utility scrollbar-none {
+  scrollbar-width: none;
+}
+
+/* Text shimmer for live status labels like "Working…". */
+@utility shimmer {
+  animation: shimmer 2s linear infinite;
+  background-image: linear-gradient(
+    to right,
+    var(--muted-foreground) 35%,
+    var(--foreground) 50%,
+    var(--muted-foreground) 65%
+  );
+  background-position: 100% 0;
+  background-size: 200% 100%;
+  background-clip: text;
+  color: transparent;
+}
+
+@keyframes shimmer {
+  from {
+    background-position: 100% 0;
+  }
+
+  to {
+    background-position: -100% 0;
+  }
+}

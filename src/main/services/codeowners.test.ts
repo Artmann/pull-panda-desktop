@@ -44,9 +44,7 @@ describe('Codeowners service', () => {
 
   describe('fetchRules', () => {
     it('returns the fetched rules', async () => {
-      const rules: CodeownerRule[] = [
-        { owners: ['alice'], pattern: '/src/**' }
-      ]
+      const rules: CodeownerRule[] = [{ owners: ['alice'], pattern: '/src/**' }]
 
       mocks.fetchCodeownerRules.mockResolvedValue(rules)
 

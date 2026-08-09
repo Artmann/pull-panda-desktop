@@ -22,6 +22,12 @@
       }
     ],
     "import/namespace": "off",
+    "import/no-unresolved": [
+      "error",
+      {
+        "ignore": ["^@modelcontextprotocol/sdk/"]
+      }
+    ],
     "no-restricted-syntax": [
       "error",
       {

@@ -29,7 +29,10 @@ interface ManualSpan {
   setStatus: (status: SpanStatus, message?: string) => void
 }
 
-export function startSpan(name: string, options: StartSpanOptions = {}): ManualSpan {
+export function startSpan(
+  name: string,
+  options: StartSpanOptions = {}
+): ManualSpan {
   const parent = options.parent ?? null
   const traceId = parent ? parent.traceId : createTraceId()
   const spanId = createSpanId()
@@ -116,4 +119,3 @@ export async function withSpan<T>(
 export function childContext(span: ManualSpan): TraceContext {
   return { traceId: span.traceId, parentSpanId: span.spanId }
 }
-

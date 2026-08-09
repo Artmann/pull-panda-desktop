@@ -3,6 +3,7 @@
  */
 import { screen, fireEvent, act } from '@testing-library/react'
 import { configureStore } from '@reduxjs/toolkit'
+import { MemoryRouter } from 'react-router'
 import { describe, it, expect, beforeAll, vi } from 'vitest'
 
 import type { ModifiedFile } from '@/types/pull-request-details'
@@ -59,7 +60,12 @@ describe('FilesView', () => {
     })
 
     await act(async () => {
-      renderWithProviders(<FilesView pullRequest={pullRequest} />, store)
+      renderWithProviders(
+        <MemoryRouter>
+          <FilesView pullRequest={pullRequest} />
+        </MemoryRouter>,
+        store
+      )
     })
 
     expect(screen.getByText('No files found.')).toBeInTheDocument()
@@ -89,7 +95,12 @@ describe('FilesView', () => {
     })
 
     await act(async () => {
-      renderWithProviders(<FilesView pullRequest={pullRequest} />, store)
+      renderWithProviders(
+        <MemoryRouter>
+          <FilesView pullRequest={pullRequest} />
+        </MemoryRouter>,
+        store
+      )
     })
 
     expect(screen.getByText('src')).toBeInTheDocument()
@@ -113,7 +124,12 @@ describe('FilesView', () => {
     })
 
     await act(async () => {
-      renderWithProviders(<FilesView pullRequest={pullRequest} />, store)
+      renderWithProviders(
+        <MemoryRouter>
+          <FilesView pullRequest={pullRequest} />
+        </MemoryRouter>,
+        store
+      )
     })
 
     expect(screen.getByText('src/index.ts')).toBeInTheDocument()
@@ -148,7 +164,12 @@ describe('FilesView', () => {
     })
 
     await act(async () => {
-      renderWithProviders(<FilesView pullRequest={pullRequest} />, store)
+      renderWithProviders(
+        <MemoryRouter>
+          <FilesView pullRequest={pullRequest} />
+        </MemoryRouter>,
+        store
+      )
     })
 
     // The diff itself is rendered by `@pierre/diffs` inside a shadow DOM via a
@@ -173,7 +194,12 @@ describe('FilesView', () => {
     })
 
     await act(async () => {
-      renderWithProviders(<FilesView pullRequest={pullRequest} />, store)
+      renderWithProviders(
+        <MemoryRouter>
+          <FilesView pullRequest={pullRequest} />
+        </MemoryRouter>,
+        store
+      )
     })
 
     expect(screen.getByText('src/file-4.ts')).toBeInTheDocument()
@@ -195,7 +221,12 @@ describe('FilesView', () => {
     })
 
     await act(async () => {
-      renderWithProviders(<FilesView pullRequest={pullRequest} />, store)
+      renderWithProviders(
+        <MemoryRouter>
+          <FilesView pullRequest={pullRequest} />
+        </MemoryRouter>,
+        store
+      )
     })
 
     expect(screen.getByText('No changes to display.')).toBeInTheDocument()
@@ -225,7 +256,12 @@ describe('FilesView', () => {
     })
 
     await act(async () => {
-      renderWithProviders(<FilesView pullRequest={pullRequest} />, store)
+      renderWithProviders(
+        <MemoryRouter>
+          <FilesView pullRequest={pullRequest} />
+        </MemoryRouter>,
+        store
+      )
     })
 
     const image = await screen.findByAltText('assets/logo.png')
@@ -260,7 +296,12 @@ describe('FilesView', () => {
     })
 
     await act(async () => {
-      renderWithProviders(<FilesView pullRequest={pullRequest} />, store)
+      renderWithProviders(
+        <MemoryRouter>
+          <FilesView pullRequest={pullRequest} />
+        </MemoryRouter>,
+        store
+      )
     })
 
     const sections = screen.getAllByRole('button')
@@ -294,7 +335,12 @@ describe('FilesView', () => {
     })
 
     await act(async () => {
-      renderWithProviders(<FilesView pullRequest={pullRequest} />, store)
+      renderWithProviders(
+        <MemoryRouter>
+          <FilesView pullRequest={pullRequest} />
+        </MemoryRouter>,
+        store
+      )
     })
 
     const button = screen.getByRole('button', { name: 'View file on GitHub' })

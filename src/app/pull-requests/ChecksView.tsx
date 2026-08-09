@@ -256,7 +256,9 @@ const checkConclusionIcons: Record<string, ReactElement | undefined> = {
   startup_failure: (
     <XCircleIcon className="size-3 text-status-danger-foreground" />
   ),
-  success: <CheckCircle2Icon className="size-3 text-status-success-foreground" />
+  success: (
+    <CheckCircle2Icon className="size-3 text-status-success-foreground" />
+  )
 }
 
 const completedCheckStateIcons: Record<string, ReactElement | undefined> = {

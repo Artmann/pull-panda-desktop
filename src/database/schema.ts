@@ -241,6 +241,52 @@ export const modifiedFiles = sqliteTable(
 export type ModifiedFile = typeof modifiedFiles.$inferSelect
 export type NewModifiedFile = typeof modifiedFiles.$inferInsert
 
+export const chatSessions = sqliteTable(
+  'chat_sessions',
+  {
+    id: text('id').primaryKey(),
+    pullRequestId: text('pull_request_id').notNull(),
+
+    agent: text('agent').notNull(),
+    agentSessionId: text('agent_session_id'),
+    title: text('title'),
+
+    createdAt: text('created_at').notNull(),
+    updatedAt: text('updated_at').notNull(),
+    deletedAt: text('deleted_at')
+  },
+  (table) => [
+    index('chat_sessions_pull_request_id_idx').on(table.pullRequestId)
+  ]
+)
+
+export type ChatSession = typeof chatSessions.$inferSelect
+export type NewChatSession = typeof chatSessions.$inferInsert
+
+export const chatMessages = sqliteTable(
+  'chat_messages',
+  {
+    id: text('id').primaryKey(),
+    sessionId: text('session_id').notNull(),
+    pullRequestId: text('pull_request_id').notNull(),
+
+    role: text('role', { enum: ['assistant', 'user'] }).notNull(),
+    content: text('content').notNull(),
+    eventsJson: text('events_json'),
+    errorMessage: text('error_message'),
+
+    createdAt: text('created_at').notNull(),
+    deletedAt: text('deleted_at')
+  },
+  (table) => [
+    index('chat_messages_pull_request_id_idx').on(table.pullRequestId),
+    index('chat_messages_session_id_idx').on(table.sessionId)
+  ]
+)
+
+export type ChatMessage = typeof chatMessages.$inferSelect
+export type NewChatMessage = typeof chatMessages.$inferInsert
+
 export const etags = sqliteTable(
   'etags',
   {

@@ -84,7 +84,10 @@ export function PullRequestActionsMenu({
     runOptimisticMutation({
       optimistic: () => {
         dispatch(
-          pullRequestsActions.upsertItem({ ...pullRequest, isDraft: newIsDraft })
+          pullRequestsActions.upsertItem({
+            ...pullRequest,
+            isDraft: newIsDraft
+          })
         )
 
         const optimisticMergeOptions = buildOptimisticMergeOptions(

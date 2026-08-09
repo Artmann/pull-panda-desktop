@@ -1,7 +1,15 @@
 import { contextBridge, ipcRenderer } from 'electron'
 
 import { ipcChannels } from './lib/ipc/channels'
+import type { DetectedAgent } from './main/agents/agent-detection'
+import type { AgentId, AgentSettings } from './main/agents/agent-settings'
 import type { BootstrapData } from './main/bootstrap'
+import type {
+  ChatEvent,
+  ChatMessageRecord,
+  ChatSendResult,
+  ChatSessionRecord
+} from './types/chat'
 import type {
   LogRecord,
   QueryLogsParams,
@@ -111,6 +119,54 @@ const usageApi = {
     ipcRenderer.invoke(ipcChannels.UsageSetReportingEnabled, enabled)
 }
 
+const agentsApi = {
+  detect: (): Promise<DetectedAgent[]> =>
+    ipcRenderer.invoke(ipcChannels.AgentsDetect),
+
+  getSettings: (): Promise<AgentSettings> =>
+    ipcRenderer.invoke(ipcChannels.AgentsGetSettings),
+
+  pickBinary: (): Promise<{ path: string | null }> =>
+    ipcRenderer.invoke(ipcChannels.AgentsPickBinary),
+
+  setDefault: (agent: AgentId | null): Promise<AgentSettings> =>
+    ipcRenderer.invoke(ipcChannels.AgentsSetDefault, agent),
+
+  setOverride: (
+    agent: AgentId,
+    binaryPath: string | null
+  ): Promise<AgentSettings> =>
+    ipcRenderer.invoke(ipcChannels.AgentsSetOverride, agent, binaryPath)
+}
+
+const chatApi = {
+  getMessages: (sessionId: string): Promise<ChatMessageRecord[]> =>
+    ipcRenderer.invoke(ipcChannels.ChatGetMessages, sessionId),
+
+  getSessions: (pullRequestId: string): Promise<ChatSessionRecord[]> =>
+    ipcRenderer.invoke(ipcChannels.ChatGetSessions, pullRequestId),
+
+  onChatEvent: (callback: (event: ChatEvent) => void): (() => void) => {
+    const handler = (_event: unknown, data: ChatEvent) => callback(data)
+
+    ipcRenderer.on(ipcChannels.ChatEvent, handler)
+
+    return () => {
+      ipcRenderer.removeListener(ipcChannels.ChatEvent, handler)
+    }
+  },
+
+  send: (params: {
+    message: string
+    pullRequestId: string
+    sessionId: string | null
+  }): Promise<ChatSendResult> =>
+    ipcRenderer.invoke(ipcChannels.ChatSend, params),
+
+  stop: (sessionId: string): Promise<void> =>
+    ipcRenderer.invoke(ipcChannels.ChatStop, sessionId)
+}
+
 const authApi = {
   requestDeviceCode: (): Promise<DeviceCodeResponse> =>
     ipcRenderer.invoke(ipcChannels.AuthRequestDeviceCode),
@@ -135,14 +191,18 @@ const authApi = {
 }
 
 contextBridge.exposeInMainWorld('electron', electronApi)
+contextBridge.exposeInMainWorld('agents', agentsApi)
 contextBridge.exposeInMainWorld('auth', authApi)
+contextBridge.exposeInMainWorld('chat', chatApi)
 contextBridge.exposeInMainWorld('telemetry', telemetryApi)
 contextBridge.exposeInMainWorld('usage', usageApi)
 
 // TypeScript declarations for the exposed API
 declare global {
   interface Window {
+    agents: typeof agentsApi
     auth: typeof authApi
+    chat: typeof chatApi
     electron: typeof electronApi
     telemetry: typeof telemetryApi
     usage: typeof usageApi

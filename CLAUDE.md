@@ -94,9 +94,9 @@ single trace.
 Separate from this local telemetry, the app sends an anonymous usage ping
 (random install UUID + app version, platform, OS version, locale, timezone —
 never account or repository data) to `https://pullpanda.io/api/app/ping` on
-startup and hourly (`src/main/usage-ping.ts`). Users can turn it off in
-Settings → Privacy; the install id and flag live in
-`usage-settings.json` in `userData` (`src/main/usage-settings.ts`).
+startup and hourly (`src/main/usage-ping.ts`). Users can turn it off in Settings
+→ Privacy; the install id and flag live in `usage-settings.json` in `userData`
+(`src/main/usage-settings.ts`).
 
 - Spans/logs are stored in `pull-panda-telemetry.db` (separate from
   `pull-panda.db`), gated on `!app.isPackaged` so end users are never traced.

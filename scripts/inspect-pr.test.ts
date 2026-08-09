@@ -45,9 +45,9 @@ describe('parseArgs', () => {
   })
 
   it('accepts options before the PR number', () => {
-    expect(parseArgs(['--brief', '--repo', 'octocat/hello-world', '7'])).toEqual(
-      { brief: true, number: 7, repo: 'octocat/hello-world' }
-    )
+    expect(
+      parseArgs(['--brief', '--repo', 'octocat/hello-world', '7'])
+    ).toEqual({ brief: true, number: 7, repo: 'octocat/hello-world' })
   })
 
   it('exits when no PR number is given', () => {

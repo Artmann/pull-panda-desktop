@@ -174,7 +174,9 @@ const runDetails = (
   Database | GitHubRest | GitHubGraphQL | EtagStore
 > =>
   runDetailsWithOperations(params, buildOperations(params)).pipe(
-    Effect.withSpan('sync.pullRequestDetails', { attributes: spanAttributes(params) })
+    Effect.withSpan('sync.pullRequestDetails', {
+      attributes: spanAttributes(params)
+    })
   )
 
 type DetailsFiber = Fiber.RuntimeFiber<SyncPullRequestDetailsResult, never>

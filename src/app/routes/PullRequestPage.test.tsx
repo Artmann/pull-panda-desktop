@@ -10,6 +10,7 @@ import { describe, it, expect, vi, beforeAll, beforeEach } from 'vitest'
 import type { PullRequest } from '@/types/pull-request'
 import type { Check, Commit, ModifiedFile } from '@/types/pull-request-details'
 
+import chatReducer from '@/app/store/chat-slice'
 import checksReducer from '@/app/store/checks-slice'
 import commentsReducer from '@/app/store/comments-slice'
 import commitsReducer from '@/app/store/commits-slice'
@@ -71,6 +72,20 @@ beforeEach(() => {
       avatarUrl: 'https://example.com/avatar.png'
     })
   })
+
+  vi.stubGlobal('agents', {
+    detect: vi.fn().mockResolvedValue([])
+  })
+
+  vi.stubGlobal('chat', {
+    getMessages: vi.fn().mockResolvedValue([]),
+    getSessions: vi.fn().mockResolvedValue([]),
+    onChatEvent: vi.fn().mockReturnValue(() => {
+      // Unsubscribe mock
+    }),
+    send: vi.fn().mockResolvedValue(null),
+    stop: vi.fn().mockResolvedValue(undefined)
+  })
 })
 
 function createTestStore(
@@ -83,6 +98,7 @@ function createTestStore(
 ) {
   return configureStore({
     reducer: {
+      chat: chatReducer,
       checks: checksReducer,
       comments: commentsReducer,
       commits: commitsReducer,
@@ -101,6 +117,12 @@ function createTestStore(
       tasks: tasksReducer
     },
     preloadedState: {
+      chat: {
+        activeSessionIdByPullRequest: {},
+        messagesBySession: {},
+        sessionsByPullRequest: {},
+        streamingBySession: {}
+      },
       checks: { items: options.checks ?? [] },
       comments: { items: [] },
       commits: { items: options.commits ?? [] },
