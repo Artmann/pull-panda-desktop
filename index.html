@@ -7,12 +7,61 @@
       content="default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' https: data: http://localhost:*; connect-src 'self' http://localhost:*"
     />
     <title>Pull Panda</title>
+    <style>
+      /* Splash shown until React mounts and replaces the #root content.
+         Colors mirror --background / --muted-foreground in src/app/index.css;
+         the app stylesheet loads later and takes over the body background. */
+      :root {
+        --splash-background: #fbfaf8;
+        --splash-foreground: #575550;
+      }
+
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --splash-background: #0e1215;
+          --splash-foreground: #aaafb3;
+        }
+      }
+
+      html,
+      body {
+        background-color: var(--splash-background);
+        height: 100%;
+        margin: 0;
+      }
+
+      .splash {
+        align-items: center;
+        display: flex;
+        height: 100vh;
+        justify-content: center;
+      }
+
+      .splash-spinner {
+        animation: splash-spin 0.8s linear infinite;
+        border: 2px solid transparent;
+        border-radius: 9999px;
+        border-top-color: var(--splash-foreground);
+        height: 2rem;
+        width: 2rem;
+      }
+
+      @keyframes splash-spin {
+        to {
+          transform: rotate(360deg);
+        }
+      }
+    </style>
   </head>
   <body>
     <div
       class="overflow-hidden"
       id="root"
-    ></div>
+    >
+      <div class="splash">
+        <div class="splash-spinner"></div>
+      </div>
+    </div>
     <script
       type="module"
       src="/src/renderer.tsx"

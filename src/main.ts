@@ -1,7 +1,9 @@
 import {
   app,
   BrowserWindow,
+  dialog,
   ipcMain,
+  nativeTheme,
   screen,
   shell,
   type IpcMainInvokeEvent
@@ -10,8 +12,20 @@ import { Effect } from 'effect'
 import started from 'electron-squirrel-startup'
 import path from 'node:path'
 
-import { initializeDatabase, closeDatabase, saveDatabase } from './database'
+import {
+  closeDatabase,
+  getDatabase,
+  initializeDatabase,
+  saveDatabase
+} from './database'
 import { ipcChannels } from './lib/ipc/channels'
+import { detectAgents } from './main/agents/agent-detection'
+import {
+  loadAgentSettings,
+  setAgentOverride,
+  setDefaultAgent,
+  type AgentId
+} from './main/agents/agent-settings'
 import {
   getApiPort,
   setApiMainWindow,
@@ -19,6 +33,8 @@ import {
   stopApiServer
 } from './main/api'
 import { bootstrap, BootstrapData } from './main/bootstrap'
+import { chatManager, type ChatSendParams } from './main/chat/chat-manager'
+import { getMessages, getSessions } from './main/chat/chat-store'
 import { needsSync } from './main/needs-sync'
 import {
   sendPullRequestResourceEvents,
@@ -62,6 +78,17 @@ import {
 
 let bootstrapData: BootstrapData | null = null
 let mainWindow: BrowserWindow | null = null
+
+// The window is created before the database and services finish initializing,
+// so the renderer's first request (GetBootstrapData) must wait until the data
+// is actually ready. Everything else the renderer calls happens after that.
+let markBootstrapReady = (): void => {
+  return
+}
+
+const bootstrapReady = new Promise<void>((resolve) => {
+  markBootstrapReady = resolve
+})
 
 // Handle creating/removing shortcuts on Windows when installing/uninstalling.
 if (started) {
@@ -113,7 +140,9 @@ function setupIpcHandlers(): void {
     return getApiPort()
   })
 
-  handleWithSpan(ipcChannels.GetBootstrapData, () => {
+  handleWithSpan(ipcChannels.GetBootstrapData, async () => {
+    await bootstrapReady
+
     return bootstrapData
   })
 
@@ -206,6 +235,63 @@ function setupIpcHandlers(): void {
     }
   )
 
+  handleWithSpan(ipcChannels.AgentsDetect, () => {
+    return detectAgents(loadAgentSettings())
+  })
+
+  handleWithSpan(ipcChannels.AgentsGetSettings, () => {
+    return loadAgentSettings()
+  })
+
+  handleWithSpan(ipcChannels.AgentsPickBinary, async () => {
+    if (!mainWindow) {
+      return { path: null }
+    }
+
+    const result = await dialog.showOpenDialog(mainWindow, {
+      properties: ['openFile']
+    })
+
+    if (result.canceled || result.filePaths.length === 0) {
+      return { path: null }
+    }
+
+    return { path: result.filePaths[0] }
+  })
+
+  handleWithSpan(
+    ipcChannels.AgentsSetDefault,
+    (_event, agent: AgentId | null) => {
+      return setDefaultAgent(agent)
+    }
+  )
+
+  handleWithSpan(
+    ipcChannels.AgentsSetOverride,
+    (_event, agent: AgentId, binaryPath: string | null) => {
+      return setAgentOverride(agent, binaryPath)
+    }
+  )
+
+  handleWithSpan(ipcChannels.ChatGetMessages, (_event, sessionId: string) => {
+    return getMessages(getDatabase(), sessionId)
+  })
+
+  handleWithSpan(
+    ipcChannels.ChatGetSessions,
+    (_event, pullRequestId: string) => {
+      return getSessions(getDatabase(), pullRequestId)
+    }
+  )
+
+  handleWithSpan(ipcChannels.ChatSend, (_event, params: ChatSendParams) => {
+    return chatManager.send(params)
+  })
+
+  handleWithSpan(ipcChannels.ChatStop, (_event, sessionId: string) => {
+    chatManager.stop(sessionId)
+  })
+
   // Telemetry handlers are registered directly (not via handleWithSpan) so that
   // observing the telemetry does not itself generate telemetry.
   ipcMain.handle(ipcChannels.TelemetryEnabled, () => {
@@ -270,6 +356,9 @@ const createWindow = () => {
   const height = Math.min(1000, Math.max(700, workAreaSize.height - margin))
 
   mainWindow = new BrowserWindow({
+    // Paint the theme's background immediately instead of a white flash while
+    // the renderer loads. Values mirror --background in src/app/index.css.
+    backgroundColor: nativeTheme.shouldUseDarkColors ? '#0e1215' : '#fbfaf8',
     frame: false,
     height,
     ...(developmentIconPath ? { icon: developmentIconPath } : {}),
@@ -289,6 +378,7 @@ const createWindow = () => {
   })
 
   taskManager.setMainWindow(mainWindow)
+  chatManager.setMainWindow(mainWindow)
 
   // Clear the module-level reference and TaskManager handle when the window
   // closes. Otherwise late-firing timers (e.g. the periodic PR sync) keep
@@ -297,6 +387,7 @@ const createWindow = () => {
   mainWindow.on('closed', () => {
     mainWindow = null
     taskManager.setMainWindow(null)
+    chatManager.setMainWindow(null)
   })
 
   mainWindow.on('focus', () => {
@@ -468,8 +559,6 @@ async function getUserLogin(): Promise<string | undefined> {
 async function initializeServices(): Promise<
   ReturnType<typeof initializeAppRuntime>
 > {
-  setupIpcHandlers()
-
   await initializeDatabase()
   await initializeTelemetry()
 
@@ -507,16 +596,22 @@ app.on('ready', async () => {
     app.dock?.setIcon(developmentIconPath)
   }
 
-  const runtime = await initializeServices()
-
-  const userLogin = await getUserLogin()
-  bootstrapData = await bootstrap(userLogin)
-
+  // Show the window right away — the static splash in index.html is visible
+  // while the database, runtime, and bootstrap data load below. The renderer
+  // blocks on GetBootstrapData, which resolves once markBootstrapReady runs.
+  setupIpcHandlers()
   createWindow()
 
   if (mainWindow) {
     setApiMainWindow(mainWindow)
   }
+
+  const runtime = await initializeServices()
+
+  const userLogin = await getUserLogin()
+  bootstrapData = await bootstrap(userLogin)
+
+  markBootstrapReady()
 
   await startBackgroundSync(runtime)
 
@@ -534,6 +629,12 @@ const focusSyncDebounceMs = 15 * 1000
 let lastFocusSyncAt = 0
 
 function maybeSyncOnFocus(): void {
+  // The window opens (and gains focus) before the services finish
+  // initializing; the startup sync covers that window of time.
+  if (!tryGetAppRuntime()) {
+    return
+  }
+
   const token = loadToken()
 
   if (!token) {
@@ -717,6 +818,8 @@ app.on('before-quit', (event) => {
 
   event.preventDefault()
   isShuttingDown = true
+
+  chatManager.dispose()
 
   const runtime = tryGetAppRuntime()
 
