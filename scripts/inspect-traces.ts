@@ -219,7 +219,9 @@ function printWaterfall(traceId: string, spans: SpanRecord[]): void {
     )
 
     if (span.statusMessage) {
-      console.log(`           ${indent}${red(span.statusMessage.split('\n')[0])}`)
+      console.log(
+        `           ${indent}${red(span.statusMessage.split('\n')[0])}`
+      )
     }
   }
 }

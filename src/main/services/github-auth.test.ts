@@ -90,7 +90,9 @@ describe('GitHubAuth', () => {
       fetchMock.mockResolvedValue(jsonResponse({}, false, 'Bad Gateway'))
 
       const error = await provide(
-        Effect.flip(Effect.flatMap(GitHubAuth, (auth) => auth.requestDeviceCode))
+        Effect.flip(
+          Effect.flatMap(GitHubAuth, (auth) => auth.requestDeviceCode)
+        )
       )
 
       if (error._tag !== 'NetworkError') {
@@ -110,7 +112,9 @@ describe('GitHubAuth', () => {
       fetchMock.mockRejectedValue(new Error('offline'))
 
       const error = await provide(
-        Effect.flip(Effect.flatMap(GitHubAuth, (auth) => auth.requestDeviceCode))
+        Effect.flip(
+          Effect.flatMap(GitHubAuth, (auth) => auth.requestDeviceCode)
+        )
       )
 
       if (error._tag !== 'NetworkError') {
@@ -236,7 +240,10 @@ describe('GitHubAuth', () => {
 
     it('falls back to the error code when no description is given', async () => {
       fetchMock.mockResolvedValue(
-        jsonResponse({ error: 'incorrect_client_credentials', error_description: '' })
+        jsonResponse({
+          error: 'incorrect_client_credentials',
+          error_description: ''
+        })
       )
 
       const error = await provide(Effect.flip(pollForToken(0)))

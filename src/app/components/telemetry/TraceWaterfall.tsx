@@ -87,10 +87,7 @@ export function TraceWaterfall({ spans }: TraceWaterfallProps): ReactElement {
 
           <div className="relative h-5 rounded bg-muted/50">
             <div
-              className={cn(
-                'absolute top-0 h-5 rounded',
-                barColor(span)
-              )}
+              className={cn('absolute top-0 h-5 rounded', barColor(span))}
               style={{
                 left: `${leftPercent}%`,
                 width: `${widthPercent}%`,

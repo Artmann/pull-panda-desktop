@@ -20,10 +20,7 @@ interface ReconcileColumns {
   deletedAt: SQLiteColumn
 }
 
-interface ReconcileOptions<
-  Table extends SQLiteTable & ReconcileColumns,
-  Item
-> {
+interface ReconcileOptions<Table extends SQLiteTable & ReconcileColumns, Item> {
   // The live rows this reconcile owns, expressed as the `where` conditions that
   // select them (e.g. `eq(table.pullRequestId, id)`). The non-deleted filter is
   // always added on top, so callers never repeat `isNull(table.deletedAt)`.

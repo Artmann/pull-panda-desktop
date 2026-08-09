@@ -48,9 +48,7 @@ export function TasksProvider({ children }: { children: ReactNode }) {
     return { hasSyncInProgress, runningTasks, tasks }
   }, [tasks])
 
-  return (
-    <TasksContext.Provider value={value}>{children}</TasksContext.Provider>
-  )
+  return <TasksContext.Provider value={value}>{children}</TasksContext.Provider>
 }
 
 export function useTasks() {

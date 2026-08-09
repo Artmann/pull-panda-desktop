@@ -73,9 +73,9 @@ describe('buildRequirements', () => {
     it('omits the requirement when no approvals are required', () => {
       const requirements = buildRequirements(makeState(), makeProtection())
 
-      expect(
-        requirements.map((requirement) => requirement.key)
-      ).not.toContain('approving-reviews')
+      expect(requirements.map((requirement) => requirement.key)).not.toContain(
+        'approving-reviews'
+      )
     })
 
     it('uses the singular label for a single required review', () => {
@@ -125,9 +125,9 @@ describe('buildRequirements', () => {
     it('omits the requirement when checks pass and strict checks are off', () => {
       const requirements = buildRequirements(makeState(), makeProtection())
 
-      expect(
-        requirements.map((requirement) => requirement.key)
-      ).not.toContain('required-checks')
+      expect(requirements.map((requirement) => requirement.key)).not.toContain(
+        'required-checks'
+      )
     })
 
     it('fails when the merge state is unstable', () => {
@@ -180,9 +180,9 @@ describe('buildRequirements', () => {
         makeProtection()
       )
 
-      expect(
-        requirements.map((requirement) => requirement.key)
-      ).not.toContain('conversations-resolved')
+      expect(requirements.map((requirement) => requirement.key)).not.toContain(
+        'conversations-resolved'
+      )
     })
 
     it('passes when every conversation is resolved', () => {
@@ -235,9 +235,9 @@ describe('buildRequirements', () => {
         makeProtection()
       )
 
-      expect(
-        requirements.map((requirement) => requirement.key)
-      ).not.toContain('branch-up-to-date')
+      expect(requirements.map((requirement) => requirement.key)).not.toContain(
+        'branch-up-to-date'
+      )
     })
 
     it('fails when the branch is behind the base branch', () => {
