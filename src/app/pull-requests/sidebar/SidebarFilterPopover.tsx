@@ -71,7 +71,7 @@ export function SidebarFilterPopover({
       <PopoverTrigger
         aria-label="Filter pull requests"
         className={cn(
-          'relative flex size-[30px] shrink-0 items-center justify-center rounded-md border',
+          'relative flex size-7.5 shrink-0 items-center justify-center rounded-md border',
           'cursor-pointer transition-colors',
           'focus-visible:ring-sidebar-ring outline-none focus-visible:ring-2',
           isOpen || activeFilterCount > 0
@@ -84,7 +84,7 @@ export function SidebarFilterPopover({
         <ListFilter className="size-3.5" />
 
         {activeFilterCount > 0 && (
-          <span className="bg-primary text-primary-foreground absolute -top-1 -right-1 flex h-3.5 min-w-3.5 items-center justify-center rounded-full px-1 font-mono text-[9px] font-semibold">
+          <span className="bg-primary text-primary-foreground absolute -top-1 -right-1 flex h-3.5 min-w-3.5 items-center justify-center rounded-full px-1 font-mono text-2xs font-semibold">
             {activeFilterCount}
           </span>
         )}
@@ -115,7 +115,7 @@ export function SidebarFilterPopover({
                 {entry.label}
 
                 {count > 0 && (
-                  <span className="text-primary font-mono text-[9px]">
+                  <span className="text-primary font-mono text-2xs">
                     {count}
                   </span>
                 )}
@@ -164,7 +164,7 @@ export function SidebarFilterPopover({
               >
                 <span
                   className={cn(
-                    'flex size-3.5 shrink-0 items-center justify-center rounded-[3px] border',
+                    'flex size-3.5 shrink-0 items-center justify-center rounded-xs border',
                     isChecked
                       ? 'border-primary bg-primary text-primary-foreground'
                       : 'border-input'

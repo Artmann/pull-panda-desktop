@@ -180,11 +180,17 @@
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
   --radius-xl: calc(var(--radius) + 4px);
+  /* Tighter than radius-sm, for small square controls like checkboxes. */
+  --radius-xs: 0.1875rem;
   /* Height of the fixed StickyPullRequestHeader; pinned file card headers
    * sit flush below it via `top-sticky-header`. */
   --spacing-sticky-header: 75px;
   /* One step below text-xs, used by the tiny status badges. */
   --text-2xs: 0.6rem;
+  /* Sidebar rows: the title sits between text-xs and text-sm, and the mono
+   * metadata line between text-2xs and text-xs. */
+  --text-row-title: 0.8125rem;
+  --text-row-meta: 0.6875rem;
 }
 
 html,

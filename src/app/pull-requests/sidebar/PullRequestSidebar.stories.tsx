@@ -32,7 +32,7 @@ function Harness({
   return (
     <Provider store={buildStore(items)}>
       <MemoryRouter initialEntries={[initialPath]}>
-        <div className="border-border flex h-[640px] rounded-lg border">
+        <div className="border-border flex h-160 rounded-lg border">
           <PullRequestSidebar />
 
           <div className="text-muted-foreground flex flex-1 items-center justify-center text-sm">

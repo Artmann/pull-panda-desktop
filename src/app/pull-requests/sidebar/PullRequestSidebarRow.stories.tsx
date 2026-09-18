@@ -35,7 +35,7 @@ const meta = {
   },
   decorators: [
     (Story) => (
-      <div className="bg-sidebar border-sidebar-border w-[306px] rounded-lg border p-1.5">
+      <div className="bg-sidebar border-sidebar-border w-85 rounded-lg border p-1.5">
         <Story />
       </div>
     )

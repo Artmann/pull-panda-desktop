@@ -32,7 +32,7 @@ export function SidebarSortMenu({
       <PopoverTrigger
         aria-label={`Sort: ${activeLabel}`}
         className={cn(
-          'flex size-[30px] shrink-0 items-center justify-center rounded-md border',
+          'flex size-7.5 shrink-0 items-center justify-center rounded-md border',
           'cursor-pointer transition-colors',
           'focus-visible:ring-sidebar-ring outline-none focus-visible:ring-2',
           isOpen

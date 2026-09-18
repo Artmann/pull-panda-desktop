@@ -51,7 +51,7 @@ export function PullRequestSidebarRow({
         <div className="flex w-full items-center gap-2">
           <span
             className={cn(
-              'min-w-0 truncate text-[13px] leading-tight',
+              'min-w-0 truncate text-row-title leading-tight',
               unread || isSelected ? 'font-semibold' : 'font-medium',
               isSelected
                 ? 'text-sidebar-accent-foreground'
@@ -68,7 +68,7 @@ export function PullRequestSidebarRow({
             className={cn('size-3 shrink-0', checkRollupColors[checkRollup])}
           />
 
-          <span className="text-muted-foreground ml-auto shrink-0 font-mono text-[11px] whitespace-nowrap">
+          <span className="text-muted-foreground ml-auto shrink-0 font-mono text-row-meta whitespace-nowrap">
             {formatTimestamp(pullRequest.updatedAt)}
           </span>
         </div>
@@ -80,12 +80,12 @@ export function PullRequestSidebarRow({
               src={pullRequest.authorAvatarUrl ?? undefined}
             />
 
-            <AvatarFallback className="text-[9px]">
+            <AvatarFallback className="text-2xs">
               {pullRequest.authorLogin?.charAt(0).toUpperCase() ?? '?'}
             </AvatarFallback>
           </Avatar>
 
-          <span className="text-muted-foreground min-w-0 flex-1 truncate font-mono text-[11px]">
+          <span className="text-muted-foreground min-w-0 flex-1 truncate font-mono text-row-meta">
             {slug}
           </span>
 
