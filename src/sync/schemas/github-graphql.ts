@@ -50,6 +50,7 @@ const PullRequestNodeSchema = Schema.Struct({
   body: Schema.NullOr(Schema.String),
   bodyHTML: Schema.String,
   headRefName: Schema.String,
+  baseRefName: Schema.String,
   state: PullRequestStateSchema,
   isDraft: Schema.Boolean,
   url: Schema.String,

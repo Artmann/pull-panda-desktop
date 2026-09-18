@@ -1,4 +1,4 @@
-import { execSync } from 'node:child_process'
+import { cpSync } from 'node:fs'
 import path from 'node:path'
 
 import type { ForgeConfig } from '@electron-forge/shared-types'
@@ -14,12 +14,19 @@ import { FuseV1Options, FuseVersion } from '@electron/fuses'
 const config: ForgeConfig = {
   hooks: {
     packageAfterPrune: async (_forgeConfig, buildPath) => {
-      // Reinstall sql.js after pruning because it's externalized from the
-      // Vite bundle but still needed at runtime.
-      execSync('npm install --no-save sql.js', {
-        cwd: buildPath,
-        stdio: 'inherit'
-      })
+      // sql.js is externalized from the Vite bundle but still needed at
+      // runtime, and pruning removes it. Copy the copy yarn.lock already
+      // resolved rather than reinstalling: `npm install` here reaches the
+      // network and fetches whatever is newest, so the packaged app could ship
+      // a different sql.js than the lockfile, and npm 10's arborist crashes
+      // outright on the pruned tree ("Cannot read properties of null (reading
+      // 'edgesOut')"). sql.js has no dependencies of its own, so a copy is
+      // equivalent.
+      cpSync(
+        path.join(process.cwd(), 'node_modules', 'sql.js'),
+        path.join(buildPath, 'node_modules', 'sql.js'),
+        { recursive: true }
+      )
     }
   },
   packagerConfig: {

@@ -20,6 +20,7 @@ export interface PullRequest {
   body: string | null
   bodyHtml: string | null
   headRefName: string | null
+  baseRefName: string | null
   state: 'OPEN' | 'CLOSED' | 'MERGED'
   url: string
   repositoryOwner: string
@@ -35,6 +36,7 @@ export interface PullRequest {
   isAssignee: boolean
   isReviewer: boolean
   labels: PullRequestLabel[]
+  lastViewedAt: string | null
   assignees: PullRequestAssignee[]
   requestedReviewers: PullRequestRequestedReviewer[]
   syncedAt: string

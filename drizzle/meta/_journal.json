@@ -71,6 +71,20 @@
       "when": 1783691655812,
       "tag": "0009_fantastic_madame_web",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "6",
+      "when": 1789694814836,
+      "tag": "0010_greedy_texas_twister",
+      "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "6",
+      "when": 1789706233340,
+      "tag": "0011_magenta_molly_hayes",
+      "breakpoints": true
     }
   ]
 }

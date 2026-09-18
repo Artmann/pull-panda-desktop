@@ -88,6 +88,7 @@ export const setFocusedPullRequest = (pullRequestId: string) =>
 
 export const activatePullRequest = (pullRequestId: string) =>
   Effect.gen(function* () {
+    const database = yield* Database
     const repository = yield* Repository
     const syncer = yield* BackgroundSyncer
     const etagStore = yield* EtagStore
@@ -97,6 +98,20 @@ export const activatePullRequest = (pullRequestId: string) =>
     yield* syncer.markPullRequestActive(pullRequestId)
 
     if (pullRequest) {
+      // Opening a pull request is what marks it read. Stamp it before forking
+      // so the sidebar's unread indicator clears immediately rather than
+      // waiting for the details sync below to finish.
+      yield* database.use('activatePullRequest.markViewed', (db) => {
+        db.update(pullRequests)
+          .set({ lastViewedAt: new Date().toISOString() })
+          .where(eq(pullRequests.id, pullRequestId))
+          .run()
+      })
+
+      const viewed = yield* Effect.promise(() => getPullRequest(pullRequestId))
+
+      yield* broadcastPullRequestUpdate(pullRequestId, viewed)
+
       const work = Effect.gen(function* () {
         for (const endpointType of [
           'checks',

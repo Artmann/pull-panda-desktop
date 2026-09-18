@@ -8,12 +8,20 @@ import {
   type PullRequestStatus
 } from './pull-request-status'
 
+// "Changes Requested" is too long for a narrow column, and the colour already
+// carries most of the meaning there.
+const compactLabels: Partial<Record<PullRequestStatus, string>> = {
+  'Changes Requested': 'Changes'
+}
+
 interface PullRequestStatusBadgeProps {
   pullRequest: PullRequest
+  size?: 'compact' | 'default'
 }
 
 export function PullRequestStatusBadge({
-  pullRequest
+  pullRequest,
+  size = 'default'
 }: PullRequestStatusBadgeProps): ReactElement {
   const status = useMemo(() => getPullRequestStatus(pullRequest), [pullRequest])
 
@@ -30,20 +38,29 @@ export function PullRequestStatusBadge({
     return map[status]
   }, [status])
 
+  const isCompact = size === 'compact'
+
   return (
     <span
       className={cn(
-        'inline-flex items-center gap-1.5',
+        'inline-flex items-center',
         'rounded-full border border-current/60',
-        'px-2 py-0.5 text-[10px] font-medium whitespace-nowrap',
+        'font-medium whitespace-nowrap',
+        isCompact
+          ? 'gap-1 px-1.5 py-0 text-[10px]'
+          : 'gap-1.5 px-2 py-0.5 text-[10px]',
         colorClass
       )}
+      title={isCompact ? status : undefined}
     >
       <span
         aria-hidden
-        className="h-1.5 w-1.5 rounded-full bg-current"
+        className={cn(
+          'rounded-full bg-current',
+          isCompact ? 'h-1 w-1' : 'h-1.5 w-1.5'
+        )}
       />
-      {status}
+      {(isCompact && compactLabels[status]) || status}
     </span>
   )
 }

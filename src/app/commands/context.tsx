@@ -45,7 +45,7 @@ type CommandContextProviderProps = {
 }
 
 // Extract PR ID from pathname like /pull-requests/abc123
-function extractPullRequestId(pathname: string): string | undefined {
+export function extractPullRequestId(pathname: string): string | undefined {
   const match = pathname.match(/^\/pull-requests\/([^/]+)/)
   return match?.[1]
 }

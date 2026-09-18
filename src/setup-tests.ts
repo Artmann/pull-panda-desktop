@@ -15,6 +15,54 @@ if (typeof window !== 'undefined') {
     })
   })
 
+  // jsdom ships no ResizeObserver. Without it @tanstack/react-virtual never
+  // measures its scroll container, so virtualized lists render zero rows and
+  // any component that constructs one directly throws. A no-op stub leaves the
+  // virtualizer on its `initialRect`, which is a screenful.
+  if (!('ResizeObserver' in globalThis)) {
+    class ResizeObserverStub implements ResizeObserver {
+      disconnect(): void {
+        // No layout in jsdom, so there is nothing to observe.
+      }
+
+      observe(): void {
+        // No layout in jsdom, so there is nothing to observe.
+      }
+
+      unobserve(): void {
+        // No layout in jsdom, so there is nothing to observe.
+      }
+    }
+
+    globalThis.ResizeObserver = ResizeObserverStub
+  }
+
+  // jsdom has no layout, so every element reports `offsetHeight`/`offsetWidth`
+  // of 0. @tanstack/react-virtual sizes its viewport from those, and a zero
+  // height means it renders no rows at all. Report a screenful so virtualized
+  // lists can be tested.
+  // jsdom defines these as getters that always return 0, so they are replaced
+  // rather than filled in.
+  for (const [name, size] of [
+    ['offsetHeight', 800],
+    ['offsetWidth', 400]
+  ] as const) {
+    Object.defineProperty(HTMLElement.prototype, name, {
+      configurable: true,
+      get(this: HTMLElement): number {
+        return this.isConnected ? size : 0
+      }
+    })
+  }
+
+  // jsdom implements no layout, so it ships no `scrollIntoView`. Components
+  // that keep a selected row on screen call it on mount.
+  const elementPrototype = Element.prototype as Partial<Element>
+
+  if (typeof elementPrototype.scrollIntoView !== 'function') {
+    elementPrototype.scrollIntoView = (): void => undefined
+  }
+
   // Node 25+ exposes a native `localStorage`/`sessionStorage` global whose
   // methods throw without the `--localstorage-file` flag. Install an
   // in-memory polyfill on both window and globalThis so bare

@@ -72,6 +72,7 @@ function buildPullRequest(
     commentCount: counts.commentCount,
     createdAt: row.createdAt,
     headRefName: row.headRefName ?? null,
+    baseRefName: row.baseRefName ?? null,
     detailsSyncedAt: row.detailsSyncedAt,
     id: row.id,
     isDraft: row.isDraft,
@@ -79,6 +80,7 @@ function buildPullRequest(
     isAuthor: row.isAuthor,
     isReviewer: row.isReviewer,
     labels: row.labels ? (JSON.parse(row.labels) as PullRequestLabel[]) : [],
+    lastViewedAt: row.lastViewedAt,
     mergedAt: row.mergedAt,
     requestedReviewers: row.requestedReviewers
       ? (JSON.parse(row.requestedReviewers) as PullRequestRequestedReviewer[])

@@ -1,7 +1,6 @@
 import dayjs from 'dayjs'
 import relativeTime from 'dayjs/plugin/relativeTime'
 import type { ReactElement } from 'react'
-import invariant from 'tiny-invariant'
 
 import {
   Tooltip,
@@ -39,15 +38,13 @@ export function TimeAgo({
   )
 }
 
-function formatTimestamp(timestamp: string): string {
+export function formatTimestamp(timestamp: string): string {
   const date = dayjs(timestamp)
   const now = dayjs()
-  const diffInSeconds = now.diff(date, 'second')
 
-  invariant(
-    diffInSeconds >= 0,
-    `Timestamp ${timestamp} is in the future compared to now ${now.toISOString()}`
-  )
+  // A timestamp can land slightly in the future when the local clock is behind
+  // GitHub's. Read that as "just now" rather than rendering nonsense.
+  const diffInSeconds = Math.max(0, now.diff(date, 'second'))
 
   if (diffInSeconds < 60) {
     return 'just now'

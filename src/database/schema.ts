@@ -22,6 +22,7 @@ export const pullRequests = sqliteTable('pull_requests', {
   body: text('body'),
   bodyHtml: text('body_html'),
   headRefName: text('head_ref_name'),
+  baseRefName: text('base_ref_name'),
 
   isDraft: integer('is_draft', { mode: 'boolean' }).notNull().default(false),
   isAuthor: integer('is_author', { mode: 'boolean' }).notNull().default(false),
@@ -37,7 +38,11 @@ export const pullRequests = sqliteTable('pull_requests', {
   requestedReviewers: text('requested_reviewers'),
 
   syncedAt: text('synced_at').notNull(),
-  detailsSyncedAt: text('details_synced_at')
+  detailsSyncedAt: text('details_synced_at'),
+
+  // Local-only. Never written by the syncer, so it must stay out of the
+  // `onConflictDoUpdate` set in sync/operations/sync-pull-requests.ts.
+  lastViewedAt: text('last_viewed_at')
 })
 
 export type PullRequest = typeof pullRequests.$inferSelect
