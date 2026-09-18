@@ -1,7 +1,6 @@
 import {
   ChevronLeftIcon,
   ChevronRightIcon,
-  HomeIcon,
   MinusIcon,
   SettingsIcon,
   SquareIcon,
@@ -30,7 +29,6 @@ export function TitleBar(): ReactElement {
 
   const canGoBack = historyIndex > 0
   const canGoForward = historyIndex < maxHistoryIndexRef.current
-  const isHomeActive = location.pathname === '/'
   const isSettingsActive = location.pathname === '/settings'
 
   const handleBack = () => {
@@ -75,14 +73,6 @@ export function TitleBar(): ReactElement {
           >
             <ChevronRightIcon className="size-4" />
           </NavigationButton>
-
-          <TitleBarLink
-            isActive={isHomeActive}
-            testId="title-bar-home"
-            to="/"
-          >
-            <HomeIcon className="size-4" />
-          </TitleBarLink>
 
           <TitleBarLink
             isActive={isSettingsActive}

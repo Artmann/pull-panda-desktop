@@ -136,6 +136,7 @@ export function createPullRequest(
     isDraft: false,
     isReviewer: false,
     labels: [],
+    lastViewedAt: null,
     mergedAt: null,
     number: 1,
     repositoryName: 'panda',

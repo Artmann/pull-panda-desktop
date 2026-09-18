@@ -37,7 +37,11 @@ export const pullRequests = sqliteTable('pull_requests', {
   requestedReviewers: text('requested_reviewers'),
 
   syncedAt: text('synced_at').notNull(),
-  detailsSyncedAt: text('details_synced_at')
+  detailsSyncedAt: text('details_synced_at'),
+
+  // Local-only. Never written by the syncer, so it must stay out of the
+  // `onConflictDoUpdate` set in sync/operations/sync-pull-requests.ts.
+  lastViewedAt: text('last_viewed_at')
 })
 
 export type PullRequest = typeof pullRequests.$inferSelect

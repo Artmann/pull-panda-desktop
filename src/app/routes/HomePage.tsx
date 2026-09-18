@@ -1,105 +1,70 @@
 import dayjs from 'dayjs'
 import { type ReactElement } from 'react'
 
-import { Badge } from '@/app/components/ui/badge'
-import { Skeleton } from '@/app/components/ui/skeleton'
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow
-} from '@/app/components/ui/table'
 import { useAuth } from '@/app/lib/store/authContext'
 import { useAppSelector } from '@/app/store/hooks'
-import { PullRequestTable } from '../components/PullRequestTable'
 
 export function HomePage(): ReactElement {
   const { user } = useAuth()
   const pullRequests = useAppSelector((state) => state.pullRequests.items)
   const initialized = useAppSelector((state) => state.pullRequests.initialized)
+
   const fullName = user?.name ?? user?.login ?? 'User'
   const displayName = fullName.split(' ')[0]
 
-  const openPullRequests = pullRequests.filter((pr) => pr.state === 'OPEN')
-
-  const pullRequestThatNeedsReview = openPullRequests
-    .filter((pr) => !pr.isAuthor)
-    .sort((a, b) => dayjs(b.updatedAt).unix() - dayjs(a.updatedAt).unix())
-
-  const yourPullRequests = openPullRequests
-    .filter((pr) => pr.isAuthor)
-    .sort((a, b) => dayjs(b.updatedAt).unix() - dayjs(a.updatedAt).unix())
+  const openPullRequests = pullRequests.filter(
+    (pullRequest) => pullRequest.state === 'OPEN'
+  )
+  const waitingOnYou = openPullRequests.filter(
+    (pullRequest) => !pullRequest.isAuthor && pullRequest.isReviewer
+  ).length
+  const yours = openPullRequests.filter(
+    (pullRequest) => pullRequest.isAuthor
+  ).length
 
   return (
-    <div className="bg-background w-full p-4 sm:p-6">
-      <div className="w-full max-w-6xl mx-auto">
-        <section className="mb-10">
-          <div className="mb-2.5 text-[11px] font-mono font-medium uppercase tracking-wider text-primary">
-            {dayjs().format('dddd, MMMM D')}
-          </div>
+    <div className="h-full w-full flex items-center justify-center p-8">
+      <div className="flex max-w-md flex-col items-center gap-3 text-center">
+        <div className="font-mono text-[11px] font-medium uppercase tracking-wider text-primary">
+          {dayjs().format('dddd, MMMM D')}
+        </div>
 
-          <div className="mb-2">
-            <Greetings name={displayName} />
-          </div>
+        <Greetings name={displayName} />
 
-          <div className="text-muted-foreground text-sm">
-            Here's what needs your attention today
-          </div>
-        </section>
+        <p className="text-muted-foreground text-sm">
+          {initialized
+            ? summarize(waitingOnYou, yours)
+            : 'Loading your pull requests…'}
+        </p>
 
-        {!initialized ? (
-          <div className="space-y-8">
-            <SkeletonSection title="Needs Your Attention" />
-            <SkeletonSection title="Your Pull Requests" />
-          </div>
-        ) : (
-          <div className="space-y-8 ">
-            <section>
-              <div className="flex items-center space-x-2 mb-4">
-                <h2 className="text-foreground font-medium">
-                  Needs Your Attention
-                </h2>
-
-                <Badge
-                  variant="outline"
-                  className="text-muted-foreground border-border"
-                >
-                  {pullRequestThatNeedsReview.length}
-                </Badge>
-              </div>
-
-              <PullRequestTable
-                paramPrefix="review"
-                pullRequests={pullRequestThatNeedsReview}
-              />
-            </section>
-
-            <section>
-              <div className="flex items-center space-x-2 mb-4">
-                <h2 className="text-foreground font-medium">
-                  Your Pull Requests
-                </h2>
-
-                <Badge
-                  variant="outline"
-                  className="text-muted-foreground border-border"
-                >
-                  {yourPullRequests.length}
-                </Badge>
-              </div>
-
-              <PullRequestTable
-                paramPrefix="your"
-                pullRequests={yourPullRequests}
-              />
-            </section>
-          </div>
-        )}
+        <p className="text-muted-foreground/70 text-xs">
+          Pick a pull request from the sidebar to get started.
+        </p>
       </div>
     </div>
   )
+}
+
+function summarize(waitingOnYou: number, yours: number): string {
+  if (waitingOnYou === 0 && yours === 0) {
+    return 'Nothing open right now. Enjoy the quiet.'
+  }
+
+  const parts: string[] = []
+
+  if (waitingOnYou > 0) {
+    parts.push(
+      `${waitingOnYou.toString()} ${waitingOnYou === 1 ? 'review is' : 'reviews are'} waiting on you`
+    )
+  }
+
+  if (yours > 0) {
+    parts.push(
+      `${yours.toString()} of your own ${yours === 1 ? 'is' : 'are'} open`
+    )
+  }
+
+  return `${parts.join(' and ')}.`
 }
 
 const greetings: Record<string, string> = {
@@ -132,60 +97,4 @@ function getTimeOfDay(): string {
   }
 
   return 'morning'
-}
-
-function SkeletonSection({ title }: { title: string }): ReactElement {
-  return (
-    <section>
-      <div className="flex items-center space-x-2 mb-4">
-        <h2 className="text-foreground font-medium">{title}</h2>
-
-        <Skeleton className="h-5 w-5 rounded-full" />
-      </div>
-
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead>Pull Request</TableHead>
-            <TableHead>Author</TableHead>
-            <TableHead>Status</TableHead>
-            <TableHead>Activity</TableHead>
-            <TableHead>Updated</TableHead>
-          </TableRow>
-        </TableHeader>
-
-        <TableBody>
-          {Array.from({ length: 3 }, (_, index) => (
-            <TableRow key={index}>
-              <TableCell>
-                <div className="flex flex-col gap-1.5">
-                  <Skeleton className="h-4 w-48" />
-                  <Skeleton className="h-3 w-32" />
-                </div>
-              </TableCell>
-
-              <TableCell>
-                <div className="flex items-center gap-2">
-                  <Skeleton className="h-5 w-5 rounded-full" />
-                  <Skeleton className="h-3 w-20" />
-                </div>
-              </TableCell>
-
-              <TableCell>
-                <Skeleton className="h-5 w-16 rounded-full" />
-              </TableCell>
-
-              <TableCell>
-                <Skeleton className="h-3 w-14" />
-              </TableCell>
-
-              <TableCell>
-                <Skeleton className="h-3 w-16" />
-              </TableCell>
-            </TableRow>
-          ))}
-        </TableBody>
-      </Table>
-    </section>
-  )
 }

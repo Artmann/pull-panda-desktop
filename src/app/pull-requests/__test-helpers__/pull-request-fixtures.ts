@@ -67,6 +67,7 @@ export function createMockPullRequest(
     isAssignee: false,
     isReviewer: false,
     labels: [],
+    lastViewedAt: null,
     assignees: [],
     requestedReviewers: [],
     syncedAt: '2024-01-01T00:00:00Z',

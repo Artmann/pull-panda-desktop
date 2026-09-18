@@ -49,7 +49,7 @@ export const PullRequestToolbar = memo(function PullRequestToolbar({
   return (
     <div
       className={`
-        fixed bottom-10 left-1/2 -translate-x-1/2 z-30
+        absolute bottom-10 left-1/2 -translate-x-1/2 z-30
         bg-background
         rounded-sm border border-border shadow-sm
         p-1.5

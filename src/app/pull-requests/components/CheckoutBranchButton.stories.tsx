@@ -57,6 +57,7 @@ const mockPullRequest: PullRequest = {
   isDraft: false,
   isReviewer: true,
   labels: [],
+  lastViewedAt: null,
   mergedAt: null,
   number: 42,
   repositoryName: 'demo',

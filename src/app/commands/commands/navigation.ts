@@ -3,12 +3,14 @@ import {
   ChevronDown,
   ChevronUp,
   GitPullRequest,
-  Home
+  Home,
+  PanelLeft
 } from 'lucide-react'
 
 import { commandRegistry } from '../registry'
 import { getNavigate } from '../context'
 import { getPullRequestNavigation } from '../pr-navigation-accessor'
+import { getSidebarNavigation } from '../sidebar-accessor'
 import { getStore } from '../store-accessor'
 import type { PullRequest } from '@/types/pull-request'
 
@@ -67,6 +69,33 @@ commandRegistry.register({
     const navigation = getPullRequestNavigation()
 
     navigation?.jumpToPreviousLandmark()
+  }
+})
+
+// Sidebar navigation (shift+j / shift+k). These deliberately avoid plain j/k,
+// which move between landmarks inside the open pull request. Alt is not an
+// option: macOS turns alt+j into a dead key, so the shortcut never matches.
+commandRegistry.register({
+  id: 'navigation.next-pull-request',
+  label: 'Go To Next Pull Request',
+  icon: PanelLeft,
+  group: 'navigation',
+  shortcut: { key: 'j', shift: true },
+  isAvailable: () => getSidebarNavigation() !== null,
+  execute: () => {
+    getSidebarNavigation()?.selectNext()
+  }
+})
+
+commandRegistry.register({
+  id: 'navigation.previous-pull-request',
+  label: 'Go To Previous Pull Request',
+  icon: PanelLeft,
+  group: 'navigation',
+  shortcut: { key: 'k', shift: true },
+  isAvailable: () => getSidebarNavigation() !== null,
+  execute: () => {
+    getSidebarNavigation()?.selectPrevious()
   }
 })
 

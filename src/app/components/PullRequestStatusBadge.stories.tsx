@@ -25,6 +25,7 @@ const basePullRequest: PullRequest = {
   isAssignee: false,
   isReviewer: false,
   labels: [],
+  lastViewedAt: null,
   assignees: [],
   requestedReviewers: [],
   syncedAt: '2026-04-23T09:00:00Z',
@@ -79,6 +80,40 @@ export const Closed: Story = {
       closedAt: '2026-04-22T12:00:00Z'
     }
   }
+}
+
+export const Compact: Story = {
+  args: {
+    pullRequest: { ...basePullRequest, changesRequestedCount: 1 },
+    size: 'compact'
+  }
+}
+
+export const CompactVersusDefault: Story = {
+  args: { pullRequest: basePullRequest },
+  render: () => (
+    <div className="flex flex-col gap-3">
+      {[
+        { label: 'Pending', overrides: {} },
+        { label: 'Approved', overrides: { approvalCount: 2 } },
+        { label: 'Changes Requested', overrides: { changesRequestedCount: 1 } }
+      ].map(({ label, overrides }) => (
+        <div
+          key={label}
+          className="flex items-center gap-3"
+        >
+          <PullRequestStatusBadge
+            pullRequest={{ ...basePullRequest, ...overrides }}
+          />
+
+          <PullRequestStatusBadge
+            pullRequest={{ ...basePullRequest, ...overrides }}
+            size="compact"
+          />
+        </div>
+      ))}
+    </div>
+  )
 }
 
 export const AllStatuses: Story = {

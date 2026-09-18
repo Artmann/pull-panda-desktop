@@ -79,6 +79,7 @@ function buildPullRequest(
     isAuthor: row.isAuthor,
     isReviewer: row.isReviewer,
     labels: row.labels ? (JSON.parse(row.labels) as PullRequestLabel[]) : [],
+    lastViewedAt: row.lastViewedAt,
     mergedAt: row.mergedAt,
     requestedReviewers: row.requestedReviewers
       ? (JSON.parse(row.requestedReviewers) as PullRequestRequestedReviewer[])

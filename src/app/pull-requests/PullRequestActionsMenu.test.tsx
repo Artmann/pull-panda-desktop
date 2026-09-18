@@ -46,6 +46,7 @@ function createMockPullRequest(
     isDraft: false,
     isReviewer: false,
     labels: [],
+    lastViewedAt: null,
     mergedAt: null,
     number: 42,
     repositoryName: 'repo',

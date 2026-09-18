@@ -28,6 +28,7 @@ import { HomePage } from '@/app/routes/HomePage'
 import { OnboardingPage } from '@/app/routes/OnboardingPage'
 import { DiffsWorkerPoolProvider } from '@/app/pull-requests/diffs/diffs-provider'
 import { PullRequestNavigationProvider } from '@/app/pull-requests/PullRequestNavigationProvider'
+import { PullRequestSidebar } from '@/app/pull-requests/sidebar/PullRequestSidebar'
 import { PullRequestPage } from '@/app/routes/PullRequestPage'
 import { SettingsPage } from '@/app/routes/SettingsPage'
 import { SignInPage } from '@/app/routes/SignInPage'
@@ -132,21 +133,66 @@ function AppContent(): ReactElement {
   }
 
   const isAuthenticated = status === 'authenticated'
-  const postSignInRedirect = isNewSignIn ? '/onboarding' : '/'
+
+  return (
+    <AppShell
+      isAuthenticated={isAuthenticated}
+      pathname={location.pathname}
+      postSignInRedirect={isNewSignIn ? '/onboarding' : '/'}
+    />
+  )
+}
+
+interface AppShellProps {
+  isAuthenticated: boolean
+  pathname: string
+  postSignInRedirect: string
+}
+
+function AppShell({
+  isAuthenticated,
+  pathname,
+  postSignInRedirect
+}: AppShellProps): ReactElement {
+  // The sidebar is pull request navigation, so it only wraps the pull request
+  // area. Settings, telemetry and onboarding stay full width.
+  const showSidebar =
+    isAuthenticated &&
+    (pathname === '/' || pathname.startsWith('/pull-requests/'))
 
   return (
     <main className="w-full h-screen flex flex-col overflow-hidden">
       <TitleBar />
 
-      <div className="flex-1 min-h-0 overflow-auto ">
-        <ErrorBoundary>
-          {isAuthenticated && <RouteRestorer />}
+      <div className="flex-1 min-h-0 flex">
+        {showSidebar && <PullRequestSidebar />}
 
-          <AppRoutes
-            isAuthenticated={isAuthenticated}
-            postSignInRedirect={postSignInRedirect}
-          />
-        </ErrorBoundary>
+        {/*
+          The positioned, non-scrolling wrapper is the containing block for
+          overlays that float above the main pane — PullRequestToolbar in
+          particular. Anchoring to it rather than the viewport keeps them
+          centred on the content instead of the whole window, at any sidebar
+          width, and they escape the scroller's clipping because their
+          containing block sits above it.
+        */}
+        <div className="relative flex flex-1 min-w-0 min-h-0">
+          {/*
+            This is the one `.overflow-auto` in the app. PullRequestPage,
+            FileCard and use-virtual-list all find their scroll container with
+            `closest('.overflow-auto')`, so the sidebar must never carry the
+            class — it scrolls with `overflow-y-auto` instead.
+          */}
+          <div className="flex-1 min-w-0 overflow-auto">
+            <ErrorBoundary>
+              {isAuthenticated && <RouteRestorer />}
+
+              <AppRoutes
+                isAuthenticated={isAuthenticated}
+                postSignInRedirect={postSignInRedirect}
+              />
+            </ErrorBoundary>
+          </div>
+        </div>
       </div>
 
       {isAuthenticated && <AppFooter />}

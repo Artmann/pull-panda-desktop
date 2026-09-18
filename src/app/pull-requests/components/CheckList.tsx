@@ -1,8 +1,6 @@
 import {
   CircleAlert,
-  CircleAlertIcon,
   CircleCheck,
-  CircleCheckIcon,
   CircleIcon,
   ExternalLink
 } from 'lucide-react'
@@ -10,6 +8,13 @@ import { useMemo, type ReactElement } from 'react'
 
 import type { Check } from '@/types/pull-request-details'
 
+import {
+  checkRollupColors,
+  checkRollupIcons,
+  getCheckRollup,
+  getCheckRollupLabel,
+  getCheckRollupSummary
+} from '@/app/components/check-rollup'
 import { Link } from '@/app/components/Link'
 import {
   Accordion,
@@ -17,6 +22,7 @@ import {
   AccordionItem,
   AccordionTrigger
 } from '@/app/components/ui/accordion'
+import { cn } from '@/app/lib/utils'
 
 const checkConclusionRanks: Record<string, number | undefined> = {
   error: 0,
@@ -65,93 +71,18 @@ function compareCheckStates(a: Check, b: Check): number | undefined {
 }
 
 export function CheckList({ checks }: { checks: Check[] }): ReactElement {
-  const hasRunningChecks = checks.some(
-    (check) =>
-      check.state?.toLowerCase() === 'in_progress' ||
-      check.state?.toLowerCase() === 'queued'
-  )
-  const hasFailedChecks = checks.some(
-    (check) =>
-      check.conclusion?.toLowerCase() === 'failure' ||
-      check.conclusion?.toLowerCase() === 'error'
-  )
-  const allChecksPassed = !hasFailedChecks && checks.length > 0
-  const isOpenByDefault = hasFailedChecks
+  const rollup = useMemo(() => getCheckRollup(checks), [checks])
+
+  const isOpenByDefault = rollup === 'failing'
 
   const icon = useMemo(() => {
-    if (allChecksPassed) {
-      return (
-        <CircleCheckIcon className="size-6 text-status-success-foreground" />
-      )
-    }
+    const Icon = checkRollupIcons[rollup]
 
-    if (hasFailedChecks) {
-      return (
-        <CircleAlertIcon className="size-6 text-status-danger-foreground" />
-      )
-    }
+    return <Icon className={cn('size-6', checkRollupColors[rollup])} />
+  }, [rollup])
 
-    return <CircleIcon className="size-6 text-muted-foreground" />
-  }, [allChecksPassed, hasFailedChecks])
-
-  const title = useMemo(() => {
-    if (allChecksPassed) {
-      return 'All checks have passed'
-    }
-
-    if (hasFailedChecks) {
-      return 'Some checks have failed'
-    }
-
-    if (hasRunningChecks) {
-      return 'Checks are running'
-    }
-
-    return 'No checks available'
-  }, [allChecksPassed, hasFailedChecks, hasRunningChecks])
-
-  const subtitle = useMemo(() => {
-    const numberOfRunningChecks = checks.filter(
-      (check) =>
-        check.state?.toLowerCase() === 'in_progress' ||
-        check.state?.toLowerCase() === 'queued'
-    ).length
-    const numberOfFailedChecks = checks.filter(
-      (check) =>
-        check.conclusion?.toLowerCase() === 'failure' ||
-        check.conclusion?.toLowerCase() === 'error'
-    ).length
-    const numberOfSuccessfulChecks = checks.filter(
-      (check) => check.conclusion?.toLowerCase() === 'success'
-    ).length
-    const numberOfSkippedChecks = checks.filter(
-      (check) => check.conclusion?.toLowerCase() === 'skipped'
-    ).length
-
-    const parts = []
-
-    if (numberOfRunningChecks > 0) {
-      parts.push(`${numberOfRunningChecks.toString()} running`)
-    }
-
-    if (numberOfFailedChecks > 0) {
-      parts.push(`${numberOfFailedChecks.toString()} failed`)
-    }
-
-    if (numberOfSkippedChecks > 0) {
-      parts.push(`${numberOfSkippedChecks.toString()} skipped`)
-    }
-
-    if (numberOfSuccessfulChecks > 0) {
-      parts.push(`${numberOfSuccessfulChecks.toString()} successful`)
-    }
-
-    if (parts.length === 0) {
-      return `${checks.length.toString()} checks`
-    }
-
-    return parts.join(', ')
-  }, [checks])
+  const title = getCheckRollupLabel(rollup)
+  const subtitle = useMemo(() => getCheckRollupSummary(checks), [checks])
 
   const sortedChecks = [...checks].sort(
     (a, b) =>

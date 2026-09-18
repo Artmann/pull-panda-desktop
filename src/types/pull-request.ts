@@ -35,6 +35,7 @@ export interface PullRequest {
   isAssignee: boolean
   isReviewer: boolean
   labels: PullRequestLabel[]
+  lastViewedAt: string | null
   assignees: PullRequestAssignee[]
   requestedReviewers: PullRequestRequestedReviewer[]
   syncedAt: string

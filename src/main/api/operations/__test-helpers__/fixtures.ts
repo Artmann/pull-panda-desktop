@@ -24,6 +24,7 @@ export const createPullRequestFixture = (
   isDraft: false,
   isReviewer: false,
   labels: null,
+  lastViewedAt: null,
   mergedAt: null,
   number: 42,
   repositoryName: 'demo',
