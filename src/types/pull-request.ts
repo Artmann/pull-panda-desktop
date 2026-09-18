@@ -20,6 +20,7 @@ export interface PullRequest {
   body: string | null
   bodyHtml: string | null
   headRefName: string | null
+  baseRefName: string | null
   state: 'OPEN' | 'CLOSED' | 'MERGED'
   url: string
   repositoryOwner: string

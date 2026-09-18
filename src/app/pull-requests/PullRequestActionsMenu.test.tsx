@@ -35,6 +35,7 @@ function createMockPullRequest(
     body: 'Test PR body',
     bodyHtml: null,
     headRefName: null,
+    baseRefName: null,
     changesRequestedCount: 0,
     closedAt: null,
     commentCount: 0,

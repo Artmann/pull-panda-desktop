@@ -65,6 +65,7 @@ function createMockPullRequest(
     body: 'Test PR body',
     bodyHtml: null,
     headRefName: null,
+    baseRefName: null,
     isDraft: false,
     isAuthor: true,
     isAssignee: false,

@@ -10,6 +10,7 @@ const basePullRequest: PullRequest = {
   body: null,
   bodyHtml: null,
   headRefName: 'feat/storybook',
+  baseRefName: null,
   state: 'OPEN',
   url: 'https://github.com/artgaard/pull-panda/pull/42',
   repositoryOwner: 'artgaard',

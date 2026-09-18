@@ -1,4 +1,5 @@
 import {
+  ArrowRight,
   Check,
   ChevronLeft,
   Copy,
@@ -71,7 +72,10 @@ export const StickyPullRequestHeader = memo(function StickyPullRequestHeader({
 
           {pullRequest.headRefName && (
             <div className="shrink-0">
-              <BranchName name={pullRequest.headRefName} />
+              <BranchName
+                baseName={pullRequest.baseRefName}
+                name={pullRequest.headRefName}
+              />
             </div>
           )}
         </div>
@@ -139,7 +143,10 @@ export const PullRequestHeader = memo(function PullRequestHeader({
         )}
 
         {pullRequest.headRefName && (
-          <BranchName name={pullRequest.headRefName} />
+          <BranchName
+            baseName={pullRequest.baseRefName}
+            name={pullRequest.headRefName}
+          />
         )}
       </div>
 
@@ -260,7 +267,13 @@ function InlineEditableTitle({
   )
 }
 
-function BranchName({ name }: { name: string }): ReactElement {
+function BranchName({
+  baseName,
+  name
+}: {
+  baseName?: string | null
+  name: string
+}): ReactElement {
   const [copied, setCopied] = useState(false)
 
   const handleCopy = () => {
@@ -288,6 +301,22 @@ function BranchName({ name }: { name: string }): ReactElement {
       >
         {name}
       </span>
+
+      {baseName && (
+        <>
+          <ArrowRight
+            aria-hidden
+            className="size-3 shrink-0 opacity-60"
+          />
+
+          <span
+            className="truncate font-mono max-w-40"
+            title={`Merges into ${baseName}`}
+          >
+            {baseName}
+          </span>
+        </>
+      )}
 
       <button
         aria-label="Copy branch name"

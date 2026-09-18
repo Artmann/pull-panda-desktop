@@ -26,6 +26,7 @@ const pullRequestNodeFields = `
   body
   bodyHTML
   headRefName
+  baseRefName
   state
   isDraft
   url
@@ -169,6 +170,7 @@ function transformNode(
     body: node.body,
     bodyHtml: node.bodyHTML,
     headRefName: node.headRefName,
+    baseRefName: node.baseRefName,
     state: node.state,
     url: node.url,
     repositoryOwner: node.repository.owner.login,
@@ -230,6 +232,7 @@ const persistPullRequest = (record: NewPullRequest) =>
             body: record.body,
             bodyHtml: record.bodyHtml,
             headRefName: record.headRefName,
+            baseRefName: record.baseRefName,
             state: record.state,
             url: record.url,
             repositoryOwner: record.repositoryOwner,

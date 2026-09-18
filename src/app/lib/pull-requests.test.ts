@@ -14,6 +14,7 @@ function createMockPullRequest(
     body: null,
     bodyHtml: null,
     headRefName: null,
+    baseRefName: null,
     state: 'OPEN',
     url: 'https://github.com/owner/repo/pull/1',
     repositoryOwner: 'owner',

@@ -1,0 +1,1 @@
+ALTER TABLE `pull_requests` ADD `base_ref_name` text;

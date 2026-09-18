@@ -18,6 +18,7 @@ export const createPullRequestFixture = (
   createdAt: '2026-01-01T00:00:00Z',
   detailsSyncedAt: null,
   headRefName: 'feature',
+  baseRefName: null,
   id: 'pr_1',
   isAssignee: false,
   isAuthor: true,

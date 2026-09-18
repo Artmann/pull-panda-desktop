@@ -130,6 +130,7 @@ export function createPullRequest(
     createdAt: '2026-01-01T00:00:00Z',
     detailsSyncedAt: null,
     headRefName: 'feature',
+    baseRefName: null,
     id: 'pr-1',
     isAssignee: false,
     isAuthor: false,
