@@ -293,20 +293,28 @@ describe('PullRequestSidebar', () => {
   it('shows a jump badge on each row while the modifier is held', () => {
     renderSidebar()
 
-    expect(within(sidebar()).queryByText('1')).not.toBeInTheDocument()
+    expect(within(sidebar()).queryByText('⌘1')).not.toBeInTheDocument()
 
     act(() => {
       window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Meta' }))
     })
 
-    expect(within(sidebar()).getByText('1')).toBeInTheDocument()
-    expect(within(sidebar()).getByText('3')).toBeInTheDocument()
+    const badge = within(sidebar()).getByText('⌘1')
+
+    expect(badge).toBeInTheDocument()
+    expect(within(sidebar()).getByText('⌘3')).toBeInTheDocument()
+
+    // The modifier and the digit share one badge, and it is painted over the
+    // timestamp from out of flow so that holding the modifier cannot reflow
+    // the rows. jsdom has no layout to measure, so the positioning that buys
+    // that is what this asserts.
+    expect(badge).toHaveClass('absolute')
 
     act(() => {
       window.dispatchEvent(new Event('blur'))
     })
 
-    expect(within(sidebar()).queryByText('1')).not.toBeInTheDocument()
+    expect(within(sidebar()).queryByText('⌘1')).not.toBeInTheDocument()
   })
 
   it('filters by repository through the filter popover', async () => {

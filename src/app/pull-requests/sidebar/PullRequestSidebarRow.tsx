@@ -32,7 +32,7 @@ function titleColor(isSelected: boolean, unread: boolean): string {
 }
 
 interface PullRequestSidebarRowProps {
-  /** Shown in place of the timestamp while the jump modifier is held. */
+  /** Painted over the timestamp while the jump modifier is held. */
   hotkey?: number
   isSelected: boolean
   onSelect: (pullRequestId: string) => void
@@ -76,9 +76,18 @@ export function PullRequestSidebarRow({
             {pullRequest.title}
           </span>
 
+          {/*
+            The shortcut chip is wider than the timestamp it covers, so it
+            reaches back over this icon. Hiding rather than unmounting keeps
+            the row's layout identical either way.
+          */}
           <CheckIcon
             aria-label={getCheckRollupLabel(checkRollup)}
-            className={cn('size-3 shrink-0', checkRollupColors[checkRollup])}
+            className={cn(
+              'size-3 shrink-0',
+              checkRollupColors[checkRollup],
+              hotkey !== undefined && 'invisible'
+            )}
           />
 
           <RowTrailing
@@ -115,13 +124,13 @@ export function PullRequestSidebarRow({
   )
 }
 
-const chipClassName =
-  'border-border text-muted-foreground rounded-sm border px-1.5 py-0.5 text-row-meta uppercase'
-
 /**
- * The right-hand end of a row's first line. While the jump modifier is held the
- * shortcut replaces the timestamp rather than sitting beside it, so nothing
- * shifts when the modifier goes down.
+ * The right-hand end of a row's first line. The timestamp always keeps its
+ * place in the layout: while the jump modifier is held it only turns
+ * invisible, and the shortcut is painted over it from out of flow. Swapping
+ * the two in the layout instead would resize this column, and because the
+ * title beside it is `truncate`, every row's title would reflow the moment the
+ * modifier went down.
  */
 function RowTrailing({
   hotkey,
@@ -130,19 +139,22 @@ function RowTrailing({
   hotkey?: number
   updatedAt: string
 }): ReactElement {
-  if (hotkey === undefined) {
-    return (
-      <span className="text-muted-foreground ml-auto shrink-0 font-mono text-row-meta whitespace-nowrap">
+  return (
+    <span className="relative ml-auto shrink-0">
+      <span
+        className={cn(
+          'text-muted-foreground block font-mono text-row-meta whitespace-nowrap',
+          hotkey !== undefined && 'invisible'
+        )}
+      >
         {formatTimestamp(updatedAt)}
       </span>
-    )
-  }
 
-  return (
-    <span className="ml-auto flex shrink-0 items-center gap-0.5">
-      <span className={chipClassName}>{isMac() ? '⌘' : 'Ctrl'}</span>
-
-      <span className={chipClassName}>{hotkey}</span>
+      {hotkey !== undefined && (
+        <span className="border-border bg-sidebar-accent text-muted-foreground absolute top-1/2 right-0 -translate-y-1/2 rounded-sm border px-1.5 py-0.5 font-mono text-row-meta leading-none whitespace-nowrap">
+          {isMac() ? `⌘${hotkey.toString()}` : `Ctrl+${hotkey.toString()}`}
+        </span>
+      )}
     </span>
   )
 }

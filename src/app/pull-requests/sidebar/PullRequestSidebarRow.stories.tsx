@@ -138,3 +138,34 @@ export const LongTitle: Story = {
     })
   }
 }
+
+export const JumpShortcut: Story = {
+  args: { hotkey: 3 },
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'While the jump modifier is held the shortcut is painted over the timestamp from out of flow, so the row keeps the exact layout it has in `Read`.'
+      }
+    }
+  }
+}
+
+export const JumpShortcutSelected: Story = {
+  args: { hotkey: 1, isSelected: true, row: buildRow({ unread: true }) }
+}
+
+export const JumpShortcutLongTitle: Story = {
+  args: {
+    hotkey: 9,
+    row: buildRow({
+      pullRequest: createMockPullRequest({
+        number: 12,
+        repositoryName: 'a-repository-with-a-very-long-name',
+        title:
+          'Refactor the background syncer so that every endpoint shares one etag store',
+        updatedAt: hoursAgo(120)
+      })
+    })
+  }
+}
