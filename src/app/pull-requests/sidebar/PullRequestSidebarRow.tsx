@@ -9,12 +9,17 @@ import { PullRequestStatusBadge } from '@/app/components/PullRequestStatusBadge'
 import { isMac } from '@/app/commands/utils'
 import { formatTimestamp } from '@/app/components/TimeAgo'
 import { Avatar, AvatarFallback, AvatarImage } from '@/app/components/ui/avatar'
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger
+} from '@/app/components/ui/tooltip'
 import { cn } from '@/app/lib/utils'
 
 import type { SidebarRow } from './sidebar-data'
 import { SidebarRowContextMenu } from './SidebarRowContextMenu'
 
-/** The 2px stripe down the left edge: attention outranks unread. */
+/** The stripe down the left edge: attention outranks unread. */
 function accentBorder(needsAttention: boolean, unread: boolean): string {
   if (needsAttention) {
     return 'border-l-status-danger-foreground'
@@ -56,7 +61,11 @@ export function PullRequestSidebarRow({
       <button
         aria-current={isSelected ? 'true' : undefined}
         className={cn(
-          'flex w-full flex-col gap-2 rounded-r-md border-l-2 px-3 py-2.5 text-left',
+          // The stripe is inside the row box, so the padding is 3px short of
+          // the 12px the list caption above uses; the icon column then starts
+          // on the same vertical line as the caption.
+          'grid w-full grid-cols-[1rem_1fr] gap-x-2 gap-y-2 text-left',
+          'rounded-r-md border-l-3 py-2.5 pr-3 pl-2.25',
           'cursor-pointer transition-colors',
           'focus-visible:ring-sidebar-ring outline-none focus-visible:ring-2',
           accentBorder(needsAttention, unread),
@@ -65,7 +74,27 @@ export function PullRequestSidebarRow({
         onClick={() => onSelect(pullRequest.id)}
         type="button"
       >
-        <div className="flex w-full items-center gap-2">
+        {/*
+          A span rather than the trigger's own button, because this row is
+          already a button and one cannot contain another.
+        */}
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <span className="flex items-center justify-center">
+              <CheckIcon
+                aria-label={getCheckRollupLabel(checkRollup)}
+                className={cn(
+                  'size-3 shrink-0',
+                  checkRollupColors[checkRollup]
+                )}
+              />
+            </span>
+          </TooltipTrigger>
+
+          <TooltipContent>{getCheckRollupLabel(checkRollup)}</TooltipContent>
+        </Tooltip>
+
+        <div className="flex min-w-0 items-center gap-2">
           <span
             className={cn(
               'min-w-0 truncate text-sm leading-tight',
@@ -76,27 +105,13 @@ export function PullRequestSidebarRow({
             {pullRequest.title}
           </span>
 
-          {/*
-            The shortcut chip is wider than the timestamp it covers, so it
-            reaches back over this icon. Hiding rather than unmounting keeps
-            the row's layout identical either way.
-          */}
-          <CheckIcon
-            aria-label={getCheckRollupLabel(checkRollup)}
-            className={cn(
-              'size-3 shrink-0',
-              checkRollupColors[checkRollup],
-              hotkey !== undefined && 'invisible'
-            )}
-          />
-
           <RowTrailing
             hotkey={hotkey}
             updatedAt={pullRequest.updatedAt}
           />
         </div>
 
-        <div className="flex w-full items-center gap-2">
+        <div className="col-start-2 flex min-w-0 items-center gap-2">
           <Avatar className="size-4 shrink-0">
             <AvatarImage
               alt={pullRequest.authorLogin ?? 'Author'}
