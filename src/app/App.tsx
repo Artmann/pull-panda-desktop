@@ -167,15 +167,7 @@ function AppShell({
       <div className="flex-1 min-h-0 flex">
         {showSidebar && <PullRequestSidebar />}
 
-        {/*
-          The positioned, non-scrolling wrapper is the containing block for
-          overlays that float above the main pane — PullRequestToolbar in
-          particular. Anchoring to it rather than the viewport keeps them
-          centred on the content instead of the whole window, at any sidebar
-          width, and they escape the scroller's clipping because their
-          containing block sits above it.
-        */}
-        <div className="relative flex flex-1 min-w-0 min-h-0">
+        <div className="flex flex-1 min-w-0 min-h-0">
           {/*
             This is the one `.overflow-auto` in the app. PullRequestPage,
             FileCard and use-virtual-list all find their scroll container with

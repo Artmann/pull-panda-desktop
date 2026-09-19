@@ -185,6 +185,10 @@
   /* Height of the fixed StickyPullRequestHeader; pinned file card headers
    * sit flush below it via `top-sticky-header`. */
   --spacing-sticky-header: 75px;
+  /* Height of AppFooter. The footer owns the pull request actions, so
+   * viewport-anchored overlays stop above it via `bottom-footer` rather than
+   * covering the controls they exist to support. */
+  --spacing-footer: 48px;
   /* One step below text-xs, used by the tiny status badges. */
   --text-2xs: 0.6rem;
   /* Sidebar rows: the title sits between text-xs and text-sm, and the mono

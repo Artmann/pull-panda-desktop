@@ -1,7 +1,12 @@
 import { Copy, ExternalLink, GitBranch } from 'lucide-react'
-import { toast } from 'sonner'
 
 import { runPullRequestCheckout } from '@/app/lib/run-pr-checkout'
+import {
+  canCopyBranchName,
+  copyPullRequestBranchName,
+  copyPullRequestLink,
+  openPullRequestOnGitHub
+} from '@/app/pull-requests/pull-request-actions'
 
 import { commandRegistry } from '../registry'
 import { getStore } from '../store-accessor'
@@ -16,11 +21,11 @@ commandRegistry.register({
   isAvailable: (ctx) =>
     ctx.view === 'pr-detail' && ctx.pullRequest !== undefined,
   execute: (ctx) => {
-    if (!ctx.pullRequest?.url) {
+    if (!ctx.pullRequest) {
       return
     }
 
-    window.auth.openUrl(ctx.pullRequest.url)
+    openPullRequestOnGitHub(ctx.pullRequest)
   }
 })
 
@@ -33,15 +38,12 @@ commandRegistry.register({
   shortcut: { key: 'c', mod: true, shift: true },
   isAvailable: (ctx) =>
     ctx.view === 'pr-detail' && ctx.pullRequest !== undefined,
-  execute: async (ctx) => {
-    if (!ctx.pullRequest?.url) return
-
-    try {
-      await navigator.clipboard.writeText(ctx.pullRequest.url)
-      toast.success('Link copied to clipboard')
-    } catch (error) {
-      toast.error('Failed to copy link')
+  execute: (ctx) => {
+    if (!ctx.pullRequest) {
+      return
     }
+
+    copyPullRequestLink(ctx.pullRequest)
   }
 })
 
@@ -86,10 +88,14 @@ commandRegistry.register({
   icon: GitBranch,
   group: 'pull request',
   isAvailable: (ctx) =>
-    ctx.view === 'pr-detail' && ctx.pullRequest !== undefined,
-  execute: async () => {
-    // Branch name is not directly available in our types
-    // This would need to be added to the PR data
-    toast.info('Branch name not available')
+    ctx.view === 'pr-detail' &&
+    ctx.pullRequest !== undefined &&
+    canCopyBranchName(ctx.pullRequest),
+  execute: (ctx) => {
+    if (!ctx.pullRequest) {
+      return
+    }
+
+    copyPullRequestBranchName(ctx.pullRequest)
   }
 })

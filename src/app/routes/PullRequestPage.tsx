@@ -6,7 +6,6 @@ import {
   MessageSquareIcon
 } from 'lucide-react'
 import React, {
-  useCallback,
   useEffect,
   useLayoutEffect,
   useMemo,
@@ -35,6 +34,7 @@ import {
   usePullRequestNavigation
 } from '@/app/pull-requests/PullRequestNavigationProvider'
 import { useAppDispatch, useAppSelector } from '@/app/store/hooks'
+import { mergeDrawerActions } from '@/app/store/merge-drawer-slice'
 import { mergeOptionsActions } from '@/app/store/merge-options-slice'
 import { pendingReviewsActions } from '@/app/store/pending-reviews-slice'
 import { clamp01 } from '@/math'
@@ -47,7 +47,6 @@ import {
   PullRequestHeader,
   StickyPullRequestHeader
 } from '../pull-requests/PullRequestHeader'
-import { PullRequestToolbar } from '../pull-requests/PullRequestToolbar'
 import { ReviewDrawer } from '../pull-requests/ReviewDrawer'
 import { TasksTab } from '../pull-requests/tasks/TasksTab'
 import {
@@ -59,13 +58,18 @@ const validTabs = ['overview', 'tasks', 'checks', 'files']
 
 export function PullRequestPage(): ReactElement {
   const containerRef = useRef<HTMLDivElement>(null)
-  const [isMergeDrawerOpen, setIsMergeDrawerOpen] = useState(false)
   const [stickyHeaderProgress, setStickyHeaderProgress] = useState(0)
 
   const { id } = useParams<{ id: string }>()
 
   const pullRequest = useAppSelector((state) =>
     state.pullRequests.items.find((pr) => pr.id === id)
+  )
+
+  // The footer action bar opens the merge drawer, so the flag lives in the
+  // store; opening it also re-runs the merge options fetch below.
+  const isMergeDrawerOpen = useAppSelector(
+    (state) => state.mergeDrawer.openForPullRequestId === id
   )
 
   const dispatch = useAppDispatch()
@@ -164,8 +168,6 @@ export function PullRequestPage(): ReactElement {
     ]
   )
 
-  const [fetchGeneration, setFetchGeneration] = useState(0)
-
   useEffect(
     function fetchMergeOptions() {
       if (!pullRequest || pullRequest.state !== 'OPEN') {
@@ -206,12 +208,8 @@ export function PullRequestPage(): ReactElement {
         }
       }
     },
-    [dispatch, fetchGeneration, pullRequest?.id, pullRequest?.state]
+    [dispatch, isMergeDrawerOpen, pullRequest?.id, pullRequest?.state]
   )
-
-  const refreshMergeOptions = useCallback(() => {
-    setFetchGeneration((generation) => generation + 1)
-  }, [])
 
   const tabs: Array<{
     content: React.ComponentType<{
@@ -354,16 +352,8 @@ export function PullRequestPage(): ReactElement {
 
       <PullRequestHeader pullRequest={pullRequest} />
 
-      <PullRequestToolbar
-        onOpenMergeDrawer={() => {
-          setIsMergeDrawerOpen(true)
-          refreshMergeOptions()
-        }}
-        pullRequest={pullRequest}
-      />
-
       <MergeDrawer
-        onClose={() => setIsMergeDrawerOpen(false)}
+        onClose={() => dispatch(mergeDrawerActions.close())}
         open={isMergeDrawerOpen}
         pullRequest={pullRequest}
       />
@@ -404,7 +394,7 @@ export function PullRequestPage(): ReactElement {
               hidden={tab.id !== activeTab}
               value={tab.id}
             >
-              <div className="w-full pb-12">
+              <div className="w-full pb-6">
                 {id ? (
                   <LandmarkScope
                     pullRequestId={id}

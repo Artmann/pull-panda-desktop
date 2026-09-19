@@ -1,14 +1,6 @@
-import {
-  ArrowRight,
-  Check,
-  Copy,
-  GitBranch,
-  GitCommitIcon,
-  Github
-} from 'lucide-react'
-import { memo, ReactElement, useMemo, useState } from 'react'
+import { ArrowRight, GitBranch, GitCommitIcon } from 'lucide-react'
+import { memo, ReactElement, useMemo } from 'react'
 import { shallowEqual } from 'react-redux'
-import { toast } from 'sonner'
 import invariant from 'tiny-invariant'
 
 import { useAppSelector } from '@/app/store/hooks'
@@ -25,9 +17,7 @@ import {
   BreadcrumbSeparator
 } from '../components/ui/breadcrumb'
 import { Badge } from '../components/ui/badge'
-import { Button } from '../components/ui/button'
 import { cn } from '../lib/utils'
-import { PullRequestActionsMenu } from './PullRequestActionsMenu'
 import { ReviewerBar } from './ReviewerBar'
 
 export const StickyPullRequestHeader = memo(function StickyPullRequestHeader({
@@ -272,23 +262,6 @@ function BranchName({
   baseName?: string | null
   name: string
 }): ReactElement {
-  const [copied, setCopied] = useState(false)
-
-  const handleCopy = () => {
-    navigator.clipboard
-      .writeText(name)
-      .then(() => {
-        setCopied(true)
-        setTimeout(() => setCopied(false), 2000)
-      })
-      .catch((error: unknown) => {
-        const message =
-          error instanceof Error ? error.message : 'Failed to copy branch name'
-
-        toast.error(message)
-      })
-  }
-
   return (
     <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
       <GitBranch className="size-3 shrink-0" />
@@ -315,16 +288,6 @@ function BranchName({
           </span>
         </>
       )}
-
-      <button
-        aria-label="Copy branch name"
-        className="p-0.5 rounded text-muted-foreground hover:text-foreground hover:bg-muted transition-colors cursor-pointer shrink-0"
-        onClick={handleCopy}
-        title="Copy branch name"
-        type="button"
-      >
-        {copied ? <Check className="size-3" /> : <Copy className="size-3" />}
-      </button>
     </div>
   )
 }
@@ -371,28 +334,6 @@ function Breadcrumbs({
           </BreadcrumbItem>
         </BreadcrumbList>
       </Breadcrumb>
-
-      <div className="ml-auto flex items-center gap-1.5">
-        <Button
-          aria-label="Open on GitHub"
-          className="size-[22px]"
-          onClick={() => {
-            window.electron.openUrl(
-              `https://github.com/${pullRequest.repositoryOwner}/${pullRequest.repositoryName}/pull/${pullRequest.number}`
-            )
-          }}
-          size="icon-xs"
-          title="Open on GitHub"
-          type="button"
-          variant="outline"
-        >
-          <Github className="size-2.5" />
-        </Button>
-
-        {pullRequest.state !== 'MERGED' && (
-          <PullRequestActionsMenu pullRequest={pullRequest} />
-        )}
-      </div>
     </div>
   )
 }
