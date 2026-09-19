@@ -36,6 +36,8 @@ import { PullRequestNavigationProvider } from '@/app/pull-requests/PullRequestNa
 
 import { PullRequestPage } from './PullRequestPage'
 
+import { TooltipProvider } from '@/app/components/ui/tooltip'
+
 vi.mock('@/app/lib/api', () => ({
   clearFocusedPullRequest: vi.fn().mockResolvedValue(undefined),
   fetchCodeowners: vi.fn().mockResolvedValue([]),
@@ -141,18 +143,20 @@ function renderWithProviders(
   return render(
     <Provider store={store}>
       <ThemeProvider>
-        <AuthProvider>
-          <MemoryRouter initialEntries={[`/pr/${pullRequestId}`]}>
-            <PullRequestNavigationProvider>
-              <Routes>
-                <Route
-                  element={<PullRequestPage />}
-                  path="/pr/:id"
-                />
-              </Routes>
-            </PullRequestNavigationProvider>
-          </MemoryRouter>
-        </AuthProvider>
+        <TooltipProvider>
+          <AuthProvider>
+            <MemoryRouter initialEntries={[`/pr/${pullRequestId}`]}>
+              <PullRequestNavigationProvider>
+                <Routes>
+                  <Route
+                    element={<PullRequestPage />}
+                    path="/pr/:id"
+                  />
+                </Routes>
+              </PullRequestNavigationProvider>
+            </MemoryRouter>
+          </AuthProvider>
+        </TooltipProvider>
       </ThemeProvider>
     </Provider>
   )

@@ -3,6 +3,7 @@ import { render } from '@testing-library/react'
 import type { ReactElement } from 'react'
 import { Provider } from 'react-redux'
 
+import { TooltipProvider } from '@/app/components/ui/tooltip'
 import { ThemeProvider } from '@/app/lib/store/themeContext'
 
 export function installObserverStubs() {
@@ -28,7 +29,9 @@ export function installObserverStubs() {
 export function renderWithProviders(ui: ReactElement, store: EnhancedStore) {
   return render(
     <Provider store={store}>
-      <ThemeProvider>{ui}</ThemeProvider>
+      <ThemeProvider>
+        <TooltipProvider>{ui}</TooltipProvider>
+      </ThemeProvider>
     </Provider>
   )
 }

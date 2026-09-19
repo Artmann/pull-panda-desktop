@@ -22,6 +22,8 @@ import {
   resolveInitialMergeMethod
 } from './MergeDrawer'
 
+import { TooltipProvider } from '@/app/components/ui/tooltip'
+
 const mockMergePullRequest = vi.fn()
 
 vi.mock('@/app/lib/api', () => ({
@@ -99,7 +101,11 @@ function renderWithProviders(
   ui: React.ReactElement,
   { store = createTestStore() } = {}
 ) {
-  return render(<Provider store={store}>{ui}</Provider>)
+  return render(
+    <Provider store={store}>
+      <TooltipProvider>{ui}</TooltipProvider>
+    </Provider>
+  )
 }
 
 const mergeableOptions: MergeOptions = {

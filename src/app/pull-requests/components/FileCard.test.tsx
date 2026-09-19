@@ -11,6 +11,8 @@ import {
 
 import { FileCard, FileCardBody, FileCardHeader } from './FileCard'
 
+import { TooltipProvider } from '@/app/components/ui/tooltip'
+
 function renderFileCard(headerChildren?: React.ReactNode) {
   return render(
     <FileCard>
@@ -18,7 +20,8 @@ function renderFileCard(headerChildren?: React.ReactNode) {
       <FileCardBody>
         <div data-testid="body-content">Body content</div>
       </FileCardBody>
-    </FileCard>
+    </FileCard>,
+    { wrapper: TooltipProvider }
   )
 }
 
@@ -81,7 +84,8 @@ describe('FileCard lazy body rendering', () => {
         >
           <div data-testid="body-content">Diff content</div>
         </FileCardBody>
-      </FileCard>
+      </FileCard>,
+      { wrapper: TooltipProvider }
     )
 
     expect(screen.getByTestId('fallback')).toBeInTheDocument()
@@ -149,7 +153,7 @@ describe('FileCard scroll adjustment on collapse', () => {
           <div data-testid="body-content">Diff content</div>
         </FileCardBody>
       </FileCard>,
-      { container: scrollContainer }
+      { container: scrollContainer, wrapper: TooltipProvider }
     )
 
     const card = scrollContainer.firstElementChild as HTMLElement
@@ -187,7 +191,7 @@ describe('FileCard scroll adjustment on collapse', () => {
           <div data-testid="body-content">Diff content</div>
         </FileCardBody>
       </FileCard>,
-      { container: scrollContainer }
+      { container: scrollContainer, wrapper: TooltipProvider }
     )
 
     // Collapse first

@@ -24,6 +24,8 @@ import { createMockPullRequest } from '../__test-helpers__/pull-request-fixtures
 import { PullRequestNavigationProvider } from '../PullRequestNavigationProvider'
 import { PullRequestSidebar } from './PullRequestSidebar'
 
+import { TooltipProvider } from '@/app/components/ui/tooltip'
+
 const pullRequests: PullRequest[] = [
   createMockPullRequest({
     authorLogin: 'octocat',
@@ -88,18 +90,20 @@ function renderSidebar({
 
   return render(
     <Provider store={store}>
-      <MemoryRouter initialEntries={[initialPath]}>
-        <PullRequestNavigationProvider>
-          <PullRequestSidebar />
-          <LocationProbe />
-          <Routes>
-            <Route
-              element={null}
-              path="*"
-            />
-          </Routes>
-        </PullRequestNavigationProvider>
-      </MemoryRouter>
+      <TooltipProvider>
+        <MemoryRouter initialEntries={[initialPath]}>
+          <PullRequestNavigationProvider>
+            <PullRequestSidebar />
+            <LocationProbe />
+            <Routes>
+              <Route
+                element={null}
+                path="*"
+              />
+            </Routes>
+          </PullRequestNavigationProvider>
+        </MemoryRouter>
+      </TooltipProvider>
     </Provider>
   )
 }

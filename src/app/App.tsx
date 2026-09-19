@@ -20,6 +20,7 @@ import { ErrorBoundary } from '@/app/components/ErrorBoundary'
 import { FpsCounter } from '@/app/components/FpsCounter'
 import { TitleBar } from '@/app/components/TitleBar'
 import { Toaster } from '@/app/components/ui/sonner'
+import { TooltipProvider } from '@/app/components/ui/tooltip'
 import { AuthProvider, useAuth } from '@/app/lib/store/authContext'
 import { TasksProvider } from '@/app/lib/store/tasksContext'
 import { ThemeProvider } from '@/app/lib/store/themeContext'
@@ -51,21 +52,23 @@ export function App({ store }: AppProps): ReactElement {
     <Provider store={store}>
       <HashRouter>
         <ThemeProvider>
-          <DiffsWorkerPoolProvider>
-            <TasksProvider>
-              <AuthProvider>
-                <CommandContextProvider>
-                  <PullRequestNavigationProvider>
-                    <ShortcutListener />
-                    <CommandPalette />
-                    <FpsCounter />
-                    <AppContent />
-                  </PullRequestNavigationProvider>
-                </CommandContextProvider>
-              </AuthProvider>
-            </TasksProvider>
-            <Toaster />
-          </DiffsWorkerPoolProvider>
+          <TooltipProvider>
+            <DiffsWorkerPoolProvider>
+              <TasksProvider>
+                <AuthProvider>
+                  <CommandContextProvider>
+                    <PullRequestNavigationProvider>
+                      <ShortcutListener />
+                      <CommandPalette />
+                      <FpsCounter />
+                      <AppContent />
+                    </PullRequestNavigationProvider>
+                  </CommandContextProvider>
+                </AuthProvider>
+              </TasksProvider>
+              <Toaster />
+            </DiffsWorkerPoolProvider>
+          </TooltipProvider>
         </ThemeProvider>
       </HashRouter>
     </Provider>
