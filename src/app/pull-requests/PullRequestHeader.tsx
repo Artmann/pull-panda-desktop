@@ -5,6 +5,11 @@ import invariant from 'tiny-invariant'
 
 import { useAppSelector } from '@/app/store/hooks'
 
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger
+} from '../components/ui/tooltip'
 import { useInlineEditField } from './use-inline-edit-field'
 import { PullRequest } from '@/types/pull-request'
 import type { Commit } from '@/types/pull-request-details'
@@ -18,6 +23,7 @@ import {
 } from '../components/ui/breadcrumb'
 import { Badge } from '../components/ui/badge'
 import { cn } from '../lib/utils'
+import { parseCommitMessage } from './parse-commit-message'
 import { ReviewerBar } from './ReviewerBar'
 
 export const StickyPullRequestHeader = memo(function StickyPullRequestHeader({
@@ -150,11 +156,15 @@ export const PullRequestHeader = memo(function PullRequestHeader({
             <>
               <span className="opacity-40">·</span>
 
-              <span className="truncate flex-1">
-                {latestCommit.message.length > 80
-                  ? latestCommit.message.slice(0, 80) + '…'
-                  : latestCommit.message}
-              </span>
+              <Tooltip>
+                <TooltipTrigger className="truncate flex-1 text-left cursor-default">
+                  <CommitSubject message={latestCommit.message} />
+                </TooltipTrigger>
+
+                <TooltipContent className="max-w-content whitespace-pre-wrap text-left">
+                  {latestCommit.message}
+                </TooltipContent>
+              </Tooltip>
             </>
           )}
 
@@ -170,6 +180,37 @@ export const PullRequestHeader = memo(function PullRequestHeader({
     </header>
   )
 })
+
+/**
+ * The subject line of a commit message, with `backticked` spans rendered as
+ * code.
+ *
+ * Commit subjects are written in markdown by habit even though nothing renders
+ * them, so the backticks used to show up literally — and the body ran straight
+ * into the subject because the whole raw message was printed. The mono face
+ * comes from preflight's `code` rule.
+ */
+function CommitSubject({ message }: { message: string }): ReactElement {
+  const { title } = parseCommitMessage(message)
+  const segments = title.split(/`([^`]+)`/)
+
+  return (
+    <>
+      {segments.map((segment, index) =>
+        index % 2 === 0 ? (
+          segment
+        ) : (
+          <code
+            className="rounded-xs bg-muted/60 px-1 py-0.5"
+            key={index}
+          >
+            {segment}
+          </code>
+        )
+      )}
+    </>
+  )
+}
 
 function Title({
   children,

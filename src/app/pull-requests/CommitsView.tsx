@@ -6,8 +6,11 @@ import { TimeAgo } from '@/app/components/TimeAgo'
 import { UserAvatar } from '@/app/components/UserAvatar'
 import { formatNumber } from '@/app/lib/numbers'
 import { useAppSelector } from '@/app/store/hooks'
+
 import type { Commit } from '@/types/pull-request-details'
 import type { PullRequest } from '@/types/pull-request'
+
+import { parseCommitMessage } from './parse-commit-message'
 
 export const CommitsView = memo(function CommitsView({
   pullRequest
@@ -166,20 +169,4 @@ function formatDateHeader(dateString: string): string {
       day: 'numeric'
     })
   }
-}
-
-function parseCommitMessage(message: string | null): {
-  title: string
-  body: string | null
-} {
-  if (!message) {
-    return { title: 'No message', body: null }
-  }
-
-  const lines = message.split('\n')
-  const title = lines[0] || 'No message'
-  const bodyLines = lines.slice(1).filter((line) => line.trim() !== '')
-  const body = bodyLines.length > 0 ? bodyLines.join('\n') : null
-
-  return { title, body }
 }
