@@ -54,13 +54,22 @@ function summarize(waitingOnYou: number, yours: number): string {
 
   if (waitingOnYou > 0) {
     parts.push(
-      `${waitingOnYou.toString()} ${waitingOnYou === 1 ? 'review is' : 'reviews are'} waiting on you`
+      waitingOnYou === 1
+        ? '1 pull request is waiting for your review'
+        : `${waitingOnYou.toString()} pull requests are waiting for your review`
     )
   }
 
   if (yours > 0) {
+    // 'yours' only has something to point at once the clause above has named
+    // pull requests. On its own this clause has to spell the noun out, or it
+    // reads as a fragment: '8 of your own are open.'
+    const noun = parts.length > 0 ? 'yours' : 'your pull requests'
+
     parts.push(
-      `${yours.toString()} of your own ${yours === 1 ? 'is' : 'are'} open`
+      yours === 1
+        ? `1 of ${noun} is open`
+        : `${yours.toString()} of ${noun} are open`
     )
   }
 

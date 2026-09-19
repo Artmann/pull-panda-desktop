@@ -164,8 +164,45 @@ describe('HomePage', () => {
 
       expect(
         screen.getByText(
-          '2 reviews are waiting on you and 1 of your own is open.'
+          '2 pull requests are waiting for your review and 1 of yours is open.'
         )
+      ).toBeInTheDocument()
+    })
+
+    it('names the noun when only your own pull requests are open', () => {
+      const store = createTestStore([
+        createMockPullRequest({ id: 'pr-1', isAuthor: true }),
+        createMockPullRequest({ id: 'pr-2', isAuthor: true })
+      ])
+
+      renderWithProviders(<HomePage />, { store })
+
+      expect(
+        screen.getByText('2 of your pull requests are open.')
+      ).toBeInTheDocument()
+    })
+
+    it('says only that a single pull request needs your review', () => {
+      const store = createTestStore([
+        createMockPullRequest({ id: 'pr-1', isAuthor: false, isReviewer: true })
+      ])
+
+      renderWithProviders(<HomePage />, { store })
+
+      expect(
+        screen.getByText('1 pull request is waiting for your review.')
+      ).toBeInTheDocument()
+    })
+
+    it('keeps the singular reading when one of your own is open', () => {
+      const store = createTestStore([
+        createMockPullRequest({ id: 'pr-1', isAuthor: true })
+      ])
+
+      renderWithProviders(<HomePage />, { store })
+
+      expect(
+        screen.getByText('1 of your pull requests is open.')
       ).toBeInTheDocument()
     })
 
