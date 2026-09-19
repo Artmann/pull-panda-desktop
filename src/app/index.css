@@ -364,13 +364,16 @@ body {
   padding: 1rem;
   border-radius: var(--radius);
   overflow-x: auto;
+  /* The same size Shiki sets on its own blocks, so a fenced block that misses
+   * highlighting is not also a different size. */
+  font-size: 0.875rem;
 }
 
 .markdown-block :not(pre) > code {
-  background-color: color-mix(in oklch, var(--muted) 50%, transparent);
-  padding: 0.125rem 0.375rem;
+  background-color: color-mix(in oklch, var(--muted) 35%, transparent);
+  padding: 0.1em 0.25em;
   border-radius: 0.25rem;
-  font-size: 0.875em;
+  font-size: 0.9em;
   font-weight: normal;
 }
 
@@ -439,18 +442,6 @@ body {
     border-radius: var(--radius);
     padding: 1rem;
     overflow-x: auto;
-  }
-
-  code {
-    font-size: 0.875em;
-  }
-
-  /* Inline code */
-  :not(pre) > code {
-    background-color: color-mix(in oklch, var(--muted) 50%, transparent);
-    padding: 0.125rem 0.25rem;
-    border-radius: 0.25rem;
-    font-weight: normal;
   }
 
   /* Links */
