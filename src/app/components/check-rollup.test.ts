@@ -5,7 +5,8 @@ import type { Check } from '@/types/pull-request-details'
 import {
   getCheckRollup,
   getCheckRollupLabel,
-  getCheckRollupSummary
+  getCheckRollupSummary,
+  getCheckTally
 } from './check-rollup'
 
 function buildCheck(overrides: Partial<Check> = {}): Check {
@@ -108,5 +109,52 @@ describe('getCheckRollupSummary', () => {
     expect(
       getCheckRollupSummary([buildCheck({ conclusion: 'cancelled' })])
     ).toEqual('1 checks')
+  })
+})
+
+describe('getCheckTally', () => {
+  it('counts nothing for an empty suite', () => {
+    expect(getCheckTally([])).toEqual({
+      failed: 0,
+      passing: 0,
+      running: 0,
+      skipped: 0,
+      successful: 0,
+      total: 0
+    })
+  })
+
+  it('separates every outcome', () => {
+    const checks = [
+      buildCheck({ id: 'a', conclusion: 'success' }),
+      buildCheck({ id: 'b', conclusion: 'SUCCESS' }),
+      buildCheck({ id: 'c', conclusion: 'failure' }),
+      buildCheck({ id: 'd', conclusion: 'skipped' }),
+      buildCheck({ id: 'e', conclusion: null, state: 'in_progress' }),
+      buildCheck({ id: 'f', conclusion: 'cancelled' })
+    ]
+
+    expect(getCheckTally(checks)).toEqual({
+      failed: 1,
+      passing: 3,
+      running: 1,
+      skipped: 1,
+      successful: 2,
+      total: 6
+    })
+  })
+
+  it('counts a skipped check as passing, so the ratio agrees with the rollup', () => {
+    const checks = [
+      buildCheck({ id: 'a', conclusion: 'success' }),
+      buildCheck({ id: 'b', conclusion: 'skipped' })
+    ]
+    const tally = getCheckTally(checks)
+
+    expect([getCheckRollup(checks), tally.passing, tally.total]).toEqual([
+      'passing',
+      2,
+      2
+    ])
   })
 })

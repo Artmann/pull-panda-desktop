@@ -24,7 +24,7 @@ import {
 import { Badge } from '../components/ui/badge'
 import { cn } from '../lib/utils'
 import { parseCommitMessage } from './parse-commit-message'
-import { ReviewerBar } from './ReviewerBar'
+import { PullRequestMetaRow } from './PullRequestMetaRow'
 
 export const StickyPullRequestHeader = memo(function StickyPullRequestHeader({
   pullRequest,
@@ -144,6 +144,8 @@ export const PullRequestHeader = memo(function PullRequestHeader({
         )}
       </div>
 
+      <PullRequestMetaRow pullRequest={pullRequest} />
+
       {commits.length > 0 && (
         <div className="flex items-center gap-2.5 rounded-lg border border-border bg-card px-3.5 py-2.5 text-xs text-muted-foreground">
           <GitCommitIcon className="size-3.5 shrink-0" />
@@ -175,8 +177,6 @@ export const PullRequestHeader = memo(function PullRequestHeader({
           )}
         </div>
       )}
-
-      <ReviewerBar pullRequest={pullRequest} />
     </header>
   )
 })
