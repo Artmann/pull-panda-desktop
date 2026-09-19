@@ -5,9 +5,9 @@ import {
   checkRollupIcons,
   getCheckRollupLabel
 } from '@/app/components/check-rollup'
+import { Kbd, shortcutLabel } from '@/app/components/Kbd'
 import { getPullRequestStatus } from '@/app/components/pull-request-status'
 import { PullRequestStatusBadge } from '@/app/components/PullRequestStatusBadge'
-import { isMac } from '@/app/commands/utils'
 import { formatTimestamp } from '@/app/components/TimeAgo'
 import { Avatar, AvatarFallback, AvatarImage } from '@/app/components/ui/avatar'
 import {
@@ -174,9 +174,9 @@ function RowTrailing({
       </span>
 
       {hotkey !== undefined && (
-        <span className="border-border bg-sidebar-accent text-muted-foreground absolute top-1/2 right-0 -translate-y-1/2 rounded-sm border px-1.5 py-0.5 text-2xs tabular-nums leading-none whitespace-nowrap">
-          {isMac() ? `⌘${hotkey.toString()}` : `Ctrl+${hotkey.toString()}`}
-        </span>
+        <Kbd className="bg-sidebar-accent absolute top-1/2 right-0 -translate-y-1/2">
+          {shortcutLabel(hotkey.toString())}
+        </Kbd>
       )}
     </span>
   )
