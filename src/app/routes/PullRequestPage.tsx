@@ -33,6 +33,10 @@ import {
   LandmarkScope,
   usePullRequestNavigation
 } from '@/app/pull-requests/PullRequestNavigationProvider'
+import {
+  checkRollupColors,
+  getCheckRollup
+} from '@/app/components/check-rollup'
 import { cn } from '@/app/lib/utils'
 import { useAppDispatch, useAppSelector } from '@/app/store/hooks'
 import { mergeDrawerActions } from '@/app/store/merge-drawer-slice'
@@ -79,6 +83,11 @@ export function PullRequestPage(): ReactElement {
 
   const checksCount = useAppSelector(
     (state) => state.checks.items.filter((c) => c.pullRequestId === id).length
+  )
+  // Selecting the rollup rather than the checks themselves keeps this a
+  // primitive, so the page does not re-render on every unrelated check write.
+  const checksRollup = useAppSelector((state) =>
+    getCheckRollup(state.checks.items.filter((c) => c.pullRequestId === id))
   )
   const filesCount = useAppSelector(
     (state) =>
@@ -218,6 +227,7 @@ export function PullRequestPage(): ReactElement {
     }>
     icon: typeof MessageSquareIcon
     id: string
+    countColor?: string
     itemCount?: number
     label: string
     width?: 'wide'
@@ -238,9 +248,12 @@ export function PullRequestPage(): ReactElement {
       },
       {
         content: ChecksView,
+        // A count is only worth colouring when it says pass or fail; at zero
+        // there is nothing to report, so the badge goes away entirely.
+        countColor: checkRollupColors[checksRollup],
         icon: ListCheckIcon,
         id: 'checks',
-        itemCount: checksCount,
+        itemCount: checksCount > 0 ? checksCount : undefined,
         label: 'Checks'
       },
       {
@@ -253,7 +266,7 @@ export function PullRequestPage(): ReactElement {
         width: 'wide'
       }
     ],
-    [checksCount, filesCount, openBlockerCount]
+    [checksCount, checksRollup, filesCount, openBlockerCount]
   )
 
   useEffect(
@@ -370,16 +383,21 @@ export function PullRequestPage(): ReactElement {
         onValueChange={handleTabChange}
       >
         <div className="w-full shrink-0 px-6 bg-background">
-          <TabsList className="bg-transparent w-full">
+          <TabsList className="bg-transparent">
             {tabs.map((tab) => (
               <TabsTrigger
                 key={tab.id}
-                className="px-6 py-2 cursor-pointer text-xs flex-1 flex justify-center items-center"
+                className="px-3 py-2 cursor-pointer text-xs flex items-center"
                 value={tab.id}
               >
                 <tab.icon className="size-4" /> {tab.label}
                 {tab.itemCount !== undefined && (
-                  <div className="text-2xs tabular-nums bg-muted rounded-sm text-center px-1.5 ml-1.5 mt-1">
+                  <div
+                    className={cn(
+                      'text-2xs tabular-nums bg-muted rounded-sm text-center min-w-4 px-1.5 ml-1.5',
+                      tab.countColor
+                    )}
+                  >
                     {tab.itemCount}
                   </div>
                 )}

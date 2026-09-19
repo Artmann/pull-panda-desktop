@@ -258,7 +258,7 @@ describe('PullRequestPage', () => {
       expect(screen.getByText('2')).toBeInTheDocument()
     })
 
-    it('displays zero counts when no details are loaded', async () => {
+    it('hides the checks badge when there are no checks', async () => {
       const pullRequest = createMockPullRequest({ id: 'pr-1', isAuthor: true })
 
       const store = createTestStore({
@@ -272,7 +272,8 @@ describe('PullRequestPage', () => {
       const checksTab = screen.getByRole('tab', { name: /checks/i })
       const filesTab = screen.getByRole('tab', { name: /files/i })
 
-      expect(checksTab.querySelector('.bg-muted')?.textContent).toEqual('0')
+      // A checks badge reads as pass or fail, so zero has nothing to say.
+      expect(checksTab.querySelector('.bg-muted')).toEqual(null)
       expect(filesTab.querySelector('.bg-muted')?.textContent).toEqual('0')
     })
 
