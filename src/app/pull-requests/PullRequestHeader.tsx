@@ -109,23 +109,23 @@ export const PullRequestHeader = memo(function PullRequestHeader({
       <div className="flex items-center gap-3.5">
         {pullRequest.state === 'OPEN' &&
           (pullRequest.isDraft ? (
-            <Badge className="bg-status-neutral border-status-neutral-border text-status-neutral-foreground text-[10px]">
+            <Badge className="bg-status-neutral border-status-neutral-border text-status-neutral-foreground text-2xs">
               Draft
             </Badge>
           ) : (
-            <Badge className="bg-status-success border-status-success-border text-status-success-foreground text-[10px]">
+            <Badge className="bg-status-success border-status-success-border text-status-success-foreground text-2xs">
               Ready for review
             </Badge>
           ))}
 
         {pullRequest.state === 'CLOSED' && (
-          <Badge className="bg-status-danger border-status-danger-border text-status-danger-foreground text-[10px]">
+          <Badge className="bg-status-danger border-status-danger-border text-status-danger-foreground text-2xs">
             Closed
           </Badge>
         )}
 
         {pullRequest.state === 'MERGED' && (
-          <Badge className="bg-status-merged border-status-merged-border text-status-merged-foreground text-[10px]">
+          <Badge className="bg-status-merged border-status-merged-border text-status-merged-foreground text-2xs">
             Merged
           </Badge>
         )}
@@ -142,7 +142,7 @@ export const PullRequestHeader = memo(function PullRequestHeader({
         <div className="flex items-center gap-2.5 rounded-lg border border-border bg-card px-3.5 py-2.5 text-xs text-muted-foreground">
           <GitCommitIcon className="size-3.5 shrink-0" />
 
-          <span className="font-mono shrink-0">
+          <span className="shrink-0 tabular-nums">
             {commits.length} {commits.length === 1 ? 'commit' : 'commits'}
           </span>
 
@@ -150,7 +150,7 @@ export const PullRequestHeader = memo(function PullRequestHeader({
             <>
               <span className="opacity-40">·</span>
 
-              <span className="truncate font-mono flex-1">
+              <span className="truncate flex-1">
                 {latestCommit.message.length > 80
                   ? latestCommit.message.slice(0, 80) + '…'
                   : latestCommit.message}
@@ -159,7 +159,7 @@ export const PullRequestHeader = memo(function PullRequestHeader({
           )}
 
           {latestCommit?.gitHubCreatedAt && (
-            <span className="font-mono shrink-0">
+            <span className="shrink-0 tabular-nums">
               <TimeAgo dateTime={latestCommit.gitHubCreatedAt} />
             </span>
           )}
@@ -226,7 +226,7 @@ function InlineEditableTitle({
       <input
         aria-label="Pull request title"
         autoFocus
-        className="w-full text-[26px] font-semibold leading-tight tracking-tight text-foreground bg-transparent border-0 border-b-2 border-primary outline-none focus:ring-0 py-0.5"
+        className="w-full text-2xl font-semibold leading-tight tracking-tight text-foreground bg-transparent border-0 border-b-2 border-primary outline-none focus:ring-0 py-0.5"
         value={draft}
         onBlur={handleSave}
         onChange={(event) => setDraft(event.target.value)}
@@ -245,7 +245,7 @@ function InlineEditableTitle({
   return (
     <h1
       className={cn(
-        'font-semibold leading-tight tracking-tight text-foreground transition-all duration-200 ease-out text-[26px]',
+        'font-semibold leading-tight tracking-tight text-foreground transition-all duration-200 ease-out text-2xl',
         !isMerged && 'cursor-text hover:opacity-80'
       )}
       onClick={isMerged ? undefined : handleStartEdit}
@@ -298,9 +298,9 @@ function Breadcrumbs({
   pullRequest: PullRequest
 }): ReactElement {
   return (
-    <div className="flex items-center gap-2 text-xs font-mono text-muted-foreground">
+    <div className="flex items-center gap-2 text-xs text-muted-foreground">
       <Breadcrumb>
-        <BreadcrumbList className="gap-1 sm:gap-1 text-xs font-mono">
+        <BreadcrumbList className="gap-1 sm:gap-1 text-xs">
           <BreadcrumbItem>
             <BreadcrumbPage>
               <span className="text-foreground/80">

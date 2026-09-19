@@ -49,7 +49,7 @@ export function SidebarSortMenu({
         align="end"
         className="w-52 p-1.5"
       >
-        <div className="text-muted-foreground px-2 py-1.5 font-mono text-2xs tracking-widest uppercase">
+        <div className="text-muted-foreground px-2 py-1.5 text-2xs font-semibold tracking-wider uppercase">
           Sort by
         </div>
 

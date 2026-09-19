@@ -308,7 +308,7 @@ function ReviewerSection({
 }: ReviewerSectionProps): ReactElement {
   return (
     <div>
-      <div className="px-3 pt-2 pb-1 text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
+      <div className="px-3 pt-2 pb-1 text-2xs font-semibold uppercase tracking-wider text-muted-foreground">
         {title}
       </div>
 
@@ -369,7 +369,7 @@ function ReviewerRow({
 
           {option.isOwner && (
             <Badge
-              className="text-[9px] px-1.5 py-0 bg-[var(--status-success)] border-[var(--status-success-border)] text-[var(--status-success-foreground)]"
+              className="text-2xs px-1.5 py-0 bg-status-success border-status-success-border text-status-success-foreground"
               variant="outline"
             >
               OWNER
@@ -378,7 +378,7 @@ function ReviewerRow({
         </div>
 
         {subLabel && (
-          <div className="truncate text-[11px] text-muted-foreground">
+          <div className="truncate text-xs text-muted-foreground">
             {subLabel}
           </div>
         )}

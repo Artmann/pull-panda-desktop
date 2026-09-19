@@ -41,7 +41,7 @@ export function AppFooter(): ReactElement {
         select-none
       "
     >
-      <div className="flex items-center gap-1.5 font-mono text-[10px] text-muted-foreground min-w-0">
+      <div className="flex items-center gap-1.5 text-xs tabular-nums text-muted-foreground min-w-0">
         {isBusy ? (
           <>
             <Loader2 className="size-2.5 animate-spin shrink-0" />

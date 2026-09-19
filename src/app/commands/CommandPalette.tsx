@@ -392,11 +392,11 @@ function CommandItem({
       {command.shortcut && (
         <div className="flex items-center gap-0.5">
           {command.shortcut.mod && (
-            <div className="uppercase border border-border text-muted-foreground px-1.5 py-0.5 rounded-sm text-[11px]">
+            <div className="uppercase border border-border text-muted-foreground px-1.5 py-0.5 rounded-sm text-2xs tabular-nums">
               {isMac() ? '⌘' : 'Ctrl'}
             </div>
           )}
-          <div className="uppercase border border-border text-muted-foreground px-1.5 py-0.5 rounded-sm text-[11px]">
+          <div className="uppercase border border-border text-muted-foreground px-1.5 py-0.5 rounded-sm text-2xs tabular-nums">
             {command.shortcut.key}
           </div>
         </div>

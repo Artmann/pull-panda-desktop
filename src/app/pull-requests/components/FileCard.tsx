@@ -52,7 +52,7 @@ export function FileCard({ children }: FileCardProps): ReactElement {
         ref={cardRef}
         className={`
           border border-border rounded-md bg-card
-          text-xs text-foreground font-mono
+          text-xs text-foreground
         `}
       >
         {children}

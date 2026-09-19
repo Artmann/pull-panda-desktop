@@ -375,7 +375,7 @@ export function PullRequestPage(): ReactElement {
               >
                 <tab.icon className="size-4" /> {tab.label}
                 {tab.itemCount !== undefined && (
-                  <div className="text-[11px] bg-muted rounded-sm text-center px-1.5 ml-1.5 mt-1">
+                  <div className="text-2xs tabular-nums bg-muted rounded-sm text-center px-1.5 ml-1.5 mt-1">
                     {tab.itemCount}
                   </div>
                 )}

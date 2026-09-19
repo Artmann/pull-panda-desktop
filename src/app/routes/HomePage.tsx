@@ -25,7 +25,7 @@ export function HomePage(): ReactElement {
   return (
     <div className="h-full w-full flex items-center justify-center p-8">
       <div className="flex max-w-md flex-col items-center gap-3 text-center">
-        <div className="font-mono text-[11px] font-medium uppercase tracking-wider text-primary">
+        <div className="text-2xs font-semibold uppercase tracking-wider text-primary">
           {dayjs().format('dddd, MMMM D')}
         </div>
 

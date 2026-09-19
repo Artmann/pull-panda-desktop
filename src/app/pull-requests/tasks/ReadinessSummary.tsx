@@ -60,9 +60,7 @@ export function ReadinessSummary({
 
       <div className="min-w-0 flex-1">
         <div className="text-base font-semibold tracking-tight">{headline}</div>
-        <div className="mt-1 font-mono text-xs text-muted-foreground">
-          {subheadline}
-        </div>
+        <div className="mt-1 text-xs text-muted-foreground">{subheadline}</div>
       </div>
 
       <div className="flex items-center gap-4">
@@ -114,7 +112,7 @@ function Stat({ count, label, tone }: StatProps): ReactElement {
       >
         {count}
       </div>
-      <div className="mt-0.5 font-mono text-[9px] uppercase tracking-widest text-muted-foreground">
+      <div className="mt-0.5 text-2xs font-semibold uppercase tracking-wider text-muted-foreground">
         {label}
       </div>
     </div>

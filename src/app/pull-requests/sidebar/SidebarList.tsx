@@ -68,12 +68,14 @@ export function SidebarList({
 
   return (
     <>
-      <div className="text-muted-foreground flex shrink-0 items-center justify-between gap-2 px-3 pt-2.5 pb-3 font-mono text-2xs tracking-widest uppercase">
+      <div className="text-muted-foreground flex shrink-0 items-center justify-between gap-2 px-3 pt-2.5 pb-3 text-2xs font-semibold tracking-wider uppercase">
         <span className="shrink-0 whitespace-nowrap">
           {countLabel(rows.length)}
         </span>
 
-        <span className="min-w-0 truncate normal-case">{sortLabel}</span>
+        <span className="min-w-0 truncate font-normal tracking-normal normal-case">
+          {sortLabel}
+        </span>
       </div>
 
       <div

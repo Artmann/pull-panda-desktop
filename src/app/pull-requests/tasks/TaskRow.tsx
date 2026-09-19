@@ -341,7 +341,7 @@ function CollapsedHeader({ isDone, task }: CollapsedHeaderProps): ReactElement {
               alt={task.authorLogin}
               src={task.authorAvatarUrl ?? undefined}
             />
-            <AvatarFallback className="text-[9px] uppercase">
+            <AvatarFallback className="text-2xs leading-none uppercase">
               {task.authorLogin.slice(0, 2)}
             </AvatarFallback>
           </Avatar>
@@ -358,7 +358,7 @@ function CollapsedHeader({ isDone, task }: CollapsedHeaderProps): ReactElement {
       </div>
 
       {task.meta && (
-        <div className="mt-1 truncate font-mono text-[11px] text-muted-foreground pt-1">
+        <div className="mt-1 truncate text-xs text-muted-foreground pt-1">
           {task.meta}
         </div>
       )}

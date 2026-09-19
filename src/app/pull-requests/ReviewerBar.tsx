@@ -138,7 +138,7 @@ export const ReviewerBar = memo(function ReviewerBar({
     <div className="flex items-center gap-2.5 rounded-lg border border-border bg-card px-3.5 py-2">
       {!isEmpty && (
         <>
-          <span className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
+          <span className="text-2xs font-semibold uppercase tracking-wider text-muted-foreground">
             Reviewers
           </span>
 

@@ -302,7 +302,7 @@ function OperationsTable({
                 {operation.errorCount > 0 ? (
                   <Badge
                     variant="destructive"
-                    className="shrink-0 px-1 py-0 text-[10px] leading-tight"
+                    className="shrink-0 px-1 py-0 text-2xs leading-tight"
                   >
                     {operation.errorCount}
                   </Badge>
@@ -370,7 +370,7 @@ function TraceTable({ traces, onSelect }: TraceTableProps): ReactElement {
                 {trace.status === 'error' ? (
                   <Badge
                     variant="destructive"
-                    className="shrink-0 px-1 py-0 text-[10px] leading-tight"
+                    className="shrink-0 px-1 py-0 text-2xs leading-tight"
                   >
                     error
                   </Badge>

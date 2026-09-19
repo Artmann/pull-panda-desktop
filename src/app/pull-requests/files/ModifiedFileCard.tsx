@@ -286,11 +286,15 @@ function FileChangeStats({
   return (
     <>
       {(additions ?? 0) > 0 && (
-        <span className="text-status-success-foreground">+{additions}</span>
+        <span className="text-status-success-foreground tabular-nums">
+          +{additions}
+        </span>
       )}
 
       {(deletions ?? 0) > 0 && (
-        <span className="text-status-danger-foreground">-{deletions}</span>
+        <span className="text-status-danger-foreground tabular-nums">
+          -{deletions}
+        </span>
       )}
     </>
   )
