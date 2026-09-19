@@ -7,6 +7,7 @@ import checksReducer from '@/app/store/checks-slice'
 import pullRequestsReducer from '@/app/store/pull-requests-slice'
 import type { PullRequest } from '@/types/pull-request'
 
+import { PullRequestNavigationProvider } from '../PullRequestNavigationProvider'
 import { PullRequestSidebar } from './PullRequestSidebar'
 import { storyRows } from './sidebar-story-fixtures'
 
@@ -32,13 +33,15 @@ function Harness({
   return (
     <Provider store={buildStore(items)}>
       <MemoryRouter initialEntries={[initialPath]}>
-        <div className="border-border flex h-160 rounded-lg border">
-          <PullRequestSidebar />
+        <PullRequestNavigationProvider>
+          <div className="border-border flex h-160 rounded-lg border">
+            <PullRequestSidebar />
 
-          <div className="text-muted-foreground flex flex-1 items-center justify-center text-sm">
-            Pull request detail
+            <div className="text-muted-foreground flex flex-1 items-center justify-center text-sm">
+              Pull request detail
+            </div>
           </div>
-        </div>
+        </PullRequestNavigationProvider>
       </MemoryRouter>
     </Provider>
   )

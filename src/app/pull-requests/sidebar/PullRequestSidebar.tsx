@@ -1,10 +1,9 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useMemo, useState } from 'react'
 import type { ReactElement } from 'react'
-import { useLocation, useNavigate } from 'react-router'
+import { useLocation } from 'react-router'
 
 import { getCheckRollup, type CheckRollup } from '@/app/components/check-rollup'
 import { extractPullRequestId } from '@/app/commands/context'
-import { setSidebarNavigation } from '@/app/commands/sidebar-accessor'
 import { useAppSelector } from '@/app/store/hooks'
 import type { Check } from '@/types/pull-request-details'
 
@@ -15,12 +14,12 @@ import {
   hasActiveFilters,
   sortOptions,
   sortRows,
-  stepIndex,
   type SidebarFilters,
   type SortId
 } from './sidebar-data'
 import { SidebarList } from './SidebarList'
 import { SidebarSearchHeader } from './SidebarSearchHeader'
+import { useSidebarSelection } from './use-sidebar-selection'
 import { useSidebarWidth } from './use-sidebar-width'
 
 function buildCheckRollups(checks: Check[]): Map<string, CheckRollup> {
@@ -47,7 +46,6 @@ function buildCheckRollups(checks: Check[]): Map<string, CheckRollup> {
 
 export function PullRequestSidebar(): ReactElement {
   const location = useLocation()
-  const navigate = useNavigate()
 
   const pullRequests = useAppSelector((state) => state.pullRequests.items)
   const checks = useAppSelector((state) => state.checks.items)
@@ -82,34 +80,7 @@ export function PullRequestSidebar(): ReactElement {
     [allRows, filters, sort]
   )
 
-  const select = useCallback(
-    (pullRequestId: string) => {
-      navigate(`/pull-requests/${pullRequestId}`)
-    },
-    [navigate]
-  )
-
-  const step = useCallback(
-    (offset: number) => {
-      const next = stepIndex(visibleRows, selectedId, offset)
-
-      if (next !== undefined) {
-        select(visibleRows[next].pullRequest.id)
-      }
-    },
-    [select, selectedId, visibleRows]
-  )
-
-  useEffect(() => {
-    setSidebarNavigation({
-      selectNext: () => step(1),
-      selectPrevious: () => step(-1)
-    })
-
-    return () => {
-      setSidebarNavigation(null)
-    }
-  }, [step])
+  const select = useSidebarSelection(visibleRows, selectedId)
 
   const sortLabel =
     sortOptions.find((option) => option.id === sort)?.label ?? ''

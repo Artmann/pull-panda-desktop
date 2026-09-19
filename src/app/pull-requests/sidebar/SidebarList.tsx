@@ -1,8 +1,11 @@
 import { useVirtualizer } from '@tanstack/react-virtual'
 import { useEffect, useRef, type ReactElement } from 'react'
 
+import { maximumJumpShortcuts } from '@/app/commands/sidebar-accessor'
+
 import { PullRequestSidebarRow } from './PullRequestSidebarRow'
 import { countLabel, type SidebarRow } from './sidebar-data'
+import { useModifierHeld } from './use-modifier-held'
 
 // Two lines of text plus padding, and the 4px gap below each row. Rows are a
 // fixed height in practice; `measureElement` corrects anything that is not.
@@ -30,6 +33,8 @@ export function SidebarList({
   sortLabel
 }: SidebarListProps): ReactElement {
   const scrollRef = useRef<HTMLDivElement | null>(null)
+
+  const isModifierHeld = useModifierHeld()
 
   const virtualizer = useVirtualizer({
     count: rows.length,
@@ -99,6 +104,11 @@ export function SidebarList({
                   }}
                 >
                   <PullRequestSidebarRow
+                    hotkey={
+                      isModifierHeld && virtualRow.index < maximumJumpShortcuts
+                        ? virtualRow.index + 1
+                        : undefined
+                    }
                     isSelected={row.pullRequest.id === selectedId}
                     onSelect={onSelect}
                     row={row}

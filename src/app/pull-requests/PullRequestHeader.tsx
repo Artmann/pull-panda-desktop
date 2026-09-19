@@ -1,7 +1,6 @@
 import {
   ArrowRight,
   Check,
-  ChevronLeft,
   Copy,
   GitBranch,
   GitCommitIcon,
@@ -9,7 +8,6 @@ import {
 } from 'lucide-react'
 import { memo, ReactElement, useMemo, useState } from 'react'
 import { shallowEqual } from 'react-redux'
-import { useNavigate } from 'react-router'
 import { toast } from 'sonner'
 import invariant from 'tiny-invariant'
 
@@ -336,22 +334,8 @@ function Breadcrumbs({
 }: {
   pullRequest: PullRequest
 }): ReactElement {
-  const navigate = useNavigate()
-
   return (
     <div className="flex items-center gap-2 text-xs font-mono text-muted-foreground">
-      <Button
-        aria-label="Back to dashboard"
-        className="size-[18px]"
-        onClick={() => navigate('/')}
-        size="icon-xs"
-        title="Back to dashboard"
-        type="button"
-        variant="outline"
-      >
-        <ChevronLeft className="size-2" />
-      </Button>
-
       <Breadcrumb>
         <BreadcrumbList className="gap-1 sm:gap-1 text-xs font-mono">
           <BreadcrumbItem>

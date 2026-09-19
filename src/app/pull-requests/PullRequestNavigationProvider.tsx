@@ -7,7 +7,7 @@ import {
   useRef,
   type ReactNode
 } from 'react'
-import { useNavigate } from 'react-router'
+import { useLocation, useNavigate } from 'react-router'
 
 import { setPullRequestNavigation } from '@/app/commands/pr-navigation-accessor'
 
@@ -21,6 +21,7 @@ const noop = (): void => {
 }
 
 export interface PullRequestNavigationApi {
+  getActiveTab: () => string | undefined
   getScrollPosition: (pullRequestId: string, tab: string) => number
   jumpToLandmark: (id: string) => void
   jumpToNextLandmark: () => void
@@ -33,6 +34,58 @@ export interface PullRequestNavigationApi {
   registerScrollContainer: (element: HTMLElement | null) => void
   setActiveKey: (pullRequestId: string, tab: string) => void
   setActiveTab: (pullRequestId: string, tab: string) => void
+}
+
+/**
+ * Records `element`'s scroll offset against whichever `prId::tab` key is active,
+ * coalescing bursts into one write per frame. Returns a cleanup function.
+ *
+ * The key and the offset are both captured when the scroll event fires rather
+ * than inside the animation frame. A tab change can land in between, and
+ * reading them late files the scroll under the tab being switched *to* — which
+ * is then restored on the next visit and drags the sticky header with it.
+ */
+function trackScrollPositions(
+  element: HTMLElement,
+  getActiveKey: () => string | null,
+  positions: Map<string, number>
+): () => void {
+  let rafId: number | null = null
+  let pending: { key: string; scrollTop: number } | null = null
+
+  const onScroll = () => {
+    const key = getActiveKey()
+
+    if (!key) {
+      return
+    }
+
+    // Overwriting `pending` is what keeps the coalescing: newest scroll wins.
+    pending = { key, scrollTop: element.scrollTop }
+
+    if (rafId !== null) {
+      return
+    }
+
+    rafId = requestAnimationFrame(() => {
+      rafId = null
+
+      if (pending) {
+        positions.set(pending.key, pending.scrollTop)
+        pending = null
+      }
+    })
+  }
+
+  element.addEventListener('scroll', onScroll, { passive: true })
+
+  return () => {
+    element.removeEventListener('scroll', onScroll)
+
+    if (rafId !== null) {
+      cancelAnimationFrame(rafId)
+    }
+  }
 }
 
 const PullRequestNavigationContext =
@@ -48,6 +101,7 @@ export function PullRequestNavigationProvider({
   children
 }: PullRequestNavigationProviderProps) {
   const navigate = useNavigate()
+  const location = useLocation()
 
   const containerRef = useRef<HTMLElement | null>(null)
   const scrollListenerCleanupRef = useRef<(() => void) | null>(null)
@@ -68,33 +122,11 @@ export function PullRequestNavigationProvider({
       return
     }
 
-    let rafId: number | null = null
-
-    const onScroll = () => {
-      if (rafId !== null) {
-        return
-      }
-
-      rafId = requestAnimationFrame(() => {
-        rafId = null
-
-        const key = activeKeyRef.current
-
-        if (key) {
-          scrollPositionsRef.current.set(key, element.scrollTop)
-        }
-      })
-    }
-
-    element.addEventListener('scroll', onScroll, { passive: true })
-
-    scrollListenerCleanupRef.current = () => {
-      element.removeEventListener('scroll', onScroll)
-
-      if (rafId !== null) {
-        cancelAnimationFrame(rafId)
-      }
-    }
+    scrollListenerCleanupRef.current = trackScrollPositions(
+      element,
+      () => activeKeyRef.current,
+      scrollPositionsRef.current
+    )
   }, [])
 
   const setActiveKey = useCallback((pullRequestId: string, tab: string) => {
@@ -107,6 +139,14 @@ export function PullRequestNavigationProvider({
     },
     []
   )
+
+  // Derived from the URL rather than a ref, so it is empty whenever no pull
+  // request is open and never goes stale.
+  const activeTab = new URLSearchParams(location.search).get('tab') ?? undefined
+
+  const getActiveTab = useCallback((): string | undefined => {
+    return activeTab
+  }, [activeTab])
 
   const setActiveTab = useCallback(
     (pullRequestId: string, tab: string) => {
@@ -264,6 +304,7 @@ export function PullRequestNavigationProvider({
 
   const api: PullRequestNavigationApi = useMemo(
     () => ({
+      getActiveTab,
       getScrollPosition,
       jumpToLandmark,
       jumpToNextLandmark,
@@ -274,6 +315,7 @@ export function PullRequestNavigationProvider({
       setActiveTab
     }),
     [
+      getActiveTab,
       getScrollPosition,
       jumpToLandmark,
       jumpToNextLandmark,
