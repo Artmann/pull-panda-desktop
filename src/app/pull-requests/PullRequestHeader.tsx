@@ -50,7 +50,7 @@ export const StickyPullRequestHeader = memo(function StickyPullRequestHeader({
         transform: `translateY(${(1 - transitionProgress) * -6}px)`
       }}
     >
-      <div className="w-full max-w-240 mx-auto px-3 py-3">
+      <div className="w-full max-w-wide mx-auto px-6 py-3">
         <Breadcrumbs pullRequest={pullRequest} />
 
         <div className="flex items-center gap-3 min-w-0">
@@ -99,7 +99,7 @@ export const PullRequestHeader = memo(function PullRequestHeader({
   }, [commits])
 
   return (
-    <header className="flex flex-col gap-4 p-6">
+    <header className="flex flex-col gap-4 max-w-content px-6 py-6">
       <Breadcrumbs pullRequest={pullRequest} />
 
       <div>

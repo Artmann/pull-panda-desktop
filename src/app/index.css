@@ -187,6 +187,19 @@
    * viewport-anchored overlays stop above it via `bottom-footer` rather than
    * covering the controls they exist to support. */
   --spacing-footer: 48px;
+  /* Measure. The pull request page centres a `max-w-wide` column and every
+   * surface inside it shares that left edge; only the right edge moves.
+   *
+   *   max-w-content (768px)  Prose and controls. Inside `px-6` that leaves
+   *                          720px of text, about 78 characters at 15px —
+   *                          within the 70-80 a reader can track without
+   *                          losing the line.
+   *   max-w-wide    (960px)  Diffs, file lists and tables, which break out
+   *                          because code wraps badly and a table needs its
+   *                          columns more than a reader needs a short line.
+   */
+  --container-content: 48rem;
+  --container-wide: 60rem;
   /* Type scale. Two body sizes plus one step below them; everything above
    * uses the Tailwind defaults. No arbitrary `text-[Npx]`.
    *

@@ -33,6 +33,7 @@ import {
   LandmarkScope,
   usePullRequestNavigation
 } from '@/app/pull-requests/PullRequestNavigationProvider'
+import { cn } from '@/app/lib/utils'
 import { useAppDispatch, useAppSelector } from '@/app/store/hooks'
 import { mergeDrawerActions } from '@/app/store/merge-drawer-slice'
 import { mergeOptionsActions } from '@/app/store/merge-options-slice'
@@ -219,6 +220,7 @@ export function PullRequestPage(): ReactElement {
     id: string
     itemCount?: number
     label: string
+    width?: 'wide'
   }> = useMemo(
     () => [
       {
@@ -246,7 +248,9 @@ export function PullRequestPage(): ReactElement {
         icon: FileCodeIcon,
         id: 'files',
         itemCount: filesCount,
-        label: 'Files'
+        label: 'Files',
+        // Diffs wrap badly at 78 characters and file paths are long.
+        width: 'wide'
       }
     ],
     [checksCount, filesCount, openBlockerCount]
@@ -321,7 +325,7 @@ export function PullRequestPage(): ReactElement {
 
   if (!pullRequest) {
     return (
-      <div className="container mx-auto py-8 px-4">
+      <div className="w-full max-w-wide mx-auto px-6 py-8">
         <Link to="/">
           <Button
             variant="ghost"
@@ -342,7 +346,7 @@ export function PullRequestPage(): ReactElement {
 
   return (
     <div
-      className="w-full max-w-240 mx-auto"
+      className="w-full max-w-wide mx-auto"
       ref={containerRef}
     >
       <StickyPullRequestHeader
@@ -365,7 +369,7 @@ export function PullRequestPage(): ReactElement {
         value={activeTab}
         onValueChange={handleTabChange}
       >
-        <div className="w-full max-w-240 mx-auto shrink-0 px-6 bg-background">
+        <div className="w-full shrink-0 px-6 bg-background">
           <TabsList className="bg-transparent w-full">
             {tabs.map((tab) => (
               <TabsTrigger
@@ -389,12 +393,17 @@ export function PullRequestPage(): ReactElement {
             <TabsContent
               key={tab.id}
               aria-hidden={tab.id !== activeTab}
-              className="h-full px-6 py-0"
+              className="h-full py-0"
               forceMount
               hidden={tab.id !== activeTab}
               value={tab.id}
             >
-              <div className="w-full pb-6">
+              <div
+                className={cn(
+                  'w-full px-6 pb-6',
+                  tab.width === 'wide' ? 'max-w-wide' : 'max-w-content'
+                )}
+              >
                 {id ? (
                   <LandmarkScope
                     pullRequestId={id}
