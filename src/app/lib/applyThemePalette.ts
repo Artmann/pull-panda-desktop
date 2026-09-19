@@ -1,6 +1,12 @@
 import type { ThemePalette } from './themes'
 
-const variableMap: Record<keyof ThemePalette, string> = {
+/**
+ * The single source of truth for which CSS custom property each palette field
+ * drives. Exported so themes.test.ts can check the stylesheet and the palettes
+ * against the same mapping: any field added to ThemePalette is then covered by
+ * the drift test automatically.
+ */
+export const themeVariableMap: Record<keyof ThemePalette, string> = {
   accent: '--accent',
   accentForeground: '--accent-foreground',
   background: '--background',
@@ -54,7 +60,7 @@ const variableMap: Record<keyof ThemePalette, string> = {
 export function applyThemePalette(palette: ThemePalette): void {
   const root = document.documentElement.style
 
-  for (const [key, cssVariable] of Object.entries(variableMap)) {
+  for (const [key, cssVariable] of Object.entries(themeVariableMap)) {
     root.setProperty(cssVariable, palette[key as keyof ThemePalette])
   }
 }
