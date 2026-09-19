@@ -4,7 +4,8 @@ import { useEffect, useRef, type ReactElement } from 'react'
 import { maximumJumpShortcuts } from '@/app/commands/sidebar-accessor'
 
 import { PullRequestSidebarRow } from './PullRequestSidebarRow'
-import { countLabel, type SidebarRow } from './sidebar-data'
+import { countLabel, type SidebarRow, type SortId } from './sidebar-data'
+import { SidebarSortMenu } from './SidebarSortMenu'
 import { useModifierHeld } from './use-modifier-held'
 
 // Two lines of text plus padding, and the 4px gap below each row. Rows are a
@@ -19,18 +20,20 @@ interface SidebarListProps {
   hasFilters: boolean
   onClearFilters: () => void
   onSelect: (pullRequestId: string) => void
+  onSortChange: (sort: SortId) => void
   rows: readonly SidebarRow[]
   selectedId: string | undefined
-  sortLabel: string
+  sort: SortId
 }
 
 export function SidebarList({
   hasFilters,
   onClearFilters,
   onSelect,
+  onSortChange,
   rows,
   selectedId,
-  sortLabel
+  sort
 }: SidebarListProps): ReactElement {
   const scrollRef = useRef<HTMLDivElement | null>(null)
 
@@ -73,9 +76,10 @@ export function SidebarList({
           {countLabel(rows.length)}
         </span>
 
-        <span className="min-w-0 truncate font-normal tracking-normal normal-case">
-          {sortLabel}
-        </span>
+        <SidebarSortMenu
+          onSortChange={onSortChange}
+          sort={sort}
+        />
       </div>
 
       <div

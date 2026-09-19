@@ -1,4 +1,4 @@
-import { ArrowDownUp, Check } from 'lucide-react'
+import { Check, ChevronDown } from 'lucide-react'
 import { useState, type ReactElement } from 'react'
 
 import {
@@ -29,20 +29,30 @@ export function SidebarSortMenu({
       onOpenChange={setIsOpen}
       open={isOpen}
     >
+      {/*
+        The trigger is the caption itself, so it inherits the caption row's caps
+        and tracking and has to opt back out: a sort order is a sentence, and
+        setting it in caps beside the count is what made it read as a second
+        label rather than as the control it is.
+      */}
       <PopoverTrigger
         aria-label={`Sort: ${activeLabel}`}
         className={cn(
-          'flex size-7.5 shrink-0 items-center justify-center rounded-md border',
+          'flex min-w-0 items-center gap-1 rounded-sm',
+          '-mx-1 -my-0.5 px-1 py-0.5',
+          'text-2xs font-normal tracking-normal normal-case',
           'cursor-pointer transition-colors',
           'focus-visible:ring-sidebar-ring outline-none focus-visible:ring-2',
           isOpen
-            ? 'border-primary/60 bg-primary/10 text-primary'
-            : 'border-input text-muted-foreground hover:text-foreground'
+            ? 'text-foreground'
+            : 'text-muted-foreground hover:text-foreground'
         )}
         title={`Sort: ${activeLabel}`}
         type="button"
       >
-        <ArrowDownUp className="size-3.5" />
+        <span className="min-w-0 truncate">{activeLabel}</span>
+
+        <ChevronDown className="size-3 shrink-0" />
       </PopoverTrigger>
 
       <PopoverContent

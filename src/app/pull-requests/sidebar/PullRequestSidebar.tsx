@@ -12,7 +12,6 @@ import {
   emptyFilters,
   filterRows,
   hasActiveFilters,
-  sortOptions,
   sortRows,
   type SidebarFilters,
   type SortId
@@ -82,9 +81,6 @@ export function PullRequestSidebar(): ReactElement {
 
   const select = useSidebarSelection(visibleRows, selectedId)
 
-  const sortLabel =
-    sortOptions.find((option) => option.id === sort)?.label ?? ''
-
   return (
     <>
       <aside
@@ -96,18 +92,17 @@ export function PullRequestSidebar(): ReactElement {
           allRows={allRows}
           filters={filters}
           onFiltersChange={setFilters}
-          onSortChange={setSort}
           resultCount={visibleRows.length}
-          sort={sort}
         />
 
         <SidebarList
           hasFilters={hasActiveFilters(filters)}
           onClearFilters={() => setFilters(emptyFilters)}
           onSelect={select}
+          onSortChange={setSort}
           rows={visibleRows}
           selectedId={selectedId}
-          sortLabel={sortLabel}
+          sort={sort}
         />
       </aside>
 
