@@ -1,4 +1,4 @@
-import type { Element, Root } from 'hast'
+import type { Element as HastElement, Root } from 'hast'
 import isString from 'lodash/isString'
 import { useTheme } from 'next-themes'
 import type { ReactElement } from 'react'
@@ -33,6 +33,51 @@ import { cn } from '@/app/lib/utils'
 // memoised `createMarkdown` callback in `useRemark`).
 const markdownComponents = { a: Link }
 
+// Read the language off the `language-*` class rehype puts on the `code`
+// element, falling back to plain text when the fence carried no language.
+function languageFromClassList(codeElement: Element): string {
+  const languageClass = Array.from(codeElement.classList).find((className) =>
+    className.startsWith('language-')
+  )
+
+  return languageClass?.replace('language-', '') ?? 'text'
+}
+
+// Move Shiki's markup *into* the `pre` React rendered, rather than swapping
+// that element out for Shiki's own. React owns this node: its fiber holds a
+// direct reference to it, and unmounting the block — which happens on every
+// navigation between pull requests, because a content change resets the parsed
+// tree to null — makes React call `removeChild` with exactly this reference.
+// Replacing the element leaves React holding a node that is no longer in the
+// container, and the removal throws "The node to be removed is not a child of
+// this node". Keeping the element identity stable keeps React's view of the DOM
+// correct; only the contents, which React never revisits, are ours to change.
+function adoptHighlightedMarkup(
+  preElement: HTMLElement,
+  highlighted: string
+): void {
+  const wrapper = document.createElement('div')
+
+  wrapper.innerHTML = highlighted
+
+  const highlightedPre = wrapper.firstElementChild
+
+  if (!(highlightedPre instanceof HTMLElement)) {
+    return
+  }
+
+  for (const attribute of Array.from(highlightedPre.attributes)) {
+    if (attribute.name === 'class') {
+      continue
+    }
+
+    preElement.setAttribute(attribute.name, attribute.value)
+  }
+
+  preElement.classList.add(...highlightedPre.classList)
+  preElement.innerHTML = highlightedPre.innerHTML
+}
+
 // Highlight code blocks in the DOM when they come into view
 async function highlightCodeBlocks(
   container: HTMLElement,
@@ -50,42 +95,27 @@ async function highlightCodeBlocks(
   for (const codeElement of codeBlocks) {
     const preElement = codeElement.parentElement
 
-    if (!preElement) {
+    // `shiki` marks the blocks this pass has already rewritten.
+    if (!preElement || preElement.classList.contains('shiki')) {
       continue
     }
-
-    // Skip if already highlighted
-    if (preElement.classList.contains('shiki')) {
-      continue
-    }
-
-    const code = codeElement.textContent ?? ''
-
-    // Detect language from class name (e.g., "language-typescript")
-    const langClass = Array.from(codeElement.classList).find((c) =>
-      c.startsWith('language-')
-    )
-    const lang = langClass?.replace('language-', '') ?? 'text'
 
     // Load the language grammar on demand, falling back to text when unknown
-    const effectiveLang = await ensureLanguageLoaded(highlighter, lang)
+    const effectiveLanguage = await ensureLanguageLoaded(
+      highlighter,
+      languageFromClassList(codeElement)
+    )
 
-    const highlighted = highlighter.codeToHtml(code, {
-      lang: effectiveLang,
-      themes: {
-        dark: darkTheme,
-        light: lightTheme
-      }
-    })
-
-    // Replace the pre element with highlighted HTML
-    const wrapper = document.createElement('div')
-    wrapper.innerHTML = highlighted
-    const newPre = wrapper.firstElementChild
-
-    if (newPre) {
-      preElement.replaceWith(newPre)
-    }
+    adoptHighlightedMarkup(
+      preElement,
+      highlighter.codeToHtml(codeElement.textContent ?? '', {
+        lang: effectiveLanguage,
+        themes: {
+          dark: darkTheme,
+          light: lightTheme
+        }
+      })
+    )
   }
 }
 
@@ -197,7 +227,7 @@ function useRemark({
 
   const rehypeDetectLanguageFromPath: Plugin<[], Root> = useCallback(() => {
     return (tree: Root) => {
-      visit(tree, 'element', (node: Element) => {
+      visit(tree, 'element', (node: HastElement) => {
         if (node.tagName !== 'code') {
           return
         }
