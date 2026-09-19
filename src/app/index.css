@@ -187,12 +187,21 @@
    * viewport-anchored overlays stop above it via `bottom-footer` rather than
    * covering the controls they exist to support. */
   --spacing-footer: 48px;
-  /* One step below text-xs, used by the tiny status badges. */
-  --text-2xs: 0.6rem;
-  /* Sidebar rows: the title sits between text-xs and text-sm, and the mono
-   * metadata line between text-2xs and text-xs. */
-  --text-row-title: 0.8125rem;
-  --text-row-meta: 0.6875rem;
+  /* Type scale. Two body sizes plus one step below them; everything above
+   * uses the Tailwind defaults. No arbitrary `text-[Npx]`.
+   *
+   *   text-2xs (11px)  UPPERCASE micro-labels, badges, chips, keycaps, avatar
+   *                    initials. Caps and digits only: 11px all-caps carries
+   *                    the same x-height presence as 12px lowercase. Never
+   *                    sentence case.
+   *   text-xs  (12px)  The floor for secondary text: timestamps, repo slugs,
+   *                    breadcrumbs, meta lines, counts, file paths.
+   *   text-sm  (14px)  Body default.
+   *
+   * The line-height companion is mandatory. Without it the utility emits
+   * font-size alone and the element inherits its parent's line-height. */
+  --text-2xs: 0.6875rem;
+  --text-2xs--line-height: 1rem;
 }
 
 /* Fonts live in a plain @theme, not the inline block above: Tailwind's

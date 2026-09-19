@@ -68,7 +68,7 @@ export function PullRequestSidebarRow({
         <div className="flex w-full items-center gap-2">
           <span
             className={cn(
-              'min-w-0 truncate text-row-title leading-tight',
+              'min-w-0 truncate text-sm leading-tight',
               unread || isSelected ? 'font-semibold' : 'font-medium',
               titleColor(isSelected, unread)
             )}
@@ -103,12 +103,12 @@ export function PullRequestSidebarRow({
               src={pullRequest.authorAvatarUrl ?? undefined}
             />
 
-            <AvatarFallback className="text-2xs">
+            <AvatarFallback className="text-2xs leading-none">
               {pullRequest.authorLogin?.charAt(0).toUpperCase() ?? '?'}
             </AvatarFallback>
           </Avatar>
 
-          <span className="text-muted-foreground min-w-0 flex-1 truncate font-mono text-row-meta">
+          <span className="text-muted-foreground min-w-0 flex-1 truncate text-xs">
             {slug}
           </span>
 
@@ -143,7 +143,7 @@ function RowTrailing({
     <span className="relative ml-auto shrink-0">
       <span
         className={cn(
-          'text-muted-foreground block font-mono text-row-meta whitespace-nowrap',
+          'text-muted-foreground block text-xs tabular-nums whitespace-nowrap',
           hotkey !== undefined && 'invisible'
         )}
       >
@@ -151,7 +151,7 @@ function RowTrailing({
       </span>
 
       {hotkey !== undefined && (
-        <span className="border-border bg-sidebar-accent text-muted-foreground absolute top-1/2 right-0 -translate-y-1/2 rounded-sm border px-1.5 py-0.5 font-mono text-row-meta leading-none whitespace-nowrap">
+        <span className="border-border bg-sidebar-accent text-muted-foreground absolute top-1/2 right-0 -translate-y-1/2 rounded-sm border px-1.5 py-0.5 text-2xs tabular-nums leading-none whitespace-nowrap">
           {isMac() ? `⌘${hotkey.toString()}` : `Ctrl+${hotkey.toString()}`}
         </span>
       )}

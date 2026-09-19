@@ -84,7 +84,7 @@ export function SidebarFilterPopover({
         <ListFilter className="size-3.5" />
 
         {activeFilterCount > 0 && (
-          <span className="bg-primary text-primary-foreground absolute -top-1 -right-1 flex h-3.5 min-w-3.5 items-center justify-center rounded-full px-1 font-mono text-2xs font-semibold">
+          <span className="bg-primary text-primary-foreground absolute -top-1 -right-1 flex h-3.5 min-w-3.5 items-center justify-center rounded-full px-1 text-2xs font-semibold tabular-nums leading-none">
             {activeFilterCount}
           </span>
         )}

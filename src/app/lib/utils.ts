@@ -5,7 +5,7 @@ import { extendTailwindMerge } from 'tailwind-merge'
 // tailwind-merge cannot see the theme, so without this it reads `text-2xs` as
 // a *colour* utility and silently drops it when a class list also sets a text
 // colour — the class never reaches the DOM and the element inherits its size.
-const fontSizes = ['2xs', 'row-title', 'row-meta']
+const fontSizes = ['2xs']
 
 const twMerge = extendTailwindMerge({
   extend: {
