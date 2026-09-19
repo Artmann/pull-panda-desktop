@@ -5,7 +5,7 @@ import {
   Loader2,
   MoreHorizontalIcon
 } from 'lucide-react'
-import { Fragment, ReactElement } from 'react'
+import { Fragment, type ReactElement, type ReactNode } from 'react'
 
 import type { MergeOptions } from '@/app/lib/api'
 import { Button } from '@/app/components/ui/button'
@@ -17,6 +17,12 @@ import {
   DropdownMenuTrigger
 } from '@/app/components/ui/dropdown-menu'
 import { Separator } from '@/app/components/ui/separator'
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger
+} from '@/app/components/ui/tooltip'
+import { Kbd } from '@/app/components/Kbd'
 import { CheckoutBranchButton } from '@/app/pull-requests/components/CheckoutBranchButton'
 import { getMergeButtonLabel } from '@/app/pull-requests/merge-button-label'
 import { usePullRequestNavigation } from '@/app/pull-requests/PullRequestNavigationProvider'
@@ -166,24 +172,61 @@ function LandmarkNavigation(): ReactElement {
 
   return (
     <div className="flex items-center gap-1">
-      <Button
+      <LandmarkButton
+        hotkey="K"
+        label="Previous section"
         onClick={() => navigation.jumpToPreviousLandmark()}
-        size="icon-xs"
-        title="Previous landmark (k)"
-        variant="outline"
       >
         <ChevronUp className="size-3" />
-      </Button>
+      </LandmarkButton>
 
-      <Button
+      <LandmarkButton
+        hotkey="J"
+        label="Next section"
         onClick={() => navigation.jumpToNextLandmark()}
-        size="icon-xs"
-        title="Next landmark (j)"
-        variant="outline"
       >
         <ChevronDown className="size-3" />
-      </Button>
+      </LandmarkButton>
     </div>
+  )
+}
+
+/**
+ * The chevrons move between the sections of the open pull request — the
+ * description, each file, each comment thread — not between pull requests,
+ * which is shift+J and shift+K and has no buttons. "Landmark" is what the
+ * navigation API calls them; the reader gets told "section".
+ */
+function LandmarkButton({
+  children,
+  hotkey,
+  label,
+  onClick
+}: {
+  children: ReactNode
+  hotkey: string
+  label: string
+  onClick: () => void
+}): ReactElement {
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <Button
+          aria-label={label}
+          onClick={onClick}
+          size="icon-xs"
+          variant="outline"
+        >
+          {children}
+        </Button>
+      </TooltipTrigger>
+
+      <TooltipContent className="flex items-center gap-2">
+        {label}
+
+        <Kbd className="border-background/40 text-background">{hotkey}</Kbd>
+      </TooltipContent>
+    </Tooltip>
   )
 }
 
@@ -236,7 +279,7 @@ function MergeButton({
   mergeOptions,
   onOpenMergeDrawer
 }: MergeButtonProps): ReactElement {
-  return (
+  const button = (
     <Button
       onClick={onOpenMergeDrawer}
       size="xs"
@@ -249,6 +292,30 @@ function MergeButton({
       )}
       {getMergeButtonLabel(mergeOptions)}
     </Button>
+  )
+
+  const blockers = (mergeOptions?.requirements ?? []).filter(
+    (requirement) => !requirement.satisfied
+  )
+
+  // The label already says *that* the merge is blocked; the tooltip is where
+  // it says what by, so there is nothing to add when nothing blocks it.
+  if (blockers.length === 0) {
+    return button
+  }
+
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>{button}</TooltipTrigger>
+
+      <TooltipContent className="max-w-64">
+        <ul className="space-y-1">
+          {blockers.map((requirement) => (
+            <li key={requirement.key}>{requirement.description}</li>
+          ))}
+        </ul>
+      </TooltipContent>
+    </Tooltip>
   )
 }
 

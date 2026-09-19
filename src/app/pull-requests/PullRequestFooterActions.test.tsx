@@ -24,6 +24,8 @@ import { createMockPullRequest } from './__test-helpers__/pull-request-fixtures'
 import { PullRequestFooterActions } from './PullRequestFooterActions'
 import { PullRequestNavigationProvider } from './PullRequestNavigationProvider'
 
+import { TooltipProvider } from '@/app/components/ui/tooltip'
+
 vi.mock('@/app/lib/api', () => ({
   createReview: vi.fn(),
   deleteReview: vi.fn(),
@@ -90,9 +92,11 @@ function renderWithProviders(
     store,
     ...render(
       <Provider store={store}>
-        <MemoryRouter>
-          <PullRequestNavigationProvider>{ui}</PullRequestNavigationProvider>
-        </MemoryRouter>
+        <TooltipProvider>
+          <MemoryRouter>
+            <PullRequestNavigationProvider>{ui}</PullRequestNavigationProvider>
+          </MemoryRouter>
+        </TooltipProvider>
       </Provider>
     )
   }

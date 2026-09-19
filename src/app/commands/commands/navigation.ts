@@ -47,7 +47,7 @@ tabs.forEach((tab, index) => {
 // Landmark jump commands (j/k on PR detail view)
 commandRegistry.register({
   id: 'navigation.landmark-next',
-  label: 'Jump To Next Landmark',
+  label: 'Jump To Next Section',
   icon: ChevronDown,
   group: 'navigation',
   shortcut: { key: 'j' },
@@ -61,7 +61,7 @@ commandRegistry.register({
 
 commandRegistry.register({
   id: 'navigation.landmark-previous',
-  label: 'Jump To Previous Landmark',
+  label: 'Jump To Previous Section',
   icon: ChevronUp,
   group: 'navigation',
   shortcut: { key: 'k' },
