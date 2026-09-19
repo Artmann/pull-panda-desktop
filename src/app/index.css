@@ -1,5 +1,3 @@
-@import '@fontsource-variable/geist';
-@import '@fontsource-variable/geist-mono';
 @import '@fontsource/ibm-plex-sans/400.css';
 @import '@fontsource/ibm-plex-sans/500.css';
 @import '@fontsource/ibm-plex-sans/600.css';
@@ -197,6 +195,19 @@
   --text-row-meta: 0.6875rem;
 }
 
+/* Fonts live in a plain @theme, not the inline block above: Tailwind's
+ * preflight resolves --default-font-family and --default-mono-font-family from
+ * these, which gives `html` IBM Plex Sans and `code`, `pre`, `kbd`, `samp` IBM
+ * Plex Mono for free. The block above has to stay `inline` because its colour
+ * tokens point at per-theme variables that applyThemePalette swaps at runtime;
+ * these two never change, so they belong at :root. */
+@theme {
+  --font-sans:
+    'IBM Plex Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font-sans--font-feature-settings: 'ss01';
+  --font-mono: 'IBM Plex Mono', ui-monospace, 'SF Mono', Consolas, monospace;
+}
+
 html,
 body,
 #root {
@@ -208,24 +219,9 @@ body,
 body {
   background-color: var(--background);
   color: var(--foreground);
-  font-family:
-    'IBM Plex Sans',
-    -apple-system,
-    BlinkMacSystemFont,
-    'Segoe UI',
-    sans-serif;
-  font-feature-settings: 'ss01' on;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   text-rendering: optimizeLegibility;
-}
-
-.font-mono,
-code,
-pre,
-kbd,
-samp {
-  font-family: 'IBM Plex Mono', ui-monospace, 'SF Mono', Consolas, monospace;
 }
 
 /* macOS-style scrollbars */
