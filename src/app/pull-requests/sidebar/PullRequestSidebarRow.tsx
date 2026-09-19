@@ -5,6 +5,7 @@ import {
   checkRollupIcons,
   getCheckRollupLabel
 } from '@/app/components/check-rollup'
+import { getPullRequestStatus } from '@/app/components/pull-request-status'
 import { PullRequestStatusBadge } from '@/app/components/PullRequestStatusBadge'
 import { isMac } from '@/app/commands/utils'
 import { formatTimestamp } from '@/app/components/TimeAgo'
@@ -55,6 +56,11 @@ export function PullRequestSidebarRow({
   const CheckIcon = checkRollupIcons[checkRollup]
 
   const slug = `${pullRequest.repositoryName} #${pullRequest.number.toString()}`
+
+  // `Pending` is what a pull request is when nothing else is true, so the pill
+  // landed on most rows and told the reader nothing they had not already
+  // worked out from its absence elsewhere.
+  const hasStatus = getPullRequestStatus(pullRequest) !== 'Pending'
 
   return (
     <SidebarRowContextMenu pullRequest={pullRequest}>
@@ -127,12 +133,14 @@ export function PullRequestSidebarRow({
             {slug}
           </span>
 
-          <div className="shrink-0">
-            <PullRequestStatusBadge
-              pullRequest={pullRequest}
-              size="compact"
-            />
-          </div>
+          {hasStatus && (
+            <div className="shrink-0">
+              <PullRequestStatusBadge
+                pullRequest={pullRequest}
+                size="compact"
+              />
+            </div>
+          )}
         </div>
       </button>
     </SidebarRowContextMenu>

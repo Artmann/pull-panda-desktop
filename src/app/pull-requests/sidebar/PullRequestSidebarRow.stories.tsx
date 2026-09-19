@@ -46,6 +46,10 @@ export default meta
 
 type Story = StoryObj<typeof meta>
 
+/**
+ * The everyday row. Nothing has happened to it yet, so it carries no status
+ * pill — "Pending" is the absence of news rather than news.
+ */
 export const Read: Story = {}
 
 export const Unread: Story = {
@@ -106,6 +110,20 @@ export const Approved: Story = {
         repositoryName: 'pull-panda-desktop',
         title: 'Add a tab with review tasks',
         updatedAt: hoursAgo(14)
+      })
+    })
+  }
+}
+
+export const ChangesRequested: Story = {
+  args: {
+    row: buildRow({
+      pullRequest: createMockPullRequest({
+        changesRequestedCount: 1,
+        number: 109,
+        repositoryName: 'pmkin-app-remix',
+        title: 'Create the content planner',
+        updatedAt: hoursAgo(30)
       })
     })
   }
