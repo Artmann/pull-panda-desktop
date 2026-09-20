@@ -48,6 +48,11 @@ interface PullRequestFooterActionsProps {
 // are always present, the primary control on the right follows what the pull
 // request needs next, and everything low-frequency lives behind the overflow
 // menu.
+//
+// The overflow menu leads the action group rather than sitting inside it. The
+// bar is right-aligned, so the last element is in the window corner, and that
+// position belongs to whatever the pull request needs next — merging it,
+// approving it — not to the catch-all.
 export function PullRequestFooterActions({
   pullRequest
 }: PullRequestFooterActionsProps): ReactElement {
@@ -76,31 +81,7 @@ export function PullRequestFooterActions({
     <div className="flex items-center gap-2">
       <LandmarkNavigation />
 
-      <Separator orientation="vertical" />
-
-      <CheckoutBranchButton pullRequest={pullRequest} />
-
-      {review.pendingComments.length > 0 && (
-        <span className="text-muted-foreground whitespace-nowrap">
-          {review.pendingComments.length} pending{' '}
-          {review.pendingComments.length === 1 ? 'comment' : 'comments'}
-        </span>
-      )}
-
-      {canStartReview && (
-        <>
-          <Separator orientation="vertical" />
-
-          <Button
-            onClick={handleStartReview}
-            size="xs"
-          >
-            Start review
-          </Button>
-        </>
-      )}
-
-      <Separator orientation="vertical" />
+      <ActionSeparator />
 
       <OverflowMenu
         actions={[
@@ -113,6 +94,35 @@ export function PullRequestFooterActions({
           ...overflowActions
         ]}
       />
+
+      <CheckoutBranchButton pullRequest={pullRequest} />
+
+      {review.pendingComments.length > 0 && (
+        <span className="text-muted-foreground whitespace-nowrap">
+          {review.pendingComments.length} pending{' '}
+          {review.pendingComments.length === 1 ? 'comment' : 'comments'}
+        </span>
+      )}
+
+      {canStartReview && (
+        <>
+          <ActionSeparator />
+
+          <Button
+            onClick={handleStartReview}
+            size="xs"
+          >
+            Start review
+          </Button>
+        </>
+      )}
+
+      {/*
+        Only a rule between two things. With the overflow menu moved to the
+        front of the group, a closed pull request has nothing after this point
+        and would otherwise end the bar on a dangling separator.
+      */}
+      {(review.hasPendingReview || canMerge) && <ActionSeparator />}
 
       {review.hasPendingReview && <ReviewSubmitActions review={review} />}
 
@@ -165,6 +175,30 @@ function buildReviewOverflowActions({
   }
 
   return actions
+}
+
+/**
+ * A toolbar rule between two groups of actions.
+ *
+ * The shared `Separator` sizes a vertical rule with `h-full`, which resolves
+ * against the flex row around it — and that row's height comes from its own
+ * content, so the percentage has nothing to resolve against and the rule
+ * collapses to zero. Both of the separator's stories work around this by
+ * giving the row a fixed height; here the height is given to the rule
+ * instead, so the buttons are still free to set the height of the bar.
+ *
+ * The override carries the same `data-[orientation=vertical]` prefix as the
+ * rule it replaces. A bare `h-4` looks like it would win, but it is neither a
+ * tailwind-merge conflict with the prefixed class nor specific enough to
+ * outrank the attribute selector it compiles to, so `h-full` would survive.
+ */
+function ActionSeparator(): ReactElement {
+  return (
+    <Separator
+      className="data-[orientation=vertical]:h-4"
+      orientation="vertical"
+    />
+  )
 }
 
 function LandmarkNavigation(): ReactElement {
