@@ -45,7 +45,7 @@ export function SidebarRowContextMenu({
     <ContextMenu>
       <ContextMenuTrigger asChild>{children}</ContextMenuTrigger>
 
-      <ContextMenuContent className="w-52">
+      <ContextMenuContent className="w-44">
         <ContextMenuItem onSelect={handleOpenInGitHub}>
           <ExternalLinkIcon />
           Open in GitHub

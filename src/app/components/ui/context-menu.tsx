@@ -43,6 +43,13 @@ function ContextMenuContent({
   )
 }
 
+/*
+  A step smaller than the shadcn default, which is `text-sm` with `size-3.5`
+  icons. The only thing that opens a context menu is a sidebar row, and the
+  menu was coming up larger than the row it was summoned from — its titles are
+  `text-sm` and everything under them is `text-xs`. Secondary actions about a
+  row should not outweigh the row.
+*/
 function ContextMenuItem({
   className,
   ...props
@@ -50,7 +57,7 @@ function ContextMenuItem({
   return (
     <ContextMenuPrimitive.Item
       className={cn(
-        'focus:bg-accent focus:text-accent-foreground relative flex cursor-default items-center gap-2 rounded-sm px-2 py-1.5 text-sm outline-none transition-colors select-none data-[disabled]:pointer-events-none data-[disabled]:opacity-50 [&_svg]:size-3.5 [&_svg]:shrink-0',
+        'focus:bg-accent focus:text-accent-foreground relative flex cursor-default items-center gap-2 rounded-sm px-2 py-1 text-xs outline-none transition-colors select-none data-[disabled]:pointer-events-none data-[disabled]:opacity-50 [&_svg]:size-3 [&_svg]:shrink-0',
         className
       )}
       data-slot="context-menu-item"
