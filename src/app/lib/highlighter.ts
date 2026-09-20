@@ -13,6 +13,8 @@ let highlighterPromise: Promise<Highlighter> | null = null
 
 const languageLoadPromises = new Map<string, Promise<void>>()
 
+const warmLanguages = ['javascript', 'json', 'typescript']
+
 export async function getSharedHighlighter(): Promise<Highlighter> {
   if (sharedHighlighter) {
     return sharedHighlighter
@@ -20,23 +22,41 @@ export async function getSharedHighlighter(): Promise<Highlighter> {
 
   if (!highlighterPromise) {
     highlighterPromise = createHighlighter({
-      themes: allShikiThemeValues as unknown as BundledTheme[],
-      langs: []
+      langs: [],
+      themes: allShikiThemeValues as unknown as BundledTheme[]
     })
+      .then((highlighter) => {
+        sharedHighlighter = highlighter
 
-    sharedHighlighter = await highlighterPromise
+        return highlighter
+      })
+      .catch((error) => {
+        // Drop the rejected promise so a later call can try again, instead of
+        // latching the failure for the rest of the session.
+        highlighterPromise = null
+
+        throw error
+      })
   }
 
   return highlighterPromise
 }
 
-// Lazily load a language grammar on demand and return the language id to use
-// for highlighting. Falls back to 'text' when the language is unknown or fails
-// to load. Concurrent requests for the same language share a single load.
-export async function ensureLanguageLoaded(
+// The synchronous view of the shared highlighter: `null` until it has finished
+// loading. Callers use it to highlight before paint when everything is already
+// warm, and fall back to the async path when it is not.
+export function getLoadedHighlighter(): Highlighter | null {
+  return sharedHighlighter
+}
+
+// The resolution rules `ensureLanguageLoaded` applies, without awaiting
+// anything. Returns `null` when a grammar still has to be fetched, which tells
+// the caller to take the async path for that block. Keeping both paths on this
+// one function is what stops them from disagreeing about a language.
+export function resolveLoadedLanguage(
   highlighter: Highlighter,
   language: string
-): Promise<string> {
+): string | null {
   if (language === 'text' || language === 'plaintext') {
     return 'text'
   }
@@ -47,6 +67,22 @@ export async function ensureLanguageLoaded(
 
   if (!(language in bundledLanguages)) {
     return 'text'
+  }
+
+  return null
+}
+
+// Lazily load a language grammar on demand and return the language id to use
+// for highlighting. Falls back to 'text' when the language is unknown or fails
+// to load. Concurrent requests for the same language share a single load.
+export async function ensureLanguageLoaded(
+  highlighter: Highlighter,
+  language: string
+): Promise<string> {
+  const loadedLanguage = resolveLoadedLanguage(highlighter, language)
+
+  if (loadedLanguage) {
+    return loadedLanguage
   }
 
   let loadPromise = languageLoadPromises.get(language)
@@ -70,6 +106,23 @@ export async function ensureLanguageLoaded(
   }
 
   return language
+}
+
+// Load the highlighter and the grammars most code blocks use before anything
+// asks for them, so the first highlighted block can render in the same frame as
+// the markdown around it rather than a beat later.
+export function warmHighlighter(): void {
+  getSharedHighlighter()
+    .then((highlighter) =>
+      Promise.all(
+        warmLanguages.map((language) =>
+          ensureLanguageLoaded(highlighter, language)
+        )
+      )
+    )
+    .catch((error) => {
+      console.error('Highlighter warm-up failed:', error)
+    })
 }
 
 const languageByExtension: Record<string, string> = {
