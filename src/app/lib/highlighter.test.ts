@@ -1,9 +1,10 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 
 import {
   ensureLanguageLoaded,
   getLanguageFromPath,
-  getSharedHighlighter
+  getSharedHighlighter,
+  resolveLoadedLanguage
 } from './highlighter'
 
 describe('getLanguageFromPath', () => {
@@ -115,5 +116,45 @@ describe('ensureLanguageLoaded', () => {
     const language = await ensureLanguageLoaded(highlighter, 'not-a-language')
 
     expect(language).toEqual('text')
+  })
+})
+
+describe('getLoadedHighlighter', () => {
+  it('returns null until the shared highlighter has finished loading', async () => {
+    // A fresh copy of the module, because the singleton is module-global and
+    // the tests above have already warmed the one in this file's instance.
+    vi.resetModules()
+
+    const freshModule = await import('./highlighter')
+
+    expect(freshModule.getLoadedHighlighter()).toEqual(null)
+
+    await freshModule.getSharedHighlighter()
+
+    expect(freshModule.getLoadedHighlighter()).not.toEqual(null)
+  })
+})
+
+describe('resolveLoadedLanguage', () => {
+  it('resolves a grammar that is already loaded', async () => {
+    const highlighter = await getSharedHighlighter()
+
+    await ensureLanguageLoaded(highlighter, 'elm')
+
+    expect(resolveLoadedLanguage(highlighter, 'elm')).toEqual('elm')
+  })
+
+  it('returns null for a bundled grammar that still has to be fetched', async () => {
+    const highlighter = await getSharedHighlighter()
+
+    expect(resolveLoadedLanguage(highlighter, 'zig')).toEqual(null)
+  })
+
+  it('resolves plaintext and unknown languages to text without loading', async () => {
+    const highlighter = await getSharedHighlighter()
+
+    expect(resolveLoadedLanguage(highlighter, 'plaintext')).toEqual('text')
+    expect(resolveLoadedLanguage(highlighter, 'text')).toEqual('text')
+    expect(resolveLoadedLanguage(highlighter, 'not-a-language')).toEqual('text')
   })
 })

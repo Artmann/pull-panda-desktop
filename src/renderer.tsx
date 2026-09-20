@@ -30,6 +30,8 @@ import { createRoot } from 'react-dom/client'
 
 import { App } from './app/App'
 import { buildPreloadedState } from './app/lib/bootstrap-state'
+import { warmHighlighter } from './app/lib/highlighter'
+import { scheduleIdleTask } from './app/lib/idle-scheduler'
 import { createStore } from './app/store'
 import './app/index.css'
 
@@ -47,6 +49,11 @@ async function main() {
   // syntax-highlight worker response is delivered to the first (unmounted)
   // instance, so diffs always render without highlighting in development.
   createRoot(root).render(<App store={store} />)
+
+  // Load Shiki and the grammars most code blocks use while the app settles,
+  // so the first highlighted block arrives in the same frame as the markdown
+  // around it rather than a beat later.
+  scheduleIdleTask(() => warmHighlighter())
 }
 
 main()
