@@ -15,6 +15,7 @@ import commentsReducer from '@/app/store/comments-slice'
 import commitsReducer from '@/app/store/commits-slice'
 import connectedReposReducer from '@/app/store/connected-repos-slice'
 import draftsReducer from '@/app/store/drafts-slice'
+import mergeDrawerReducer from '@/app/store/merge-drawer-slice'
 import mergeOptionsReducer from '@/app/store/merge-options-slice'
 import modifiedFilesReducer from '@/app/store/modified-files-slice'
 import pendingReviewCommentsReducer from '@/app/store/pending-review-comments-slice'
@@ -34,6 +35,8 @@ import { installObserverStubs } from '@/app/pull-requests/__test-helpers__/test-
 import { PullRequestNavigationProvider } from '@/app/pull-requests/PullRequestNavigationProvider'
 
 import { PullRequestPage } from './PullRequestPage'
+
+import { TooltipProvider } from '@/app/components/ui/tooltip'
 
 vi.mock('@/app/lib/api', () => ({
   clearFocusedPullRequest: vi.fn().mockResolvedValue(undefined),
@@ -88,6 +91,7 @@ function createTestStore(
       commits: commitsReducer,
       connectedRepos: connectedReposReducer,
       drafts: draftsReducer,
+      mergeDrawer: mergeDrawerReducer,
       mergeOptions: mergeOptionsReducer,
       modifiedFiles: modifiedFilesReducer,
       pendingReviewComments: pendingReviewCommentsReducer,
@@ -110,6 +114,7 @@ function createTestStore(
         initialized: true
       },
       drafts: {},
+      mergeDrawer: { openForPullRequestId: null },
       mergeOptions: {},
       modifiedFiles: { items: options.modifiedFiles ?? [] },
       pendingReviewComments: {},
@@ -138,18 +143,20 @@ function renderWithProviders(
   return render(
     <Provider store={store}>
       <ThemeProvider>
-        <AuthProvider>
-          <MemoryRouter initialEntries={[`/pr/${pullRequestId}`]}>
-            <PullRequestNavigationProvider>
-              <Routes>
-                <Route
-                  element={<PullRequestPage />}
-                  path="/pr/:id"
-                />
-              </Routes>
-            </PullRequestNavigationProvider>
-          </MemoryRouter>
-        </AuthProvider>
+        <TooltipProvider>
+          <AuthProvider>
+            <MemoryRouter initialEntries={[`/pr/${pullRequestId}`]}>
+              <PullRequestNavigationProvider>
+                <Routes>
+                  <Route
+                    element={<PullRequestPage />}
+                    path="/pr/:id"
+                  />
+                </Routes>
+              </PullRequestNavigationProvider>
+            </MemoryRouter>
+          </AuthProvider>
+        </TooltipProvider>
       </ThemeProvider>
     </Provider>
   )
@@ -255,7 +262,7 @@ describe('PullRequestPage', () => {
       expect(screen.getByText('2')).toBeInTheDocument()
     })
 
-    it('displays zero counts when no details are loaded', async () => {
+    it('hides the checks badge when there are no checks', async () => {
       const pullRequest = createMockPullRequest({ id: 'pr-1', isAuthor: true })
 
       const store = createTestStore({
@@ -269,7 +276,8 @@ describe('PullRequestPage', () => {
       const checksTab = screen.getByRole('tab', { name: /checks/i })
       const filesTab = screen.getByRole('tab', { name: /files/i })
 
-      expect(checksTab.querySelector('.bg-muted')?.textContent).toEqual('0')
+      // A checks badge reads as pass or fail, so zero has nothing to say.
+      expect(checksTab.querySelector('.bg-muted')).toEqual(null)
       expect(filesTab.querySelector('.bg-muted')?.textContent).toEqual('0')
     })
 

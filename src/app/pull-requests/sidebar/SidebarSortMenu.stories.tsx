@@ -20,7 +20,18 @@ const meta = {
   component: SidebarSortMenu,
   parameters: { layout: 'centered' },
   tags: ['autodocs'],
-  args: { onSortChange: () => undefined, sort: 'needs' }
+  args: { onSortChange: () => undefined, sort: 'needs' },
+  decorators: [
+    // The caption row the trigger lives in, caps and all, so the story shows
+    // whether the trigger's own casing survives the inheritance.
+    (Story) => (
+      <div className="bg-sidebar text-muted-foreground border-sidebar-border flex w-85 items-center justify-between gap-2 rounded-lg border px-3 py-2.5 text-2xs font-semibold tracking-wider uppercase">
+        <span className="shrink-0 whitespace-nowrap">10 pull requests</span>
+
+        <Story />
+      </div>
+    )
+  ]
 } satisfies Meta<typeof SidebarSortMenu>
 
 export default meta

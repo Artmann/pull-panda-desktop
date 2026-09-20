@@ -20,6 +20,7 @@ import { ErrorBoundary } from '@/app/components/ErrorBoundary'
 import { FpsCounter } from '@/app/components/FpsCounter'
 import { TitleBar } from '@/app/components/TitleBar'
 import { Toaster } from '@/app/components/ui/sonner'
+import { TooltipProvider } from '@/app/components/ui/tooltip'
 import { AuthProvider, useAuth } from '@/app/lib/store/authContext'
 import { TasksProvider } from '@/app/lib/store/tasksContext'
 import { ThemeProvider } from '@/app/lib/store/themeContext'
@@ -51,21 +52,23 @@ export function App({ store }: AppProps): ReactElement {
     <Provider store={store}>
       <HashRouter>
         <ThemeProvider>
-          <DiffsWorkerPoolProvider>
-            <TasksProvider>
-              <AuthProvider>
-                <CommandContextProvider>
-                  <PullRequestNavigationProvider>
-                    <ShortcutListener />
-                    <CommandPalette />
-                    <FpsCounter />
-                    <AppContent />
-                  </PullRequestNavigationProvider>
-                </CommandContextProvider>
-              </AuthProvider>
-            </TasksProvider>
-            <Toaster />
-          </DiffsWorkerPoolProvider>
+          <TooltipProvider>
+            <DiffsWorkerPoolProvider>
+              <TasksProvider>
+                <AuthProvider>
+                  <CommandContextProvider>
+                    <PullRequestNavigationProvider>
+                      <ShortcutListener />
+                      <CommandPalette />
+                      <FpsCounter />
+                      <AppContent />
+                    </PullRequestNavigationProvider>
+                  </CommandContextProvider>
+                </AuthProvider>
+              </TasksProvider>
+              <Toaster />
+            </DiffsWorkerPoolProvider>
+          </TooltipProvider>
         </ThemeProvider>
       </HashRouter>
     </Provider>
@@ -168,12 +171,10 @@ function AppShell({
         {showSidebar && <PullRequestSidebar />}
 
         {/*
-          The positioned, non-scrolling wrapper is the containing block for
-          overlays that float above the main pane — PullRequestToolbar in
-          particular. Anchoring to it rather than the viewport keeps them
-          centred on the content instead of the whole window, at any sidebar
-          width, and they escape the scroller's clipping because their
-          containing block sits above it.
+          `relative` makes this box the one StickyPullRequestHeader pins itself
+          to. It is the content column — beside the sidebar, and outside the
+          scroll container below — so an absolute bar inside the page lands
+          across the content and nothing else, at any sidebar width.
         */}
         <div className="relative flex flex-1 min-w-0 min-h-0">
           {/*

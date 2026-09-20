@@ -2,12 +2,12 @@ import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import { useHotkeys } from 'react-hotkeys-hook'
 import { ArrowLeft } from 'lucide-react'
 
+import { Kbd, modifierKey } from '../components/Kbd'
 import { Input } from '../components/ui/input'
 import { useCommandContext } from './context'
 import { commandRegistry } from './registry'
 import { Command, CommandOption } from './types'
 import { cn } from '../lib/utils'
-import { isMac } from './utils'
 
 type PaletteMode = 'commands' | 'params'
 
@@ -391,14 +391,9 @@ function CommandItem({
 
       {command.shortcut && (
         <div className="flex items-center gap-0.5">
-          {command.shortcut.mod && (
-            <div className="uppercase border border-border text-muted-foreground px-1.5 py-0.5 rounded-sm text-[11px]">
-              {isMac() ? '⌘' : 'Ctrl'}
-            </div>
-          )}
-          <div className="uppercase border border-border text-muted-foreground px-1.5 py-0.5 rounded-sm text-[11px]">
-            {command.shortcut.key}
-          </div>
+          {command.shortcut.mod && <Kbd>{modifierKey()}</Kbd>}
+
+          <Kbd>{command.shortcut.key}</Kbd>
         </div>
       )}
     </div>

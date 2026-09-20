@@ -9,8 +9,9 @@ import {
 
 import { commandRegistry } from '../registry'
 import { getNavigate } from '../context'
+import { pullRequestPath } from '@/app/pull-requests/pull-request-path'
 import { getPullRequestNavigation } from '../pr-navigation-accessor'
-import { getSidebarNavigation } from '../sidebar-accessor'
+import { getSidebarNavigation, maximumJumpShortcuts } from '../sidebar-accessor'
 import { getStore } from '../store-accessor'
 import type { PullRequest } from '@/types/pull-request'
 
@@ -46,7 +47,7 @@ tabs.forEach((tab, index) => {
 // Landmark jump commands (j/k on PR detail view)
 commandRegistry.register({
   id: 'navigation.landmark-next',
-  label: 'Jump To Next Landmark',
+  label: 'Jump To Next Section',
   icon: ChevronDown,
   group: 'navigation',
   shortcut: { key: 'j' },
@@ -60,7 +61,7 @@ commandRegistry.register({
 
 commandRegistry.register({
   id: 'navigation.landmark-previous',
-  label: 'Jump To Previous Landmark',
+  label: 'Jump To Previous Section',
   icon: ChevronUp,
   group: 'navigation',
   shortcut: { key: 'k' },
@@ -98,6 +99,25 @@ commandRegistry.register({
     getSidebarNavigation()?.selectPrevious()
   }
 })
+
+// Jump straight to the Nth pull request in the sidebar (mod+1 .. mod+9).
+// `mod` resolves to Cmd on macOS and Ctrl elsewhere, so this covers both. Only
+// 1-9: Electron's default menu binds mod+0 to resetZoom. These do not collide
+// with the plain 1-4 tab shortcuts because `matchesShortcut` compares every
+// modifier strictly.
+for (let position = 1; position <= maximumJumpShortcuts; position++) {
+  commandRegistry.register({
+    id: `navigation.jump-to-pull-request-${position.toString()}`,
+    icon: PanelLeft,
+    label: `Go To Pull Request ${position.toString()}`,
+    group: 'navigation',
+    shortcut: { key: position.toString(), mod: true },
+    isAvailable: () => getSidebarNavigation() !== null,
+    execute: () => {
+      getSidebarNavigation()?.selectIndex(position - 1)
+    }
+  })
+}
 
 // Go home command
 commandRegistry.register({
@@ -152,6 +172,11 @@ commandRegistry.register<PullRequest>({
 
     const navigate = getNavigate()
 
-    navigate(`/pull-requests/${pullRequest.id}`)
+    navigate(
+      pullRequestPath(
+        pullRequest.id,
+        getPullRequestNavigation()?.getActiveTab()
+      )
+    )
   }
 })

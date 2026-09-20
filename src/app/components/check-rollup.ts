@@ -10,6 +10,20 @@ import type { Check } from '@/types/pull-request-details'
 
 export type CheckRollup = 'failing' | 'none' | 'passing' | 'running'
 
+export interface CheckTally {
+  failed: number
+  /**
+   * Succeeded or skipped — everything `getCheckRollup` reads as good news. A
+   * ratio built from this agrees with the colour beside it: a suite with one
+   * skipped check still rolls up to passing, so it must not read "7/8".
+   */
+  passing: number
+  running: number
+  skipped: number
+  successful: number
+  total: number
+}
+
 const failedConclusions = new Set(['error', 'failure'])
 const runningStates = new Set(['in_progress', 'queued'])
 
@@ -49,38 +63,51 @@ export function getCheckRollupLabel(rollup: CheckRollup): string {
 }
 
 export function getCheckRollupSummary(checks: readonly Check[]): string {
-  const running = checks.filter(isCheckRunning).length
-  const failed = checks.filter(isCheckFailed).length
-  const skipped = checks.filter(
-    (check) => check.conclusion?.toLowerCase() === 'skipped'
-  ).length
-  const successful = checks.filter(
-    (check) => check.conclusion?.toLowerCase() === 'success'
-  ).length
-
+  const tally = getCheckTally(checks)
   const parts: string[] = []
 
-  if (running > 0) {
-    parts.push(`${running.toString()} running`)
+  if (tally.running > 0) {
+    parts.push(`${tally.running.toString()} running`)
   }
 
-  if (failed > 0) {
-    parts.push(`${failed.toString()} failed`)
+  if (tally.failed > 0) {
+    parts.push(`${tally.failed.toString()} failed`)
   }
 
-  if (skipped > 0) {
-    parts.push(`${skipped.toString()} skipped`)
+  if (tally.skipped > 0) {
+    parts.push(`${tally.skipped.toString()} skipped`)
   }
 
-  if (successful > 0) {
-    parts.push(`${successful.toString()} successful`)
+  if (tally.successful > 0) {
+    parts.push(`${tally.successful.toString()} successful`)
   }
 
   if (parts.length === 0) {
-    return `${checks.length.toString()} checks`
+    return `${tally.total.toString()} checks`
   }
 
   return parts.join(', ')
+}
+
+export function getCheckTally(checks: readonly Check[]): CheckTally {
+  const hasConclusion = (check: Check, conclusion: string): boolean =>
+    check.conclusion?.toLowerCase() === conclusion
+
+  const skipped = checks.filter((check) =>
+    hasConclusion(check, 'skipped')
+  ).length
+  const successful = checks.filter((check) =>
+    hasConclusion(check, 'success')
+  ).length
+
+  return {
+    failed: checks.filter(isCheckFailed).length,
+    passing: skipped + successful,
+    running: checks.filter(isCheckRunning).length,
+    skipped,
+    successful,
+    total: checks.length
+  }
 }
 
 export const checkRollupColors: Record<CheckRollup, string> = {

@@ -53,35 +53,41 @@ export function TitleBar(): ReactElement {
 
   return (
     <div className="title-bar h-8 flex items-center justify-between bg-titlebar border-b border-border select-none">
+      {/*
+        macOS keeps its traffic lights in the top-left corner, so the buttons
+        are padded clear of them and pushed to the far side of this column.
+        Everywhere else the corner is ours, and they sit flush against it.
+      */}
       <div
-        className={cn('flex-1 max-w-50 h-full', isMac && 'pl-17')}
+        className={cn(
+          'flex-1 max-w-50 h-full flex items-center',
+          isMac && 'pl-17 justify-end'
+        )}
         style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}
       >
-        <div className="h-full flex items-center float-right">
-          <NavigationButton
-            disabled={!canGoBack}
-            onClick={handleBack}
-            testId="title-bar-back"
-          >
-            <ChevronLeftIcon className="size-4" />
-          </NavigationButton>
+        <NavigationButton
+          disabled={!canGoBack}
+          onClick={handleBack}
+          testId="title-bar-back"
+        >
+          <ChevronLeftIcon className="size-4" />
+        </NavigationButton>
 
-          <NavigationButton
-            disabled={!canGoForward}
-            onClick={handleForward}
-            testId="title-bar-forward"
-          >
-            <ChevronRightIcon className="size-4" />
-          </NavigationButton>
+        <NavigationButton
+          disabled={!canGoForward}
+          onClick={handleForward}
+          testId="title-bar-forward"
+        >
+          <ChevronRightIcon className="size-4" />
+        </NavigationButton>
 
-          <TitleBarLink
-            isActive={isSettingsActive}
-            testId="title-bar-settings"
-            to="/settings"
-          >
-            <SettingsIcon className="size-4" />
-          </TitleBarLink>
-        </div>
+        <TitleBarLink
+          isActive={isSettingsActive}
+          testId="title-bar-settings"
+          to="/settings"
+        >
+          <SettingsIcon className="size-4" />
+        </TitleBarLink>
       </div>
 
       <div

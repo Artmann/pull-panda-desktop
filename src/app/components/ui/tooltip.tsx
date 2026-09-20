@@ -4,28 +4,32 @@ import * as TooltipPrimitive from '@radix-ui/react-tooltip'
 import { cn } from '@/app/lib/utils'
 
 function TooltipProvider({
-  delayDuration = 0,
+  delayDuration = 300,
+  skipDelayDuration = 400,
   ...props
 }: React.ComponentProps<typeof TooltipPrimitive.Provider>) {
   return (
     <TooltipPrimitive.Provider
       data-slot="tooltip-provider"
       delayDuration={delayDuration}
+      skipDelayDuration={skipDelayDuration}
       {...props}
     />
   )
 }
 
+// No provider of its own: one is mounted at the root of the app (and of
+// Storybook) so that every tooltip shares a delay, and so that moving between
+// two neighbouring tooltips inside the skip window shows the second one at
+// once instead of making the reader wait again.
 function Tooltip({
   ...props
 }: React.ComponentProps<typeof TooltipPrimitive.Root>) {
   return (
-    <TooltipProvider>
-      <TooltipPrimitive.Root
-        data-slot="tooltip"
-        {...props}
-      />
-    </TooltipProvider>
+    <TooltipPrimitive.Root
+      data-slot="tooltip"
+      {...props}
+    />
   )
 }
 
@@ -64,4 +68,4 @@ function TooltipContent({
   )
 }
 
-export { Tooltip, TooltipTrigger, TooltipContent }
+export { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger }

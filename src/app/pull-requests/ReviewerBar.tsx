@@ -135,33 +135,27 @@ export const ReviewerBar = memo(function ReviewerBar({
   const isEmpty = entries.length === 0
 
   return (
-    <div className="flex items-center gap-2.5 rounded-lg border border-border bg-card px-3.5 py-2">
+    <div className="flex items-center gap-2">
       {!isEmpty && (
-        <>
-          <span className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
-            Reviewers
-          </span>
+        <div className="flex items-center -space-x-1.5">
+          {entries.map((entry) => (
+            <Tooltip key={entry.login}>
+              <TooltipTrigger asChild>
+                <div className="relative">
+                  <UserAvatar
+                    avatarUrl={entry.avatarUrl}
+                    login={entry.displayName}
+                  />
+                  <ReviewerStatusIndicator status={entry.status} />
+                </div>
+              </TooltipTrigger>
 
-          <div className="flex items-center -space-x-1.5">
-            {entries.map((entry) => (
-              <Tooltip key={entry.login}>
-                <TooltipTrigger asChild>
-                  <div className="relative">
-                    <UserAvatar
-                      avatarUrl={entry.avatarUrl}
-                      login={entry.displayName}
-                    />
-                    <ReviewerStatusIndicator status={entry.status} />
-                  </div>
-                </TooltipTrigger>
-
-                <TooltipContent>
-                  {statusTooltip(entry.displayName, entry.status)}
-                </TooltipContent>
-              </Tooltip>
-            ))}
-          </div>
-        </>
+              <TooltipContent>
+                {statusTooltip(entry.displayName, entry.status)}
+              </TooltipContent>
+            </Tooltip>
+          ))}
+        </div>
       )}
 
       <ReviewerPicker

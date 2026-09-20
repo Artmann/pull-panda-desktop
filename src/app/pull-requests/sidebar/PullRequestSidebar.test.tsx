@@ -2,19 +2,29 @@
  * @vitest-environment jsdom
  */
 import { configureStore } from '@reduxjs/toolkit'
-import { render, screen, within } from '@testing-library/react'
+import { act, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { Provider } from 'react-redux'
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router'
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 
+// Pin the platform so the jump modifier is Meta rather than whatever jsdom's
+// navigator.platform happens to report.
+vi.mock('@/app/commands/utils', () => ({
+  isMac: () => true
+}))
+
+import { getSidebarNavigation } from '@/app/commands/sidebar-accessor'
 import checksReducer from '@/app/store/checks-slice'
 import pullRequestsReducer from '@/app/store/pull-requests-slice'
 import type { Check } from '@/types/pull-request-details'
 import type { PullRequest } from '@/types/pull-request'
 
 import { createMockPullRequest } from '../__test-helpers__/pull-request-fixtures'
+import { PullRequestNavigationProvider } from '../PullRequestNavigationProvider'
 import { PullRequestSidebar } from './PullRequestSidebar'
+
+import { TooltipProvider } from '@/app/components/ui/tooltip'
 
 const pullRequests: PullRequest[] = [
   createMockPullRequest({
@@ -62,7 +72,7 @@ const pullRequests: PullRequest[] = [
 function LocationProbe() {
   const location = useLocation()
 
-  return <div data-testid="pathname">{location.pathname}</div>
+  return <div data-testid="pathname">{location.pathname + location.search}</div>
 }
 
 function renderSidebar({
@@ -80,16 +90,20 @@ function renderSidebar({
 
   return render(
     <Provider store={store}>
-      <MemoryRouter initialEntries={[initialPath]}>
-        <PullRequestSidebar />
-        <LocationProbe />
-        <Routes>
-          <Route
-            element={null}
-            path="*"
-          />
-        </Routes>
-      </MemoryRouter>
+      <TooltipProvider>
+        <MemoryRouter initialEntries={[initialPath]}>
+          <PullRequestNavigationProvider>
+            <PullRequestSidebar />
+            <LocationProbe />
+            <Routes>
+              <Route
+                element={null}
+                path="*"
+              />
+            </Routes>
+          </PullRequestNavigationProvider>
+        </MemoryRouter>
+      </TooltipProvider>
     </Provider>
   )
 }
@@ -134,6 +148,31 @@ describe('PullRequestSidebar', () => {
     expect(screen.getByTestId('pathname')).toHaveTextContent(
       '/pull-requests/pr-b'
     )
+  })
+
+  it('keeps the tab you are on when moving to another pull request', async () => {
+    const user = userEvent.setup()
+
+    renderSidebar({ initialPath: '/pull-requests/pr-a?tab=files' })
+
+    await user.click(within(sidebar()).getByText('Your own work'))
+
+    expect(screen.getByTestId('pathname')).toHaveTextContent(
+      '/pull-requests/pr-b?tab=files'
+    )
+  })
+
+  it('opens on the default tab when none is active', async () => {
+    const user = userEvent.setup()
+
+    renderSidebar({ initialPath: '/' })
+
+    await user.click(within(sidebar()).getByText('Your own work'))
+
+    expect(screen.getByTestId('pathname')).toHaveTextContent(
+      '/pull-requests/pr-b'
+    )
+    expect(screen.getByTestId('pathname')).not.toHaveTextContent('tab=')
   })
 
   it('marks the open pull request as the current row', () => {
@@ -220,6 +259,66 @@ describe('PullRequestSidebar', () => {
     const spacer = sidebar().querySelector('.overflow-y-auto > div')
 
     expect(spacer?.getAttribute('style')).toContain('height:')
+  })
+
+  it('jumps to a row by index, following the current order', () => {
+    renderSidebar()
+
+    // Default sort is needs-attention first, so index 0 is the review request.
+    act(() => {
+      getSidebarNavigation()?.selectIndex(0)
+    })
+
+    expect(screen.getByTestId('pathname')).toHaveTextContent(
+      '/pull-requests/pr-a'
+    )
+
+    act(() => {
+      getSidebarNavigation()?.selectIndex(2)
+    })
+
+    expect(screen.getByTestId('pathname')).toHaveTextContent(
+      '/pull-requests/pr-c'
+    )
+  })
+
+  it('ignores an index past the end of the list', () => {
+    renderSidebar({ initialPath: '/pull-requests/pr-b' })
+
+    act(() => {
+      getSidebarNavigation()?.selectIndex(99)
+    })
+
+    expect(screen.getByTestId('pathname')).toHaveTextContent(
+      '/pull-requests/pr-b'
+    )
+  })
+
+  it('shows a jump badge on each row while the modifier is held', () => {
+    renderSidebar()
+
+    expect(within(sidebar()).queryByText('⌘1')).not.toBeInTheDocument()
+
+    act(() => {
+      window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Meta' }))
+    })
+
+    const badge = within(sidebar()).getByText('⌘1')
+
+    expect(badge).toBeInTheDocument()
+    expect(within(sidebar()).getByText('⌘3')).toBeInTheDocument()
+
+    // The modifier and the digit share one badge, and it is painted over the
+    // timestamp from out of flow so that holding the modifier cannot reflow
+    // the rows. jsdom has no layout to measure, so the positioning that buys
+    // that is what this asserts.
+    expect(badge).toHaveClass('absolute')
+
+    act(() => {
+      window.dispatchEvent(new Event('blur'))
+    })
+
+    expect(within(sidebar()).queryByText('⌘1')).not.toBeInTheDocument()
   })
 
   it('filters by repository through the filter popover', async () => {

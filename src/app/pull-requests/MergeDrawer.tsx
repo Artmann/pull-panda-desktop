@@ -844,7 +844,7 @@ function MergeRequirementsChecklist({
 }: MergeRequirementsChecklistProps): ReactElement {
   return (
     <div className="flex flex-col gap-2">
-      <h4 className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+      <h4 className="text-2xs font-semibold uppercase tracking-wider text-muted-foreground">
         Requirements
       </h4>
 
@@ -908,7 +908,7 @@ function SquashCommitSection({
 }: SquashCommitSectionProps): ReactElement {
   return (
     <div className="flex flex-col gap-2 flex-1 min-h-0">
-      <h4 className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+      <h4 className="text-2xs font-semibold uppercase tracking-wider text-muted-foreground">
         Commit message
       </h4>
 

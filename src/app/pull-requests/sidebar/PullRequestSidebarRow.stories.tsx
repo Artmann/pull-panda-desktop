@@ -46,6 +46,10 @@ export default meta
 
 type Story = StoryObj<typeof meta>
 
+/**
+ * The everyday row. Nothing has happened to it yet, so it carries no status
+ * pill — "Pending" is the absence of news rather than news.
+ */
 export const Read: Story = {}
 
 export const Unread: Story = {
@@ -111,6 +115,20 @@ export const Approved: Story = {
   }
 }
 
+export const ChangesRequested: Story = {
+  args: {
+    row: buildRow({
+      pullRequest: createMockPullRequest({
+        changesRequestedCount: 1,
+        number: 109,
+        repositoryName: 'pmkin-app-remix',
+        title: 'Create the content planner',
+        updatedAt: hoursAgo(30)
+      })
+    })
+  }
+}
+
 export const Draft: Story = {
   args: {
     row: buildRow({
@@ -127,6 +145,37 @@ export const Draft: Story = {
 
 export const LongTitle: Story = {
   args: {
+    row: buildRow({
+      pullRequest: createMockPullRequest({
+        number: 12,
+        repositoryName: 'a-repository-with-a-very-long-name',
+        title:
+          'Refactor the background syncer so that every endpoint shares one etag store',
+        updatedAt: hoursAgo(120)
+      })
+    })
+  }
+}
+
+export const JumpShortcut: Story = {
+  args: { hotkey: 3 },
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'While the jump modifier is held the shortcut is painted over the timestamp from out of flow, so the row keeps the exact layout it has in `Read`.'
+      }
+    }
+  }
+}
+
+export const JumpShortcutSelected: Story = {
+  args: { hotkey: 1, isSelected: true, row: buildRow({ unread: true }) }
+}
+
+export const JumpShortcutLongTitle: Story = {
+  args: {
+    hotkey: 9,
     row: buildRow({
       pullRequest: createMockPullRequest({
         number: 12,

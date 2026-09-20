@@ -49,7 +49,7 @@ export function ReviewBadge({ review }: ReviewBadgeProps): ReactElement {
           className={cn(
             'inline-flex items-center gap-1.5',
             'rounded-full border border-current/60',
-            'px-2 py-0.5 text-[10px] font-medium whitespace-nowrap',
+            'px-2 py-0.5 text-2xs font-medium whitespace-nowrap',
             variant.colorClass
           )}
         >

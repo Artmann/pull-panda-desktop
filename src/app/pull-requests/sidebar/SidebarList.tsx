@@ -1,8 +1,12 @@
 import { useVirtualizer } from '@tanstack/react-virtual'
 import { useEffect, useRef, type ReactElement } from 'react'
 
+import { maximumJumpShortcuts } from '@/app/commands/sidebar-accessor'
+
 import { PullRequestSidebarRow } from './PullRequestSidebarRow'
-import { countLabel, type SidebarRow } from './sidebar-data'
+import { countLabel, type SidebarRow, type SortId } from './sidebar-data'
+import { SidebarSortMenu } from './SidebarSortMenu'
+import { useModifierHeld } from './use-modifier-held'
 
 // Two lines of text plus padding, and the 4px gap below each row. Rows are a
 // fixed height in practice; `measureElement` corrects anything that is not.
@@ -16,20 +20,24 @@ interface SidebarListProps {
   hasFilters: boolean
   onClearFilters: () => void
   onSelect: (pullRequestId: string) => void
+  onSortChange: (sort: SortId) => void
   rows: readonly SidebarRow[]
   selectedId: string | undefined
-  sortLabel: string
+  sort: SortId
 }
 
 export function SidebarList({
   hasFilters,
   onClearFilters,
   onSelect,
+  onSortChange,
   rows,
   selectedId,
-  sortLabel
+  sort
 }: SidebarListProps): ReactElement {
   const scrollRef = useRef<HTMLDivElement | null>(null)
+
+  const isModifierHeld = useModifierHeld()
 
   const virtualizer = useVirtualizer({
     count: rows.length,
@@ -63,12 +71,15 @@ export function SidebarList({
 
   return (
     <>
-      <div className="text-muted-foreground flex shrink-0 items-center justify-between gap-2 px-3 pt-2.5 pb-3 font-mono text-2xs tracking-widest uppercase">
+      <div className="text-muted-foreground flex shrink-0 items-center justify-between gap-2 px-3 pt-2.5 pb-3 text-2xs font-semibold tracking-wider uppercase">
         <span className="shrink-0 whitespace-nowrap">
           {countLabel(rows.length)}
         </span>
 
-        <span className="min-w-0 truncate normal-case">{sortLabel}</span>
+        <SidebarSortMenu
+          onSortChange={onSortChange}
+          sort={sort}
+        />
       </div>
 
       <div
@@ -99,6 +110,11 @@ export function SidebarList({
                   }}
                 >
                   <PullRequestSidebarRow
+                    hotkey={
+                      isModifierHeld && virtualRow.index < maximumJumpShortcuts
+                        ? virtualRow.index + 1
+                        : undefined
+                    }
                     isSelected={row.pullRequest.id === selectedId}
                     onSelect={onSelect}
                     row={row}

@@ -4,25 +4,20 @@ import { type ReactElement } from 'react'
 import { Input } from '@/app/components/ui/input'
 
 import { SidebarFilterPopover } from './SidebarFilterPopover'
-import { SidebarSortMenu } from './SidebarSortMenu'
-import type { SidebarFilters, SidebarRow, SortId } from './sidebar-data'
+import type { SidebarFilters, SidebarRow } from './sidebar-data'
 
 interface SidebarSearchHeaderProps {
   allRows: readonly SidebarRow[]
   filters: SidebarFilters
   onFiltersChange: (filters: SidebarFilters) => void
-  onSortChange: (sort: SortId) => void
   resultCount: number
-  sort: SortId
 }
 
 export function SidebarSearchHeader({
   allRows,
   filters,
   onFiltersChange,
-  onSortChange,
-  resultCount,
-  sort
+  resultCount
 }: SidebarSearchHeaderProps): ReactElement {
   return (
     <div className="border-sidebar-border flex shrink-0 items-center gap-1.5 border-b px-3 py-2.5">
@@ -47,11 +42,6 @@ export function SidebarSearchHeader({
         filters={filters}
         onFiltersChange={onFiltersChange}
         resultCount={resultCount}
-      />
-
-      <SidebarSortMenu
-        onSortChange={onSortChange}
-        sort={sort}
       />
     </div>
   )

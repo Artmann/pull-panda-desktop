@@ -84,7 +84,7 @@ export function SidebarFilterPopover({
         <ListFilter className="size-3.5" />
 
         {activeFilterCount > 0 && (
-          <span className="bg-primary text-primary-foreground absolute -top-1 -right-1 flex h-3.5 min-w-3.5 items-center justify-center rounded-full px-1 font-mono text-2xs font-semibold">
+          <span className="bg-primary text-primary-foreground absolute -top-1 -right-1 flex h-3.5 min-w-3.5 items-center justify-center rounded-full px-1 text-2xs font-semibold tabular-nums leading-none">
             {activeFilterCount}
           </span>
         )}
@@ -115,7 +115,7 @@ export function SidebarFilterPopover({
                 {entry.label}
 
                 {count > 0 && (
-                  <span className="text-primary font-mono text-2xs">
+                  <span className="text-primary text-xs tabular-nums">
                     {count}
                   </span>
                 )}
@@ -182,7 +182,7 @@ export function SidebarFilterPopover({
                   {value.label}
                 </span>
 
-                <span className="text-muted-foreground shrink-0 font-mono text-2xs">
+                <span className="text-muted-foreground shrink-0 text-xs tabular-nums">
                   {value.count}
                 </span>
               </button>
@@ -215,7 +215,7 @@ export function SidebarFilterPopover({
             Clear all
           </button>
 
-          <span className="text-muted-foreground font-mono text-2xs whitespace-nowrap">
+          <span className="text-muted-foreground text-xs tabular-nums whitespace-nowrap">
             {countLabel(resultCount)}
           </span>
         </div>

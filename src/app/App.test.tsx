@@ -13,6 +13,7 @@ import commentsReducer from '@/app/store/comments-slice'
 import commitsReducer from '@/app/store/commits-slice'
 import connectedReposReducer from '@/app/store/connected-repos-slice'
 import draftsReducer from '@/app/store/drafts-slice'
+import mergeDrawerReducer from '@/app/store/merge-drawer-slice'
 import mergeOptionsReducer from '@/app/store/merge-options-slice'
 import modifiedFilesReducer from '@/app/store/modified-files-slice'
 import pendingReviewCommentsReducer from '@/app/store/pending-review-comments-slice'
@@ -81,6 +82,7 @@ function createTestStore() {
       commits: commitsReducer,
       connectedRepos: connectedReposReducer,
       drafts: draftsReducer,
+      mergeDrawer: mergeDrawerReducer,
       mergeOptions: mergeOptionsReducer,
       modifiedFiles: modifiedFilesReducer,
       pendingReviewComments: pendingReviewCommentsReducer,
@@ -103,6 +105,7 @@ function createTestStore() {
         initialized: true
       },
       drafts: {},
+      mergeDrawer: { openForPullRequestId: null },
       mergeOptions: {},
       modifiedFiles: { items: [] },
       pendingReviewComments: {},

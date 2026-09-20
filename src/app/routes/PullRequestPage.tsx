@@ -6,7 +6,6 @@ import {
   MessageSquareIcon
 } from 'lucide-react'
 import React, {
-  useCallback,
   useEffect,
   useLayoutEffect,
   useMemo,
@@ -34,7 +33,13 @@ import {
   LandmarkScope,
   usePullRequestNavigation
 } from '@/app/pull-requests/PullRequestNavigationProvider'
+import {
+  checkRollupColors,
+  getCheckRollup
+} from '@/app/components/check-rollup'
+import { cn } from '@/app/lib/utils'
 import { useAppDispatch, useAppSelector } from '@/app/store/hooks'
+import { mergeDrawerActions } from '@/app/store/merge-drawer-slice'
 import { mergeOptionsActions } from '@/app/store/merge-options-slice'
 import { pendingReviewsActions } from '@/app/store/pending-reviews-slice'
 import { clamp01 } from '@/math'
@@ -47,7 +52,6 @@ import {
   PullRequestHeader,
   StickyPullRequestHeader
 } from '../pull-requests/PullRequestHeader'
-import { PullRequestToolbar } from '../pull-requests/PullRequestToolbar'
 import { ReviewDrawer } from '../pull-requests/ReviewDrawer'
 import { TasksTab } from '../pull-requests/tasks/TasksTab'
 import {
@@ -59,7 +63,6 @@ const validTabs = ['overview', 'tasks', 'checks', 'files']
 
 export function PullRequestPage(): ReactElement {
   const containerRef = useRef<HTMLDivElement>(null)
-  const [isMergeDrawerOpen, setIsMergeDrawerOpen] = useState(false)
   const [stickyHeaderProgress, setStickyHeaderProgress] = useState(0)
 
   const { id } = useParams<{ id: string }>()
@@ -68,12 +71,23 @@ export function PullRequestPage(): ReactElement {
     state.pullRequests.items.find((pr) => pr.id === id)
   )
 
+  // The footer action bar opens the merge drawer, so the flag lives in the
+  // store; opening it also re-runs the merge options fetch below.
+  const isMergeDrawerOpen = useAppSelector(
+    (state) => state.mergeDrawer.openForPullRequestId === id
+  )
+
   const dispatch = useAppDispatch()
   const [searchParams] = useSearchParams()
   const navigation = usePullRequestNavigation()
 
   const checksCount = useAppSelector(
     (state) => state.checks.items.filter((c) => c.pullRequestId === id).length
+  )
+  // Selecting the rollup rather than the checks themselves keeps this a
+  // primitive, so the page does not re-render on every unrelated check write.
+  const checksRollup = useAppSelector((state) =>
+    getCheckRollup(state.checks.items.filter((c) => c.pullRequestId === id))
   )
   const filesCount = useAppSelector(
     (state) =>
@@ -164,8 +178,6 @@ export function PullRequestPage(): ReactElement {
     ]
   )
 
-  const [fetchGeneration, setFetchGeneration] = useState(0)
-
   useEffect(
     function fetchMergeOptions() {
       if (!pullRequest || pullRequest.state !== 'OPEN') {
@@ -206,12 +218,8 @@ export function PullRequestPage(): ReactElement {
         }
       }
     },
-    [dispatch, fetchGeneration, pullRequest?.id, pullRequest?.state]
+    [dispatch, isMergeDrawerOpen, pullRequest?.id, pullRequest?.state]
   )
-
-  const refreshMergeOptions = useCallback(() => {
-    setFetchGeneration((generation) => generation + 1)
-  }, [])
 
   const tabs: Array<{
     content: React.ComponentType<{
@@ -219,8 +227,10 @@ export function PullRequestPage(): ReactElement {
     }>
     icon: typeof MessageSquareIcon
     id: string
+    countColor?: string
     itemCount?: number
     label: string
+    width?: 'wide'
   }> = useMemo(
     () => [
       {
@@ -238,9 +248,12 @@ export function PullRequestPage(): ReactElement {
       },
       {
         content: ChecksView,
+        // A count is only worth colouring when it says pass or fail; at zero
+        // there is nothing to report, so the badge goes away entirely.
+        countColor: checkRollupColors[checksRollup],
         icon: ListCheckIcon,
         id: 'checks',
-        itemCount: checksCount,
+        itemCount: checksCount > 0 ? checksCount : undefined,
         label: 'Checks'
       },
       {
@@ -248,10 +261,12 @@ export function PullRequestPage(): ReactElement {
         icon: FileCodeIcon,
         id: 'files',
         itemCount: filesCount,
-        label: 'Files'
+        label: 'Files',
+        // Diffs wrap badly at 78 characters and file paths are long.
+        width: 'wide'
       }
     ],
-    [checksCount, filesCount, openBlockerCount]
+    [checksCount, checksRollup, filesCount, openBlockerCount]
   )
 
   useEffect(
@@ -323,7 +338,7 @@ export function PullRequestPage(): ReactElement {
 
   if (!pullRequest) {
     return (
-      <div className="container mx-auto py-8 px-4">
+      <div className="w-full max-w-wide mx-auto px-6 py-8">
         <Link to="/">
           <Button
             variant="ghost"
@@ -344,7 +359,7 @@ export function PullRequestPage(): ReactElement {
 
   return (
     <div
-      className="w-full max-w-240 mx-auto"
+      className="w-full max-w-wide mx-auto"
       ref={containerRef}
     >
       <StickyPullRequestHeader
@@ -354,16 +369,8 @@ export function PullRequestPage(): ReactElement {
 
       <PullRequestHeader pullRequest={pullRequest} />
 
-      <PullRequestToolbar
-        onOpenMergeDrawer={() => {
-          setIsMergeDrawerOpen(true)
-          refreshMergeOptions()
-        }}
-        pullRequest={pullRequest}
-      />
-
       <MergeDrawer
-        onClose={() => setIsMergeDrawerOpen(false)}
+        onClose={() => dispatch(mergeDrawerActions.close())}
         open={isMergeDrawerOpen}
         pullRequest={pullRequest}
       />
@@ -375,17 +382,22 @@ export function PullRequestPage(): ReactElement {
         value={activeTab}
         onValueChange={handleTabChange}
       >
-        <div className="w-full max-w-240 mx-auto shrink-0 px-6 bg-background">
-          <TabsList className="bg-transparent w-full">
+        <div className="w-full shrink-0 px-6 bg-background">
+          <TabsList className="bg-transparent">
             {tabs.map((tab) => (
               <TabsTrigger
                 key={tab.id}
-                className="px-6 py-2 cursor-pointer text-xs flex-1 flex justify-center items-center"
+                className="px-3 py-2 cursor-pointer text-xs flex items-center"
                 value={tab.id}
               >
                 <tab.icon className="size-4" /> {tab.label}
                 {tab.itemCount !== undefined && (
-                  <div className="text-[11px] bg-muted rounded-sm text-center px-1.5 ml-1.5 mt-1">
+                  <div
+                    className={cn(
+                      'text-2xs tabular-nums bg-muted rounded-sm text-center min-w-4 px-1.5 ml-1.5',
+                      tab.countColor
+                    )}
+                  >
                     {tab.itemCount}
                   </div>
                 )}
@@ -399,12 +411,17 @@ export function PullRequestPage(): ReactElement {
             <TabsContent
               key={tab.id}
               aria-hidden={tab.id !== activeTab}
-              className="h-full px-6 py-0"
+              className="h-full py-0"
               forceMount
               hidden={tab.id !== activeTab}
               value={tab.id}
             >
-              <div className="w-full pb-12">
+              <div
+                className={cn(
+                  'w-full px-6 pb-6',
+                  tab.width === 'wide' ? 'max-w-wide' : 'max-w-content'
+                )}
+              >
                 {id ? (
                   <LandmarkScope
                     pullRequestId={id}

@@ -1,7 +1,6 @@
 import { ChevronLeftIcon, ChevronRightIcon, Trash2 } from 'lucide-react'
-import { memo, ReactElement, useState } from 'react'
+import { memo, ReactElement } from 'react'
 import { shallowEqual } from 'react-redux'
-import { toast } from 'sonner'
 
 import { Button } from '@/app/components/ui/button'
 import { MarkdownBlock } from '@/app/components/MarkdownBlock'
@@ -12,7 +11,7 @@ import {
   SidePanelTitle
 } from '@/app/components/ui/side-panel'
 import { Textarea } from '@/app/components/ui/textarea'
-import { deleteReview, submitReview } from '@/app/lib/api'
+import { usePendingReviewActions } from '@/app/pull-requests/use-pending-review-actions'
 import { getDraftKeyForReviewBody } from '@/app/store/drafts-slice'
 import { useAppDispatch, useAppSelector } from '@/app/store/hooks'
 import {
@@ -22,8 +21,6 @@ import {
 import { pendingReviewsActions } from '@/app/store/pending-reviews-slice'
 import { useDraft } from '@/app/store/use-draft'
 import { PullRequest } from '@/types/pull-request'
-
-const emptyPendingComments: PendingReviewComment[] = []
 
 interface ReviewDrawerProps {
   pullRequest: PullRequest
@@ -50,159 +47,16 @@ export const ReviewDrawer = memo(function ReviewDrawer({
     )
   }
 
-  const pendingComments: PendingReviewComment[] = useAppSelector(
-    (state) =>
-      state.pendingReviewComments[pullRequest.id] ?? emptyPendingComments,
-    shallowEqual
-  )
-
   const draftKey = getDraftKeyForReviewBody(pullRequest.id)
+  const { body: reviewBody, setBody: setReviewBody } = useDraft(draftKey)
+
   const {
-    body: reviewBody,
-    setBody: setReviewBody,
-    clearDraft
-  } = useDraft(draftKey)
-  const [isSubmitting, setIsSubmitting] = useState(false)
-
-  const handleSubmitReview = async (
-    event: 'APPROVE' | 'REQUEST_CHANGES' | 'COMMENT'
-  ) => {
-    if (!pendingReview) {
-      return
-    }
-
-    const reviewId = pendingReview.gitHubNumericId
-
-    if (typeof reviewId !== 'number' || reviewId <= 0) {
-      toast.error('Review not ready yet. Please wait for sync to complete.')
-
-      return
-    }
-
-    // Store previous state for rollback
-    const previousReview = { ...pendingReview }
-    const previousBody = reviewBody
-    const previousComments = [...pendingComments]
-
-    // Optimistically update UI
-    setIsSubmitting(true)
-    clearDraft()
-    dispatch(
-      pendingReviewsActions.clearReview({ pullRequestId: pullRequest.id })
-    )
-    dispatch(
-      pendingReviewCommentsActions.clearComments({
-        pullRequestId: pullRequest.id
-      })
-    )
-
-    try {
-      await submitReview({
-        body: reviewBody || undefined,
-        comments:
-          pendingComments.length > 0
-            ? pendingComments.map((comment) => ({
-                body: comment.body,
-                line: comment.line,
-                path: comment.path,
-                side: comment.side
-              }))
-            : undefined,
-        event,
-        owner: pullRequest.repositoryOwner,
-        pullNumber: pullRequest.number,
-        repo: pullRequest.repositoryName,
-        reviewId
-      })
-
-      const eventLabels = {
-        APPROVE: 'approved',
-        COMMENT: 'submitted',
-        REQUEST_CHANGES: 'requested changes on'
-      }
-
-      toast.success(`Successfully ${eventLabels[event]} the pull request`)
-    } catch (error) {
-      // Rollback on error
-      dispatch(
-        pendingReviewsActions.setReview({
-          pullRequestId: pullRequest.id,
-          review: previousReview
-        })
-      )
-      setReviewBody(previousBody)
-
-      // Restore pending comments
-      for (const comment of previousComments) {
-        dispatch(
-          pendingReviewCommentsActions.addComment({
-            pullRequestId: pullRequest.id,
-            comment
-          })
-        )
-      }
-
-      const message =
-        error instanceof Error ? error.message : 'Failed to submit review'
-
-      toast.error(message)
-    } finally {
-      setIsSubmitting(false)
-    }
-  }
-
-  const handleCancelReview = async () => {
-    if (!pendingReview) {
-      return
-    }
-
-    const reviewId = pendingReview.gitHubNumericId
-
-    if (typeof reviewId !== 'number' || reviewId <= 0) {
-      // No review on GitHub yet, just clear locally
-      dispatch(
-        pendingReviewsActions.clearReview({ pullRequestId: pullRequest.id })
-      )
-
-      return
-    }
-
-    // Store previous state for rollback
-    const previousReview = { ...pendingReview }
-    const previousBody = reviewBody
-
-    // Optimistically update UI
-    setIsSubmitting(true)
-    clearDraft()
-    dispatch(
-      pendingReviewsActions.clearReview({ pullRequestId: pullRequest.id })
-    )
-
-    try {
-      await deleteReview({
-        owner: pullRequest.repositoryOwner,
-        pullNumber: pullRequest.number,
-        repo: pullRequest.repositoryName,
-        reviewId
-      })
-    } catch (error) {
-      // Rollback on error
-      dispatch(
-        pendingReviewsActions.setReview({
-          pullRequestId: pullRequest.id,
-          review: previousReview
-        })
-      )
-      setReviewBody(previousBody)
-
-      const message =
-        error instanceof Error ? error.message : 'Failed to cancel review'
-
-      toast.error(message)
-    } finally {
-      setIsSubmitting(false)
-    }
-  }
+    cancelReview,
+    hasReviewContent,
+    isSubmitting,
+    pendingComments,
+    submitReview
+  } = usePendingReviewActions(pullRequest)
 
   return (
     <SidePanel
@@ -242,11 +96,8 @@ export const ReviewDrawer = memo(function ReviewDrawer({
 
             <div className="flex items-center gap-2">
               <Button
-                disabled={
-                  isSubmitting ||
-                  (!reviewBody.trim() && pendingComments.length === 0)
-                }
-                onClick={() => handleSubmitReview('COMMENT')}
+                disabled={isSubmitting || !hasReviewContent}
+                onClick={() => submitReview('COMMENT')}
                 size="sm"
                 variant="outline"
               >
@@ -254,11 +105,8 @@ export const ReviewDrawer = memo(function ReviewDrawer({
               </Button>
 
               <Button
-                disabled={
-                  isSubmitting ||
-                  (!reviewBody.trim() && pendingComments.length === 0)
-                }
-                onClick={() => handleSubmitReview('REQUEST_CHANGES')}
+                disabled={isSubmitting || !hasReviewContent}
+                onClick={() => submitReview('REQUEST_CHANGES')}
                 size="sm"
                 variant="outline"
               >
@@ -267,7 +115,7 @@ export const ReviewDrawer = memo(function ReviewDrawer({
 
               <Button
                 disabled={isSubmitting}
-                onClick={() => handleSubmitReview('APPROVE')}
+                onClick={() => submitReview('APPROVE')}
                 size="sm"
               >
                 Approve
@@ -313,7 +161,7 @@ export const ReviewDrawer = memo(function ReviewDrawer({
             <Button
               className="w-full"
               disabled={isSubmitting}
-              onClick={handleCancelReview}
+              onClick={cancelReview}
               size="sm"
               variant="ghost"
             >

@@ -5,21 +5,48 @@ import {
   checkRollupIcons,
   getCheckRollupLabel
 } from '@/app/components/check-rollup'
+import { Kbd, shortcutLabel } from '@/app/components/Kbd'
+import { getPullRequestStatus } from '@/app/components/pull-request-status'
 import { PullRequestStatusBadge } from '@/app/components/PullRequestStatusBadge'
 import { formatTimestamp } from '@/app/components/TimeAgo'
 import { Avatar, AvatarFallback, AvatarImage } from '@/app/components/ui/avatar'
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger
+} from '@/app/components/ui/tooltip'
 import { cn } from '@/app/lib/utils'
 
 import type { SidebarRow } from './sidebar-data'
 import { SidebarRowContextMenu } from './SidebarRowContextMenu'
 
+/** The stripe down the left edge: attention outranks unread. */
+function accentBorder(needsAttention: boolean, unread: boolean): string {
+  if (needsAttention) {
+    return 'border-l-status-danger-foreground'
+  }
+
+  return unread ? 'border-l-primary' : 'border-l-transparent'
+}
+
+function titleColor(isSelected: boolean, unread: boolean): string {
+  if (isSelected) {
+    return 'text-sidebar-accent-foreground'
+  }
+
+  return unread ? 'text-sidebar-foreground' : 'text-muted-foreground'
+}
+
 interface PullRequestSidebarRowProps {
+  /** Painted over the timestamp while the jump modifier is held. */
+  hotkey?: number
   isSelected: boolean
   onSelect: (pullRequestId: string) => void
   row: SidebarRow
 }
 
 export function PullRequestSidebarRow({
+  hotkey,
   isSelected,
   onSelect,
   row
@@ -30,73 +57,127 @@ export function PullRequestSidebarRow({
 
   const slug = `${pullRequest.repositoryName} #${pullRequest.number.toString()}`
 
+  // `Pending` is what a pull request is when nothing else is true, so the pill
+  // landed on most rows and told the reader nothing they had not already
+  // worked out from its absence elsewhere.
+  const hasStatus = getPullRequestStatus(pullRequest) !== 'Pending'
+
   return (
     <SidebarRowContextMenu pullRequest={pullRequest}>
       <button
         aria-current={isSelected ? 'true' : undefined}
         className={cn(
-          'flex w-full flex-col gap-2 rounded-r-md border-l-2 px-3 py-2.5 text-left',
+          // The stripe is inside the row box, so the padding is 3px short of
+          // the 12px the list caption above uses; the icon column then starts
+          // on the same vertical line as the caption.
+          'grid w-full grid-cols-[1rem_1fr] gap-x-2 gap-y-2 text-left',
+          'rounded-r-md border-l-3 py-2.5 pr-3 pl-2.25',
           'cursor-pointer transition-colors',
           'focus-visible:ring-sidebar-ring outline-none focus-visible:ring-2',
-          needsAttention
-            ? 'border-l-status-danger-foreground'
-            : unread
-              ? 'border-l-primary'
-              : 'border-l-transparent',
+          accentBorder(needsAttention, unread),
           isSelected ? 'bg-sidebar-accent' : 'hover:bg-sidebar-accent/50'
         )}
         onClick={() => onSelect(pullRequest.id)}
         type="button"
       >
-        <div className="flex w-full items-center gap-2">
+        {/*
+          A span rather than the trigger's own button, because this row is
+          already a button and one cannot contain another.
+        */}
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <span className="flex items-center justify-center">
+              <CheckIcon
+                aria-label={getCheckRollupLabel(checkRollup)}
+                className={cn(
+                  'size-3 shrink-0',
+                  checkRollupColors[checkRollup]
+                )}
+              />
+            </span>
+          </TooltipTrigger>
+
+          <TooltipContent>{getCheckRollupLabel(checkRollup)}</TooltipContent>
+        </Tooltip>
+
+        <div className="flex min-w-0 items-center gap-2">
           <span
             className={cn(
-              'min-w-0 truncate text-row-title leading-tight',
+              'min-w-0 truncate text-sm leading-tight',
               unread || isSelected ? 'font-semibold' : 'font-medium',
-              isSelected
-                ? 'text-sidebar-accent-foreground'
-                : unread
-                  ? 'text-sidebar-foreground'
-                  : 'text-muted-foreground'
+              titleColor(isSelected, unread)
             )}
           >
             {pullRequest.title}
           </span>
 
-          <CheckIcon
-            aria-label={getCheckRollupLabel(checkRollup)}
-            className={cn('size-3 shrink-0', checkRollupColors[checkRollup])}
+          <RowTrailing
+            hotkey={hotkey}
+            updatedAt={pullRequest.updatedAt}
           />
-
-          <span className="text-muted-foreground ml-auto shrink-0 font-mono text-row-meta whitespace-nowrap">
-            {formatTimestamp(pullRequest.updatedAt)}
-          </span>
         </div>
 
-        <div className="flex w-full items-center gap-2">
+        <div className="col-start-2 flex min-w-0 items-center gap-2">
           <Avatar className="size-4 shrink-0">
             <AvatarImage
               alt={pullRequest.authorLogin ?? 'Author'}
               src={pullRequest.authorAvatarUrl ?? undefined}
             />
 
-            <AvatarFallback className="text-2xs">
+            <AvatarFallback className="text-2xs leading-none">
               {pullRequest.authorLogin?.charAt(0).toUpperCase() ?? '?'}
             </AvatarFallback>
           </Avatar>
 
-          <span className="text-muted-foreground min-w-0 flex-1 truncate font-mono text-row-meta">
+          <span className="text-muted-foreground min-w-0 flex-1 truncate text-xs">
             {slug}
           </span>
 
-          <div className="shrink-0">
-            <PullRequestStatusBadge
-              pullRequest={pullRequest}
-              size="compact"
-            />
-          </div>
+          {hasStatus && (
+            <div className="shrink-0">
+              <PullRequestStatusBadge
+                pullRequest={pullRequest}
+                size="compact"
+              />
+            </div>
+          )}
         </div>
       </button>
     </SidebarRowContextMenu>
+  )
+}
+
+/**
+ * The right-hand end of a row's first line. The timestamp always keeps its
+ * place in the layout: while the jump modifier is held it only turns
+ * invisible, and the shortcut is painted over it from out of flow. Swapping
+ * the two in the layout instead would resize this column, and because the
+ * title beside it is `truncate`, every row's title would reflow the moment the
+ * modifier went down.
+ */
+function RowTrailing({
+  hotkey,
+  updatedAt
+}: {
+  hotkey?: number
+  updatedAt: string
+}): ReactElement {
+  return (
+    <span className="relative ml-auto shrink-0">
+      <span
+        className={cn(
+          'text-muted-foreground block text-xs tabular-nums whitespace-nowrap',
+          hotkey !== undefined && 'invisible'
+        )}
+      >
+        {formatTimestamp(updatedAt)}
+      </span>
+
+      {hotkey !== undefined && (
+        <Kbd className="bg-sidebar-accent absolute top-1/2 right-0 -translate-y-1/2">
+          {shortcutLabel(hotkey.toString())}
+        </Kbd>
+      )}
+    </span>
   )
 }

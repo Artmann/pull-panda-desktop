@@ -13,6 +13,8 @@ import commitsReducer from '@/app/store/commits-slice'
 
 import { CommitsView } from './CommitsView'
 
+import { TooltipProvider } from '@/app/components/ui/tooltip'
+
 beforeAll(() => {
   global.IntersectionObserver = vi.fn().mockImplementation(() => ({
     observe: vi.fn(),
@@ -96,7 +98,11 @@ function renderWithProviders(
   ui: React.ReactElement,
   { store = createTestStore() } = {}
 ) {
-  return render(<Provider store={store}>{ui}</Provider>)
+  return render(
+    <Provider store={store}>
+      <TooltipProvider>{ui}</TooltipProvider>
+    </Provider>
+  )
 }
 
 describe('CommitsView', () => {

@@ -210,8 +210,8 @@ export function CheckoutBranchButton({
       >
         <div className="px-2 pt-2 pb-1.5 text-xs text-muted-foreground">
           Connect a local clone of{' '}
-          <span className="font-mono text-foreground">{fullName}</span> to check
-          out this branch.
+          <span className="font-medium text-foreground">{fullName}</span> to
+          check out this branch.
         </div>
 
         <DropdownMenuSeparator />

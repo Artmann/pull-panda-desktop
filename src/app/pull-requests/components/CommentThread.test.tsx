@@ -22,6 +22,8 @@ import reviewThreadsReducer from '@/app/store/review-threads-slice'
 
 import { CommentThreadCard, FileCommentThreadCard } from './CommentThread'
 
+import { TooltipProvider } from '@/app/components/ui/tooltip'
+
 // Mock browser APIs not available in jsdom
 beforeAll(() => {
   global.IntersectionObserver = vi.fn(function MockIntersectionObserver() {
@@ -162,7 +164,9 @@ function renderWithProviders(
   return render(
     <Provider store={store}>
       <ThemeProvider>
-        <AuthProvider>{ui}</AuthProvider>
+        <AuthProvider>
+          <TooltipProvider>{ui}</TooltipProvider>
+        </AuthProvider>
       </ThemeProvider>
     </Provider>
   )

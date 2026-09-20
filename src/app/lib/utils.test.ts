@@ -14,17 +14,11 @@ describe('cn', () => {
       'text-2xs text-muted-foreground'
     )
 
-    expect(cn('text-row-title', 'text-muted-foreground')).toEqual(
-      'text-row-title text-muted-foreground'
-    )
-
-    expect(cn('text-row-meta', 'text-primary')).toEqual(
-      'text-row-meta text-primary'
-    )
+    expect(cn('text-2xs', 'text-primary')).toEqual('text-2xs text-primary')
   })
 
-  it('still treats two custom font sizes as conflicting', () => {
-    expect(cn('text-2xs', 'text-row-title')).toEqual('text-row-title')
+  it('still treats a custom font size and a built-in one as conflicting', () => {
+    expect(cn('text-2xs', 'text-sm')).toEqual('text-sm')
   })
 
   it('still treats two text colours as conflicting', () => {

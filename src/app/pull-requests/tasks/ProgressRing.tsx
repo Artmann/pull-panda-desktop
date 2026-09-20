@@ -38,7 +38,7 @@ export function ProgressRing({ percentage }: ProgressRingProps): ReactElement {
           strokeWidth="3"
         />
       </svg>
-      <div className="absolute inset-0 flex items-center justify-center text-[10px] font-mono font-semibold tracking-tight text-muted-foreground">
+      <div className="absolute inset-0 flex items-center justify-center text-2xs font-semibold tabular-nums tracking-tight text-muted-foreground">
         {clamped}%
       </div>
     </div>

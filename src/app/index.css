@@ -1,5 +1,3 @@
-@import '@fontsource-variable/geist';
-@import '@fontsource-variable/geist-mono';
 @import '@fontsource/ibm-plex-sans/400.css';
 @import '@fontsource/ibm-plex-sans/500.css';
 @import '@fontsource/ibm-plex-sans/600.css';
@@ -28,7 +26,7 @@
   --card-foreground: oklch(0.22 0.01 95);
   --popover: oklch(1 0 0);
   --popover-foreground: oklch(0.22 0.01 95);
-  --primary: oklch(0.55 0.14 260);
+  --primary: oklch(0.52 0.19 262);
   --primary-foreground: oklch(0.985 0.003 95);
   --secondary: oklch(0.955 0.005 95);
   --secondary-foreground: oklch(0.22 0.01 95);
@@ -41,7 +39,7 @@
   --border: oklch(0.88 0.005 95);
   --input: oklch(0.88 0.005 95);
   --titlebar: oklch(0.965 0.004 95);
-  --ring: oklch(0.55 0.14 260);
+  --ring: oklch(0.52 0.19 262);
   --chart-1: oklch(0.53 0.22 25);
   --chart-2: oklch(0.65 0.18 55);
   --chart-3: oklch(0.75 0.15 95);
@@ -50,12 +48,12 @@
   --radius: 0.625rem;
   --sidebar: oklch(0.955 0.006 95);
   --sidebar-foreground: oklch(0.36 0.012 95);
-  --sidebar-primary: oklch(0.55 0.14 260);
+  --sidebar-primary: oklch(0.52 0.19 262);
   --sidebar-primary-foreground: oklch(0.985 0.003 95);
   --sidebar-accent: oklch(0.9 0.009 95);
   --sidebar-accent-foreground: oklch(0.32 0.012 95);
   --sidebar-border: oklch(0.88 0.008 95);
-  --sidebar-ring: oklch(0.55 0.14 260);
+  --sidebar-ring: oklch(0.52 0.19 262);
 
   --status-danger: oklch(0.95 0.035 25);
   --status-danger-border: oklch(0.86 0.08 25);
@@ -76,54 +74,54 @@
 
 /* Pull Panda — Midnight (Dark Theme) */
 .dark {
-  --background: oklch(0.18 0.008 240);
-  --foreground: oklch(0.96 0.005 240);
-  --card: oklch(0.21 0.008 240);
-  --card-foreground: oklch(0.96 0.005 240);
-  --popover: oklch(0.21 0.008 240);
-  --popover-foreground: oklch(0.96 0.005 240);
-  --primary: oklch(0.72 0.14 260);
-  --primary-foreground: oklch(0.1 0 0);
-  --secondary: oklch(0.24 0.008 240);
-  --secondary-foreground: oklch(0.96 0.005 240);
-  --muted: oklch(0.24 0.008 240);
-  --muted-foreground: oklch(0.75 0.008 240);
-  --accent: oklch(0.26 0.008 240);
-  --accent-foreground: oklch(0.96 0.005 240);
+  --background: oklch(0.19 0.009 240);
+  --foreground: oklch(0.92 0.006 240);
+  --card: oklch(0.245 0.009 240);
+  --card-foreground: oklch(0.92 0.006 240);
+  --popover: oklch(0.245 0.009 240);
+  --popover-foreground: oklch(0.92 0.006 240);
+  --primary: oklch(0.56 0.21 262);
+  --primary-foreground: oklch(0.985 0.004 240);
+  --secondary: oklch(0.275 0.009 240);
+  --secondary-foreground: oklch(0.92 0.006 240);
+  --muted: oklch(0.275 0.009 240);
+  --muted-foreground: oklch(0.665 0.012 240);
+  --accent: oklch(0.3 0.01 240);
+  --accent-foreground: oklch(0.92 0.006 240);
   --destructive: oklch(0.68 0.16 25);
-  --destructive-foreground: oklch(0.18 0.008 240);
-  --border: oklch(0.3 0.008 240);
-  --input: oklch(0.3 0.008 240);
-  --titlebar: oklch(0.15 0.008 240);
-  --ring: oklch(0.72 0.14 260);
+  --destructive-foreground: oklch(0.19 0.009 240);
+  --border: oklch(0.36 0.012 240);
+  --input: oklch(0.36 0.012 240);
+  --titlebar: oklch(0.14 0.009 240);
+  --ring: oklch(0.7 0.15 262);
   --chart-1: oklch(0.72 0.14 10);
   --chart-2: oklch(0.75 0.14 55);
   --chart-3: oklch(0.85 0.12 95);
   --chart-4: oklch(0.7 0.16 155);
   --chart-5: oklch(0.77 0.12 255);
-  --sidebar: oklch(0.16 0.008 240);
-  --sidebar-foreground: oklch(0.9 0.006 240);
-  --sidebar-primary: oklch(0.72 0.14 260);
-  --sidebar-primary-foreground: oklch(0.1 0 0);
-  --sidebar-accent: oklch(0.26 0.008 240);
-  --sidebar-accent-foreground: oklch(0.96 0.005 240);
-  --sidebar-border: oklch(0.3 0.008 240);
-  --sidebar-ring: oklch(0.72 0.14 260);
+  --sidebar: oklch(0.15 0.009 240);
+  --sidebar-foreground: oklch(0.86 0.008 240);
+  --sidebar-primary: oklch(0.56 0.21 262);
+  --sidebar-primary-foreground: oklch(0.985 0.004 240);
+  --sidebar-accent: oklch(0.3 0.01 240);
+  --sidebar-accent-foreground: oklch(0.92 0.006 240);
+  --sidebar-border: oklch(0.36 0.012 240);
+  --sidebar-ring: oklch(0.7 0.15 262);
 
-  --status-danger: oklch(0.27 0.03 25);
-  --status-danger-border: oklch(0.38 0.05 25);
+  --status-danger: oklch(0.3 0.035 25);
+  --status-danger-border: oklch(0.42 0.06 25);
   --status-danger-foreground: oklch(0.82 0.08 25);
-  --status-merged: oklch(0.27 0.03 300);
-  --status-merged-border: oklch(0.38 0.05 300);
+  --status-merged: oklch(0.3 0.035 300);
+  --status-merged-border: oklch(0.42 0.06 300);
   --status-merged-foreground: oklch(0.82 0.08 300);
-  --status-neutral: oklch(0.27 0.005 270);
-  --status-neutral-border: oklch(0.38 0.01 270);
+  --status-neutral: oklch(0.3 0.006 270);
+  --status-neutral-border: oklch(0.42 0.012 270);
   --status-neutral-foreground: oklch(0.82 0.02 270);
-  --status-success: oklch(0.27 0.03 150);
-  --status-success-border: oklch(0.38 0.04 150);
+  --status-success: oklch(0.3 0.035 150);
+  --status-success-border: oklch(0.42 0.05 150);
   --status-success-foreground: oklch(0.82 0.08 150);
-  --status-warning: oklch(0.27 0.03 80);
-  --status-warning-border: oklch(0.38 0.05 80);
+  --status-warning: oklch(0.3 0.035 80);
+  --status-warning-border: oklch(0.42 0.06 80);
   --status-warning-foreground: oklch(0.82 0.08 80);
 }
 
@@ -185,12 +183,51 @@
   /* Height of the fixed StickyPullRequestHeader; pinned file card headers
    * sit flush below it via `top-sticky-header`. */
   --spacing-sticky-header: 75px;
-  /* One step below text-xs, used by the tiny status badges. */
-  --text-2xs: 0.6rem;
-  /* Sidebar rows: the title sits between text-xs and text-sm, and the mono
-   * metadata line between text-2xs and text-xs. */
-  --text-row-title: 0.8125rem;
-  --text-row-meta: 0.6875rem;
+  /* Height of AppFooter. The footer owns the pull request actions, so
+   * viewport-anchored overlays stop above it via `bottom-footer` rather than
+   * covering the controls they exist to support. */
+  --spacing-footer: 48px;
+  /* Measure. The pull request page centres a `max-w-wide` column and every
+   * surface inside it shares that left edge; only the right edge moves.
+   *
+   *   max-w-content (768px)  Prose and controls. Inside `px-6` that leaves
+   *                          720px of text, about 78 characters at 15px —
+   *                          within the 70-80 a reader can track without
+   *                          losing the line.
+   *   max-w-wide    (960px)  Diffs, file lists and tables, which break out
+   *                          because code wraps badly and a table needs its
+   *                          columns more than a reader needs a short line.
+   */
+  --container-content: 48rem;
+  --container-wide: 60rem;
+  /* Type scale. Two body sizes plus one step below them; everything above
+   * uses the Tailwind defaults. No arbitrary `text-[Npx]`.
+   *
+   *   text-2xs (11px)  UPPERCASE micro-labels, badges, chips, keycaps, avatar
+   *                    initials. Caps and digits only: 11px all-caps carries
+   *                    the same x-height presence as 12px lowercase. Never
+   *                    sentence case.
+   *   text-xs  (12px)  The floor for secondary text: timestamps, repo slugs,
+   *                    breadcrumbs, meta lines, counts, file paths.
+   *   text-sm  (14px)  Body default.
+   *
+   * The line-height companion is mandatory. Without it the utility emits
+   * font-size alone and the element inherits its parent's line-height. */
+  --text-2xs: 0.6875rem;
+  --text-2xs--line-height: 1rem;
+}
+
+/* Fonts live in a plain @theme, not the inline block above: Tailwind's
+ * preflight resolves --default-font-family and --default-mono-font-family from
+ * these, which gives `html` IBM Plex Sans and `code`, `pre`, `kbd`, `samp` IBM
+ * Plex Mono for free. The block above has to stay `inline` because its colour
+ * tokens point at per-theme variables that applyThemePalette swaps at runtime;
+ * these two never change, so they belong at :root. */
+@theme {
+  --font-sans:
+    'IBM Plex Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font-sans--font-feature-settings: 'ss01';
+  --font-mono: 'IBM Plex Mono', ui-monospace, 'SF Mono', Consolas, monospace;
 }
 
 html,
@@ -204,24 +241,9 @@ body,
 body {
   background-color: var(--background);
   color: var(--foreground);
-  font-family:
-    'IBM Plex Sans',
-    -apple-system,
-    BlinkMacSystemFont,
-    'Segoe UI',
-    sans-serif;
-  font-feature-settings: 'ss01' on;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   text-rendering: optimizeLegibility;
-}
-
-.font-mono,
-code,
-pre,
-kbd,
-samp {
-  font-family: 'IBM Plex Mono', ui-monospace, 'SF Mono', Consolas, monospace;
 }
 
 /* macOS-style scrollbars */
@@ -342,13 +364,16 @@ samp {
   padding: 1rem;
   border-radius: var(--radius);
   overflow-x: auto;
+  /* The same size Shiki sets on its own blocks, so a fenced block that misses
+   * highlighting is not also a different size. */
+  font-size: 0.875rem;
 }
 
 .markdown-block :not(pre) > code {
-  background-color: color-mix(in oklch, var(--muted) 50%, transparent);
-  padding: 0.125rem 0.375rem;
+  background-color: color-mix(in oklch, var(--muted) 35%, transparent);
+  padding: 0.1em 0.25em;
   border-radius: 0.25rem;
-  font-size: 0.875em;
+  font-size: 0.9em;
   font-weight: normal;
 }
 
@@ -417,18 +442,6 @@ samp {
     border-radius: var(--radius);
     padding: 1rem;
     overflow-x: auto;
-  }
-
-  code {
-    font-size: 0.875em;
-  }
-
-  /* Inline code */
-  :not(pre) > code {
-    background-color: color-mix(in oklch, var(--muted) 50%, transparent);
-    padding: 0.125rem 0.25rem;
-    border-radius: 0.25rem;
-    font-weight: normal;
   }
 
   /* Links */

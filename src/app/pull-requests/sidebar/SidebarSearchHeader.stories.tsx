@@ -2,26 +2,18 @@ import type { Meta, StoryObj } from '@storybook/react-vite'
 import { useState } from 'react'
 
 import { SidebarSearchHeader } from './SidebarSearchHeader'
-import {
-  emptyFilters,
-  filterRows,
-  type SidebarFilters,
-  type SortId
-} from './sidebar-data'
+import { emptyFilters, filterRows, type SidebarFilters } from './sidebar-data'
 import { storyRows } from './sidebar-story-fixtures'
 
 function Harness({ initial }: { initial: SidebarFilters }) {
   const [filters, setFilters] = useState(initial)
-  const [sort, setSort] = useState<SortId>('needs')
 
   return (
     <SidebarSearchHeader
       allRows={storyRows}
       filters={filters}
       onFiltersChange={setFilters}
-      onSortChange={setSort}
       resultCount={filterRows(storyRows, filters).length}
-      sort={sort}
     />
   )
 }
@@ -35,9 +27,7 @@ const meta = {
     allRows: storyRows,
     filters: emptyFilters,
     onFiltersChange: () => undefined,
-    onSortChange: () => undefined,
-    resultCount: storyRows.length,
-    sort: 'needs'
+    resultCount: storyRows.length
   },
   decorators: [
     (Story) => (

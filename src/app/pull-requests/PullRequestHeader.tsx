@@ -1,20 +1,15 @@
-import {
-  ArrowRight,
-  Check,
-  ChevronLeft,
-  Copy,
-  GitBranch,
-  GitCommitIcon,
-  Github
-} from 'lucide-react'
-import { memo, ReactElement, useMemo, useState } from 'react'
+import { ArrowRight, GitBranch, GitCommitIcon } from 'lucide-react'
+import { memo, ReactElement, useMemo } from 'react'
 import { shallowEqual } from 'react-redux'
-import { useNavigate } from 'react-router'
-import { toast } from 'sonner'
 import invariant from 'tiny-invariant'
 
 import { useAppSelector } from '@/app/store/hooks'
 
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger
+} from '../components/ui/tooltip'
 import { useInlineEditField } from './use-inline-edit-field'
 import { PullRequest } from '@/types/pull-request'
 import type { Commit } from '@/types/pull-request-details'
@@ -27,10 +22,9 @@ import {
   BreadcrumbSeparator
 } from '../components/ui/breadcrumb'
 import { Badge } from '../components/ui/badge'
-import { Button } from '../components/ui/button'
 import { cn } from '../lib/utils'
-import { PullRequestActionsMenu } from './PullRequestActionsMenu'
-import { ReviewerBar } from './ReviewerBar'
+import { parseCommitMessage } from './parse-commit-message'
+import { PullRequestMetaRow } from './PullRequestMetaRow'
 
 export const StickyPullRequestHeader = memo(function StickyPullRequestHeader({
   pullRequest,
@@ -47,9 +41,20 @@ export const StickyPullRequestHeader = memo(function StickyPullRequestHeader({
   )
 
   return (
+    /*
+      Pinned to the content column rather than to the window. The bar is
+      `absolute`, and the only positioned ancestor it can resolve against is the
+      shell's content column in App.tsx — which sits beside the sidebar and
+      outside the scroll container. Resolving against a box outside the
+      scrollport is what keeps the bar still while the page scrolls under it,
+      the same thing `fixed` used to buy, and resolving against that box in
+      particular is what keeps it off the sidebar. A `fixed` bar cannot do the
+      second: it is measured from the window, and the sidebar is resizable, so
+      there is no constant left inset to give it.
+    */
     <header
       className={`
-        fixed top-8 left-0 right-0 z-50
+        absolute top-0 left-0 right-0 z-50
         flex flex-col gap-2
         bg-background
         border-b border-border
@@ -62,7 +67,7 @@ export const StickyPullRequestHeader = memo(function StickyPullRequestHeader({
         transform: `translateY(${(1 - transitionProgress) * -6}px)`
       }}
     >
-      <div className="w-full max-w-240 mx-auto px-3 py-3">
+      <div className="w-full max-w-wide mx-auto px-6 py-3">
         <Breadcrumbs pullRequest={pullRequest} />
 
         <div className="flex items-center gap-3 min-w-0">
@@ -111,7 +116,7 @@ export const PullRequestHeader = memo(function PullRequestHeader({
   }, [commits])
 
   return (
-    <header className="flex flex-col gap-4 p-6">
+    <header className="flex flex-col gap-4 max-w-content px-6 py-6">
       <Breadcrumbs pullRequest={pullRequest} />
 
       <div>
@@ -121,23 +126,23 @@ export const PullRequestHeader = memo(function PullRequestHeader({
       <div className="flex items-center gap-3.5">
         {pullRequest.state === 'OPEN' &&
           (pullRequest.isDraft ? (
-            <Badge className="bg-status-neutral border-status-neutral-border text-status-neutral-foreground text-[10px]">
+            <Badge className="bg-status-neutral border-status-neutral-border text-status-neutral-foreground text-2xs">
               Draft
             </Badge>
           ) : (
-            <Badge className="bg-status-success border-status-success-border text-status-success-foreground text-[10px]">
+            <Badge className="bg-status-success border-status-success-border text-status-success-foreground text-2xs">
               Ready for review
             </Badge>
           ))}
 
         {pullRequest.state === 'CLOSED' && (
-          <Badge className="bg-status-danger border-status-danger-border text-status-danger-foreground text-[10px]">
+          <Badge className="bg-status-danger border-status-danger-border text-status-danger-foreground text-2xs">
             Closed
           </Badge>
         )}
 
         {pullRequest.state === 'MERGED' && (
-          <Badge className="bg-status-merged border-status-merged-border text-status-merged-foreground text-[10px]">
+          <Badge className="bg-status-merged border-status-merged-border text-status-merged-foreground text-2xs">
             Merged
           </Badge>
         )}
@@ -150,11 +155,13 @@ export const PullRequestHeader = memo(function PullRequestHeader({
         )}
       </div>
 
+      <PullRequestMetaRow pullRequest={pullRequest} />
+
       {commits.length > 0 && (
         <div className="flex items-center gap-2.5 rounded-lg border border-border bg-card px-3.5 py-2.5 text-xs text-muted-foreground">
           <GitCommitIcon className="size-3.5 shrink-0" />
 
-          <span className="font-mono shrink-0">
+          <span className="shrink-0 tabular-nums">
             {commits.length} {commits.length === 1 ? 'commit' : 'commits'}
           </span>
 
@@ -162,26 +169,59 @@ export const PullRequestHeader = memo(function PullRequestHeader({
             <>
               <span className="opacity-40">·</span>
 
-              <span className="truncate font-mono flex-1">
-                {latestCommit.message.length > 80
-                  ? latestCommit.message.slice(0, 80) + '…'
-                  : latestCommit.message}
-              </span>
+              <Tooltip>
+                <TooltipTrigger className="truncate flex-1 text-left cursor-default">
+                  <CommitSubject message={latestCommit.message} />
+                </TooltipTrigger>
+
+                <TooltipContent className="max-w-content whitespace-pre-wrap text-left">
+                  {latestCommit.message}
+                </TooltipContent>
+              </Tooltip>
             </>
           )}
 
           {latestCommit?.gitHubCreatedAt && (
-            <span className="font-mono shrink-0">
+            <span className="shrink-0 tabular-nums">
               <TimeAgo dateTime={latestCommit.gitHubCreatedAt} />
             </span>
           )}
         </div>
       )}
-
-      <ReviewerBar pullRequest={pullRequest} />
     </header>
   )
 })
+
+/**
+ * The subject line of a commit message, with `backticked` spans rendered as
+ * code.
+ *
+ * Commit subjects are written in markdown by habit even though nothing renders
+ * them, so the backticks used to show up literally — and the body ran straight
+ * into the subject because the whole raw message was printed. The mono face
+ * comes from preflight's `code` rule.
+ */
+function CommitSubject({ message }: { message: string }): ReactElement {
+  const { title } = parseCommitMessage(message)
+  const segments = title.split(/`([^`]+)`/)
+
+  return (
+    <>
+      {segments.map((segment, index) =>
+        index % 2 === 0 ? (
+          segment
+        ) : (
+          <code
+            className="rounded-xs bg-muted/60 px-1 py-0.5"
+            key={index}
+          >
+            {segment}
+          </code>
+        )
+      )}
+    </>
+  )
+}
 
 function Title({
   children,
@@ -238,7 +278,7 @@ function InlineEditableTitle({
       <input
         aria-label="Pull request title"
         autoFocus
-        className="w-full text-[26px] font-semibold leading-tight tracking-tight text-foreground bg-transparent border-0 border-b-2 border-primary outline-none focus:ring-0 py-0.5"
+        className="w-full text-2xl font-semibold leading-tight tracking-tight text-foreground bg-transparent border-0 border-b-2 border-primary outline-none focus:ring-0 py-0.5"
         value={draft}
         onBlur={handleSave}
         onChange={(event) => setDraft(event.target.value)}
@@ -257,7 +297,7 @@ function InlineEditableTitle({
   return (
     <h1
       className={cn(
-        'font-semibold leading-tight tracking-tight text-foreground transition-all duration-200 ease-out text-[26px]',
+        'font-semibold leading-tight tracking-tight text-foreground transition-all duration-200 ease-out text-2xl',
         !isMerged && 'cursor-text hover:opacity-80'
       )}
       onClick={isMerged ? undefined : handleStartEdit}
@@ -274,23 +314,6 @@ function BranchName({
   baseName?: string | null
   name: string
 }): ReactElement {
-  const [copied, setCopied] = useState(false)
-
-  const handleCopy = () => {
-    navigator.clipboard
-      .writeText(name)
-      .then(() => {
-        setCopied(true)
-        setTimeout(() => setCopied(false), 2000)
-      })
-      .catch((error: unknown) => {
-        const message =
-          error instanceof Error ? error.message : 'Failed to copy branch name'
-
-        toast.error(message)
-      })
-  }
-
   return (
     <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
       <GitBranch className="size-3 shrink-0" />
@@ -317,16 +340,6 @@ function BranchName({
           </span>
         </>
       )}
-
-      <button
-        aria-label="Copy branch name"
-        className="p-0.5 rounded text-muted-foreground hover:text-foreground hover:bg-muted transition-colors cursor-pointer shrink-0"
-        onClick={handleCopy}
-        title="Copy branch name"
-        type="button"
-      >
-        {copied ? <Check className="size-3" /> : <Copy className="size-3" />}
-      </button>
     </div>
   )
 }
@@ -336,24 +349,10 @@ function Breadcrumbs({
 }: {
   pullRequest: PullRequest
 }): ReactElement {
-  const navigate = useNavigate()
-
   return (
-    <div className="flex items-center gap-2 text-xs font-mono text-muted-foreground">
-      <Button
-        aria-label="Back to dashboard"
-        className="size-[18px]"
-        onClick={() => navigate('/')}
-        size="icon-xs"
-        title="Back to dashboard"
-        type="button"
-        variant="outline"
-      >
-        <ChevronLeft className="size-2" />
-      </Button>
-
+    <div className="flex items-center gap-2 text-xs text-muted-foreground">
       <Breadcrumb>
-        <BreadcrumbList className="gap-1 sm:gap-1 text-xs font-mono">
+        <BreadcrumbList className="gap-1 sm:gap-1 text-xs">
           <BreadcrumbItem>
             <BreadcrumbPage>
               <span className="text-foreground/80">
@@ -387,28 +386,6 @@ function Breadcrumbs({
           </BreadcrumbItem>
         </BreadcrumbList>
       </Breadcrumb>
-
-      <div className="ml-auto flex items-center gap-1.5">
-        <Button
-          aria-label="Open on GitHub"
-          className="size-[22px]"
-          onClick={() => {
-            window.electron.openUrl(
-              `https://github.com/${pullRequest.repositoryOwner}/${pullRequest.repositoryName}/pull/${pullRequest.number}`
-            )
-          }}
-          size="icon-xs"
-          title="Open on GitHub"
-          type="button"
-          variant="outline"
-        >
-          <Github className="size-2.5" />
-        </Button>
-
-        {pullRequest.state !== 'MERGED' && (
-          <PullRequestActionsMenu pullRequest={pullRequest} />
-        )}
-      </div>
     </div>
   )
 }

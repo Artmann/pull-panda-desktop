@@ -8,6 +8,8 @@ import type { Review } from '@/types/pull-request-details'
 
 import { ReviewBadge } from './ReviewBadge'
 
+import { TooltipProvider } from '@/app/components/ui/tooltip'
+
 function buildReview(overrides?: Partial<Review>): Review {
   return {
     authorAvatarUrl: 'https://github.com/octocat.png',
@@ -29,7 +31,9 @@ function buildReview(overrides?: Partial<Review>): Review {
 
 describe('ReviewBadge', () => {
   it('renders an approved badge with the success color', () => {
-    render(<ReviewBadge review={buildReview({ state: 'APPROVED' })} />)
+    render(<ReviewBadge review={buildReview({ state: 'APPROVED' })} />, {
+      wrapper: TooltipProvider
+    })
 
     const badge = screen.getByText('Approved')
 
@@ -37,7 +41,10 @@ describe('ReviewBadge', () => {
   })
 
   it('renders a changes requested badge with the danger color', () => {
-    render(<ReviewBadge review={buildReview({ state: 'CHANGES_REQUESTED' })} />)
+    render(
+      <ReviewBadge review={buildReview({ state: 'CHANGES_REQUESTED' })} />,
+      { wrapper: TooltipProvider }
+    )
 
     const badge = screen.getByText('Requested changes')
 
@@ -45,7 +52,9 @@ describe('ReviewBadge', () => {
   })
 
   it('renders a commented badge with the muted color for other states', () => {
-    render(<ReviewBadge review={buildReview({ state: 'COMMENTED' })} />)
+    render(<ReviewBadge review={buildReview({ state: 'COMMENTED' })} />, {
+      wrapper: TooltipProvider
+    })
 
     const badge = screen.getByText('Commented')
 
@@ -53,7 +62,9 @@ describe('ReviewBadge', () => {
   })
 
   it('renders the author avatar when an avatar url is present', () => {
-    render(<ReviewBadge review={buildReview()} />)
+    render(<ReviewBadge review={buildReview()} />, {
+      wrapper: TooltipProvider
+    })
 
     const avatar = screen.getByRole('img')
 
@@ -62,7 +73,9 @@ describe('ReviewBadge', () => {
   })
 
   it('renders a dot placeholder when no avatar url is present', () => {
-    render(<ReviewBadge review={buildReview({ authorAvatarUrl: null })} />)
+    render(<ReviewBadge review={buildReview({ authorAvatarUrl: null })} />, {
+      wrapper: TooltipProvider
+    })
 
     expect(screen.queryByRole('img')).not.toBeInTheDocument()
   })

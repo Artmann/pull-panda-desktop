@@ -1436,16 +1436,6 @@
   resolved "https://registry.yarnpkg.com/@floating-ui/utils/-/utils-0.2.10.tgz#a2a1e3812d14525f725d011a73eceb41fef5bc1c"
   integrity sha512-aGTxbpbg8/b5JfU1HXSrbH3wXZuLPJcNEcZQFMxLs3oSzgtVu6nFPkbbGGUvBcUjKV2YyB9Wxxabo+HEH9tcRQ==
 
-"@fontsource-variable/geist-mono@^5.2.7":
-  version "5.2.7"
-  resolved "https://registry.yarnpkg.com/@fontsource-variable/geist-mono/-/geist-mono-5.2.7.tgz#c5b05ebfd133b33ac6e0812d6ec8f8ca1dc627ca"
-  integrity sha512-ZKlZ5sjtalb2TwXKs400mAGDlt/+2ENLNySPx0wTz3bP3mWARCsUW+rpxzZc7e05d2qGch70pItt3K4qttbIYA==
-
-"@fontsource-variable/geist@^5.2.8":
-  version "5.2.8"
-  resolved "https://registry.yarnpkg.com/@fontsource-variable/geist/-/geist-5.2.8.tgz#7fe7b74934b5d680150ba5664ea147603d5a7c0c"
-  integrity sha512-cJ6m9e+8MQ5dCYJsLylfZrgBh6KkG4bOLckB35Tr9J/EqdkEM6QllH5PxqP1dhTvFup+HtMRPuz9xOjxXJggxw==
-
 "@fontsource/ibm-plex-mono@^5.2.7":
   version "5.2.7"
   resolved "https://registry.yarnpkg.com/@fontsource/ibm-plex-mono/-/ibm-plex-mono-5.2.7.tgz#ef5b6f052115fdf6666208a5f8a0f13fcd7ba1fd"

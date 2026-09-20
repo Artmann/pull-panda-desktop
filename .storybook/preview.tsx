@@ -1,6 +1,8 @@
 import type { Preview } from '@storybook/react-vite'
 import { withThemeByClassName } from '@storybook/addon-themes'
 
+import { TooltipProvider } from '@/app/components/ui/tooltip'
+
 import '@/app/index.css'
 
 const preview: Preview = {
@@ -19,6 +21,13 @@ const preview: Preview = {
     }
   },
   decorators: [
+    // The app mounts one provider at its root; stories need the same one, or
+    // every tooltip in them throws.
+    (Story) => (
+      <TooltipProvider>
+        <Story />
+      </TooltipProvider>
+    ),
     withThemeByClassName({
       themes: {
         light: '',

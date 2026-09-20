@@ -47,8 +47,8 @@ export function PullRequestStatusBadge({
         'rounded-full border border-current/60',
         'font-medium whitespace-nowrap',
         isCompact
-          ? 'gap-1 px-1.5 py-0 text-[10px]'
-          : 'gap-1.5 px-2 py-0.5 text-[10px]',
+          ? 'gap-1 px-1.5 py-0 text-2xs'
+          : 'gap-1.5 px-2 py-0.5 text-2xs',
         colorClass
       )}
       title={isCompact ? status : undefined}

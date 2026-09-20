@@ -152,7 +152,7 @@ function InlineEditableBody({
     return (
       <div className="group relative">
         <MarkdownBlock
-          className="pull-request-description prose-sm *:first:mt-0!"
+          className="pull-request-description *:first:mt-0!"
           content={pullRequest.body}
         />
 

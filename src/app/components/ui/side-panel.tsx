@@ -22,7 +22,7 @@ function SidePanel({
   return (
     <div
       className={cn(
-        'fixed top-8 bottom-0 right-0 z-50',
+        'fixed top-8 bottom-footer right-0 z-50',
         'bg-background border-l border-border',
         'flex flex-col transition-[width] duration-200 ease-in-out',
         collapsed ? 'w-3' : 'w-96',
@@ -108,7 +108,7 @@ function SidePanelFooter({
 }: SidePanelFooterProps) {
   return (
     <div
-      className={cn('mt-auto p-4 pb-12', collapsed && 'hidden', className)}
+      className={cn('mt-auto p-4', collapsed && 'hidden', className)}
       {...props}
     />
   )
