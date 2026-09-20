@@ -41,9 +41,20 @@ export const StickyPullRequestHeader = memo(function StickyPullRequestHeader({
   )
 
   return (
+    /*
+      Pinned to the content column rather than to the window. The bar is
+      `absolute`, and the only positioned ancestor it can resolve against is the
+      shell's content column in App.tsx — which sits beside the sidebar and
+      outside the scroll container. Resolving against a box outside the
+      scrollport is what keeps the bar still while the page scrolls under it,
+      the same thing `fixed` used to buy, and resolving against that box in
+      particular is what keeps it off the sidebar. A `fixed` bar cannot do the
+      second: it is measured from the window, and the sidebar is resizable, so
+      there is no constant left inset to give it.
+    */
     <header
       className={`
-        fixed top-8 left-0 right-0 z-50
+        absolute top-0 left-0 right-0 z-50
         flex flex-col gap-2
         bg-background
         border-b border-border

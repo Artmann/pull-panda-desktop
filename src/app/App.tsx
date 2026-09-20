@@ -170,7 +170,13 @@ function AppShell({
       <div className="flex-1 min-h-0 flex">
         {showSidebar && <PullRequestSidebar />}
 
-        <div className="flex flex-1 min-w-0 min-h-0">
+        {/*
+          `relative` makes this box the one StickyPullRequestHeader pins itself
+          to. It is the content column — beside the sidebar, and outside the
+          scroll container below — so an absolute bar inside the page lands
+          across the content and nothing else, at any sidebar width.
+        */}
+        <div className="relative flex flex-1 min-w-0 min-h-0">
           {/*
             This is the one `.overflow-auto` in the app. PullRequestPage,
             FileCard and use-virtual-list all find their scroll container with
