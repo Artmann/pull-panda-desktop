@@ -1,15 +1,13 @@
 import { useTheme } from 'next-themes'
-import { type ReactElement, type ReactNode, useEffect, useState } from 'react'
+import { type ReactElement, useEffect, useState } from 'react'
 
-import { Card, CardContent } from '../components/ui/card'
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue
-} from '../components/ui/select'
-
+} from '@/app/components/ui/select'
 import {
   ensureLanguageLoaded,
   getSharedHighlighter
@@ -17,6 +15,8 @@ import {
 import { useAppTheme } from '@/app/lib/store/themeContext'
 import { getThemesForMode, type AppTheme } from '@/app/lib/themes'
 import { useDiffLayout } from '@/app/pull-requests/diffs/use-diff-layout'
+
+import { SettingRow, SettingsSection } from './section'
 
 const sampleCode = `function greet(name: string): string {
   const message = \`Hello, \${name}!\`
@@ -34,81 +34,85 @@ export function AppearanceSettings(): ReactElement {
   const availableThemes = getThemesForMode(mode)
 
   return (
-    <div>
-      <h2 className="text-xl font-medium mb-6">Appearance</h2>
-
-      <Card className="pt-0">
-        <CardContent>
-          <SettingItem
-            description="Choose the color theme for the entire application"
-            label="Theme"
+    <SettingsSection title="Appearance">
+      <SettingRow
+        description="Colors for the whole application."
+        label="Theme"
+      >
+        <Select
+          value={appTheme.value}
+          onValueChange={setAppTheme}
+        >
+          <SelectTrigger
+            className="w-44"
+            size="sm"
           >
-            <Select
-              value={appTheme.value}
-              onValueChange={setAppTheme}
-            >
-              <SelectTrigger className="w-52">
-                <SelectValue placeholder="Theme" />
-              </SelectTrigger>
-              <SelectContent>
-                {availableThemes.map((t) => (
-                  <SelectItem
-                    key={t.value}
-                    value={t.value}
-                  >
-                    {t.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </SettingItem>
+            <SelectValue placeholder="Theme" />
+          </SelectTrigger>
+          <SelectContent>
+            {availableThemes.map((availableTheme) => (
+              <SelectItem
+                key={availableTheme.value}
+                value={availableTheme.value}
+              >
+                {availableTheme.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </SettingRow>
 
-          <SettingItem
-            description="Select light, dark, or follow your system preference"
-            label="Appearance"
+      <SettingRow
+        description="Light, dark, or follow your system."
+        label="Appearance"
+      >
+        <Select
+          value={theme}
+          onValueChange={setTheme}
+        >
+          <SelectTrigger
+            className="w-44"
+            size="sm"
           >
-            <Select
-              value={theme}
-              onValueChange={setTheme}
-            >
-              <SelectTrigger className="w-52">
-                <SelectValue placeholder="Appearance" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="dark">Dark</SelectItem>
-                <SelectItem value="light">Light</SelectItem>
-                <SelectItem value="system">System preference</SelectItem>
-              </SelectContent>
-            </Select>
-          </SettingItem>
+            <SelectValue placeholder="Appearance" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="dark">Dark</SelectItem>
+            <SelectItem value="light">Light</SelectItem>
+            <SelectItem value="system">System preference</SelectItem>
+          </SelectContent>
+        </Select>
+      </SettingRow>
 
-          <SettingItem
-            description="How file diffs are laid out by default. Each file has a toggle to override it."
-            label="Diff layout"
+      <SettingRow
+        description="The default for file diffs. Each file has a toggle to override it."
+        label="Diff layout"
+      >
+        <Select
+          value={diffLayout}
+          onValueChange={(value) => {
+            setDiffLayout(value === 'split' ? 'split' : 'unified')
+          }}
+        >
+          <SelectTrigger
+            className="w-44"
+            size="sm"
           >
-            <Select
-              value={diffLayout}
-              onValueChange={(value) => {
-                setDiffLayout(value === 'split' ? 'split' : 'unified')
-              }}
-            >
-              <SelectTrigger className="w-52">
-                <SelectValue placeholder="Diff layout" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="unified">Unified</SelectItem>
-                <SelectItem value="split">Split</SelectItem>
-              </SelectContent>
-            </Select>
-          </SettingItem>
+            <SelectValue placeholder="Diff layout" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="unified">Unified</SelectItem>
+            <SelectItem value="split">Split</SelectItem>
+          </SelectContent>
+        </Select>
+      </SettingRow>
 
-          <div className="pt-6">
-            <div className="font-medium mb-2">Preview</div>
-            <CodePreview appTheme={appTheme} />
-          </div>
-        </CardContent>
-      </Card>
-    </div>
+      <div className="flex flex-col gap-2 py-3">
+        <div className="text-xs text-muted-foreground">Preview</div>
+
+        <CodePreview appTheme={appTheme} />
+      </div>
+    </SettingsSection>
   )
 }
 
@@ -136,37 +140,16 @@ function CodePreview({ appTheme }: { appTheme: AppTheme }): ReactElement {
 
   if (!highlightedHtml) {
     return (
-      <div className="rounded-lg bg-muted p-4 font-mono text-sm">
-        Loading preview...
+      <div className="rounded-md border border-border bg-muted p-3 font-mono text-xs text-muted-foreground">
+        Loading preview…
       </div>
     )
   }
 
   return (
     <div
-      className="rounded-lg overflow-hidden text-sm [&_pre]:p-4 [&_pre]:m-0"
+      className="overflow-hidden rounded-md border border-border text-xs [&_pre]:m-0 [&_pre]:overflow-x-auto [&_pre]:p-3"
       dangerouslySetInnerHTML={{ __html: highlightedHtml }}
     />
-  )
-}
-
-function SettingItem({
-  children,
-  description,
-  label
-}: {
-  children: ReactNode
-  description: string
-  label: string
-}): ReactElement {
-  return (
-    <div className="flex items-center justify-between py-6 border-b last:border-b-0 border-border">
-      <div>
-        <div className="font-medium">{label}</div>
-        <div className="text-muted-foreground text-sm">{description}</div>
-      </div>
-
-      <div>{children}</div>
-    </div>
   )
 }

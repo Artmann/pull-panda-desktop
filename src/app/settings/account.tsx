@@ -1,9 +1,10 @@
 import { type ReactElement } from 'react'
 
-import { UserAvatar } from '../components/UserAvatar'
-import { Button } from '../components/ui/button'
-import { Card, CardContent } from '../components/ui/card'
-import { useAuth } from '../lib/store/authContext'
+import { Button } from '@/app/components/ui/button'
+import { UserAvatar } from '@/app/components/UserAvatar'
+import { useAuth } from '@/app/lib/store/authContext'
+
+import { SettingsSection } from './section'
 
 export function AccountSettings(): ReactElement {
   const { logout, user } = useAuth()
@@ -15,35 +16,33 @@ export function AccountSettings(): ReactElement {
   }
 
   return (
-    <div>
-      <h2 className="text-xl font-medium mb-6">Account</h2>
+    <SettingsSection title="Account">
+      <div className="flex items-center justify-between gap-8 py-3">
+        <div className="flex min-w-0 items-center gap-3">
+          <UserAvatar
+            avatarUrl={user?.avatar_url}
+            login={user?.login}
+          />
 
-      <Card className="pt-0">
-        <CardContent>
-          <div className="flex items-center justify-between py-6">
-            <div className="flex items-center gap-3">
-              <UserAvatar
-                avatarUrl={user?.avatar_url}
-                login={user?.login}
-              />
-
-              <div>
-                <div className="font-medium">{user?.name ?? user?.login}</div>
-                <div className="text-muted-foreground text-sm">
-                  @{user?.login}
-                </div>
-              </div>
+          <div className="min-w-0">
+            <div className="truncate text-sm font-medium">
+              {user?.name ?? user?.login}
             </div>
 
-            <Button
-              variant="destructive"
-              onClick={handleSignOut}
-            >
-              Sign out
-            </Button>
+            <div className="truncate text-xs text-muted-foreground">
+              @{user?.login}
+            </div>
           </div>
-        </CardContent>
-      </Card>
-    </div>
+        </div>
+
+        <Button
+          onClick={handleSignOut}
+          size="sm"
+          variant="outline"
+        >
+          Sign out
+        </Button>
+      </div>
+    </SettingsSection>
   )
 }
