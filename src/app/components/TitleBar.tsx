@@ -10,6 +10,7 @@ import { type ReactElement, useEffect, useRef } from 'react'
 import { useLocation, useNavigate } from 'react-router'
 
 import { cn } from '@/app/lib/utils'
+import { closeSettings } from '@/app/settings/close-settings'
 import { Wordmark } from './PandaMark'
 
 const isMac = navigator.platform.toLowerCase().includes('mac')
@@ -37,6 +38,14 @@ export function TitleBar(): ReactElement {
 
   const handleForward = () => {
     navigate(1)
+  }
+
+  const handleOpenSettings = () => {
+    navigate('/settings')
+  }
+
+  const handleCloseSettings = () => {
+    closeSettings(navigate)
   }
 
   const handleMinimize = () => {
@@ -81,13 +90,14 @@ export function TitleBar(): ReactElement {
           <ChevronRightIcon className="size-4" />
         </NavigationButton>
 
-        <TitleBarLink
+        <TitleBarToggle
           isActive={isSettingsActive}
+          label={isSettingsActive ? 'Close settings' : 'Open settings'}
+          onClick={isSettingsActive ? handleCloseSettings : handleOpenSettings}
           testId="title-bar-settings"
-          to="/settings"
         >
           <SettingsIcon className="size-4" />
-        </TitleBarLink>
+        </TitleBarToggle>
       </div>
 
       <div
@@ -188,31 +198,34 @@ function NavigationButton({
   )
 }
 
-interface TitleBarLinkProps {
+interface TitleBarToggleProps {
   children: React.ReactNode
   isActive: boolean
+  label: string
+  onClick: () => void
   testId?: string
-  to: string
 }
 
-function TitleBarLink({
+// A page toggle: opens its page, and closes it again when it is already open.
+function TitleBarToggle({
   children,
   isActive,
-  testId,
-  to
-}: TitleBarLinkProps): ReactElement {
-  const navigate = useNavigate()
-
+  label,
+  onClick,
+  testId
+}: TitleBarToggleProps): ReactElement {
   return (
     <button
+      aria-label={label}
+      aria-pressed={isActive}
       className={cn(
-        'w-8 h-full flex items-center justify-center transition-colors',
+        'w-8 h-full flex items-center justify-center transition-colors hover:bg-muted',
         isActive
-          ? 'text-foreground cursor-default'
-          : 'text-muted-foreground hover:bg-muted hover:text-foreground'
+          ? 'text-foreground'
+          : 'text-muted-foreground hover:text-foreground'
       )}
       data-testid={testId}
-      onClick={() => navigate(to)}
+      onClick={onClick}
       type="button"
     >
       {children}

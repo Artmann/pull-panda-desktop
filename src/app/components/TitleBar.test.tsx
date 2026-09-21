@@ -40,6 +40,7 @@ describe('TitleBar', () => {
 
   beforeEach(() => {
     mockNavigate.mockClear()
+    mockLocation.pathname = '/'
 
     setHistoryState({ idx: 0 })
 
@@ -175,6 +176,40 @@ describe('TitleBar', () => {
     render(<TitleBar />)
 
     expect(screen.getByTestId('title-bar-back')).toBeDisabled()
+  })
+
+  describe('settings toggle', () => {
+    it('opens settings when not on the settings page', () => {
+      mockLocation.pathname = '/pull-requests/1'
+
+      render(<TitleBar />)
+
+      fireEvent.click(screen.getByRole('button', { name: 'Open settings' }))
+
+      expect(mockNavigate.mock.calls).toEqual([['/settings']])
+    })
+
+    it('goes back when clicked on the settings page with history', () => {
+      setHistoryState({ idx: 1 })
+      mockLocation.pathname = '/settings'
+
+      render(<TitleBar />)
+
+      fireEvent.click(screen.getByRole('button', { name: 'Close settings' }))
+
+      expect(mockNavigate.mock.calls).toEqual([[-1]])
+    })
+
+    it('goes home when clicked on the settings page without history', () => {
+      setHistoryState({ idx: 0 })
+      mockLocation.pathname = '/settings'
+
+      render(<TitleBar />)
+
+      fireEvent.click(screen.getByRole('button', { name: 'Close settings' }))
+
+      expect(mockNavigate.mock.calls).toEqual([['/', { replace: true }]])
+    })
   })
 
   describe('window controls', () => {
