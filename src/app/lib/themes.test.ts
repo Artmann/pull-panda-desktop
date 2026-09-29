@@ -5,6 +5,7 @@ import { describe, expect, it } from 'vitest'
 
 import { themeVariableMap } from './applyThemePalette'
 import {
+  appThemes,
   defaultDarkThemeValue,
   defaultLightThemeValue,
   getThemeByValue,
@@ -49,6 +50,48 @@ function readPalette(selector: string): ThemePalette {
   return Object.fromEntries(entries) as ThemePalette
 }
 
+/**
+ * The linear sRGB channels a palette colour resolves to, or undefined when the
+ * value is not the `oklch(L C H)` form every palette uses. Channels outside
+ * 0..1 are outside the gamut a screen can show.
+ */
+function toLinearSrgb(color: string): number[] | undefined {
+  const match = color.match(/^oklch\(\s*([\d.]+)\s+([\d.]+)\s+([\d.]+)\s*\)$/)
+
+  if (!match) {
+    return
+  }
+
+  const lightness = Number(match[1])
+  const chroma = Number(match[2])
+  const hue = (Number(match[3]) * Math.PI) / 180
+
+  const a = chroma * Math.cos(hue)
+  const b = chroma * Math.sin(hue)
+
+  const long = (lightness + 0.3963377774 * a + 0.2158037573 * b) ** 3
+  const medium = (lightness - 0.1055613458 * a - 0.0638541728 * b) ** 3
+  const short = (lightness - 0.0894841775 * a - 1.291485548 * b) ** 3
+
+  return [
+    4.0767416621 * long - 3.3077115913 * medium + 0.2309699292 * short,
+    -1.2684380046 * long + 2.6097574011 * medium - 0.3413193965 * short,
+    -0.0041960863 * long - 0.7034186147 * medium + 1.707614701 * short
+  ]
+}
+
+function isOutsideSrgb(color: string): boolean {
+  const channels = toLinearSrgb(color)
+
+  if (channels === undefined) {
+    return false
+  }
+
+  // A hair of tolerance: a colour sitting exactly on the boundary rounds to the
+  // same byte either way, so only a real overshoot counts.
+  return channels.some((channel) => channel < -0.0005 || channel > 1.0005)
+}
+
 function componentFiles(directory: string): string[] {
   return readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {
     const entryPath = path.join(directory, entry.name)
@@ -90,6 +133,25 @@ describe('the signature palettes', () => {
       .map(([field]) => field)
 
     expect(orphans).toEqual([])
+  })
+})
+
+describe('every palette', () => {
+  it('stays inside the sRGB gamut', () => {
+    const offenders = appThemes.flatMap((theme) =>
+      (['dark', 'light'] as const).flatMap((mode) =>
+        Object.entries(theme[mode])
+          .filter(([, color]) => isOutsideSrgb(color))
+          .map(([field, color]) => `${theme.value} ${mode} ${field}: ${color}`)
+      )
+    )
+
+    // A colour outside sRGB is gamut-mapped by the browser, which shifts hue
+    // and lightness by an amount the token never asked for — so what renders
+    // is not what the palette says. Lower the chroma until the colour fits;
+    // lightness and hue carry the intent, chroma is the part that cannot be
+    // honoured anyway.
+    expect(offenders).toEqual([])
   })
 })
 
