@@ -317,6 +317,27 @@ body {
   --diffs-modified-color-override: var(--primary);
 }
 
+/* Word-level emphasis paints the changed words inside a changed line, and the
+ * package does it with a 20% wash of the base colour above. In a light theme
+ * that base is dark, so the wash darkens the span — the right direction, and
+ * left alone here. In a dark theme the base is a light text tone, so the wash
+ * goes the wrong way: it lands at roughly twice the luminance of the line
+ * fill. A line that was rewritten rather than edited carries a single span
+ * across its whole width, so that wash covers the entire line and the dimmer
+ * syntax colours — comments above all — stop reading against it.
+ *
+ * The status surface token is the same hue at surface strength: dark and
+ * saturated instead of light and pale. It separates from the line fill by
+ * chroma rather than lightness, so changed words stay marked and the code on
+ * top keeps at least the contrast it has on an ordinary changed line.
+ *
+ * :where() keeps this at one class of specificity so the fully-added and
+ * fully-deleted rules below still win on source order. */
+:where(.dark) .pierre-diff {
+  --diffs-bg-addition-emphasis-override: var(--status-success);
+  --diffs-bg-deletion-emphasis-override: var(--status-danger);
+}
+
 /* Comment threads embed a small excerpt of the diff for context; render it a
  * step smaller than the full file view so it reads as a quote, not a diff. */
 .pierre-diff--compact {
