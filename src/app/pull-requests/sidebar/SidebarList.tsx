@@ -2,6 +2,7 @@ import { useVirtualizer } from '@tanstack/react-virtual'
 import { useEffect, useRef, type ReactElement } from 'react'
 
 import { maximumJumpShortcuts } from '@/app/commands/sidebar-accessor'
+import { cn } from '@/app/lib/utils'
 
 import { PullRequestSidebarRow } from './PullRequestSidebarRow'
 import { countLabel, type SidebarRow, type SortId } from './sidebar-data'
@@ -17,6 +18,8 @@ function initialViewportHeight(): number {
 }
 
 interface SidebarListProps {
+  /** Rows on their way out of the list — see `use-departing-rows`. */
+  departingIds: ReadonlySet<string>
   hasFilters: boolean
   onClearFilters: () => void
   onSelect: (pullRequestId: string) => void
@@ -27,6 +30,7 @@ interface SidebarListProps {
 }
 
 export function SidebarList({
+  departingIds,
   hasFilters,
   onClearFilters,
   onSelect,
@@ -99,11 +103,20 @@ export function SidebarList({
             {virtualRows.map((virtualRow) => {
               const row = rows[virtualRow.index]
 
+              const isDeparting = departingIds.has(row.pullRequest.id)
+
               return (
                 <div
                   key={virtualRow.key}
                   ref={virtualizer.measureElement}
-                  className="absolute top-0 left-0 w-full pb-1"
+                  className={cn(
+                    'absolute top-0 left-0 w-full pb-1',
+                    // The row stays mounted for the whole fade, so this is a
+                    // transition from the row as it was rather than an entry
+                    // animation on a fresh node.
+                    'transition-opacity duration-300 ease-out motion-reduce:transition-none',
+                    isDeparting && 'pointer-events-none opacity-0'
+                  )}
                   data-index={virtualRow.index}
                   style={{
                     transform: `translateY(${virtualRow.start.toString()}px)`

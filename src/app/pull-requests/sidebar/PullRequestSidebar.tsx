@@ -18,6 +18,8 @@ import {
 } from './sidebar-data'
 import { SidebarList } from './SidebarList'
 import { SidebarSearchHeader } from './SidebarSearchHeader'
+import { useAdvancePastDeparture } from './use-advance-past-departure'
+import { useDepartingRows } from './use-departing-rows'
 import { useSidebarSelection } from './use-sidebar-selection'
 import { useSidebarWidth } from './use-sidebar-width'
 
@@ -58,15 +60,11 @@ export function PullRequestSidebar(): ReactElement {
 
   const checkRollups = useMemo(() => buildCheckRollups(checks), [checks])
 
-  // Open pull requests only, plus whichever one is open right now — merging a
-  // pull request from the detail page should not make it vanish underneath you.
+  // Open pull requests only. One that has just been merged or closed is held
+  // back for a moment by `useDepartingRows` so its row can fade out.
   const listed = useMemo(
-    () =>
-      pullRequests.filter(
-        (pullRequest) =>
-          pullRequest.state === 'OPEN' || pullRequest.id === selectedId
-      ),
-    [pullRequests, selectedId]
+    () => pullRequests.filter((pullRequest) => pullRequest.state === 'OPEN'),
+    [pullRequests]
   )
 
   const allRows = useMemo(
@@ -74,9 +72,17 @@ export function PullRequestSidebar(): ReactElement {
     [checkRollups, listed]
   )
 
-  const visibleRows = useMemo(
+  const liveRows = useMemo(
     () => sortRows(filterRows(allRows, filters), sort),
     [allRows, filters, sort]
+  )
+
+  const advancePastDeparture = useAdvancePastDeparture(liveRows, selectedId)
+
+  const { departingIds, rows: visibleRows } = useDepartingRows(
+    liveRows,
+    pullRequests,
+    advancePastDeparture
   )
 
   const select = useSidebarSelection(visibleRows, selectedId)
@@ -96,6 +102,7 @@ export function PullRequestSidebar(): ReactElement {
         />
 
         <SidebarList
+          departingIds={departingIds}
           hasFilters={hasActiveFilters(filters)}
           onClearFilters={() => setFilters(emptyFilters)}
           onSelect={select}
