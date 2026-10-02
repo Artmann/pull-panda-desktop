@@ -7,9 +7,10 @@ import { useSelectPullRequest } from './use-sidebar-selection'
 
 /**
  * Merging the pull request you are reading takes its row out from under you, so
- * move on to whichever row fills the gap it leaves behind. Returns a handler
- * for `useDepartingRows`, which calls it once the row has finished fading —
- * pulling the page away any earlier would bury the merge you just confirmed.
+ * move up to the row above it, or down to the one below when it was at the top.
+ * Returns a handler for `useDepartingRows`, which calls it once the row has
+ * finished fading — pulling the page away any earlier would bury the merge you
+ * just confirmed.
  */
 export function useAdvancePastDeparture(
   rows: readonly SidebarRow[],
@@ -25,7 +26,7 @@ export function useAdvancePastDeparture(
         return
       }
 
-      const next = rows[Math.min(index, rows.length - 1)]
+      const next = rows[Math.min(Math.max(index - 1, 0), rows.length - 1)]
 
       if (!next) {
         navigate('/')

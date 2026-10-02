@@ -450,7 +450,7 @@ describe('PullRequestSidebar departures', () => {
     expect(rowTitles()).toHaveLength(2)
   })
 
-  it('moves you on to the next pull request once the row you merged has gone', () => {
+  it('moves you up to the previous pull request once the row you merged has gone', () => {
     vi.useFakeTimers()
 
     const { store } = renderSidebar({ initialPath: '/pull-requests/pr-b' })
@@ -468,7 +468,23 @@ describe('PullRequestSidebar departures', () => {
     })
 
     expect(screen.getByTestId('pathname')).toHaveTextContent(
-      '/pull-requests/pr-c'
+      '/pull-requests/pr-a'
+    )
+  })
+
+  it('moves you down to the next pull request when the row you merged was at the top', () => {
+    vi.useFakeTimers()
+
+    const { store } = renderSidebar({ initialPath: '/pull-requests/pr-a' })
+
+    merge(store, 'pr-a')
+
+    act(() => {
+      vi.advanceTimersByTime(departureDurationMs)
+    })
+
+    expect(screen.getByTestId('pathname')).toHaveTextContent(
+      '/pull-requests/pr-b'
     )
   })
 
