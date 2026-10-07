@@ -3,6 +3,7 @@ import { eq, and, isNull } from 'drizzle-orm'
 import { getDatabase } from '../database'
 import { loadPullRequestRows } from '../database/pull-request-rows'
 import { comments, pullRequests, reviews } from '../database/schema'
+import { checkFromRow } from './check-from-row'
 import { loadAll as loadConnectedRepos } from './connected-repos'
 import type {
   PullRequest,
@@ -211,7 +212,10 @@ async function collectDetails(
   return collected
 }
 
-export async function bootstrap(userLogin?: string): Promise<BootstrapData> {
+function buildPullRequestList(userLogin?: string): {
+  pendingReviews: Record<string, PendingReview>
+  pullRequests: PullRequest[]
+} {
   const database = getDatabase()
 
   const rows = database.select().from(pullRequests).all()
@@ -230,6 +234,19 @@ export async function bootstrap(userLogin?: string): Promise<BootstrapData> {
       commentCount: commentCountByPullRequestId.get(row.id) ?? 0
     })
   )
+
+  return { pendingReviews, pullRequests: parsedPullRequests }
+}
+
+// Just the pull request list, without each PR's details. Used whenever the
+// list changes, which happens far more often than a full bootstrap.
+export function loadPullRequestList(userLogin?: string): PullRequest[] {
+  return buildPullRequestList(userLogin).pullRequests
+}
+
+export async function bootstrap(userLogin?: string): Promise<BootstrapData> {
+  const { pendingReviews, pullRequests: parsedPullRequests } =
+    buildPullRequestList(userLogin)
 
   const details = await collectDetails(parsedPullRequests, userLogin)
 
@@ -315,23 +332,7 @@ export async function getPullRequestDetails(
     syncedAt: row.syncedAt
   }))
 
-  const parsedChecks: Check[] = checkRows.map((row) => ({
-    id: row.id,
-    gitHubId: row.gitHubId,
-    pullRequestId: row.pullRequestId,
-    name: row.name,
-    state: row.state,
-    conclusion: row.conclusion,
-    commitSha: row.commitSha,
-    suiteName: row.suiteName,
-    durationInSeconds: row.durationInSeconds,
-    detailsUrl: row.detailsUrl,
-    message: row.message,
-    url: row.url,
-    gitHubCreatedAt: row.gitHubCreatedAt,
-    gitHubUpdatedAt: row.gitHubUpdatedAt,
-    syncedAt: row.syncedAt
-  }))
+  const parsedChecks: Check[] = checkRows.map(checkFromRow)
 
   const parsedCommits: Commit[] = commitRows.map((row) => ({
     id: row.id,

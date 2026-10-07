@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { needsSync } from './needs-sync'
+import { needsSync, syncPriority } from './needs-sync'
 
 const now = new Date('2026-06-11T12:00:00Z').getTime()
 
@@ -9,7 +9,9 @@ const hourMs = 60 * minuteMs
 const dayMs = 24 * hourMs
 
 interface CandidateOverrides {
+  detailsFingerprint?: string | null
   detailsSyncedAt?: string | null
+  fingerprint?: string | null
   id?: string
   state?: string
   updatedAt?: string
@@ -17,7 +19,9 @@ interface CandidateOverrides {
 
 function candidate(overrides: CandidateOverrides = {}) {
   return {
+    detailsFingerprint: 'abc|SUCCESS|none',
     detailsSyncedAt: new Date(now - 30 * 1000).toISOString(),
+    fingerprint: 'abc|SUCCESS|none',
     id: 'pr-1',
     state: 'OPEN',
     updatedAt: new Date(now - hourMs).toISOString(),
@@ -55,6 +59,18 @@ describe('needsSync', () => {
     expect(needsSync(pullRequest, noActiveIds, now)).toEqual(true)
   })
 
+  it('syncs pull requests whose fingerprint changed since the last sync', () => {
+    const pullRequest = candidate({ fingerprint: 'abc|PENDING|none' })
+
+    expect(needsSync(pullRequest, noActiveIds, now)).toEqual(true)
+  })
+
+  it('ignores a missing fingerprint', () => {
+    const pullRequest = candidate({ fingerprint: null })
+
+    expect(needsSync(pullRequest, noActiveIds, now)).toEqual(false)
+  })
+
   it('syncs active pull requests synced more than 10 seconds ago', () => {
     const pullRequest = candidate({
       detailsSyncedAt: new Date(now - 11 * 1000).toISOString()
@@ -71,37 +87,60 @@ describe('needsSync', () => {
     expect(needsSync(pullRequest, new Set(['pr-1']), now)).toEqual(false)
   })
 
-  it('syncs recently updated pull requests synced over a minute ago', () => {
+  it('syncs recently updated pull requests synced over 10 minutes ago', () => {
     const pullRequest = candidate({
-      detailsSyncedAt: new Date(now - 2 * minuteMs).toISOString()
+      detailsSyncedAt: new Date(now - 11 * minuteMs).toISOString(),
+      updatedAt: new Date(now - 2 * hourMs).toISOString()
     })
 
     expect(needsSync(pullRequest, noActiveIds, now)).toEqual(true)
   })
 
-  it('skips recently updated pull requests synced within the last minute', () => {
+  it('skips recently updated pull requests synced within the last 10 minutes', () => {
     const pullRequest = candidate({
-      detailsSyncedAt: new Date(now - 30 * 1000).toISOString()
+      detailsSyncedAt: new Date(now - 9 * minuteMs).toISOString()
     })
 
     expect(needsSync(pullRequest, noActiveIds, now)).toEqual(false)
   })
 
-  it('syncs older pull requests synced more than five minutes ago', () => {
+  it('syncs older pull requests synced more than 30 minutes ago', () => {
     const pullRequest = candidate({
-      detailsSyncedAt: new Date(now - 6 * minuteMs).toISOString(),
+      detailsSyncedAt: new Date(now - 31 * minuteMs).toISOString(),
       updatedAt: new Date(now - 2 * dayMs).toISOString()
     })
 
     expect(needsSync(pullRequest, noActiveIds, now)).toEqual(true)
   })
 
-  it('skips older pull requests synced within the last five minutes', () => {
+  it('skips older pull requests synced within the last 30 minutes', () => {
     const pullRequest = candidate({
-      detailsSyncedAt: new Date(now - 4 * minuteMs).toISOString(),
+      detailsSyncedAt: new Date(now - 29 * minuteMs).toISOString(),
       updatedAt: new Date(now - 2 * dayMs).toISOString()
     })
 
     expect(needsSync(pullRequest, noActiveIds, now)).toEqual(false)
+  })
+})
+
+describe('syncPriority', () => {
+  it('puts never-synced pull requests first', () => {
+    expect(syncPriority(candidate({ detailsSyncedAt: null }))).toEqual(0)
+  })
+
+  it('puts pull requests with a known change second', () => {
+    const updated = candidate({
+      detailsSyncedAt: new Date(now - 10 * minuteMs).toISOString(),
+      updatedAt: new Date(now - 5 * minuteMs).toISOString()
+    })
+    const fingerprintChanged = candidate({ fingerprint: 'def|SUCCESS|none' })
+
+    expect([syncPriority(updated), syncPriority(fingerprintChanged)]).toEqual([
+      1, 1
+    ])
+  })
+
+  it('puts everything else last', () => {
+    expect(syncPriority(candidate())).toEqual(2)
   })
 })

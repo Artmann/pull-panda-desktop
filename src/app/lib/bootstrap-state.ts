@@ -1,8 +1,6 @@
 import type { PreloadedState } from '@/app/store'
 import type { BootstrapData } from '@/main/bootstrap'
 
-import { filterReadyPullRequests } from './pull-requests'
-
 export function buildPreloadedState(
   bootstrapData: BootstrapData | null
 ): PreloadedState {
@@ -23,7 +21,7 @@ export function buildPreloadedState(
     pendingReviews: bootstrapData.pendingReviews,
     pullRequests: {
       initialized: true,
-      items: filterReadyPullRequests(bootstrapData.pullRequests)
+      items: bootstrapData.pullRequests
     },
     reactions: { items: bootstrapData.reactions },
     reviews: { items: bootstrapData.reviews },

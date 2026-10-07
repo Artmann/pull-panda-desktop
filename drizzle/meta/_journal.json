@@ -85,6 +85,13 @@
       "when": 1789706233340,
       "tag": "0011_magenta_molly_hayes",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "6",
+      "when": 1791362869481,
+      "tag": "0012_pull_request_fingerprint",
+      "breakpoints": true
     }
   ]
 }

@@ -6,6 +6,10 @@ import type { ResourceUpdatedEvent } from '../types/ipc-events'
 
 let cachedUserLogin: string | undefined
 
+export function getCachedUserLogin(): string | undefined {
+  return cachedUserLogin
+}
+
 export function setCachedUserLogin(login: string | undefined): void {
   cachedUserLogin = login
 }

@@ -259,11 +259,13 @@ export const GitHubRestLive: Layer.Layer<
             })
           )
 
-          yield* broker.recordCost('rest', 1)
-
+          // GitHub does not charge for a 304, so only a full response counts
+          // against our local budget.
           if (response === null) {
             return Option.none<A>()
           }
+
+          yield* broker.recordCost('rest', 1)
 
           const responseHeaders = response.headers as Record<string, string>
 

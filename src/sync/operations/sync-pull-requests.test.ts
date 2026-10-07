@@ -5,7 +5,7 @@ import { NetworkError } from '../errors'
 import type { PullRequestNode } from '../schemas/github-graphql'
 import { Database } from '../services/database'
 import { GitHubGraphQL } from '../services/github-graphql'
-import { syncPullRequests } from './sync-pull-requests'
+import { buildFingerprint, syncPullRequests } from './sync-pull-requests'
 
 const timeOne = '2026-01-01T00:00:00Z'
 const timeTwo = '2026-01-02T00:00:00Z'
@@ -18,14 +18,29 @@ const rateLimit = {
 }
 
 interface ProbeNode {
+  headRefOid?: string
   id: string
   updatedAt: string
 }
 
 interface KnownRow {
+  fingerprint?: string | null
   id: string
+  isAssignee?: boolean
+  isAuthor?: boolean
+  isReviewer?: boolean
   updatedAt: string
 }
+
+const emptyFingerprint = 'none|none|none'
+
+const knownRow = (row: KnownRow): Required<KnownRow> => ({
+  fingerprint: null,
+  isAssignee: false,
+  isAuthor: false,
+  isReviewer: false,
+  ...row
+})
 
 // A fake drizzle handle implementing only the fluent chains the operations
 // under test invoke, recording writes so assertions can inspect them.
@@ -46,7 +61,7 @@ const makeStubDatabase = (knownRows: ReadonlyArray<KnownRow>) => {
     select: () => ({
       from: () => ({
         where: () => ({
-          all: () => knownRows
+          all: () => knownRows.map(knownRow)
         })
       })
     }),
@@ -72,44 +87,49 @@ const makeStubDatabase = (knownRows: ReadonlyArray<KnownRow>) => {
 interface StubGraphQLOptions {
   assigned?: ReadonlyArray<ProbeNode>
   authored?: ReadonlyArray<ProbeNode>
+  authoredSecondPage?: ReadonlyArray<ProbeNode>
   hydrationFails?: boolean
   nodesById?: Record<string, PullRequestNode | null>
   reviewRequested?: ReadonlyArray<ProbeNode>
 }
 
-const probeResponse = (nodes: ReadonlyArray<ProbeNode>): unknown => ({
-  search: {
-    pageInfo: { hasNextPage: false, endCursor: null },
-    nodes: nodes.map((node) => ({
-      __typename: 'PullRequest',
-      state: 'OPEN',
-      ...node
-    }))
-  },
-  rateLimit
+const probeBucket = (
+  nodes: ReadonlyArray<ProbeNode>,
+  endCursor: string | null = null
+) => ({
+  pageInfo: { hasNextPage: endCursor !== null, endCursor },
+  nodes: nodes.map((node) => ({
+    __typename: 'PullRequest',
+    state: 'OPEN',
+    ...node
+  }))
 })
 
 const makeStubGraphQL = (options: StubGraphQLOptions) => {
   const hydrationCalls: string[][] = []
-
-  const nodesForSearch = (searchQuery: string): ReadonlyArray<ProbeNode> => {
-    if (searchQuery.includes('author:@me')) {
-      return options.authored ?? []
-    }
-
-    if (searchQuery.includes('assignee:@me')) {
-      return options.assigned ?? []
-    }
-
-    return options.reviewRequested ?? []
-  }
+  const pageCalls: Array<Record<string, unknown>> = []
 
   const layer = Layer.succeed(GitHubGraphQL, {
     query: <A>(queryText: string, variables: Record<string, unknown>) => {
-      if (queryText.includes('ProbePullRequests')) {
-        const searchQuery = variables.searchQuery as string
+      if (queryText.includes('ProbePullRequestsPage')) {
+        pageCalls.push(variables)
 
-        return Effect.succeed(probeResponse(nodesForSearch(searchQuery)) as A)
+        return Effect.succeed({
+          search: probeBucket(options.authoredSecondPage ?? []),
+          rateLimit
+        } as A)
+      }
+
+      if (queryText.includes('ProbePullRequests')) {
+        return Effect.succeed({
+          assigned: probeBucket(options.assigned ?? []),
+          authored: probeBucket(
+            options.authored ?? [],
+            options.authoredSecondPage ? 'cursor-1' : null
+          ),
+          reviewRequested: probeBucket(options.reviewRequested ?? []),
+          rateLimit
+        } as A)
       }
 
       const ids = Object.values(variables) as string[]
@@ -132,7 +152,7 @@ const makeStubGraphQL = (options: StubGraphQLOptions) => {
     }
   })
 
-  return { hydrationCalls, layer }
+  return { hydrationCalls, layer, pageCalls }
 }
 
 const makePullRequestNode = (
@@ -167,6 +187,7 @@ const expectedPersistedRecord = (
   flags: { isAssignee: boolean; isAuthor: boolean; isReviewer: boolean },
   updatedAt: string
 ) => ({
+  fingerprint: emptyFingerprint,
   id,
   number: 1,
   title: `Title ${id}`,
@@ -244,8 +265,10 @@ describe('syncPullRequests', () => {
     expect(database.updates).toEqual([])
   })
 
-  it('refreshes relation flags without hydrating when nothing changed', async () => {
-    const database = makeStubDatabase([{ id: 'pr-1', updatedAt: timeOne }])
+  it('refreshes changed relation flags without hydrating', async () => {
+    const database = makeStubDatabase([
+      { fingerprint: emptyFingerprint, id: 'pr-1', updatedAt: timeOne }
+    ])
     const graphql = makeStubGraphQL({
       authored: [{ id: 'pr-1', updatedAt: timeOne }],
       reviewRequested: [{ id: 'pr-1', updatedAt: timeOne }]
@@ -257,17 +280,94 @@ describe('syncPullRequests', () => {
       synced: 0,
       syncedIds: new Set(['pr-1']),
       errors: [],
-      hasChanges: false
+      hasChanges: true
     })
     expect(graphql.hydrationCalls).toEqual([])
     expect(database.inserts).toEqual([])
     expect(database.updates).toEqual([
       {
+        fingerprint: emptyFingerprint,
         isAuthor: true,
         isAssignee: false,
         isReviewer: true,
         syncedAt: expect.any(String) as unknown
       }
+    ])
+  })
+
+  it('writes nothing when flags and fingerprint are unchanged', async () => {
+    const database = makeStubDatabase([
+      {
+        fingerprint: emptyFingerprint,
+        id: 'pr-1',
+        isAuthor: true,
+        updatedAt: timeOne
+      }
+    ])
+    const graphql = makeStubGraphQL({
+      authored: [{ id: 'pr-1', updatedAt: timeOne }]
+    })
+
+    const result = await runSync(database, graphql)
+
+    expect(result).toEqual({
+      synced: 0,
+      syncedIds: new Set(['pr-1']),
+      errors: [],
+      hasChanges: false
+    })
+    expect(database.inserts).toEqual([])
+    expect(database.updates).toEqual([])
+  })
+
+  it('stores a new fingerprint without reporting a list change', async () => {
+    const database = makeStubDatabase([
+      {
+        fingerprint: emptyFingerprint,
+        id: 'pr-1',
+        isAuthor: true,
+        updatedAt: timeOne
+      }
+    ])
+    const graphql = makeStubGraphQL({
+      authored: [{ headRefOid: 'abc123', id: 'pr-1', updatedAt: timeOne }]
+    })
+
+    const result = await runSync(database, graphql)
+
+    expect(result).toEqual({
+      synced: 0,
+      syncedIds: new Set(['pr-1']),
+      errors: [],
+      hasChanges: false
+    })
+    expect(database.updates).toEqual([
+      {
+        fingerprint: 'abc123|none|none',
+        isAuthor: true,
+        isAssignee: false,
+        isReviewer: false,
+        syncedAt: expect.any(String) as unknown
+      }
+    ])
+  })
+
+  it('reads further pages only for a search with more results', async () => {
+    const database = makeStubDatabase([])
+    const graphql = makeStubGraphQL({
+      authored: [{ id: 'pr-1', updatedAt: timeOne }],
+      authoredSecondPage: [{ id: 'pr-2', updatedAt: timeOne }],
+      nodesById: {
+        'pr-1': makePullRequestNode('pr-1'),
+        'pr-2': makePullRequestNode('pr-2')
+      }
+    })
+
+    const result = await runSync(database, graphql)
+
+    expect(result.syncedIds).toEqual(new Set(['pr-1', 'pr-2']))
+    expect(graphql.pageCalls).toEqual([
+      { cursor: 'cursor-1', searchQuery: 'is:pr is:open author:@me' }
     ])
   })
 
@@ -302,6 +402,7 @@ describe('syncPullRequests', () => {
     ])
     expect(database.updates).toEqual([
       {
+        fingerprint: emptyFingerprint,
         isAuthor: false,
         isAssignee: true,
         isReviewer: false,
@@ -347,5 +448,36 @@ describe('syncPullRequests', () => {
     expect(graphql.hydrationCalls).toEqual([['pr-1']])
     expect(database.inserts).toEqual([])
     expect(database.updates).toEqual([])
+  })
+})
+
+describe('buildFingerprint', () => {
+  it('combines the head commit, check rollup and review decision', () => {
+    const fingerprint = buildFingerprint({
+      __typename: 'PullRequest',
+      commits: {
+        nodes: [{ commit: { statusCheckRollup: { state: 'PENDING' } } }]
+      },
+      headRefOid: 'abc123',
+      id: 'pr-1',
+      reviewDecision: 'APPROVED',
+      state: 'OPEN',
+      updatedAt: timeOne
+    })
+
+    expect(fingerprint).toEqual('abc123|PENDING|APPROVED')
+  })
+
+  it('uses placeholders for missing fields', () => {
+    const fingerprint = buildFingerprint({
+      __typename: 'PullRequest',
+      commits: { nodes: [{ commit: { statusCheckRollup: null } }] },
+      id: 'pr-1',
+      reviewDecision: null,
+      state: 'OPEN',
+      updatedAt: timeOne
+    })
+
+    expect(fingerprint).toEqual('none|none|none')
   })
 })

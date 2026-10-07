@@ -1,6 +1,5 @@
 import type { UnknownAction } from '@reduxjs/toolkit'
 
-import { filterReadyPullRequests } from '@/app/lib/pull-requests'
 import { checksActions } from '@/app/store/checks-slice'
 import { commentsActions } from '@/app/store/comments-slice'
 import { commitsActions } from '@/app/store/commits-slice'
@@ -58,7 +57,7 @@ export function resourceEventToAction(
       return pullRequestsActions.upsertItem(event.data)
 
     case 'pull-requests':
-      return pullRequestsActions.setItems(filterReadyPullRequests(event.data))
+      return pullRequestsActions.setItems(event.data)
 
     case 'reactions':
       return reactionsActions.setForPullRequest({

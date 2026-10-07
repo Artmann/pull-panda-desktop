@@ -8,8 +8,11 @@ import {
   type SyncError
 } from '../errors'
 import {
+  CombinedProbeResponseSchema,
   MultiAliasResponseSchema,
   ProbePageResponseSchema,
+  type ProbeBucket,
+  type ProbeNode,
   type PullRequestNode
 } from '../schemas/github-graphql'
 import type { ProbeEntry, RelationFlags, SyncResult } from '../schemas/domain'
@@ -59,22 +62,73 @@ const pullRequestNodeFields = `
   }
 `
 
+// The probe reads just enough to notice a change: `updatedAt` moves on new
+// commits, comments and reviews, and the fingerprint fields catch what it
+// misses (checks finishing, the review decision changing). Keeping the nested
+// selection to `commits(last: 1)` keeps each search at about 1 point.
+const probeNodeSelection = `
+  pageInfo { hasNextPage endCursor }
+  nodes {
+    __typename
+    ... on PullRequest {
+      id
+      updatedAt
+      state
+      headRefOid
+      reviewDecision
+      commits(last: 1) {
+        nodes { commit { statusCheckRollup { state } } }
+      }
+    }
+  }
+`
+
+const searchQueries = {
+  assigned: 'is:pr is:open assignee:@me',
+  authored: 'is:pr is:open author:@me',
+  reviewRequested: 'is:pr is:open review-requested:@me'
+} as const
+
+type ProbeBucketName = keyof typeof searchQueries
+
+const relationForBucket: Record<ProbeBucketName, keyof RelationFlags> = {
+  assigned: 'isAssignee',
+  authored: 'isAuthor',
+  reviewRequested: 'isReviewer'
+}
+
+// The first page of all three searches goes out as one request. Only a
+// search with more than 100 results needs follow-up pages.
+const combinedProbeQuery = `
+  query ProbePullRequests($assignedQuery: String!, $authoredQuery: String!, $reviewRequestedQuery: String!) {
+    assigned: search(query: $assignedQuery, type: ISSUE, first: 100) { ${probeNodeSelection} }
+    authored: search(query: $authoredQuery, type: ISSUE, first: 100) { ${probeNodeSelection} }
+    reviewRequested: search(query: $reviewRequestedQuery, type: ISSUE, first: 100) { ${probeNodeSelection} }
+    rateLimit { cost limit remaining resetAt }
+  }
+`
+
 // NB: the variable is named $searchQuery rather than $query because
 // @octokit/graphql reserves the `query` key on its variables bag for the
 // GraphQL document itself and rejects any caller that passes `query` as a
 // variable name.
 const probePageQuery = `
-  query ProbePullRequests($searchQuery: String!, $cursor: String) {
-    search(query: $searchQuery, type: ISSUE, first: 100, after: $cursor) {
-      pageInfo { hasNextPage endCursor }
-      nodes {
-        __typename
-        ... on PullRequest { id updatedAt state }
-      }
-    }
+  query ProbePullRequestsPage($searchQuery: String!, $cursor: String) {
+    search(query: $searchQuery, type: ISSUE, first: 100, after: $cursor) { ${probeNodeSelection} }
     rateLimit { cost limit remaining resetAt }
   }
 `
+
+export function buildFingerprint(node: ProbeNode): string {
+  const rollupState =
+    node.commits?.nodes[0]?.commit.statusCheckRollup?.state ?? 'none'
+
+  return [
+    node.headRefOid ?? 'none',
+    rollupState,
+    node.reviewDecision ?? 'none'
+  ].join('|')
+}
 
 function buildMultiAliasQuery(idCount: number): string {
   const aliases = Array.from(
@@ -97,11 +151,7 @@ function buildMultiAliasQuery(idCount: number): string {
 
 function ingestProbeNodes(
   entries: Map<string, ProbeEntry>,
-  nodes: ReadonlyArray<{
-    __typename: string
-    id: string
-    updatedAt: string
-  }>,
+  nodes: ReadonlyArray<ProbeNode>,
   relation: keyof RelationFlags
 ): void {
   for (const node of nodes) {
@@ -117,6 +167,7 @@ function ingestProbeNodes(
     }
 
     entries.set(node.id, {
+      fingerprint: buildFingerprint(node),
       id: node.id,
       updatedAt: node.updatedAt,
       isAuthor: relation === 'isAuthor',
@@ -126,26 +177,34 @@ function ingestProbeNodes(
   }
 }
 
-const probeSearch = (
-  searchQuery: string,
-  entries: Map<string, ProbeEntry>,
-  relation: keyof RelationFlags
+const probeFailed = (cause: unknown) =>
+  new SyncProbeFailedError({ cause }) as SyncError
+
+// Reads the remaining pages of one search, starting after `cursor`.
+const probeRemainingPages = (
+  bucket: ProbeBucketName,
+  startCursor: string | null,
+  entries: Map<string, ProbeEntry>
 ): Effect.Effect<number, SyncError, GitHubGraphQL> =>
   Effect.gen(function* () {
     const graphql = yield* GitHubGraphQL
-    let cursor: string | null = null
+    let cursor = startCursor
     let totalCost = 0
 
     while (true) {
       const response = yield* graphql
-        .query(probePageQuery, { searchQuery, cursor }, ProbePageResponseSchema)
-        .pipe(
-          Effect.mapError(
-            (cause) => new SyncProbeFailedError({ cause }) as SyncError
-          )
+        .query(
+          probePageQuery,
+          { searchQuery: searchQueries[bucket], cursor },
+          ProbePageResponseSchema
         )
+        .pipe(Effect.mapError(probeFailed))
 
-      ingestProbeNodes(entries, response.search.nodes, relation)
+      ingestProbeNodes(
+        entries,
+        response.search.nodes,
+        relationForBucket[bucket]
+      )
       totalCost += response.rateLimit.cost
 
       if (!response.search.pageInfo.hasNextPage) {
@@ -160,10 +219,11 @@ const probeSearch = (
 
 function transformNode(
   node: PullRequestNode,
-  relation: RelationFlags,
+  entry: ProbeEntry,
   now: string
 ): NewPullRequest {
   return {
+    fingerprint: entry.fingerprint,
     id: node.id,
     number: node.number,
     title: node.title,
@@ -182,9 +242,9 @@ function transformNode(
     closedAt: node.closedAt,
     mergedAt: node.mergedAt,
     isDraft: node.isDraft,
-    isAuthor: relation.isAuthor,
-    isAssignee: relation.isAssignee,
-    isReviewer: relation.isReviewer,
+    isAuthor: entry.isAuthor,
+    isAssignee: entry.isAssignee,
+    isReviewer: entry.isReviewer,
     labels: JSON.stringify(
       node.labels.nodes.map((label) => ({
         name: label.name,
@@ -250,6 +310,7 @@ const persistPullRequest = (record: NewPullRequest) =>
             labels: record.labels,
             assignees: record.assignees,
             requestedReviewers: record.requestedReviewers,
+            fingerprint: record.fingerprint,
             syncedAt: record.syncedAt
           }
         })
@@ -257,33 +318,55 @@ const persistPullRequest = (record: NewPullRequest) =>
     })
   })
 
-const getKnownUpdatedAtMap = (ids: ReadonlyArray<string>) =>
+interface KnownRow extends RelationFlags {
+  fingerprint: string | null
+  id: string
+  updatedAt: string
+}
+
+const getKnownRows = (ids: ReadonlyArray<string>) =>
   Effect.gen(function* () {
     if (ids.length === 0) {
-      return new Map<string, string>()
+      return new Map<string, KnownRow>()
     }
 
     const database = yield* Database
 
-    const rows = yield* database.use('getKnownUpdatedAt', (db) =>
+    const rows: KnownRow[] = yield* database.use('getKnownRows', (db) =>
       db
-        .select({ id: pullRequests.id, updatedAt: pullRequests.updatedAt })
+        .select({
+          fingerprint: pullRequests.fingerprint,
+          id: pullRequests.id,
+          isAssignee: pullRequests.isAssignee,
+          isAuthor: pullRequests.isAuthor,
+          isReviewer: pullRequests.isReviewer,
+          updatedAt: pullRequests.updatedAt
+        })
         .from(pullRequests)
         .where(inArray(pullRequests.id, ids as string[]))
         .all()
     )
 
-    return new Map(rows.map((row) => [row.id, row.updatedAt]))
+    return new Map(rows.map((row) => [row.id, row]))
   })
 
-const updateRelationFlags = (entry: ProbeEntry) =>
+function haveRelationFlagsChanged(entry: ProbeEntry, known: KnownRow): boolean {
+  return (
+    entry.isAuthor !== known.isAuthor ||
+    entry.isAssignee !== known.isAssignee ||
+    entry.isReviewer !== known.isReviewer
+  )
+}
+
+const updateProbeFields = (entry: ProbeEntry) =>
   Effect.gen(function* () {
     const database = yield* Database
     const now = new Date().toISOString()
 
-    yield* database.use('updateRelationFlags', (db) => {
+    yield* database.use('updateProbeFields', (db) => {
       db.update(pullRequests)
         .set({
+          fingerprint: entry.fingerprint,
           isAuthor: entry.isAuthor,
           isAssignee: entry.isAssignee,
           isReviewer: entry.isReviewer,
@@ -341,35 +424,55 @@ const probeAllRelations = (
   entries: Map<string, ProbeEntry>
 ): Effect.Effect<number, SyncError, GitHubGraphQL> =>
   Effect.gen(function* () {
-    const authoredCost = yield* probeSearch(
-      'is:pr is:open author:@me',
-      entries,
-      'isAuthor'
-    )
-    const assignedCost = yield* probeSearch(
-      'is:pr is:open assignee:@me',
-      entries,
-      'isAssignee'
-    )
-    const reviewerCost = yield* probeSearch(
-      'is:pr is:open review-requested:@me',
-      entries,
-      'isReviewer'
-    )
+    const graphql = yield* GitHubGraphQL
 
-    return authoredCost + assignedCost + reviewerCost
+    const response = yield* graphql
+      .query(
+        combinedProbeQuery,
+        {
+          assignedQuery: searchQueries.assigned,
+          authoredQuery: searchQueries.authored,
+          reviewRequestedQuery: searchQueries.reviewRequested
+        },
+        CombinedProbeResponseSchema
+      )
+      .pipe(Effect.mapError(probeFailed))
+
+    let totalCost = response.rateLimit.cost
+
+    const buckets: ReadonlyArray<ProbeBucketName> = [
+      'authored',
+      'assigned',
+      'reviewRequested'
+    ]
+
+    for (const bucket of buckets) {
+      const firstPage: ProbeBucket = response[bucket]
+
+      ingestProbeNodes(entries, firstPage.nodes, relationForBucket[bucket])
+
+      if (firstPage.pageInfo.hasNextPage) {
+        totalCost += yield* probeRemainingPages(
+          bucket,
+          firstPage.pageInfo.endCursor,
+          entries
+        )
+      }
+    }
+
+    return totalCost
   })
 
 function collectIdsNeedingHydration(
   entries: Map<string, ProbeEntry>,
-  knownUpdatedAt: ReadonlyMap<string, string>
+  knownRows: ReadonlyMap<string, KnownRow>
 ): string[] {
   const ids: string[] = []
 
   for (const entry of entries.values()) {
-    const known = knownUpdatedAt.get(entry.id)
+    const known = knownRows.get(entry.id)
 
-    if (!known || known !== entry.updatedAt) {
+    if (!known || known.updatedAt !== entry.updatedAt) {
       ids.push(entry.id)
     }
   }
@@ -413,19 +516,37 @@ const hydrateAndPersistPullRequests = (
     return { errors, syncedCount }
   })
 
-const refreshUnchangedRelationFlags = (
+// Writes the relation flags and fingerprint of pull requests that were not
+// hydrated, but only for rows where one of them moved. The probe runs every
+// few seconds, so skipping no-op writes keeps the database quiet. Returns
+// whether any relation flag changed, since that changes the list.
+const refreshUnchangedProbeFields = (
   entries: Map<string, ProbeEntry>,
   hydratedIds: ReadonlySet<string>,
-  knownUpdatedAt: ReadonlyMap<string, string>
+  knownRows: ReadonlyMap<string, KnownRow>
 ) =>
   Effect.gen(function* () {
+    let relationFlagsChanged = false
+
     for (const entry of entries.values()) {
-      if (hydratedIds.has(entry.id) || !knownUpdatedAt.has(entry.id)) {
+      const known = knownRows.get(entry.id)
+
+      if (hydratedIds.has(entry.id) || !known) {
         continue
       }
 
-      yield* updateRelationFlags(entry)
+      const flagsChanged = haveRelationFlagsChanged(entry, known)
+
+      if (!flagsChanged && entry.fingerprint === known.fingerprint) {
+        continue
+      }
+
+      relationFlagsChanged = relationFlagsChanged || flagsChanged
+
+      yield* updateProbeFields(entry)
     }
+
+    return relationFlagsChanged
   })
 
 export const syncPullRequests: Effect.Effect<
@@ -443,17 +564,14 @@ export const syncPullRequests: Effect.Effect<
     `[Sync] Probe returned ${allIds.length} PRs (cost=${totalProbeCost})`
   )
 
-  const knownUpdatedAt = yield* getKnownUpdatedAtMap(allIds)
-  const idsNeedingHydration = collectIdsNeedingHydration(
-    entries,
-    knownUpdatedAt
-  )
-  const hasChanges = idsNeedingHydration.length > 0
+  const knownRows = yield* getKnownRows(allIds)
+  const idsNeedingHydration = collectIdsNeedingHydration(entries, knownRows)
+  const needsHydration = idsNeedingHydration.length > 0
 
   let errors: ReadonlyArray<string> = []
   let syncedCount = 0
 
-  if (hasChanges) {
+  if (needsHydration) {
     yield* Effect.logInfo(
       `[Sync] Hydrating ${idsNeedingHydration.length}/${allIds.length} changed PRs`
     )
@@ -468,17 +586,17 @@ export const syncPullRequests: Effect.Effect<
     syncedCount = hydration.syncedCount
   }
 
-  yield* refreshUnchangedRelationFlags(
+  const relationFlagsChanged = yield* refreshUnchangedProbeFields(
     entries,
     new Set(idsNeedingHydration),
-    knownUpdatedAt
+    knownRows
   )
 
   return {
     synced: syncedCount,
     syncedIds: new Set(entries.keys()),
     errors,
-    hasChanges
+    hasChanges: needsHydration || relationFlagsChanged
   }
 }).pipe(Effect.withSpan('sync.pullRequests'))
 
