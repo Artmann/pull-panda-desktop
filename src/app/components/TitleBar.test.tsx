@@ -73,7 +73,7 @@ describe('TitleBar', () => {
   it('renders the title', () => {
     render(<TitleBar />)
 
-    expect(screen.getByText('pullpanda')).toBeInTheDocument()
+    expect(screen.getByText('Pull Panda')).toBeInTheDocument()
   })
 
   it('renders navigation buttons', () => {
