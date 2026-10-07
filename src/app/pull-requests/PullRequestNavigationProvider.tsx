@@ -11,14 +11,11 @@ import { useLocation, useNavigate } from 'react-router'
 
 import { setPullRequestNavigation } from '@/app/commands/pr-navigation-accessor'
 
-const toKey = (pullRequestId: string, tab: string): string =>
-  `${pullRequestId}::${tab}`
-
-const landmarkJumpOffset = 80
-
-const noop = (): void => {
-  // Intentional no-op cleanup when there is nothing to unregister.
-}
+import { useLandmarkJumps } from './use-landmark-jumps'
+import {
+  toNavigationKey,
+  useScrollPositionRegistry
+} from './use-scroll-position-registry'
 
 export interface PullRequestNavigationApi {
   getActiveTab: () => string | undefined
@@ -36,58 +33,6 @@ export interface PullRequestNavigationApi {
   setActiveTab: (pullRequestId: string, tab: string) => void
 }
 
-/**
- * Records `element`'s scroll offset against whichever `prId::tab` key is active,
- * coalescing bursts into one write per frame. Returns a cleanup function.
- *
- * The key and the offset are both captured when the scroll event fires rather
- * than inside the animation frame. A tab change can land in between, and
- * reading them late files the scroll under the tab being switched *to* — which
- * is then restored on the next visit and drags the sticky header with it.
- */
-function trackScrollPositions(
-  element: HTMLElement,
-  getActiveKey: () => string | null,
-  positions: Map<string, number>
-): () => void {
-  let rafId: number | null = null
-  let pending: { key: string; scrollTop: number } | null = null
-
-  const onScroll = () => {
-    const key = getActiveKey()
-
-    if (!key) {
-      return
-    }
-
-    // Overwriting `pending` is what keeps the coalescing: newest scroll wins.
-    pending = { key, scrollTop: element.scrollTop }
-
-    if (rafId !== null) {
-      return
-    }
-
-    rafId = requestAnimationFrame(() => {
-      rafId = null
-
-      if (pending) {
-        positions.set(pending.key, pending.scrollTop)
-        pending = null
-      }
-    })
-  }
-
-  element.addEventListener('scroll', onScroll, { passive: true })
-
-  return () => {
-    element.removeEventListener('scroll', onScroll)
-
-    if (rafId !== null) {
-      cancelAnimationFrame(rafId)
-    }
-  }
-}
-
 const PullRequestNavigationContext =
   createContext<PullRequestNavigationApi | null>(null)
 
@@ -97,48 +42,13 @@ interface PullRequestNavigationProviderProps {
   children: ReactNode
 }
 
-export function PullRequestNavigationProvider({
-  children
-}: PullRequestNavigationProviderProps) {
+/** The `tab` URL parameter, exposed as a stable getter plus a tab setter. */
+function useTabRouting(): Pick<
+  PullRequestNavigationApi,
+  'getActiveTab' | 'setActiveTab'
+> {
   const navigate = useNavigate()
   const location = useLocation()
-
-  const containerRef = useRef<HTMLElement | null>(null)
-  const scrollListenerCleanupRef = useRef<(() => void) | null>(null)
-  const scrollPositionsRef = useRef<Map<string, number>>(new Map())
-  const activeKeyRef = useRef<string | null>(null)
-  const landmarksRef = useRef<Map<string, Map<string, HTMLElement>>>(new Map())
-
-  const registerScrollContainer = useCallback((element: HTMLElement | null) => {
-    if (containerRef.current === element) {
-      return
-    }
-
-    scrollListenerCleanupRef.current?.()
-    scrollListenerCleanupRef.current = null
-    containerRef.current = element
-
-    if (!element) {
-      return
-    }
-
-    scrollListenerCleanupRef.current = trackScrollPositions(
-      element,
-      () => activeKeyRef.current,
-      scrollPositionsRef.current
-    )
-  }, [])
-
-  const setActiveKey = useCallback((pullRequestId: string, tab: string) => {
-    activeKeyRef.current = toKey(pullRequestId, tab)
-  }, [])
-
-  const getScrollPosition = useCallback(
-    (pullRequestId: string, tab: string): number => {
-      return scrollPositionsRef.current.get(toKey(pullRequestId, tab)) ?? 0
-    },
-    []
-  )
 
   // Derived from the URL rather than a ref, so it is empty whenever no pull
   // request is open and never goes stale.
@@ -155,152 +65,26 @@ export function PullRequestNavigationProvider({
     [navigate]
   )
 
-  const registerLandmark = useCallback(
-    (scopeKey: string, id: string, element: HTMLElement | null) => {
-      if (!scopeKey || !element) {
-        return noop
-      }
+  return { getActiveTab, setActiveTab }
+}
 
-      let landmarks = landmarksRef.current.get(scopeKey)
-
-      if (!landmarks) {
-        landmarks = new Map()
-        landmarksRef.current.set(scopeKey, landmarks)
-      }
-
-      landmarks.set(id, element)
-
-      return () => {
-        const currentLandmarks = landmarksRef.current.get(scopeKey)
-
-        if (!currentLandmarks) {
-          return
-        }
-
-        if (currentLandmarks.get(id) === element) {
-          currentLandmarks.delete(id)
-        }
-
-        if (currentLandmarks.size === 0) {
-          landmarksRef.current.delete(scopeKey)
-        }
-      }
-    },
-    []
-  )
-
-  const getSortedLandmarks = useCallback((): HTMLElement[] => {
-    const key = activeKeyRef.current
-
-    if (!key) {
-      return []
-    }
-
-    const landmarks = landmarksRef.current.get(key)
-
-    if (!landmarks) {
-      return []
-    }
-
-    return Array.from(landmarks.values())
-      .filter((element) => element.isConnected)
-      .sort((a, b) => {
-        const aTop = a.getBoundingClientRect().top
-        const bTop = b.getBoundingClientRect().top
-
-        return aTop - bTop
-      })
-  }, [])
-
-  const scrollToElement = useCallback((element: HTMLElement) => {
-    const container = containerRef.current
-
-    if (!container) {
-      return
-    }
-
-    const containerRect = container.getBoundingClientRect()
-    const elementRect = element.getBoundingClientRect()
-    const targetTop =
-      container.scrollTop +
-      (elementRect.top - containerRect.top) -
-      landmarkJumpOffset
-
-    container.scrollTo({
-      top: Math.max(0, targetTop),
-      behavior: 'smooth'
-    })
-  }, [])
-
-  const jumpToNextLandmark = useCallback(() => {
-    const container = containerRef.current
-
-    if (!container) {
-      return
-    }
-
-    const sorted = getSortedLandmarks()
-    const containerTop = container.getBoundingClientRect().top
-
-    const next = sorted.find((element) => {
-      const relativeTop =
-        element.getBoundingClientRect().top - containerTop + container.scrollTop
-
-      return relativeTop > container.scrollTop + landmarkJumpOffset + 1
-    })
-
-    if (next) {
-      scrollToElement(next)
-    }
-  }, [getSortedLandmarks, scrollToElement])
-
-  const jumpToPreviousLandmark = useCallback(() => {
-    const container = containerRef.current
-
-    if (!container) {
-      return
-    }
-
-    const sorted = getSortedLandmarks()
-    const containerTop = container.getBoundingClientRect().top
-
-    let previous: HTMLElement | null = null
-
-    for (const element of sorted) {
-      const relativeTop =
-        element.getBoundingClientRect().top - containerTop + container.scrollTop
-
-      if (relativeTop < container.scrollTop + landmarkJumpOffset - 1) {
-        previous = element
-      } else {
-        break
-      }
-    }
-
-    if (previous) {
-      scrollToElement(previous)
-    }
-  }, [getSortedLandmarks, scrollToElement])
-
-  const jumpToLandmark = useCallback(
-    (id: string) => {
-      const key = activeKeyRef.current
-
-      if (!key) {
-        return
-      }
-
-      const landmarks = landmarksRef.current.get(key)
-      const element = landmarks?.get(id)
-
-      if (!element) {
-        return
-      }
-
-      scrollToElement(element)
-    },
-    [scrollToElement]
-  )
+export function PullRequestNavigationProvider({
+  children
+}: PullRequestNavigationProviderProps) {
+  const {
+    activeKeyRef,
+    containerRef,
+    getScrollPosition,
+    registerScrollContainer,
+    setActiveKey
+  } = useScrollPositionRegistry()
+  const {
+    jumpToLandmark,
+    jumpToNextLandmark,
+    jumpToPreviousLandmark,
+    registerLandmark
+  } = useLandmarkJumps(containerRef, activeKeyRef)
+  const { getActiveTab, setActiveTab } = useTabRouting()
 
   const api: PullRequestNavigationApi = useMemo(
     () => ({
@@ -334,13 +118,6 @@ export function PullRequestNavigationProvider({
       setPullRequestNavigation(null)
     }
   }, [api])
-
-  useEffect(() => {
-    return () => {
-      scrollListenerCleanupRef.current?.()
-      scrollListenerCleanupRef.current = null
-    }
-  }, [])
 
   return (
     <PullRequestNavigationContext.Provider value={api}>
@@ -392,7 +169,10 @@ export function LandmarkScope({
   pullRequestId,
   tab
 }: LandmarkScopeProps): ReactNode {
-  const key = useMemo(() => toKey(pullRequestId, tab), [pullRequestId, tab])
+  const key = useMemo(
+    () => toNavigationKey(pullRequestId, tab),
+    [pullRequestId, tab]
+  )
 
   return (
     <LandmarkScopeContext.Provider value={key}>

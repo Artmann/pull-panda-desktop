@@ -2,6 +2,8 @@ import { app } from 'electron'
 import fs from 'node:fs'
 import path from 'node:path'
 
+import { readJsonObjectFile } from './read-json-object-file'
+
 export type ConnectedRepos = Record<string, string>
 
 function getStorePath(): string {
@@ -9,32 +11,16 @@ function getStorePath(): string {
 }
 
 export function loadAll(): ConnectedRepos {
-  const storePath = getStorePath()
+  const stored = readJsonObjectFile(getStorePath())
+  const result: ConnectedRepos = {}
 
-  if (!fs.existsSync(storePath)) {
-    return {}
+  for (const [key, value] of Object.entries(stored)) {
+    if (typeof value === 'string' && value.length > 0) {
+      result[key] = value
+    }
   }
 
-  try {
-    const raw = fs.readFileSync(storePath, 'utf-8')
-    const parsed = JSON.parse(raw) as unknown
-
-    if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
-      return {}
-    }
-
-    const result: ConnectedRepos = {}
-
-    for (const [key, value] of Object.entries(parsed)) {
-      if (typeof value === 'string' && value.length > 0) {
-        result[key] = value
-      }
-    }
-
-    return result
-  } catch {
-    return {}
-  }
+  return result
 }
 
 function saveAll(repos: ConnectedRepos): void {

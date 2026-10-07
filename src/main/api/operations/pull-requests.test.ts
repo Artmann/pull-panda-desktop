@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { buildRequirements } from './pull-requests'
+import { buildRequirements, storedPullRequestChanges } from './pull-requests'
 
 type MergeState = Parameters<typeof buildRequirements>[0]
 type Protection = Parameters<typeof buildRequirements>[1]
@@ -73,9 +73,9 @@ describe('buildRequirements', () => {
     it('omits the requirement when no approvals are required', () => {
       const requirements = buildRequirements(makeState(), makeProtection())
 
-      expect(
-        requirements.map((requirement) => requirement.key)
-      ).not.toContain('approving-reviews')
+      expect(requirements.map((requirement) => requirement.key)).not.toContain(
+        'approving-reviews'
+      )
     })
 
     it('uses the singular label for a single required review', () => {
@@ -125,9 +125,9 @@ describe('buildRequirements', () => {
     it('omits the requirement when checks pass and strict checks are off', () => {
       const requirements = buildRequirements(makeState(), makeProtection())
 
-      expect(
-        requirements.map((requirement) => requirement.key)
-      ).not.toContain('required-checks')
+      expect(requirements.map((requirement) => requirement.key)).not.toContain(
+        'required-checks'
+      )
     })
 
     it('fails when the merge state is unstable', () => {
@@ -180,9 +180,9 @@ describe('buildRequirements', () => {
         makeProtection()
       )
 
-      expect(
-        requirements.map((requirement) => requirement.key)
-      ).not.toContain('conversations-resolved')
+      expect(requirements.map((requirement) => requirement.key)).not.toContain(
+        'conversations-resolved'
+      )
     })
 
     it('passes when every conversation is resolved', () => {
@@ -235,9 +235,9 @@ describe('buildRequirements', () => {
         makeProtection()
       )
 
-      expect(
-        requirements.map((requirement) => requirement.key)
-      ).not.toContain('branch-up-to-date')
+      expect(requirements.map((requirement) => requirement.key)).not.toContain(
+        'branch-up-to-date'
+      )
     })
 
     it('fails when the branch is behind the base branch', () => {
@@ -298,5 +298,46 @@ describe('buildRequirements', () => {
     expect(
       requirements.every((requirement) => requirement.satisfied === false)
     ).toEqual(true)
+  })
+})
+
+describe('storedPullRequestChanges', () => {
+  const baseInput = {
+    owner: 'octocat',
+    pullNumber: 42,
+    pullRequestId: 'pr_1',
+    repo: 'demo',
+    token: 'token'
+  }
+  const now = '2026-01-01T00:00:00Z'
+
+  it('only includes the fields the input sets', () => {
+    expect(
+      storedPullRequestChanges(
+        { ...baseInput, title: 'New title' },
+        'OPEN',
+        now
+      )
+    ).toEqual({ title: 'New title', updatedAt: now })
+  })
+
+  it('maps the REST state to the stored state', () => {
+    expect([
+      storedPullRequestChanges({ ...baseInput, state: 'closed' }, 'OPEN', now),
+      storedPullRequestChanges({ ...baseInput, state: 'open' }, 'CLOSED', now)
+    ]).toEqual([
+      { state: 'CLOSED', updatedAt: now },
+      { state: 'OPEN', updatedAt: now }
+    ])
+  })
+
+  it('includes the body and draft flag when set', () => {
+    expect(
+      storedPullRequestChanges(
+        { ...baseInput, body: 'Body', isDraft: true },
+        'OPEN',
+        now
+      )
+    ).toEqual({ body: 'Body', isDraft: true, updatedAt: now })
   })
 })

@@ -3,7 +3,7 @@ import { eq } from 'drizzle-orm'
 import { graphql } from '@octokit/graphql'
 import { Octokit } from '@octokit/rest'
 
-import { pullRequests } from '../../../database/schema'
+import { pullRequests, type NewPullRequest } from '../../../database/schema'
 import { getPullRequest, getPullRequestDetails } from '../../bootstrap'
 import { MemoryCache } from '../../memory-cache'
 import {
@@ -48,6 +48,30 @@ const broadcastPullRequestUpdate = (
       pullRequestId,
       type: 'pull-request'
     })
+  })
+
+// Writes local changes to a pull request row, then reloads it and broadcasts
+// the fresh copy to the renderer.
+const updateStoredPullRequest = (
+  operation: string,
+  pullRequestId: string,
+  values: Partial<NewPullRequest>
+) =>
+  Effect.gen(function* () {
+    const database = yield* Database
+
+    yield* database.use(operation, (db) => {
+      db.update(pullRequests)
+        .set(values)
+        .where(eq(pullRequests.id, pullRequestId))
+        .run()
+    })
+
+    const updated = yield* Effect.promise(() => getPullRequest(pullRequestId))
+
+    yield* broadcastPullRequestUpdate(pullRequestId, updated)
+
+    return updated
   })
 
 const broadcastResourceEvents = (pullRequestId: string) =>
@@ -187,6 +211,93 @@ export interface UpdatePullRequestInput {
   readonly token: string
 }
 
+const convertToDraftMutation = `mutation ConvertPullRequestToDraft($id: ID!) {
+  convertPullRequestToDraft(input: { pullRequestId: $id }) {
+    pullRequest { id isDraft }
+  }
+}`
+
+const markReadyForReviewMutation = `mutation MarkPullRequestReadyForReview($id: ID!) {
+  markPullRequestReadyForReview(input: { pullRequestId: $id }) {
+    pullRequest { id isDraft }
+  }
+}`
+
+// The title, body and state fields the input sets, as GitHub's REST API
+// names them.
+function restFieldsOf(
+  input: UpdatePullRequestInput
+): Partial<Pick<UpdatePullRequestInput, 'body' | 'state' | 'title'>> {
+  return {
+    ...(input.title !== undefined && { title: input.title }),
+    ...(input.body !== undefined && { body: input.body }),
+    ...(input.state !== undefined && { state: input.state })
+  }
+}
+
+async function sendPullRequestUpdate(
+  input: UpdatePullRequestInput
+): Promise<void> {
+  const restFields = restFieldsOf(input)
+
+  if (Object.keys(restFields).length > 0) {
+    const octokit = new Octokit({ auth: input.token })
+
+    await octokit.rest.pulls.update({
+      owner: input.owner,
+      pull_number: input.pullNumber,
+      repo: input.repo,
+      ...restFields
+    })
+  }
+
+  if (input.isDraft === undefined) {
+    return
+  }
+
+  const client = graphql.defaults({
+    headers: { authorization: `token ${input.token}` }
+  })
+
+  await client(
+    input.isDraft ? convertToDraftMutation : markReadyForReviewMutation,
+    { id: input.pullRequestId }
+  )
+}
+
+function storedStateOf(
+  state: UpdatePullRequestInput['state'],
+  currentState: string
+): string {
+  if (state === 'closed') {
+    return 'CLOSED'
+  }
+
+  if (state === 'open') {
+    return 'OPEN'
+  }
+
+  return currentState
+}
+
+// The columns to write locally after a successful update. Only fields the
+// input sets are included.
+export function storedPullRequestChanges(
+  input: UpdatePullRequestInput,
+  currentState: string,
+  now: string
+) {
+  return {
+    ...(input.title !== undefined && { title: input.title }),
+    ...(input.body !== undefined && { body: input.body }),
+    ...(input.state !== undefined && {
+      state: storedStateOf(input.state, currentState)
+    }),
+    ...(input.isDraft !== undefined && { isDraft: input.isDraft }),
+    updatedAt: now
+  }
+}
+
 export const updatePullRequest = (input: UpdatePullRequestInput) =>
   Effect.gen(function* () {
     if (input.title !== undefined && input.title.trim() === '') {
@@ -196,88 +307,25 @@ export const updatePullRequest = (input: UpdatePullRequestInput) =>
     }
 
     const repository = yield* Repository
-    const database = yield* Database
 
     const pullRequest = yield* repository.requirePullRequestById(
       input.pullRequestId
     )
 
-    const octokit = new Octokit({ auth: input.token })
-    const hasRestUpdate =
-      input.title !== undefined ||
-      input.body !== undefined ||
-      input.state !== undefined
-
     yield* Effect.tryPromise({
-      try: async () => {
-        if (hasRestUpdate) {
-          await octokit.rest.pulls.update({
-            owner: input.owner,
-            pull_number: input.pullNumber,
-            repo: input.repo,
-            ...(input.title !== undefined && { title: input.title }),
-            ...(input.body !== undefined && { body: input.body }),
-            ...(input.state !== undefined && { state: input.state })
-          })
-        }
-
-        if (input.isDraft !== undefined) {
-          const client = graphql.defaults({
-            headers: { authorization: `token ${input.token}` }
-          })
-
-          if (input.isDraft) {
-            await client(
-              `mutation ConvertPullRequestToDraft($id: ID!) {
-                convertPullRequestToDraft(input: { pullRequestId: $id }) {
-                  pullRequest { id isDraft }
-                }
-              }`,
-              { id: input.pullRequestId }
-            )
-          } else {
-            await client(
-              `mutation MarkPullRequestReadyForReview($id: ID!) {
-                markPullRequestReadyForReview(input: { pullRequestId: $id }) {
-                  pullRequest { id isDraft }
-                }
-              }`,
-              { id: input.pullRequestId }
-            )
-          }
-        }
-      },
+      try: () => sendPullRequestUpdate(input),
       catch: octokitErrorOf('updatePullRequest')
     })
 
-    const now = new Date().toISOString()
-    const newState =
-      input.state === 'closed'
-        ? 'CLOSED'
-        : input.state === 'open'
-          ? 'OPEN'
-          : pullRequest.state
-
-    yield* database.use('updatePullRequest.update', (db) => {
-      db.update(pullRequests)
-        .set({
-          ...(input.title !== undefined && { title: input.title }),
-          ...(input.body !== undefined && { body: input.body }),
-          ...(input.state !== undefined && { state: newState }),
-          ...(input.isDraft !== undefined && { isDraft: input.isDraft }),
-          updatedAt: now
-        })
-        .where(eq(pullRequests.id, input.pullRequestId))
-        .run()
-    })
-
-    const updated = yield* Effect.promise(() =>
-      getPullRequest(input.pullRequestId)
+    return yield* updateStoredPullRequest(
+      'updatePullRequest.update',
+      input.pullRequestId,
+      storedPullRequestChanges(
+        input,
+        pullRequest.state,
+        new Date().toISOString()
+      )
     )
-
-    yield* broadcastPullRequestUpdate(input.pullRequestId, updated)
-
-    return updated
   })
 
 interface GraphQLMergeState {
@@ -723,7 +771,6 @@ export interface MergePullRequestInput {
 export const mergePullRequest = (input: MergePullRequestInput) =>
   Effect.gen(function* () {
     const repository = yield* Repository
-    const database = yield* Database
 
     yield* repository.requirePullRequestById(input.pullRequestId)
 
@@ -748,24 +795,15 @@ export const mergePullRequest = (input: MergePullRequestInput) =>
 
     const now = new Date().toISOString()
 
-    yield* database.use('mergePullRequest.update', (db) => {
-      db.update(pullRequests)
-        .set({
-          mergedAt: now,
-          state: 'MERGED',
-          updatedAt: now
-        })
-        .where(eq(pullRequests.id, input.pullRequestId))
-        .run()
-    })
-
-    const updated = yield* Effect.promise(() =>
-      getPullRequest(input.pullRequestId)
+    return yield* updateStoredPullRequest(
+      'mergePullRequest.update',
+      input.pullRequestId,
+      {
+        mergedAt: now,
+        state: 'MERGED',
+        updatedAt: now
+      }
     )
-
-    yield* broadcastPullRequestUpdate(input.pullRequestId, updated)
-
-    return updated
   })
 
 export interface UpdateBranchInput {

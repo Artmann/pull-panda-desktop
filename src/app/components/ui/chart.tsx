@@ -37,6 +37,33 @@ function ChartContainer({
   )
 }
 
+// Shared axis, grid and tooltip styling
+const axisProps = {
+  axisLine: false,
+  fontSize: 12,
+  stroke: 'var(--muted-foreground)',
+  tickLine: false
+}
+
+const gridProps = {
+  stroke: 'var(--border)',
+  strokeDasharray: '3 3',
+  vertical: false
+}
+
+const tooltipContentStyle = {
+  backgroundColor: 'var(--background)',
+  border: '1px solid var(--border)',
+  borderRadius: '6px',
+  boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)',
+  fontSize: '12px',
+  padding: '8px 12px'
+}
+
+function formatYAxis(value: unknown): string {
+  return `${value}`
+}
+
 // Bar Chart
 interface BarChartProps<T extends object> {
   data: T[]
@@ -62,37 +89,18 @@ export function BarChart<T extends object>({
   return (
     <ChartContainer className={className}>
       <RechartsBarChart data={data}>
-        {showGrid && (
-          <CartesianGrid
-            strokeDasharray="3 3"
-            stroke="var(--border)"
-            vertical={false}
-          />
-        )}
+        {showGrid && <CartesianGrid {...gridProps} />}
         <XAxis
+          {...axisProps}
           dataKey={xKey}
-          stroke="var(--muted-foreground)"
-          fontSize={12}
-          tickLine={false}
-          axisLine={false}
           tickFormatter={formatXAxis}
         />
         <YAxis
-          stroke="var(--muted-foreground)"
-          fontSize={12}
-          tickLine={false}
-          axisLine={false}
-          tickFormatter={(value) => `${value}`}
+          {...axisProps}
+          tickFormatter={formatYAxis}
         />
         <Tooltip
-          contentStyle={{
-            backgroundColor: 'var(--background)',
-            border: '1px solid var(--border)',
-            borderRadius: '6px',
-            fontSize: '12px',
-            padding: '8px 12px',
-            boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)'
-          }}
+          contentStyle={tooltipContentStyle}
           formatter={(value) => [
             formatTooltip ? formatTooltip(value) : value,
             ''
@@ -139,38 +147,17 @@ export function MultiLineChart<T extends object>({
   return (
     <ChartContainer className={className}>
       <RechartsLineChart data={data}>
-        {showGrid && (
-          <CartesianGrid
-            strokeDasharray="3 3"
-            stroke="var(--border)"
-            vertical={false}
-          />
-        )}
+        {showGrid && <CartesianGrid {...gridProps} />}
         <XAxis
+          {...axisProps}
           dataKey={xKey}
-          stroke="var(--muted-foreground)"
-          fontSize={12}
-          tickLine={false}
-          axisLine={false}
           tickFormatter={formatXAxis}
         />
         <YAxis
-          stroke="var(--muted-foreground)"
-          fontSize={12}
-          tickLine={false}
-          axisLine={false}
-          tickFormatter={(value) => `${value}`}
+          {...axisProps}
+          tickFormatter={formatYAxis}
         />
-        <Tooltip
-          contentStyle={{
-            backgroundColor: 'var(--background)',
-            border: '1px solid var(--border)',
-            borderRadius: '6px',
-            fontSize: '12px',
-            padding: '8px 12px',
-            boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)'
-          }}
-        />
+        <Tooltip contentStyle={tooltipContentStyle} />
         <Legend wrapperStyle={{ fontSize: '12px' }} />
         {referenceLine !== undefined && (
           <ReferenceLine

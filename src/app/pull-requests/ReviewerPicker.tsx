@@ -6,33 +6,26 @@ import {
   useMemo,
   useRef,
   useState,
-  type ReactElement
+  type ReactElement,
+  type RefObject
 } from 'react'
 
 import { UserAvatar } from '@/app/components/UserAvatar'
 import { Badge } from '@/app/components/ui/badge'
 import { Input } from '@/app/components/ui/input'
-import { removeReviewers, requestReviewers } from '@/app/lib/api'
-import { runOptimisticMutation } from '@/app/lib/mutations/run-optimistic-mutation'
 import { cn } from '@/app/lib/utils'
-import { useAppDispatch, useAppSelector } from '@/app/store/hooks'
-import { pullRequestsActions } from '@/app/store/pull-requests-slice'
-import { recentReviewersActions } from '@/app/store/recent-reviewers-slice'
 import type { PullRequest } from '@/types/pull-request'
 
-import type { CodeownerEntry, Collaborator } from '@/app/lib/api'
-import type { RecentReviewer } from '@/app/store/recent-reviewers-slice'
-
-import {
-  buildReviewerCandidates,
-  type ReviewerCandidate,
-  type ReviewerSection
+import type {
+  ReviewerCandidate,
+  ReviewerSection
 } from './build-reviewer-candidates'
+import {
+  useDismissOnOutsideClick,
+  useReviewerCandidates,
+  useToggleReviewer
+} from './use-reviewer-picker'
 import { useReviewerSuggestionsLoader } from './use-reviewer-suggestions-loader'
-
-const emptyRecents: RecentReviewer[] = []
-const emptyCollaborators: Collaborator[] = []
-const emptyCodeowners: CodeownerEntry[] = []
 
 interface ReviewerPickerProps {
   pullRequest: PullRequest
@@ -62,26 +55,8 @@ export const ReviewerPicker = memo(function ReviewerPicker({
 
   const containerRef = useRef<HTMLDivElement>(null)
   const searchInputRef = useRef<HTMLInputElement>(null)
-  const dispatch = useAppDispatch()
-  const repoFullName = `${pullRequest.repositoryOwner}/${pullRequest.repositoryName}`
 
   useReviewerSuggestionsLoader(pullRequest)
-
-  const recents = useAppSelector(
-    (state) => state.recentReviewers?.byRepo[repoFullName] ?? emptyRecents
-  )
-
-  const collaborators = useAppSelector(
-    (state) =>
-      state.reviewerSuggestions?.collaboratorsByRepo[repoFullName] ??
-      emptyCollaborators
-  )
-
-  const codeowners = useAppSelector(
-    (state) =>
-      state.reviewerSuggestions?.codeownersByPullRequest[pullRequest.id] ??
-      emptyCodeowners
-  )
 
   const requestedLogins = useMemo(
     () =>
@@ -89,31 +64,9 @@ export const ReviewerPicker = memo(function ReviewerPicker({
     [pullRequest.requestedReviewers]
   )
 
-  useEffect(() => {
-    if (!isOpen) {
-      return
-    }
+  const close = useCallback(() => setIsOpen(false), [])
 
-    const handleClickOutside = (event: MouseEvent) => {
-      if (!containerRef.current?.contains(event.target as Node)) {
-        setIsOpen(false)
-      }
-    }
-
-    const handleEscape = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') {
-        setIsOpen(false)
-      }
-    }
-
-    document.addEventListener('mousedown', handleClickOutside)
-    document.addEventListener('keydown', handleEscape)
-
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside)
-      document.removeEventListener('keydown', handleEscape)
-    }
-  }, [isOpen])
+  useDismissOnOutsideClick(containerRef, isOpen, close)
 
   useEffect(() => {
     if (isOpen) {
@@ -123,175 +76,153 @@ export const ReviewerPicker = memo(function ReviewerPicker({
     }
   }, [isOpen])
 
-  const candidatesBySection = useMemo(() => {
-    const excludeLogins = pullRequest.authorLogin
-      ? new Set([pullRequest.authorLogin])
-      : undefined
+  const candidatesBySection = useReviewerCandidates(pullRequest, query)
+  const handleToggle = useToggleReviewer(pullRequest, requestedLogins)
 
-    const candidates = buildReviewerCandidates({
-      collaborators,
-      codeowners,
-      excludeLogins,
-      query,
-      recents
-    })
-
-    const grouped = new Map<ReviewerSection, ReviewerCandidate[]>()
-
-    for (const candidate of candidates) {
-      const existing = grouped.get(candidate.section) ?? []
-      existing.push(candidate)
-      grouped.set(candidate.section, existing)
-    }
-
-    return grouped
-  }, [collaborators, codeowners, pullRequest.authorLogin, query, recents])
-
-  const handleToggle = useCallback(
-    (candidate: ReviewerCandidate) => {
-      const isRequested = requestedLogins.has(candidate.login)
-      const previous = pullRequest.requestedReviewers
-
-      const optimisticReviewers = isRequested
-        ? previous.filter((reviewer) => reviewer.login !== candidate.login)
-        : [
-            ...previous,
-            { avatarUrl: candidate.avatarUrl, login: candidate.login }
-          ]
-
-      const action = isRequested ? removeReviewers : requestReviewers
-
-      runOptimisticMutation({
-        optimistic: () => {
-          dispatch(
-            pullRequestsActions.upsertItem({
-              ...pullRequest,
-              requestedReviewers: optimisticReviewers
-            })
-          )
-
-          if (!isRequested) {
-            dispatch(
-              recentReviewersActions.recordUsage({
-                avatarUrl: candidate.avatarUrl,
-                login: candidate.login,
-                repoFullName
-              })
-            )
-          }
-        },
-        request: () =>
-          action({ logins: [candidate.login], pullRequestId: pullRequest.id }),
-        commit: (updated) => dispatch(pullRequestsActions.upsertItem(updated)),
-        rollback: () =>
-          dispatch(
-            pullRequestsActions.upsertItem({
-              ...pullRequest,
-              requestedReviewers: previous
-            })
-          ),
-        errorMessage: isRequested
-          ? 'Failed to remove reviewer'
-          : 'Failed to request reviewer'
-      })
-    },
-    [dispatch, pullRequest, repoFullName, requestedLogins]
-  )
-
-  const hasResults = candidatesBySection.size > 0
+  const toggleOpen = () => setIsOpen((value) => !value)
 
   return (
     <div
       className="relative"
       ref={containerRef}
     >
-      {variant === 'cta' ? (
-        <button
-          aria-label="Assign reviewers"
-          className={cn(
-            'flex items-center gap-1.5',
-            '-mx-1.5 px-1.5 py-0.5 rounded',
-            'text-xs text-muted-foreground',
-            'hover:text-foreground',
-            'transition-colors cursor-pointer'
-          )}
-          onClick={() => setIsOpen((value) => !value)}
-          type="button"
-        >
-          <Plus className="size-3.5" />
-          Assign reviewers
-        </button>
-      ) : (
-        <button
-          aria-label="Assign reviewer"
-          className={cn(
-            'flex items-center justify-center',
-            'size-7 rounded-full',
-            'border border-dashed border-border',
-            'text-muted-foreground',
-            'hover:border-foreground hover:text-foreground',
-            'transition-colors cursor-pointer'
-          )}
-          onClick={() => setIsOpen((value) => !value)}
-          type="button"
-        >
-          <Plus className="size-3.5" />
-        </button>
-      )}
+      <ReviewerPickerTrigger
+        onClick={toggleOpen}
+        variant={variant}
+      />
 
       {isOpen && (
-        <div
-          className={cn(
-            'absolute top-full left-0 z-50 mt-2',
-            'w-80 rounded-lg border border-border bg-popover shadow-lg',
-            'overflow-hidden'
-          )}
-        >
-          <div className="border-b border-border p-2">
-            <div className="relative">
-              <Search className="absolute left-2 top-1/2 -translate-y-1/2 size-3.5 text-muted-foreground pointer-events-none" />
-
-              <Input
-                className="pl-7"
-                onChange={(event) => setQuery(event.target.value)}
-                placeholder="Assign reviewer..."
-                ref={searchInputRef}
-                size="sm"
-                value={query}
-              />
-            </div>
-          </div>
-
-          <div className="max-h-80 overflow-y-auto py-1">
-            {!hasResults && (
-              <div className="px-3 py-6 text-center text-xs text-muted-foreground">
-                No matching reviewers.
-              </div>
-            )}
-
-            {sectionOrder.map((section) => {
-              const options = candidatesBySection.get(section)
-
-              if (!options || options.length === 0) {
-                return null
-              }
-
-              return (
-                <ReviewerSection
-                  isSelected={(login) => requestedLogins.has(login)}
-                  key={section}
-                  onToggle={handleToggle}
-                  options={options}
-                  title={sectionTitles[section]}
-                />
-              )
-            })}
-          </div>
-        </div>
+        <ReviewerPickerMenu
+          candidatesBySection={candidatesBySection}
+          onQueryChange={setQuery}
+          onToggle={handleToggle}
+          query={query}
+          requestedLogins={requestedLogins}
+          searchInputRef={searchInputRef}
+        />
       )}
     </div>
   )
 })
+
+interface ReviewerPickerTriggerProps {
+  onClick: () => void
+  variant: 'compact' | 'cta'
+}
+
+function ReviewerPickerTrigger({
+  onClick,
+  variant
+}: ReviewerPickerTriggerProps): ReactElement {
+  if (variant === 'cta') {
+    return (
+      <button
+        aria-label="Assign reviewers"
+        className={cn(
+          'flex items-center gap-1.5',
+          '-mx-1.5 px-1.5 py-0.5 rounded',
+          'text-xs text-muted-foreground',
+          'hover:text-foreground',
+          'transition-colors cursor-pointer'
+        )}
+        onClick={onClick}
+        type="button"
+      >
+        <Plus className="size-3.5" />
+        Assign reviewers
+      </button>
+    )
+  }
+
+  return (
+    <button
+      aria-label="Assign reviewer"
+      className={cn(
+        'flex items-center justify-center',
+        'size-7 rounded-full',
+        'border border-dashed border-border',
+        'text-muted-foreground',
+        'hover:border-foreground hover:text-foreground',
+        'transition-colors cursor-pointer'
+      )}
+      onClick={onClick}
+      type="button"
+    >
+      <Plus className="size-3.5" />
+    </button>
+  )
+}
+
+interface ReviewerPickerMenuProps {
+  candidatesBySection: Map<ReviewerSection, ReviewerCandidate[]>
+  onQueryChange: (query: string) => void
+  onToggle: (candidate: ReviewerCandidate) => void
+  query: string
+  requestedLogins: Set<string>
+  searchInputRef: RefObject<HTMLInputElement | null>
+}
+
+function ReviewerPickerMenu({
+  candidatesBySection,
+  onQueryChange,
+  onToggle,
+  query,
+  requestedLogins,
+  searchInputRef
+}: ReviewerPickerMenuProps): ReactElement {
+  const hasResults = candidatesBySection.size > 0
+
+  return (
+    <div
+      className={cn(
+        'absolute top-full left-0 z-50 mt-2',
+        'w-80 rounded-lg border border-border bg-popover shadow-lg',
+        'overflow-hidden'
+      )}
+    >
+      <div className="border-b border-border p-2">
+        <div className="relative">
+          <Search className="absolute left-2 top-1/2 -translate-y-1/2 size-3.5 text-muted-foreground pointer-events-none" />
+
+          <Input
+            className="pl-7"
+            onChange={(event) => onQueryChange(event.target.value)}
+            placeholder="Assign reviewer..."
+            ref={searchInputRef}
+            size="sm"
+            value={query}
+          />
+        </div>
+      </div>
+
+      <div className="max-h-80 overflow-y-auto py-1">
+        {!hasResults && (
+          <div className="px-3 py-6 text-center text-xs text-muted-foreground">
+            No matching reviewers.
+          </div>
+        )}
+
+        {sectionOrder.map((section) => {
+          const options = candidatesBySection.get(section)
+
+          if (!options || options.length === 0) {
+            return null
+          }
+
+          return (
+            <ReviewerSection
+              isSelected={(login) => requestedLogins.has(login)}
+              key={section}
+              onToggle={onToggle}
+              options={options}
+              title={sectionTitles[section]}
+            />
+          )
+        })}
+      </div>
+    </div>
+  )
+}
 
 interface ReviewerSectionProps {
   isSelected: (login: string) => boolean

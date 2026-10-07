@@ -1,37 +1,16 @@
-import { createSlice, type PayloadAction } from '@reduxjs/toolkit'
-
 import type { CommentReaction } from '@/types/pull-request-details'
 
-export interface ReactionsState {
-  items: CommentReaction[]
-}
+import {
+  createPullRequestItemsSlice,
+  type PullRequestItemsState
+} from './pull-request-items-slice'
 
-const initialState: ReactionsState = { items: [] }
+export type ReactionsState = PullRequestItemsState<CommentReaction>
 
-const reactionsSlice = createSlice({
-  name: 'reactions',
-  initialState,
-  reducers: {
-    setAll(state, action: PayloadAction<CommentReaction[]>) {
-      state.items = action.payload
-    },
-
-    setForPullRequest(
-      state,
-      action: PayloadAction<{
-        items: CommentReaction[]
-        pullRequestId: string
-      }>
-    ) {
-      const { items, pullRequestId } = action.payload
-
-      state.items = [
-        ...state.items.filter((item) => item.pullRequestId !== pullRequestId),
-        ...items
-      ]
-    }
-  }
-})
+const reactionsSlice = createPullRequestItemsSlice<
+  CommentReaction,
+  'reactions'
+>('reactions')
 
 export const reactionsActions = reactionsSlice.actions
 export default reactionsSlice.reducer

@@ -1,34 +1,13 @@
-import { createSlice, type PayloadAction } from '@reduxjs/toolkit'
-
 import type { Commit } from '@/types/pull-request-details'
 
-export interface CommitsState {
-  items: Commit[]
-}
+import {
+  createPullRequestItemsSlice,
+  type PullRequestItemsState
+} from './pull-request-items-slice'
 
-const initialState: CommitsState = { items: [] }
+export type CommitsState = PullRequestItemsState<Commit>
 
-const commitsSlice = createSlice({
-  name: 'commits',
-  initialState,
-  reducers: {
-    setAll(state, action: PayloadAction<Commit[]>) {
-      state.items = action.payload
-    },
-
-    setForPullRequest(
-      state,
-      action: PayloadAction<{ items: Commit[]; pullRequestId: string }>
-    ) {
-      const { items, pullRequestId } = action.payload
-
-      state.items = [
-        ...state.items.filter((item) => item.pullRequestId !== pullRequestId),
-        ...items
-      ]
-    }
-  }
-})
+const commitsSlice = createPullRequestItemsSlice<Commit, 'commits'>('commits')
 
 export const commitsActions = commitsSlice.actions
 export default commitsSlice.reducer
