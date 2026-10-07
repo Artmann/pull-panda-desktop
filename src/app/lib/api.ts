@@ -43,6 +43,35 @@ async function getApiBaseUrl(): Promise<string> {
   return apiBaseUrl
 }
 
+interface JsonRequestOptions {
+  body?: unknown
+  errorMessage: string
+  method: 'DELETE' | 'GET' | 'PATCH' | 'POST'
+}
+
+async function sendJsonRequest(
+  path: string,
+  options: JsonRequestOptions
+): Promise<Response> {
+  const baseUrl = await getApiBaseUrl()
+
+  const response = await tracedFetch(`${baseUrl}${path}`, {
+    method: options.method,
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    ...(options.body !== undefined && { body: JSON.stringify(options.body) })
+  })
+
+  if (!response.ok) {
+    const error = await response.json()
+
+    throw new Error(extractErrorMessage(error.error, options.errorMessage))
+  }
+
+  return response
+}
+
 interface CreateCommentRequest {
   body: string
   owner: string
@@ -99,21 +128,11 @@ interface DeleteReviewRequest {
 export async function createReview(
   request: CreateReviewRequest
 ): Promise<CreateReviewResponse> {
-  const baseUrl = await getApiBaseUrl()
-
-  const response = await tracedFetch(`${baseUrl}/api/reviews`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json'
-    },
-    body: JSON.stringify(request)
+  const response = await sendJsonRequest('/api/reviews', {
+    body: request,
+    errorMessage: 'Failed to create review',
+    method: 'POST'
   })
-
-  if (!response.ok) {
-    const error = await response.json()
-
-    throw new Error(extractErrorMessage(error.error, 'Failed to create review'))
-  }
 
   return response.json()
 }
@@ -144,58 +163,33 @@ export async function getPendingReview(
 export async function submitReview(
   request: SubmitReviewRequest
 ): Promise<void> {
-  const baseUrl = await getApiBaseUrl()
-
-  const response = await tracedFetch(
-    `${baseUrl}/api/reviews/${request.reviewId}/submit`,
-    {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        body: request.body,
-        comments: request.comments,
-        event: request.event,
-        owner: request.owner,
-        pullNumber: request.pullNumber,
-        repo: request.repo
-      })
-    }
-  )
-
-  if (!response.ok) {
-    const error = await response.json()
-
-    throw new Error(extractErrorMessage(error.error, 'Failed to submit review'))
-  }
+  await sendJsonRequest(`/api/reviews/${request.reviewId}/submit`, {
+    body: {
+      body: request.body,
+      comments: request.comments,
+      event: request.event,
+      owner: request.owner,
+      pullNumber: request.pullNumber,
+      repo: request.repo
+    },
+    errorMessage: 'Failed to submit review',
+    method: 'POST'
+  })
 }
 
 export async function deleteReview(
   request: DeleteReviewRequest
 ): Promise<void> {
-  const baseUrl = await getApiBaseUrl()
   const params = new URLSearchParams({
     owner: request.owner,
     pullNumber: String(request.pullNumber),
     repo: request.repo
   })
 
-  const response = await tracedFetch(
-    `${baseUrl}/api/reviews/${request.reviewId}?${params}`,
-    {
-      method: 'DELETE',
-      headers: {
-        'Content-Type': 'application/json'
-      }
-    }
-  )
-
-  if (!response.ok) {
-    const error = await response.json()
-
-    throw new Error(extractErrorMessage(error.error, 'Failed to delete review'))
-  }
+  await sendJsonRequest(`/api/reviews/${request.reviewId}?${params}`, {
+    errorMessage: 'Failed to delete review',
+    method: 'DELETE'
+  })
 }
 
 interface ReviewThreadResolutionRequest {
@@ -214,23 +208,11 @@ interface ReviewThreadResolutionResponse {
 export async function resolveReviewThread(
   request: ReviewThreadResolutionRequest
 ): Promise<ReviewThreadResolutionResponse> {
-  const baseUrl = await getApiBaseUrl()
-
-  const response = await tracedFetch(`${baseUrl}/api/review-threads/resolve`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json'
-    },
-    body: JSON.stringify(request)
+  const response = await sendJsonRequest('/api/review-threads/resolve', {
+    body: request,
+    errorMessage: 'Failed to resolve review thread',
+    method: 'POST'
   })
-
-  if (!response.ok) {
-    const error = await response.json()
-
-    throw new Error(
-      extractErrorMessage(error.error, 'Failed to resolve review thread')
-    )
-  }
 
   return response.json()
 }
@@ -238,26 +220,11 @@ export async function resolveReviewThread(
 export async function unresolveReviewThread(
   request: ReviewThreadResolutionRequest
 ): Promise<ReviewThreadResolutionResponse> {
-  const baseUrl = await getApiBaseUrl()
-
-  const response = await tracedFetch(
-    `${baseUrl}/api/review-threads/unresolve`,
-    {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify(request)
-    }
-  )
-
-  if (!response.ok) {
-    const error = await response.json()
-
-    throw new Error(
-      extractErrorMessage(error.error, 'Failed to unresolve review thread')
-    )
-  }
+  const response = await sendJsonRequest('/api/review-threads/unresolve', {
+    body: request,
+    errorMessage: 'Failed to unresolve review thread',
+    method: 'POST'
+  })
 
   return response.json()
 }
@@ -265,23 +232,11 @@ export async function unresolveReviewThread(
 export async function createComment(
   request: CreateCommentRequest
 ): Promise<CreateCommentResponse> {
-  const baseUrl = await getApiBaseUrl()
-
-  const response = await tracedFetch(`${baseUrl}/api/comments`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json'
-    },
-    body: JSON.stringify(request)
+  const response = await sendJsonRequest('/api/comments', {
+    body: request,
+    errorMessage: 'Failed to create comment',
+    method: 'POST'
   })
-
-  if (!response.ok) {
-    const error = await response.json()
-
-    throw new Error(
-      extractErrorMessage(error.error, 'Failed to create comment')
-    )
-  }
 
   return response.json()
 }
@@ -356,25 +311,10 @@ export async function clearFocusedPullRequest(): Promise<void> {
 export async function syncPullRequestDetails(
   pullRequestId: string
 ): Promise<void> {
-  const baseUrl = await getApiBaseUrl()
-
-  const response = await tracedFetch(
-    `${baseUrl}/api/pull-requests/${pullRequestId}/sync`,
-    {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      }
-    }
-  )
-
-  if (!response.ok) {
-    const error = await response.json()
-
-    throw new Error(
-      extractErrorMessage(error.error, 'Failed to sync pull request details')
-    )
-  }
+  await sendJsonRequest(`/api/pull-requests/${pullRequestId}/sync`, {
+    errorMessage: 'Failed to sync pull request details',
+    method: 'POST'
+  })
 }
 
 export interface MergeRequirement {
@@ -396,25 +336,13 @@ export interface MergeOptions {
 export async function getMergeOptions(
   pullRequestId: string
 ): Promise<MergeOptions> {
-  const baseUrl = await getApiBaseUrl()
-
-  const response = await tracedFetch(
-    `${baseUrl}/api/pull-requests/${pullRequestId}/merge-options`,
+  const response = await sendJsonRequest(
+    `/api/pull-requests/${pullRequestId}/merge-options`,
     {
-      method: 'GET',
-      headers: {
-        'Content-Type': 'application/json'
-      }
+      errorMessage: 'Failed to fetch merge options',
+      method: 'GET'
     }
   )
-
-  if (!response.ok) {
-    const error = await response.json()
-
-    throw new Error(
-      extractErrorMessage(error.error, 'Failed to fetch merge options')
-    )
-  }
 
   return response.json()
 }
@@ -432,16 +360,10 @@ interface MergePullRequestRequest {
 export async function mergePullRequest(
   request: MergePullRequestRequest
 ): Promise<PullRequest> {
-  const baseUrl = await getApiBaseUrl()
-
-  const response = await tracedFetch(
-    `${baseUrl}/api/pull-requests/${request.pullRequestId}/merge`,
+  const response = await sendJsonRequest(
+    `/api/pull-requests/${request.pullRequestId}/merge`,
     {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
+      body: {
         ...(request.commitMessage !== undefined && {
           commitMessage: request.commitMessage
         }),
@@ -452,17 +374,11 @@ export async function mergePullRequest(
         owner: request.owner,
         pullNumber: request.pullNumber,
         repo: request.repo
-      })
+      },
+      errorMessage: 'Failed to merge pull request',
+      method: 'POST'
     }
   )
-
-  if (!response.ok) {
-    const error = await response.json()
-
-    throw new Error(
-      extractErrorMessage(error.error, 'Failed to merge pull request')
-    )
-  }
 
   return response.json()
 }
@@ -478,33 +394,21 @@ interface UpdatePullRequestBranchRequest {
 export async function updatePullRequestBranch(
   request: UpdatePullRequestBranchRequest
 ): Promise<void> {
-  const baseUrl = await getApiBaseUrl()
-
-  const response = await tracedFetch(
-    `${baseUrl}/api/pull-requests/${request.pullRequestId}/update-branch`,
+  await sendJsonRequest(
+    `/api/pull-requests/${request.pullRequestId}/update-branch`,
     {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
+      body: {
         ...(request.expectedHeadSha !== undefined && {
           expectedHeadSha: request.expectedHeadSha
         }),
         owner: request.owner,
         pullNumber: request.pullNumber,
         repo: request.repo
-      })
+      },
+      errorMessage: 'Failed to update pull request branch',
+      method: 'POST'
     }
   )
-
-  if (!response.ok) {
-    const error = await response.json()
-
-    throw new Error(
-      extractErrorMessage(error.error, 'Failed to update pull request branch')
-    )
-  }
 }
 
 interface UpdatePullRequestRequest {
@@ -521,16 +425,10 @@ interface UpdatePullRequestRequest {
 export async function updatePullRequest(
   request: UpdatePullRequestRequest
 ): Promise<PullRequest> {
-  const baseUrl = await getApiBaseUrl()
-
-  const response = await tracedFetch(
-    `${baseUrl}/api/pull-requests/${request.pullRequestId}`,
+  const response = await sendJsonRequest(
+    `/api/pull-requests/${request.pullRequestId}`,
     {
-      method: 'PATCH',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
+      body: {
         body: request.body,
         isDraft: request.isDraft,
         owner: request.owner,
@@ -538,17 +436,11 @@ export async function updatePullRequest(
         repo: request.repo,
         state: request.state,
         title: request.title
-      })
+      },
+      errorMessage: 'Failed to update pull request',
+      method: 'PATCH'
     }
   )
-
-  if (!response.ok) {
-    const error = await response.json()
-
-    throw new Error(
-      extractErrorMessage(error.error, 'Failed to update pull request')
-    )
-  }
 
   return response.json()
 }
@@ -574,23 +466,11 @@ export async function verifyConnectedRepo(args: {
   fullName: string
   localPath: string
 }): Promise<VerifyRepoResult> {
-  const baseUrl = await getApiBaseUrl()
-
-  const response = await tracedFetch(`${baseUrl}/api/repo-checkout/verify`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json'
-    },
-    body: JSON.stringify(args)
+  const response = await sendJsonRequest('/api/repo-checkout/verify', {
+    body: args,
+    errorMessage: 'Failed to verify repository',
+    method: 'POST'
   })
-
-  if (!response.ok) {
-    const error = await response.json()
-
-    throw new Error(
-      extractErrorMessage(error.error, 'Failed to verify repository')
-    )
-  }
 
   return response.json()
 }
@@ -599,23 +479,11 @@ export async function cloneConnectedRepo(args: {
   fullName: string
   parentDir: string
 }): Promise<CloneRepoResult> {
-  const baseUrl = await getApiBaseUrl()
-
-  const response = await tracedFetch(`${baseUrl}/api/repo-checkout/clone`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json'
-    },
-    body: JSON.stringify(args)
+  const response = await sendJsonRequest('/api/repo-checkout/clone', {
+    body: args,
+    errorMessage: 'Failed to clone repository',
+    method: 'POST'
   })
-
-  if (!response.ok) {
-    const error = await response.json()
-
-    throw new Error(
-      extractErrorMessage(error.error, 'Failed to clone repository')
-    )
-  }
 
   return response.json()
 }
@@ -624,45 +492,21 @@ export async function setConnectedRepo(args: {
   fullName: string
   localPath: string
 }): Promise<void> {
-  const baseUrl = await getApiBaseUrl()
-
-  const response = await tracedFetch(`${baseUrl}/api/repo-checkout/set`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json'
-    },
-    body: JSON.stringify(args)
+  await sendJsonRequest('/api/repo-checkout/set', {
+    body: args,
+    errorMessage: 'Failed to save connected repository',
+    method: 'POST'
   })
-
-  if (!response.ok) {
-    const error = await response.json()
-
-    throw new Error(
-      extractErrorMessage(error.error, 'Failed to save connected repository')
-    )
-  }
 }
 
 export async function checkoutPullRequestBranch(
   pullRequestId: string
 ): Promise<CheckoutPullRequestResult> {
-  const baseUrl = await getApiBaseUrl()
-
-  const response = await tracedFetch(`${baseUrl}/api/repo-checkout/checkout`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json'
-    },
-    body: JSON.stringify({ pullRequestId })
+  const response = await sendJsonRequest('/api/repo-checkout/checkout', {
+    body: { pullRequestId },
+    errorMessage: 'Failed to check out branch',
+    method: 'POST'
   })
-
-  if (!response.ok) {
-    const error = await response.json()
-
-    throw new Error(
-      extractErrorMessage(error.error, 'Failed to check out branch')
-    )
-  }
 
   return response.json()
 }
@@ -675,24 +519,14 @@ interface ReviewerMutationRequest {
 export async function requestReviewers(
   request: ReviewerMutationRequest
 ): Promise<PullRequest> {
-  const baseUrl = await getApiBaseUrl()
-
-  const response = await tracedFetch(
-    `${baseUrl}/api/pull-requests/${request.pullRequestId}/reviewers`,
+  const response = await sendJsonRequest(
+    `/api/pull-requests/${request.pullRequestId}/reviewers`,
     {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ logins: request.logins })
+      body: { logins: request.logins },
+      errorMessage: 'Failed to request reviewers',
+      method: 'POST'
     }
   )
-
-  if (!response.ok) {
-    const error = await response.json()
-
-    throw new Error(
-      extractErrorMessage(error.error, 'Failed to request reviewers')
-    )
-  }
 
   return response.json()
 }
@@ -700,24 +534,14 @@ export async function requestReviewers(
 export async function removeReviewers(
   request: ReviewerMutationRequest
 ): Promise<PullRequest> {
-  const baseUrl = await getApiBaseUrl()
-
-  const response = await tracedFetch(
-    `${baseUrl}/api/pull-requests/${request.pullRequestId}/reviewers`,
+  const response = await sendJsonRequest(
+    `/api/pull-requests/${request.pullRequestId}/reviewers`,
     {
-      method: 'DELETE',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ logins: request.logins })
+      body: { logins: request.logins },
+      errorMessage: 'Failed to remove reviewers',
+      method: 'DELETE'
     }
   )
-
-  if (!response.ok) {
-    const error = await response.json()
-
-    throw new Error(
-      extractErrorMessage(error.error, 'Failed to remove reviewers')
-    )
-  }
 
   return response.json()
 }

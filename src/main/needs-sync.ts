@@ -1,17 +1,40 @@
 const activeSyncIntervalMs = 10_000
 const oneDayMs = 24 * 60 * 60 * 1000
-const recentSyncIntervalMs = 60_000
-const staleSyncIntervalMs = 5 * 60_000
+const recentSafetyIntervalMs = 10 * 60_000
+const staleSafetyIntervalMs = 30 * 60_000
 
 interface SyncCandidate {
+  detailsFingerprint: string | null
   detailsSyncedAt: string | null
+  fingerprint: string | null
   id: string
   state: string
   updatedAt: string
 }
 
-// Decides whether a pull request is due for a details sync based on how
-// recently it changed on GitHub and whether the user has it open.
+function hasFingerprintChanged(pullRequest: SyncCandidate): boolean {
+  return (
+    pullRequest.fingerprint !== null &&
+    pullRequest.fingerprint !== pullRequest.detailsFingerprint
+  )
+}
+
+function isUpdatedSinceDetailsSync(pullRequest: SyncCandidate): boolean {
+  if (!pullRequest.detailsSyncedAt) {
+    return true
+  }
+
+  return (
+    new Date(pullRequest.updatedAt).getTime() >
+    new Date(pullRequest.detailsSyncedAt).getTime()
+  )
+}
+
+// Decides whether a pull request is due for a details sync. The list probe
+// runs every few seconds and records `updatedAt` (moves on commits, comments
+// and reviews) plus a fingerprint (head commit, check rollup, review
+// decision), so most changes are caught by those. The time-based rules are a
+// safety net for changes neither of them shows, such as reactions.
 export function needsSync(
   pullRequest: SyncCandidate,
   activePullRequestIds: Set<string>,
@@ -22,31 +45,47 @@ export function needsSync(
     return false
   }
 
-  // Never synced before
   if (!pullRequest.detailsSyncedAt) {
     return true
   }
 
-  const detailsSyncedAt = new Date(pullRequest.detailsSyncedAt).getTime()
-  const updatedAt = new Date(pullRequest.updatedAt).getTime()
-
-  // Updated on GitHub since last sync
-  if (updatedAt > detailsSyncedAt) {
+  if (isUpdatedSinceDetailsSync(pullRequest)) {
     return true
   }
+
+  if (hasFingerprintChanged(pullRequest)) {
+    return true
+  }
+
+  const detailsSyncedAt = new Date(pullRequest.detailsSyncedAt).getTime()
 
   // Active PRs (user has opened them) sync every 10 seconds
   if (activePullRequestIds.has(pullRequest.id)) {
     return now - detailsSyncedAt > activeSyncIntervalMs
   }
 
-  // Recently updated open PRs sync every 60 seconds
+  const updatedAt = new Date(pullRequest.updatedAt).getTime()
   const isRecentlyUpdated = now - updatedAt < oneDayMs
+  const safetyIntervalMs = isRecentlyUpdated
+    ? recentSafetyIntervalMs
+    : staleSafetyIntervalMs
 
-  if (isRecentlyUpdated) {
-    return now - detailsSyncedAt > recentSyncIntervalMs
+  return now - detailsSyncedAt > safetyIntervalMs
+}
+
+// Lower runs first: never-synced PRs (usually ones that were just opened),
+// then PRs with a known change, then everything else.
+export function syncPriority(pullRequest: SyncCandidate): number {
+  if (!pullRequest.detailsSyncedAt) {
+    return 0
   }
 
-  // Older open PRs sync every 5 minutes
-  return now - detailsSyncedAt > staleSyncIntervalMs
+  if (
+    isUpdatedSinceDetailsSync(pullRequest) ||
+    hasFingerprintChanged(pullRequest)
+  ) {
+    return 1
+  }
+
+  return 2
 }

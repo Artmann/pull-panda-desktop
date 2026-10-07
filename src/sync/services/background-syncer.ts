@@ -17,9 +17,18 @@ import { GitHubRest } from './github-rest'
 import { ResourceEventBus } from './resource-event-bus'
 import { SyncRecorder } from './sync-recorder'
 
-const focusedPullRequestIntervalMs = 2000
-const activeWithRunningChecksIntervalMs = 2000
-const activeWithoutRunningChecksIntervalMs = 10000
+// Intervals while the window has focus, and while it is in the background.
+// Nobody is watching a background window, so there is no point in spending
+// requests and CPU on 2-second refreshes.
+const focusedPullRequestIntervalMs = { background: 30_000, foreground: 2000 }
+const activeWithRunningChecksIntervalMs = {
+  background: 30_000,
+  foreground: 2000
+}
+const activeWithoutRunningChecksIntervalMs = {
+  background: 60_000,
+  foreground: 10_000
+}
 const idleTickMs = 1000
 
 interface ActivePullRequest {
@@ -36,11 +45,20 @@ interface FocusedPullRequest {
 interface SyncerState {
   activePullRequests: Map<string, ActivePullRequest>
   focusedPullRequest: FocusedPullRequest | null
+  isWindowFocused: boolean
 }
 
 const initialState: SyncerState = {
   activePullRequests: new Map(),
-  focusedPullRequest: null
+  focusedPullRequest: null,
+  isWindowFocused: true
+}
+
+function intervalFor(
+  intervals: { background: number; foreground: number },
+  state: SyncerState
+): number {
+  return state.isWindowFocused ? intervals.foreground : intervals.background
 }
 
 export class BackgroundSyncer extends Context.Tag('sync/BackgroundSyncer')<
@@ -57,6 +75,7 @@ export class BackgroundSyncer extends Context.Tag('sync/BackgroundSyncer')<
     readonly getFocusedPullRequestId: Effect.Effect<string | null>
     readonly getActivePullRequestIds: Effect.Effect<Set<string>>
     readonly getMonitoringData: Effect.Effect<MonitoringData>
+    readonly setWindowFocused: (isFocused: boolean) => Effect.Effect<void>
   }
 >() {}
 
@@ -103,7 +122,10 @@ export const BackgroundSyncerLive: Layer.Layer<
 
       const now = Date.now()
 
-      if (now - focused.lastSyncedAt < focusedPullRequestIntervalMs) {
+      if (
+        now - focused.lastSyncedAt <
+        intervalFor(focusedPullRequestIntervalMs, state)
+      ) {
         return
       }
 
@@ -302,9 +324,12 @@ export const BackgroundSyncerLive: Layer.Layer<
       const removableIds: string[] = []
 
       for (const [pullRequestId, activePr] of state.activePullRequests) {
-        const interval = activePr.hasRunningChecks
-          ? activeWithRunningChecksIntervalMs
-          : activeWithoutRunningChecksIntervalMs
+        const interval = intervalFor(
+          activePr.hasRunningChecks
+            ? activeWithRunningChecksIntervalMs
+            : activeWithoutRunningChecksIntervalMs,
+          state
+        )
 
         if (now - activePr.lastSyncedAt < interval) {
           continue
@@ -444,7 +469,13 @@ export const BackgroundSyncerLive: Layer.Layer<
         (state) => new Set(state.activePullRequests.keys())
       ),
 
-      getMonitoringData: recorder.getMonitoringData
+      getMonitoringData: recorder.getMonitoringData,
+
+      setWindowFocused: (isFocused) =>
+        Ref.update(stateRef, (current) => ({
+          ...current,
+          isWindowFocused: isFocused
+        }))
     }
   })
 )

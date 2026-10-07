@@ -2,6 +2,7 @@ import {
   app,
   BrowserWindow,
   ipcMain,
+  powerMonitor,
   screen,
   shell,
   type IpcMainInvokeEvent
@@ -10,7 +11,13 @@ import { Effect } from 'effect'
 import started from 'electron-squirrel-startup'
 import path from 'node:path'
 
-import { initializeDatabase, closeDatabase, saveDatabase } from './database'
+import {
+  closeDatabase,
+  getDatabase,
+  initializeDatabase,
+  saveDatabase
+} from './database'
+import { pullRequests } from './database/schema'
 import { ipcChannels } from './lib/ipc/channels'
 import {
   getApiPort,
@@ -18,12 +25,23 @@ import {
   startApiServer,
   stopApiServer
 } from './main/api'
-import { bootstrap, BootstrapData } from './main/bootstrap'
-import { needsSync } from './main/needs-sync'
 import {
+  bootstrap,
+  type BootstrapData,
+  loadPullRequestList
+} from './main/bootstrap'
+import {
+  ListSyncScheduler,
+  type RateLimitBudget,
+  windowStateOf
+} from './main/list-sync-scheduler'
+import { needsSync, syncPriority } from './main/needs-sync'
+import {
+  getCachedUserLogin,
   sendPullRequestResourceEvents,
   setCachedUserLogin
 } from './main/send-resource-events'
+import { setManualSyncHandler } from './main/sync-requests'
 import { taskManager } from './main/task-manager'
 import { startUsagePingScheduler } from './main/usage-ping'
 import {
@@ -43,6 +61,9 @@ import {
   tryGetAppRuntime
 } from './sync/runtime'
 import { BackgroundSyncer } from './sync/services/background-syncer'
+import { RateLimitTracker } from './sync/services/rate-limit-tracker'
+import type { RequestKind } from './sync/errors'
+import type { SyncResult } from './sync/schemas/domain'
 import { initializeTelemetry, shutdownTelemetry } from './telemetry/lifecycle'
 import { withSpan } from './telemetry/span'
 import { getTelemetryStore } from './telemetry/store'
@@ -60,7 +81,9 @@ import {
   requestDeviceCodeOperation
 } from './main/api/operations/auth'
 
-let bootstrapData: BootstrapData | null = null
+// Built during startup so the first window load doesn't wait for it. Later
+// requests (a renderer reload) build fresh data instead of reusing it.
+let pendingBootstrap: Promise<BootstrapData> | null = null
 let mainWindow: BrowserWindow | null = null
 
 // Handle creating/removing shortcuts on Windows when installing/uninstalling.
@@ -114,7 +137,11 @@ function setupIpcHandlers(): void {
   })
 
   handleWithSpan(ipcChannels.GetBootstrapData, () => {
-    return bootstrapData
+    const data = pendingBootstrap ?? bootstrap(getCachedUserLogin())
+
+    pendingBootstrap = null
+
+    return data
   })
 
   handleWithSpan(ipcChannels.GetTasks, () => {
@@ -299,8 +326,15 @@ const createWindow = () => {
     taskManager.setMainWindow(null)
   })
 
+  // Sync when the user comes back to the app, and let the per-PR syncer
+  // slow down while the window is in the background.
   mainWindow.on('focus', () => {
-    maybeSyncOnFocus()
+    setSyncerWindowFocused(true)
+    listSyncScheduler.requestSync()
+  })
+
+  mainWindow.on('blur', () => {
+    setSyncerWindowFocused(false)
   })
 
   // and load the index.html of the app.
@@ -317,8 +351,10 @@ function errorMessageOf(error: unknown): string {
   return error instanceof Error ? error.message : 'Unknown error'
 }
 
+type PullRequestRow = typeof pullRequests.$inferSelect
+
 async function syncOnePullRequestDetail(
-  pullRequest: BootstrapData['pullRequests'][number],
+  pullRequest: PullRequestRow,
   currentUserLogin: string | undefined,
   deletedPullRequestIds: string[],
   errors: string[]
@@ -362,32 +398,94 @@ async function notifyDeletedPullRequests(
     return
   }
 
-  await rebuildBootstrapAndNotify()
+  await notifyPullRequestList()
 
   console.log(
     `Removed ${deletedPullRequestIds.length} inaccessible PRs from the list`
   )
 }
 
+// Reads the current GitHub budget for one API. Returns null when nothing is
+// known yet or the reported window has already reset.
+async function readBudget(kind: RequestKind): Promise<RateLimitBudget | null> {
+  const runtime = tryGetAppRuntime()
+
+  if (!runtime) {
+    return null
+  }
+
+  const snapshot = await runtime.runPromise(
+    Effect.flatMap(RateLimitTracker, (tracker) => tracker.snapshot(kind))
+  )
+
+  if (!snapshot || snapshot.resetAt * 1000 < Date.now()) {
+    return null
+  }
+
+  return snapshot
+}
+
+function isBudgetLow(budget: RateLimitBudget | null): boolean {
+  return budget !== null && budget.remaining < budget.limit * 0.1
+}
+
+// PRs due for a details sync, most urgent first. When the REST budget is
+// nearly spent, only PRs that have never been synced (new ones) go ahead.
+function loadDetailSyncCandidates(
+  activePullRequestIds: Set<string>,
+  onlyNew: boolean
+): PullRequestRow[] {
+  return getDatabase()
+    .select()
+    .from(pullRequests)
+    .all()
+    .filter((row) => needsSync(row, activePullRequestIds))
+    .filter((row) => !onlyNew || syncPriority(row) === 0)
+    .sort((a, b) => syncPriority(a) - syncPriority(b))
+}
+
+let detailSyncInFlight = false
+let detailSyncRerunRequested = false
+
+// Runs detail passes one at a time. A request that arrives during a pass
+// starts another pass once it finishes, so newly found PRs are not skipped.
 async function syncAllPullRequestDetails(): Promise<void> {
-  if (!bootstrapData) {
+  if (detailSyncInFlight) {
+    detailSyncRerunRequested = true
+
     return
   }
 
+  detailSyncInFlight = true
+
+  try {
+    do {
+      detailSyncRerunRequested = false
+      await runDetailSyncPass()
+    } while (detailSyncRerunRequested)
+  } finally {
+    detailSyncInFlight = false
+  }
+}
+
+async function runDetailSyncPass(): Promise<void> {
   const runtime = getAppRuntime()
   const activePullRequestIds = await runtime.runPromise(
     Effect.flatMap(BackgroundSyncer, (syncer) => syncer.getActivePullRequestIds)
   )
 
-  const allPullRequests = bootstrapData.pullRequests
-  const pullRequests = allPullRequests.filter((pullRequest) =>
-    needsSync(pullRequest, activePullRequestIds)
+  const restBudget = await readBudget('rest')
+  const candidates = loadDetailSyncCandidates(
+    activePullRequestIds,
+    isBudgetLow(restBudget)
   )
-  const total = pullRequests.length
+  const total = candidates.length
 
-  console.log(
-    `Starting background sync for ${total}/${allPullRequests.length} PRs needing updates`
-  )
+  if (total === 0) {
+    return
+  }
+
+  console.log(`Starting background sync for ${total} PRs needing updates`)
 
   const task = taskManager.createTask('syncPullRequestDetails', {
     message: 'Synchronizing pull requests...',
@@ -410,8 +508,8 @@ async function syncAllPullRequestDetails(): Promise<void> {
 
   const batchSize = 5
 
-  for (let i = 0; i < pullRequests.length; i += batchSize) {
-    const batch = pullRequests.slice(i, i + batchSize)
+  for (let i = 0; i < candidates.length; i += batchSize) {
+    const batch = candidates.slice(i, i + batchSize)
 
     await Promise.allSettled(
       batch.map(async (pullRequest) => {
@@ -447,7 +545,13 @@ async function syncAllPullRequestDetails(): Promise<void> {
   console.log('Background sync for all PR details completed')
 }
 
+// Returns the signed-in user's login. It only asks GitHub when nothing is
+// cached, since syncs run every few seconds and the login rarely changes.
 async function getUserLogin(): Promise<string | undefined> {
+  return getCachedUserLogin() ?? fetchUserLogin()
+}
+
+async function fetchUserLogin(): Promise<string | undefined> {
   const runtime = tryGetAppRuntime()
 
   if (!runtime) {
@@ -480,8 +584,8 @@ async function initializeServices(): Promise<
   return runtime
 }
 
-// Start the background syncer fiber via the runtime, then kick off an initial
-// pull-request sync when a token is already stored.
+// Start the background syncer fiber via the runtime, then start the list sync
+// scheduler, which runs its first sync right away.
 async function startBackgroundSync(
   runtime: ReturnType<typeof initializeAppRuntime>
 ): Promise<void> {
@@ -495,9 +599,20 @@ async function startBackgroundSync(
     )
   )
 
-  if (loadToken()) {
-    runPullRequestSync()
-  }
+  setManualSyncHandler(() => {
+    showNextListSyncTask = true
+    listSyncScheduler.requestSync()
+  })
+
+  // A laptop waking up has usually missed changes, so sync right away.
+  powerMonitor.on('resume', () => {
+    listSyncScheduler.requestSync()
+  })
+  powerMonitor.on('unlock-screen', () => {
+    listSyncScheduler.requestSync()
+  })
+
+  listSyncScheduler.start()
 }
 
 app.on('ready', async () => {
@@ -510,7 +625,7 @@ app.on('ready', async () => {
   const runtime = await initializeServices()
 
   const userLogin = await getUserLogin()
-  bootstrapData = await bootstrap(userLogin)
+  pendingBootstrap = bootstrap(userLogin)
 
   createWindow()
 
@@ -523,97 +638,135 @@ app.on('ready', async () => {
   startUsagePingScheduler()
 })
 
-let pullRequestSyncInFlight = false
 let staleSyncInFlight = false
 let lastSearchSyncedIds: Set<string> = new Set()
+let lastStaleSyncAt = 0
+// Set by a manual refresh so that run shows up in the footer. Timed runs
+// happen every few seconds and stay silent.
+let showNextListSyncTask = false
 
-// Trigger a sync when the window regains focus so the list is fresh exactly
-// when the user looks at the app. Debounced so rapid alt-tabbing doesn't fire a
-// burst of syncs.
-const focusSyncDebounceMs = 15 * 1000
-let lastFocusSyncAt = 0
+// A full stale sweep re-reads every local open PR that the search no longer
+// returns. It runs at once when a PR drops out of the search (it was likely
+// merged or closed), and otherwise only every few minutes.
+const staleSyncIntervalMs = 5 * 60 * 1000
 
-function maybeSyncOnFocus(): void {
-  const token = loadToken()
-
-  if (!token) {
-    return
-  }
-
-  const now = Date.now()
-
-  if (now - lastFocusSyncAt < focusSyncDebounceMs) {
-    return
-  }
-
-  lastFocusSyncAt = now
-
-  runPullRequestSync().catch((error) => {
-    console.error('Focus-triggered sync failed:', error)
-  })
+function setSyncerWindowFocused(isFocused: boolean): void {
+  tryGetAppRuntime()
+    ?.runPromise(
+      Effect.flatMap(BackgroundSyncer, (syncer) =>
+        syncer.setWindowFocused(isFocused)
+      )
+    )
+    .catch((error) => {
+      console.error('Failed to update the syncer focus state:', error)
+    })
 }
 
-async function rebuildBootstrapAndNotify(): Promise<void> {
+// Sends the pull request list (without details) to the renderer.
+async function notifyPullRequestList(): Promise<void> {
   const userLogin = await getUserLogin()
-  bootstrapData = await bootstrap(userLogin)
 
   mainWindow?.webContents.send(ipcChannels.ResourceUpdated, {
     type: 'pull-requests',
-    data: bootstrapData.pullRequests
+    data: loadPullRequestList(userLogin)
   })
 }
 
-async function runPullRequestSync(): Promise<boolean> {
-  if (pullRequestSyncInFlight) {
-    return false
+function shouldRunStaleSync(syncedIds: ReadonlySet<string>): boolean {
+  const hasDroppedIds = Array.from(lastSearchSyncedIds).some(
+    (id) => !syncedIds.has(id)
+  )
+
+  return hasDroppedIds || Date.now() - lastStaleSyncAt > staleSyncIntervalMs
+}
+
+interface ListSyncTask {
+  complete: () => void
+  fail: (message: string) => void
+}
+
+const silentListSyncTask: ListSyncTask = {
+  complete: () => undefined,
+  fail: () => undefined
+}
+
+// Starts a footer task for a manual refresh. Timed runs stay silent.
+function startListSyncTask(): ListSyncTask {
+  if (!showNextListSyncTask) {
+    return silentListSyncTask
   }
 
-  pullRequestSyncInFlight = true
+  showNextListSyncTask = false
 
-  const syncTask = taskManager.createTask('syncPullRequests', {
+  const task = taskManager.createTask('syncPullRequests', {
     message: 'Synchronizing pull requests...'
   })
 
-  taskManager.startTask(syncTask.id)
+  taskManager.startTask(task.id)
 
-  try {
-    const runtime = getAppRuntime()
-    const result = await runtime.runPromise(syncPullRequests)
+  return {
+    complete: () => taskManager.completeTask(task.id),
+    fail: (message) => taskManager.failTask(task.id, message)
+  }
+}
 
-    taskManager.completeTask(syncTask.id)
+async function handleListSyncResult(result: SyncResult): Promise<void> {
+  if (result.errors.length > 0) {
+    console.warn('Sync warnings:', result.errors)
+  }
 
+  const runStale = shouldRunStaleSync(result.syncedIds)
+
+  lastSearchSyncedIds = result.syncedIds
+
+  // Rebuilding and sending the list makes the renderer re-render, so only
+  // do it when the list actually changed.
+  if (result.hasChanges) {
     console.log(`Synced ${result.synced} pull requests`)
 
-    if (result.errors.length > 0) {
-      console.warn('Sync warnings:', result.errors)
-    }
+    await notifyPullRequestList()
+  }
 
-    lastSearchSyncedIds = result.syncedIds
+  mainWindow?.webContents.send(ipcChannels.SyncComplete)
 
-    await rebuildBootstrapAndNotify()
-
-    mainWindow?.webContents.send(ipcChannels.SyncComplete)
-
-    // Stale handling can sleep on rate limits, so it runs on its own
-    // in-flight flag and never blocks the main poll cycle.
+  // Stale handling can sleep on rate limits, so it runs on its own
+  // in-flight flag and never blocks the main poll cycle.
+  if (runStale) {
     runStaleSync().catch((error) => {
       console.error('Failed to run stale sync:', error)
     })
+  }
 
-    syncAllPullRequestDetails().catch((error) => {
-      console.error('Failed to sync PR details:', error)
-    })
+  syncAllPullRequestDetails().catch((error) => {
+    console.error('Failed to sync PR details:', error)
+  })
+}
 
-    return result.hasChanges
+async function runPullRequestSync(): Promise<void> {
+  if (!loadToken()) {
+    return
+  }
+
+  const task = startListSyncTask()
+
+  try {
+    const result = await getAppRuntime().runPromise(syncPullRequests)
+
+    task.complete()
+
+    await handleListSyncResult(result)
   } catch (error) {
-    taskManager.failTask(syncTask.id, errorMessageOf(error))
-    console.error('Failed to sync pull requests:', error)
+    task.fail(errorMessageOf(error))
 
-    return false
-  } finally {
-    pullRequestSyncInFlight = false
+    console.error('Failed to sync pull requests:', error)
   }
 }
+
+const listSyncScheduler = new ListSyncScheduler({
+  getBudget: () => readBudget('graphql'),
+  getWindowState: () => windowStateOf(mainWindow),
+  run: runPullRequestSync
+})
 
 async function runStaleSync(): Promise<void> {
   if (staleSyncInFlight) {
@@ -621,6 +774,7 @@ async function runStaleSync(): Promise<void> {
   }
 
   staleSyncInFlight = true
+  lastStaleSyncAt = Date.now()
 
   try {
     const runtime = getAppRuntime()
@@ -631,7 +785,7 @@ async function runStaleSync(): Promise<void> {
     if (staleUpdated > 0) {
       console.log(`Updated ${staleUpdated} stale pull requests`)
 
-      await rebuildBootstrapAndNotify()
+      await notifyPullRequestList()
     }
   } catch (error) {
     console.error('Failed to sync stale pull requests:', error)
@@ -640,70 +794,11 @@ async function runStaleSync(): Promise<void> {
   }
 }
 
-// Save database periodically (every 30 seconds)
+// Save database periodically (every 30 seconds). Skipped when nothing was
+// written since the last save.
 setInterval(() => {
   saveDatabase()
 }, 30000)
-
-// Adaptive cadence for the main PR search:
-// - Default cadence is 1 min.
-// - When the last run produced changes (or there is a focused PR), refresh
-//   sooner so the list stays responsive.
-// - Otherwise stretch the interval ×1.5 up to a 10 min ceiling.
-const minSyncDelayMs = 30 * 1000
-const baseSyncDelayMs = 60 * 1000
-const maxSyncDelayMs = 10 * 60 * 1000
-const focusedSyncDelayMs = 60 * 1000
-
-let nextSyncDelayMs = baseSyncDelayMs
-
-function scheduleNextPullRequestSync(): void {
-  setTimeout(() => {
-    const token = loadToken()
-
-    if (!token) {
-      nextSyncDelayMs = baseSyncDelayMs
-      scheduleNextPullRequestSync()
-
-      return
-    }
-
-    runPullRequestSync()
-      .then(async (hasChanges) => {
-        if (hasChanges) {
-          nextSyncDelayMs = minSyncDelayMs
-
-          return
-        }
-
-        const runtime = getAppRuntime()
-        const focusedId = await runtime.runPromise(
-          Effect.flatMap(
-            BackgroundSyncer,
-            (syncer) => syncer.getFocusedPullRequestId
-          )
-        )
-
-        if (focusedId) {
-          nextSyncDelayMs = focusedSyncDelayMs
-        } else {
-          nextSyncDelayMs = Math.min(
-            maxSyncDelayMs,
-            Math.max(baseSyncDelayMs, Math.floor(nextSyncDelayMs * 1.5))
-          )
-        }
-      })
-      .catch((error) => {
-        console.error('Pull request sync iteration failed:', error)
-        nextSyncDelayMs = baseSyncDelayMs
-      })
-      .finally(() => {
-        scheduleNextPullRequestSync()
-      })
-  }, nextSyncDelayMs)
-}
-
-scheduleNextPullRequestSync()
 
 // Save database before quitting. The shutdown is async because we need to let
 // background sync fibers finish before the database is closed, otherwise an
@@ -717,6 +812,7 @@ app.on('before-quit', (event) => {
 
   event.preventDefault()
   isShuttingDown = true
+  listSyncScheduler.stop()
 
   const runtime = tryGetAppRuntime()
 

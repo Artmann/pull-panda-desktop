@@ -6,19 +6,16 @@ import {
   useEffect,
   type ReactNode
 } from 'react'
-import { shallowEqual, useStore } from 'react-redux'
+import { useStore } from 'react-redux'
 import { useLocation, useNavigate, type NavigateFunction } from 'react-router'
 
 import type { AppStore } from '@/app/store'
 import { useAppSelector } from '@/app/store/hooks'
-import type {
-  Comment,
-  ModifiedFile,
-  PullRequestDetails
-} from '@/types/pull-request-details'
+import type { Comment, ModifiedFile } from '@/types/pull-request-details'
 
 import { setStore } from './store-accessor'
 import type { CommandContext, CommandView } from './types'
+import { usePullRequestDetails } from './use-pull-request-details'
 
 type CommandContextValue = {
   context: CommandContext
@@ -50,124 +47,35 @@ export function extractPullRequestId(pathname: string): string | undefined {
   return match?.[1]
 }
 
-export function CommandContextProvider({
-  children
-}: CommandContextProviderProps) {
-  const location = useLocation()
+export function getCommandView(pathname: string): CommandView {
+  if (pathname.startsWith('/pull-requests/')) {
+    return 'pr-detail'
+  }
+
+  if (pathname === '/') {
+    return 'home'
+  }
+
+  return 'other'
+}
+
+// Store references for commands to use
+function useCommandReferences() {
   const navigate = useNavigate()
   const store = useStore() as AppStore
 
-  // Store references for commands to use
   useEffect(() => {
     navigateFunction = navigate
     setStore(store)
+
     return () => {
       navigateFunction = null
     }
   }, [navigate, store])
+}
 
-  // Extract PR ID from pathname (useParams doesn't work outside Routes)
-  const pullRequestId = extractPullRequestId(location.pathname)
-
-  const pullRequest = useAppSelector((state) =>
-    pullRequestId
-      ? state.pullRequests.items.find((pr) => pr.id === pullRequestId)
-      : undefined
-  )
-
-  const checks = useAppSelector(
-    (state) =>
-      pullRequestId
-        ? state.checks.items.filter((c) => c.pullRequestId === pullRequestId)
-        : [],
-    shallowEqual
-  )
-
-  const comments = useAppSelector(
-    (state) =>
-      pullRequestId
-        ? state.comments.items.filter((c) => c.pullRequestId === pullRequestId)
-        : [],
-    shallowEqual
-  )
-
-  const commits = useAppSelector(
-    (state) =>
-      pullRequestId
-        ? state.commits.items.filter((c) => c.pullRequestId === pullRequestId)
-        : [],
-    shallowEqual
-  )
-
-  const files = useAppSelector(
-    (state) =>
-      pullRequestId
-        ? state.modifiedFiles.items.filter(
-            (f) => f.pullRequestId === pullRequestId
-          )
-        : [],
-    shallowEqual
-  )
-
-  const reactions = useAppSelector(
-    (state) =>
-      pullRequestId
-        ? state.reactions.items.filter((r) => r.pullRequestId === pullRequestId)
-        : [],
-    shallowEqual
-  )
-
-  const reviews = useAppSelector(
-    (state) =>
-      pullRequestId
-        ? state.reviews.items.filter((r) => r.pullRequestId === pullRequestId)
-        : [],
-    shallowEqual
-  )
-
-  const reviewThreads = useAppSelector(
-    (state) =>
-      pullRequestId
-        ? state.reviewThreads.items.filter(
-            (t) => t.pullRequestId === pullRequestId
-          )
-        : [],
-    shallowEqual
-  )
-
-  const pullRequestDetails: PullRequestDetails | undefined = useMemo(
-    () =>
-      pullRequestId
-        ? {
-            checks,
-            comments,
-            commits,
-            files,
-            reactions,
-            reviews,
-            reviewThreads
-          }
-        : undefined,
-    [
-      pullRequestId,
-      checks,
-      comments,
-      commits,
-      files,
-      reactions,
-      reviews,
-      reviewThreads
-    ]
-  )
-
-  // Derive view from current path
-  const view: CommandView = useMemo(() => {
-    if (location.pathname.startsWith('/pull-requests/')) return 'pr-detail'
-    if (location.pathname === '/') return 'home'
-    return 'other'
-  }, [location.pathname])
-
-  // File and comment selection state
+// File and comment selection state
+function useSelections(view: CommandView) {
   const [selectedFile, setSelectedFile] = useState<ModifiedFile | undefined>()
   const [selectedComment, setSelectedComment] = useState<Comment | undefined>()
 
@@ -178,6 +86,30 @@ export function CommandContextProvider({
       setSelectedComment(undefined)
     }
   }, [view])
+
+  return { selectedComment, selectedFile, setSelectedComment, setSelectedFile }
+}
+
+export function CommandContextProvider({
+  children
+}: CommandContextProviderProps) {
+  const location = useLocation()
+
+  useCommandReferences()
+
+  // Extract PR ID from pathname (useParams doesn't work outside Routes)
+  const pullRequestId = extractPullRequestId(location.pathname)
+
+  const pullRequest = useAppSelector((state) =>
+    pullRequestId
+      ? state.pullRequests.items.find((pr) => pr.id === pullRequestId)
+      : undefined
+  )
+  const pullRequestDetails = usePullRequestDetails(pullRequestId)
+  const view = getCommandView(location.pathname)
+
+  const { selectedComment, selectedFile, setSelectedComment, setSelectedFile } =
+    useSelections(view)
 
   const context: CommandContext = useMemo(
     () => ({

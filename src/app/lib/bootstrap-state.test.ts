@@ -192,7 +192,10 @@ describe('buildPreloadedState', () => {
       },
       modifiedFiles: { items: [modifiedFile] },
       pendingReviews: { 'pr-ready': pendingReview },
-      pullRequests: { initialized: true, items: [readyPullRequest] },
+      pullRequests: {
+        initialized: true,
+        items: [readyPullRequest, notReadyPullRequest]
+      },
       reactions: { items: [reaction] },
       reviews: { items: [review] },
       reviewThreads: { items: [reviewThread] }

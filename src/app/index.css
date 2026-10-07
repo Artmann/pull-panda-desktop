@@ -398,6 +398,43 @@ body {
   font-weight: normal;
 }
 
+/* GitHub task lists ("- [x] Done"). The checkboxes are disabled native inputs,
+ * which Chromium draws grey and outside the theme, so draw them from theme
+ * tokens instead. The checkbox hangs in the list's indent (as on GitHub) so
+ * wrapped lines and nested lists line up with the item text. */
+.markdown-block .contains-task-list {
+  list-style: none;
+}
+
+.markdown-block .task-list-item input[type='checkbox'] {
+  appearance: none;
+  display: inline-grid;
+  place-content: center;
+  width: 1em;
+  height: 1em;
+  margin: 0 0.5em 0.2em -1.5em;
+  vertical-align: middle;
+  border: 1px solid var(--input);
+  border-radius: 0.25rem;
+  background-color: var(--background);
+  cursor: default;
+  opacity: 1;
+}
+
+.markdown-block .task-list-item input[type='checkbox']:checked {
+  border-color: var(--primary);
+  background-color: var(--primary);
+}
+
+.markdown-block .task-list-item input[type='checkbox']:checked::before {
+  content: '';
+  width: 0.7em;
+  height: 0.7em;
+  background-color: var(--primary-foreground);
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M3 8.5l3 3 7-7' fill='none' stroke='black' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E")
+    center / contain no-repeat;
+}
+
 /* Remove default backticks added by Tailwind typography plugin */
 .prose
   :where(code):not(
@@ -439,22 +476,6 @@ body {
   li {
     margin-top: 0.125rem;
     margin-bottom: 0.125rem;
-  }
-
-  /* Task list styling */
-  ul.contains-task-list {
-    list-style: none;
-    padding-left: 0;
-  }
-
-  .task-list-item {
-    display: flex;
-    align-items: flex-start;
-    gap: 0.5rem;
-  }
-
-  .task-list-item input[type='checkbox'] {
-    margin-top: 0.25rem;
   }
 
   /* Code block styling */

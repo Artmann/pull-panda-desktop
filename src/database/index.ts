@@ -80,6 +80,7 @@ export function getWasmPath(): string {
 
 let database: ReturnType<typeof drizzle> | null = null
 let sqliteInstance: SqlJsDatabase | null = null
+let savedTotalChanges: number | null = null
 
 export async function initializeDatabase(): Promise<
   ReturnType<typeof drizzle>
@@ -134,6 +135,14 @@ export function saveDatabase(): void {
     return
   }
 
+  // Exporting serializes the whole database, which is wasted CPU and disk
+  // work when nothing has been written since the last save.
+  const totalChanges = readTotalChanges(sqliteInstance)
+
+  if (totalChanges !== null && totalChanges === savedTotalChanges) {
+    return
+  }
+
   const databasePath = getDatabasePath()
   const data = sqliteInstance.export()
   const buffer = Buffer.from(data)
@@ -146,12 +155,25 @@ export function saveDatabase(): void {
   }
 
   fs.writeFileSync(databasePath, buffer)
+
+  savedTotalChanges = totalChanges
+}
+
+// `total_changes()` counts every row inserted, updated or deleted since the
+// connection opened, so comparing it between saves tells us if anything was
+// written.
+function readTotalChanges(instance: SqlJsDatabase): number | null {
+  const result = instance.exec('SELECT total_changes()')
+  const value = result[0]?.values[0]?.[0]
+
+  return typeof value === 'number' ? value : null
 }
 
 export function closeDatabase(): void {
   if (sqliteInstance) {
     saveDatabase()
     sqliteInstance.close()
+    savedTotalChanges = null
     sqliteInstance = null
   }
 

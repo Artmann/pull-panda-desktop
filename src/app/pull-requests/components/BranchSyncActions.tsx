@@ -13,6 +13,8 @@ import { mergeOptionsActions } from '@/app/store/merge-options-slice'
 import { useAppDispatch, useAppSelector } from '@/app/store/hooks'
 import type { PullRequest } from '@/types/pull-request'
 
+import { useCopyPrompt } from './use-copy-prompt'
+
 interface BranchSyncActionsProps {
   fullWidth?: boolean
   pullRequest: PullRequest
@@ -114,26 +116,11 @@ function CopyConflictPromptButton({
   fullWidth,
   pullRequest
 }: ActionButtonProps): ReactElement {
-  const [hasBeenClicked, setHasBeenClicked] = useState(false)
-
-  const handleClick = useCallback(() => {
-    const prompt = formatConflictPrompt(pullRequest)
-
-    setHasBeenClicked(true)
-
-    navigator.clipboard
-      .writeText(prompt)
-      .then(() => {
-        setTimeout(() => {
-          setHasBeenClicked(false)
-        }, 1_400)
-      })
-      .catch((error: unknown) => {
-        console.error('Failed to copy prompt to clipboard:', error)
-        setHasBeenClicked(false)
-        toast.error('Failed to copy prompt to clipboard')
-      })
-  }, [pullRequest])
+  const buildPrompt = useCallback(
+    () => formatConflictPrompt(pullRequest),
+    [pullRequest]
+  )
+  const { copy: handleClick, hasBeenClicked } = useCopyPrompt(buildPrompt)
 
   return (
     <Button

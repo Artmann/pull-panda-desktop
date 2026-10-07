@@ -1,4 +1,5 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
+import type { ComponentProps, ReactElement } from 'react'
 
 import {
   Accordion,
@@ -18,49 +19,68 @@ export default meta
 
 type Story = StoryObj<typeof meta>
 
-export const Default: Story = {
-  args: {
-    type: 'single',
-    collapsible: true
-  },
-  render: (args) => (
+interface Section {
+  content: string
+  title: string
+  value: string
+}
+
+function renderSections(
+  sections: Section[]
+): (args: ComponentProps<typeof Accordion>) => ReactElement {
+  return (args) => (
     <div className="w-96">
       <Accordion {...args}>
-        <AccordionItem value="one">
-          <AccordionTrigger>What is Pull Panda?</AccordionTrigger>
-          <AccordionContent>
-            A delightful desktop code review tool for the AI era.
-          </AccordionContent>
-        </AccordionItem>
-        <AccordionItem value="two">
-          <AccordionTrigger>Does it sync offline?</AccordionTrigger>
-          <AccordionContent>
-            Yes — PR data is cached locally via SQLite.
-          </AccordionContent>
-        </AccordionItem>
-        <AccordionItem value="three">
-          <AccordionTrigger>Is it open source?</AccordionTrigger>
-          <AccordionContent>Licensed under MIT.</AccordionContent>
-        </AccordionItem>
+        {sections.map((section) => (
+          <AccordionItem
+            key={section.value}
+            value={section.value}
+          >
+            <AccordionTrigger>{section.title}</AccordionTrigger>
+            <AccordionContent>{section.content}</AccordionContent>
+          </AccordionItem>
+        ))}
       </Accordion>
     </div>
   )
 }
 
+export const Default: Story = {
+  args: {
+    type: 'single',
+    collapsible: true
+  },
+  render: renderSections([
+    {
+      content: 'A delightful desktop code review tool for the AI era.',
+      title: 'What is Pull Panda?',
+      value: 'one'
+    },
+    {
+      content: 'Yes — PR data is cached locally via SQLite.',
+      title: 'Does it sync offline?',
+      value: 'two'
+    },
+    {
+      content: 'Licensed under MIT.',
+      title: 'Is it open source?',
+      value: 'three'
+    }
+  ])
+}
+
 export const Multiple: Story = {
   args: { type: 'multiple' },
-  render: (args) => (
-    <div className="w-96">
-      <Accordion {...args}>
-        <AccordionItem value="one">
-          <AccordionTrigger>First section</AccordionTrigger>
-          <AccordionContent>Content for the first section.</AccordionContent>
-        </AccordionItem>
-        <AccordionItem value="two">
-          <AccordionTrigger>Second section</AccordionTrigger>
-          <AccordionContent>Content for the second section.</AccordionContent>
-        </AccordionItem>
-      </Accordion>
-    </div>
-  )
+  render: renderSections([
+    {
+      content: 'Content for the first section.',
+      title: 'First section',
+      value: 'one'
+    },
+    {
+      content: 'Content for the second section.',
+      title: 'Second section',
+      value: 'two'
+    }
+  ])
 }

@@ -69,12 +69,25 @@ const PullRequestNodeSchema = Schema.Struct({
 
 export type PullRequestNode = Schema.Schema.Type<typeof PullRequestNodeSchema>
 
+const ProbeCommitSchema = Schema.Struct({
+  commit: Schema.Struct({
+    statusCheckRollup: Schema.NullOr(Schema.Struct({ state: Schema.String }))
+  })
+})
+
 const ProbeNodeSchema = Schema.Struct({
   __typename: Schema.String,
   id: Schema.String,
   updatedAt: Schema.String,
-  state: PullRequestStateSchema
+  state: PullRequestStateSchema,
+  headRefOid: Schema.optional(Schema.String),
+  reviewDecision: Schema.optional(Schema.NullOr(Schema.String)),
+  commits: Schema.optional(
+    Schema.Struct({ nodes: Schema.Array(ProbeCommitSchema) })
+  )
 })
+
+export type ProbeNode = Schema.Schema.Type<typeof ProbeNodeSchema>
 
 const ProbePageInfoSchema = Schema.Struct({
   hasNextPage: Schema.Boolean,
@@ -86,8 +99,17 @@ const ProbeBucketSchema = Schema.Struct({
   nodes: Schema.Array(ProbeNodeSchema)
 })
 
+export type ProbeBucket = Schema.Schema.Type<typeof ProbeBucketSchema>
+
 export const ProbePageResponseSchema = Schema.Struct({
   search: ProbeBucketSchema,
+  rateLimit: RateLimitSchema
+})
+
+export const CombinedProbeResponseSchema = Schema.Struct({
+  assigned: ProbeBucketSchema,
+  authored: ProbeBucketSchema,
+  reviewRequested: ProbeBucketSchema,
   rateLimit: RateLimitSchema
 })
 

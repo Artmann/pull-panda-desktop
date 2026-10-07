@@ -3,6 +3,8 @@ import { randomUUID } from 'node:crypto'
 import fs from 'node:fs'
 import path from 'node:path'
 
+import { readJsonObjectFile } from './read-json-object-file'
+
 export interface UsageSettings {
   enabled: boolean
   installId: string
@@ -49,24 +51,7 @@ export function setUsageReportingEnabled(enabled: boolean): void {
 }
 
 function readStoredValues(): Partial<UsageSettings> {
-  const storePath = getStorePath()
-
-  if (!fs.existsSync(storePath)) {
-    return {}
-  }
-
-  try {
-    const raw = fs.readFileSync(storePath, 'utf-8')
-    const parsed = JSON.parse(raw) as unknown
-
-    if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
-      return {}
-    }
-
-    return parsed as Partial<UsageSettings>
-  } catch {
-    return {}
-  }
+  return readJsonObjectFile(getStorePath()) as Partial<UsageSettings>
 }
 
 function saveUsageSettings(settings: UsageSettings): void {

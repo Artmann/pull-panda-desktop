@@ -3,6 +3,7 @@ import { and, eq, isNull } from 'drizzle-orm'
 
 import { checks } from '../../../database/schema'
 import { Database } from '../../../sync/services/database'
+import { checkFromRow } from '../../check-from-row'
 import { Repository } from '../../services/repository'
 import type { Check } from '../../../types/pull-request-details'
 
@@ -42,23 +43,7 @@ export const listChecks = (
         .all()
     )
 
-    const parsed: Check[] = rows.map((row) => ({
-      id: row.id,
-      gitHubId: row.gitHubId,
-      pullRequestId: row.pullRequestId,
-      name: row.name,
-      state: row.state,
-      conclusion: row.conclusion,
-      commitSha: row.commitSha,
-      suiteName: row.suiteName,
-      durationInSeconds: row.durationInSeconds,
-      detailsUrl: row.detailsUrl,
-      message: row.message,
-      url: row.url,
-      gitHubCreatedAt: row.gitHubCreatedAt,
-      gitHubUpdatedAt: row.gitHubUpdatedAt,
-      syncedAt: row.syncedAt
-    }))
+    const parsed: Check[] = rows.map(checkFromRow)
 
     return {
       checks: parsed,

@@ -155,19 +155,19 @@ describe('resourceEventToAction', () => {
     expect(action).toEqual(pullRequestsActions.upsertItem(pullRequest))
   })
 
-  it('maps a pull-requests event to pullRequestsActions.setItems with only ready pull requests', () => {
-    const ready = createPullRequest({ id: 'pr-ready' })
-    const notReady = createPullRequest({
-      id: 'pr-not-ready',
+  it('maps a pull-requests event to pullRequestsActions.setItems, including pull requests whose details are not synced yet', () => {
+    const synced = createPullRequest({ id: 'pr-synced' })
+    const notSynced = createPullRequest({
+      id: 'pr-not-synced',
       detailsSyncedAt: null
     })
 
     const action = resourceEventToAction({
-      data: [ready, notReady],
+      data: [synced, notSynced],
       type: 'pull-requests'
     })
 
-    expect(action).toEqual(pullRequestsActions.setItems([ready]))
+    expect(action).toEqual(pullRequestsActions.setItems([synced, notSynced]))
   })
 
   it('maps a reactions event to reactionsActions.setForPullRequest', () => {

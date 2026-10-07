@@ -110,6 +110,21 @@ export const runDetailsWithOperations = (
       `Starting detail sync for PR #${params.pullNumber} in ${params.owner}/${params.repositoryName}`
     )
 
+    // Read before syncing so that a fingerprint that moves mid-sync still
+    // differs from the stored one and triggers another pass.
+    const fingerprintAtStart = yield* database
+      .use('syncDetails.readFingerprint', (db) =>
+        db
+          .select({ fingerprint: pullRequests.fingerprint })
+          .from(pullRequests)
+          .where(eq(pullRequests.id, params.pullRequestId))
+          .get()
+      )
+      .pipe(
+        Effect.map((row) => row?.fingerprint ?? null),
+        Effect.catchAll(() => Effect.succeed(null))
+      )
+
     for (const operation of operations) {
       const outcome = yield* Effect.either(operation.effect)
 
@@ -152,7 +167,10 @@ export const runDetailsWithOperations = (
       yield* database
         .use('syncDetails.markCompleted', (db) => {
           db.update(pullRequests)
-            .set({ detailsSyncedAt: new Date().toISOString() })
+            .set({
+              detailsFingerprint: fingerprintAtStart,
+              detailsSyncedAt: new Date().toISOString()
+            })
             .where(eq(pullRequests.id, params.pullRequestId))
             .run()
         })
@@ -174,7 +192,9 @@ const runDetails = (
   Database | GitHubRest | GitHubGraphQL | EtagStore
 > =>
   runDetailsWithOperations(params, buildOperations(params)).pipe(
-    Effect.withSpan('sync.pullRequestDetails', { attributes: spanAttributes(params) })
+    Effect.withSpan('sync.pullRequestDetails', {
+      attributes: spanAttributes(params)
+    })
   )
 
 type DetailsFiber = Fiber.RuntimeFiber<SyncPullRequestDetailsResult, never>

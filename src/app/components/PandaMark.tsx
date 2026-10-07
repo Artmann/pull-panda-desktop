@@ -38,7 +38,7 @@ export function Wordmark({ className }: { className?: string }): ReactElement {
         className="text-xs font-bold tracking-tight"
         style={{ letterSpacing: '-0.01em' }}
       >
-        pullpanda
+        Pull Panda
       </span>
     </div>
   )

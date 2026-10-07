@@ -70,20 +70,21 @@ const notifyRenderer = (input: ToggleReviewThreadInput) =>
     )
   })
 
-export const resolveReviewThread = (input: ToggleReviewThreadInput) =>
-  Effect.gen(function* () {
-    const graphql = yield* GitHubGraphQL
-    const database = yield* Database
+type ResolvedThread =
+  (typeof ResolveThreadResponseSchema.Type)['resolveReviewThread']['thread']
 
-    const response = yield* graphql.query(
-      resolveMutation,
-      { threadId: input.threadId },
-      ResolveThreadResponseSchema
-    )
-    const thread = response.resolveReviewThread.thread
+// Stores the thread state GitHub returned, tells the renderer, and returns the
+// new resolution state.
+const storeThreadResolution = (
+  operation: string,
+  input: ToggleReviewThreadInput,
+  thread: ResolvedThread
+) =>
+  Effect.gen(function* () {
+    const database = yield* Database
     const now = new Date().toISOString()
 
-    yield* database.use('resolveReviewThread.update', (db) => {
+    yield* database.use(operation, (db) => {
       db.update(reviewThreads)
         .set({
           isResolved: thread.isResolved,
@@ -105,37 +106,36 @@ export const resolveReviewThread = (input: ToggleReviewThreadInput) =>
     return result
   })
 
+export const resolveReviewThread = (input: ToggleReviewThreadInput) =>
+  Effect.gen(function* () {
+    const graphql = yield* GitHubGraphQL
+
+    const response = yield* graphql.query(
+      resolveMutation,
+      { threadId: input.threadId },
+      ResolveThreadResponseSchema
+    )
+
+    return yield* storeThreadResolution(
+      'resolveReviewThread.update',
+      input,
+      response.resolveReviewThread.thread
+    )
+  })
+
 export const unresolveReviewThread = (input: ToggleReviewThreadInput) =>
   Effect.gen(function* () {
     const graphql = yield* GitHubGraphQL
-    const database = yield* Database
 
     const response = yield* graphql.query(
       unresolveMutation,
       { threadId: input.threadId },
       UnresolveThreadResponseSchema
     )
-    const thread = response.unresolveReviewThread.thread
-    const now = new Date().toISOString()
 
-    yield* database.use('unresolveReviewThread.update', (db) => {
-      db.update(reviewThreads)
-        .set({
-          isResolved: thread.isResolved,
-          resolvedByLogin: thread.resolvedBy?.login ?? null,
-          syncedAt: now
-        })
-        .where(eq(reviewThreads.gitHubId, thread.id))
-        .run()
-    })
-
-    yield* notifyRenderer(input)
-
-    const result: ToggleReviewThreadResult = {
-      gitHubId: thread.id,
-      isResolved: thread.isResolved,
-      resolvedByLogin: thread.resolvedBy?.login ?? null
-    }
-
-    return result
+    return yield* storeThreadResolution(
+      'unresolveReviewThread.update',
+      input,
+      response.unresolveReviewThread.thread
+    )
   })

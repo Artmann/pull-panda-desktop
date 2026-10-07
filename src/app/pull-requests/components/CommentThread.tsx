@@ -16,7 +16,6 @@ import {
   type ReactNode
 } from 'react'
 import { shallowEqual } from 'react-redux'
-import { toast } from 'sonner'
 
 import type { PullRequest } from '@/types/pull-request'
 import type { Comment, ReviewThread } from '@/types/pull-request-details'
@@ -40,6 +39,7 @@ import { reviewThreadsActions } from '@/app/store/review-threads-slice'
 
 import { CommentBody } from './CommentBody'
 import { CommentReply } from './CommentReply'
+import { useCopyPrompt } from './use-copy-prompt'
 import { PierreDiff } from '../diffs/PierreDiff'
 
 interface CommentThreadProps {
@@ -207,26 +207,11 @@ interface CopyAsPromptButtonProps {
 const CopyAsPromptButton = memo(function CopyAsPromptButton({
   comment
 }: CopyAsPromptButtonProps): ReactElement {
-  const [hasBeenClicked, setHasBeenClicked] = useState(false)
-
-  const handleClick = useCallback(() => {
-    const prompt = formatCommentAsPrompt(comment)
-
-    setHasBeenClicked(true)
-
-    navigator.clipboard
-      .writeText(prompt)
-      .then(() => {
-        setTimeout(() => {
-          setHasBeenClicked(false)
-        }, 1_400)
-      })
-      .catch((error: unknown) => {
-        console.error('Failed to copy prompt to clipboard:', error)
-        setHasBeenClicked(false)
-        toast.error('Failed to copy prompt to clipboard')
-      })
-  }, [comment])
+  const buildPrompt = useCallback(
+    () => formatCommentAsPrompt(comment),
+    [comment]
+  )
+  const { copy: handleClick, hasBeenClicked } = useCopyPrompt(buildPrompt)
 
   return (
     <Button

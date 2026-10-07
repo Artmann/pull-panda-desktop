@@ -40,6 +40,12 @@ export const pullRequests = sqliteTable('pull_requests', {
   syncedAt: text('synced_at').notNull(),
   detailsSyncedAt: text('details_synced_at'),
 
+  // A short summary of the PR's state (head commit, check counts, review
+  // decision) read by the cheap list probe. `detailsFingerprint` is the value
+  // it had when details were last synced; when they differ, details are due.
+  fingerprint: text('fingerprint'),
+  detailsFingerprint: text('details_fingerprint'),
+
   // Local-only. Never written by the syncer, so it must stay out of the
   // `onConflictDoUpdate` set in sync/operations/sync-pull-requests.ts.
   lastViewedAt: text('last_viewed_at')
