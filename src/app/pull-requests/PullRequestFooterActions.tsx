@@ -24,7 +24,10 @@ import {
 } from '@/app/components/ui/tooltip'
 import { Kbd } from '@/app/components/Kbd'
 import { CheckoutBranchButton } from '@/app/pull-requests/components/CheckoutBranchButton'
-import { getMergeButtonLabel } from '@/app/pull-requests/merge-button-label'
+import {
+  getMergeButtonLabel,
+  isReadyToMerge
+} from '@/app/pull-requests/merge-button-label'
 import { usePullRequestNavigation } from '@/app/pull-requests/PullRequestNavigationProvider'
 import { startPendingReview } from '@/app/pull-requests/start-pending-review'
 import {
@@ -317,7 +320,7 @@ function MergeButton({
     <Button
       onClick={onOpenMergeDrawer}
       size="xs"
-      variant={mergeOptions?.mergeable === true ? 'default' : 'outline'}
+      variant={isReadyToMerge(mergeOptions) ? 'default' : 'outline'}
     >
       {mergeOptions?.mergeable === null ? (
         <Loader2 className="size-3 animate-spin" />

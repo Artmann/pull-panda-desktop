@@ -32,6 +32,7 @@ import type { MergeOptions, MergeRequirement } from '@/app/lib/api'
 import { runOptimisticMutation } from '@/app/lib/mutations/run-optimistic-mutation'
 import { cn } from '@/app/lib/utils'
 import { BranchSyncActions } from '@/app/pull-requests/components/BranchSyncActions'
+import { canMergeNow } from '@/app/pull-requests/merge-button-label'
 import { useAppDispatch, useAppSelector } from '@/app/store/hooks'
 import { pullRequestsActions } from '@/app/store/pull-requests-slice'
 import type { Check, Review } from '@/types/pull-request-details'
@@ -182,7 +183,7 @@ export const MergeDrawer = memo(function MergeDrawer({
   )
 
   const allowedMethods = getAllowedMergeMethods(mergeOptions)
-  const canMerge = mergeOptions?.mergeable === true
+  const canMerge = canMergeNow(mergeOptions)
 
   const handleTabClick = (method: MergeMethod) => {
     setSelectedMethod(method)
