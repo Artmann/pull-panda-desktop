@@ -39,6 +39,11 @@ export interface PullRequest {
   lastViewedAt: string | null
   assignees: PullRequestAssignee[]
   requestedReviewers: PullRequestRequestedReviewer[]
+  /**
+   * GitHub's verdict on the branch's review rules: `APPROVED`,
+   * `CHANGES_REQUESTED` or `REVIEW_REQUIRED`. Null when no rule applies.
+   */
+  reviewDecision: string | null
   syncedAt: string
   detailsSyncedAt: string | null
   commentCount: number

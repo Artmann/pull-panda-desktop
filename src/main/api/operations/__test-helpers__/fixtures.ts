@@ -33,6 +33,7 @@ export const createPullRequestFixture = (
   repositoryName: 'demo',
   repositoryOwner: 'octocat',
   requestedReviewers: null,
+  reviewDecision: null,
   state: 'open',
   syncedAt: '2026-01-01T00:00:00Z',
   title: 'Demo PR',

@@ -42,6 +42,7 @@ function createPullRequest(overrides: Partial<PullRequest> = {}): PullRequest {
     lastViewedAt: null,
     assignees: [],
     requestedReviewers: [],
+    reviewDecision: null,
     syncedAt: '2024-01-01T00:00:00Z',
     detailsSyncedAt: '2024-01-01T00:01:00Z',
     commentCount: 0,

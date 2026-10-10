@@ -169,6 +169,7 @@ function ingestProbeNodes(
     entries.set(node.id, {
       fingerprint: buildFingerprint(node),
       id: node.id,
+      reviewDecision: node.reviewDecision ?? null,
       updatedAt: node.updatedAt,
       isAuthor: relation === 'isAuthor',
       isAssignee: relation === 'isAssignee',
@@ -257,6 +258,7 @@ function transformNode(
         avatarUrl: assignee.avatarUrl
       }))
     ),
+    reviewDecision: entry.reviewDecision,
     requestedReviewers: JSON.stringify(
       node.reviewRequests.nodes.flatMap((entry) => {
         const reviewer = entry.requestedReviewer
@@ -310,6 +312,7 @@ const persistPullRequest = (record: NewPullRequest) =>
             labels: record.labels,
             assignees: record.assignees,
             requestedReviewers: record.requestedReviewers,
+            reviewDecision: record.reviewDecision,
             fingerprint: record.fingerprint,
             syncedAt: record.syncedAt
           }
@@ -321,6 +324,7 @@ const persistPullRequest = (record: NewPullRequest) =>
 interface KnownRow extends RelationFlags {
   fingerprint: string | null
   id: string
+  reviewDecision: string | null
   updatedAt: string
 }
 
@@ -340,6 +344,7 @@ const getKnownRows = (ids: ReadonlyArray<string>) =>
           isAssignee: pullRequests.isAssignee,
           isAuthor: pullRequests.isAuthor,
           isReviewer: pullRequests.isReviewer,
+          reviewDecision: pullRequests.reviewDecision,
           updatedAt: pullRequests.updatedAt
         })
         .from(pullRequests)
@@ -370,6 +375,7 @@ const updateProbeFields = (entry: ProbeEntry) =>
           isAuthor: entry.isAuthor,
           isAssignee: entry.isAssignee,
           isReviewer: entry.isReviewer,
+          reviewDecision: entry.reviewDecision,
           syncedAt: now
         })
         .where(eq(pullRequests.id, entry.id))
@@ -516,17 +522,19 @@ const hydrateAndPersistPullRequests = (
     return { errors, syncedCount }
   })
 
-// Writes the relation flags and fingerprint of pull requests that were not
-// hydrated, but only for rows where one of them moved. The probe runs every
-// few seconds, so skipping no-op writes keeps the database quiet. Returns
-// whether any relation flag changed, since that changes the list.
+// Writes the relation flags, fingerprint and review decision of pull requests
+// that were not hydrated, but only for rows where one of them moved. The probe
+// runs every few seconds, so skipping no-op writes keeps the database quiet.
+// Returns whether a relation flag or review decision changed, since either
+// changes what the list shows. A review decision can move without bumping
+// `updatedAt`, e.g. when a branch rule changes.
 const refreshUnchangedProbeFields = (
   entries: Map<string, ProbeEntry>,
   hydratedIds: ReadonlySet<string>,
   knownRows: ReadonlyMap<string, KnownRow>
 ) =>
   Effect.gen(function* () {
-    let relationFlagsChanged = false
+    let listChanged = false
 
     for (const entry of entries.values()) {
       const known = knownRows.get(entry.id)
@@ -536,17 +544,23 @@ const refreshUnchangedProbeFields = (
       }
 
       const flagsChanged = haveRelationFlagsChanged(entry, known)
+      const reviewDecisionChanged =
+        entry.reviewDecision !== known.reviewDecision
 
-      if (!flagsChanged && entry.fingerprint === known.fingerprint) {
+      if (
+        !flagsChanged &&
+        !reviewDecisionChanged &&
+        entry.fingerprint === known.fingerprint
+      ) {
         continue
       }
 
-      relationFlagsChanged = relationFlagsChanged || flagsChanged
+      listChanged = listChanged || flagsChanged || reviewDecisionChanged
 
       yield* updateProbeFields(entry)
     }
 
-    return relationFlagsChanged
+    return listChanged
   })
 
 export const syncPullRequests: Effect.Effect<
@@ -586,7 +600,7 @@ export const syncPullRequests: Effect.Effect<
     syncedCount = hydration.syncedCount
   }
 
-  const relationFlagsChanged = yield* refreshUnchangedProbeFields(
+  const listChanged = yield* refreshUnchangedProbeFields(
     entries,
     new Set(idsNeedingHydration),
     knownRows
@@ -596,7 +610,7 @@ export const syncPullRequests: Effect.Effect<
     synced: syncedCount,
     syncedIds: new Set(entries.keys()),
     errors,
-    hasChanges: needsHydration || relationFlagsChanged
+    hasChanges: needsHydration || listChanged
   }
 }).pipe(Effect.withSpan('sync.pullRequests'))
 

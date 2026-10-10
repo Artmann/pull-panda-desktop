@@ -130,6 +130,7 @@ function createMockPullRequest(
     lastViewedAt: null,
     assignees: [],
     requestedReviewers: [],
+    reviewDecision: null,
     syncedAt: '2024-01-01T00:00:00Z',
     detailsSyncedAt: null,
     commentCount: 0,

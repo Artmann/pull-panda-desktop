@@ -1,4 +1,5 @@
 import type { CheckRollup } from '@/app/components/check-rollup'
+import { getReviewOutcome } from '@/app/components/pull-request-status'
 import type { PullRequest } from '@/types/pull-request'
 
 export type FacetKey = 'authors' | 'flags' | 'repos'
@@ -106,7 +107,10 @@ export function needsAttention(
   }
 
   if (pullRequest.isAuthor) {
-    return pullRequest.changesRequestedCount > 0 || checkRollup === 'failing'
+    return (
+      getReviewOutcome(pullRequest) === 'changes-requested' ||
+      checkRollup === 'failing'
+    )
   }
 
   return pullRequest.isReviewer
@@ -149,7 +153,9 @@ export function getMergeReadiness(
     return 'draft'
   }
 
-  if (pullRequest.changesRequestedCount > 0) {
+  const reviewOutcome = getReviewOutcome(pullRequest)
+
+  if (reviewOutcome === 'changes-requested') {
     return 'changes-requested'
   }
 
@@ -161,7 +167,7 @@ export function getMergeReadiness(
     return 'checks-running'
   }
 
-  if (pullRequest.approvalCount === 0) {
+  if (reviewOutcome === 'pending') {
     return 'needs-review'
   }
 

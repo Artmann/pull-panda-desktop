@@ -7,6 +7,7 @@ export interface RelationFlags {
 export interface ProbeEntry extends RelationFlags {
   fingerprint: string
   id: string
+  reviewDecision: string | null
   updatedAt: string
 }
 
