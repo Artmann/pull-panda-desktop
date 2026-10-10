@@ -1,0 +1,1 @@
+ALTER TABLE `pull_requests` ADD `review_decision` text;

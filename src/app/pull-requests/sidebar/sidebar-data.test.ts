@@ -458,6 +458,15 @@ describe('getMergeReadiness', () => {
     )
   })
 
+  it('needs a review when GitHub still requires one despite an approval', () => {
+    const pullRequest = createMockPullRequest({
+      ...approved,
+      reviewDecision: 'REVIEW_REQUIRED'
+    })
+
+    expect(getMergeReadiness(pullRequest, 'passing')).toEqual('needs-review')
+  })
+
   it('only needs a review when everything else is green', () => {
     expect(getMergeReadiness(createMockPullRequest(), 'passing')).toEqual(
       'needs-review'

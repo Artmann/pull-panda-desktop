@@ -20,6 +20,7 @@ const rateLimit = {
 interface ProbeNode {
   headRefOid?: string
   id: string
+  reviewDecision?: string | null
   updatedAt: string
 }
 
@@ -29,6 +30,7 @@ interface KnownRow {
   isAssignee?: boolean
   isAuthor?: boolean
   isReviewer?: boolean
+  reviewDecision?: string | null
   updatedAt: string
 }
 
@@ -39,6 +41,7 @@ const knownRow = (row: KnownRow): Required<KnownRow> => ({
   isAssignee: false,
   isAuthor: false,
   isReviewer: false,
+  reviewDecision: null,
   ...row
 })
 
@@ -212,6 +215,7 @@ const expectedPersistedRecord = (
   labels: '[]',
   assignees: '[]',
   requestedReviewers: '[]',
+  reviewDecision: null as string | null,
   syncedAt: expect.any(String) as unknown
 })
 
@@ -290,6 +294,7 @@ describe('syncPullRequests', () => {
         isAuthor: true,
         isAssignee: false,
         isReviewer: true,
+        reviewDecision: null,
         syncedAt: expect.any(String) as unknown
       }
     ])
@@ -347,6 +352,73 @@ describe('syncPullRequests', () => {
         isAuthor: true,
         isAssignee: false,
         isReviewer: false,
+        reviewDecision: null,
+        syncedAt: expect.any(String) as unknown
+      }
+    ])
+  })
+
+  it('stores a changed review decision and reports a list change', async () => {
+    const database = makeStubDatabase([
+      {
+        fingerprint: 'none|none|APPROVED',
+        id: 'pr-1',
+        isAuthor: true,
+        reviewDecision: 'APPROVED',
+        updatedAt: timeOne
+      }
+    ])
+    const graphql = makeStubGraphQL({
+      authored: [
+        { id: 'pr-1', reviewDecision: 'REVIEW_REQUIRED', updatedAt: timeOne }
+      ]
+    })
+
+    const result = await runSync(database, graphql)
+
+    expect(result).toEqual({
+      synced: 0,
+      syncedIds: new Set(['pr-1']),
+      errors: [],
+      hasChanges: true
+    })
+    expect(database.updates).toEqual([
+      {
+        fingerprint: 'none|none|REVIEW_REQUIRED',
+        isAuthor: true,
+        isAssignee: false,
+        isReviewer: false,
+        reviewDecision: 'REVIEW_REQUIRED',
+        syncedAt: expect.any(String) as unknown
+      }
+    ])
+  })
+
+  it('backfills the review decision of a row stored before it was tracked', async () => {
+    const database = makeStubDatabase([
+      {
+        fingerprint: 'none|none|REVIEW_REQUIRED',
+        id: 'pr-1',
+        isAuthor: true,
+        updatedAt: timeOne
+      }
+    ])
+    const graphql = makeStubGraphQL({
+      authored: [
+        { id: 'pr-1', reviewDecision: 'REVIEW_REQUIRED', updatedAt: timeOne }
+      ]
+    })
+
+    const result = await runSync(database, graphql)
+
+    expect(result.hasChanges).toEqual(true)
+    expect(database.updates).toEqual([
+      {
+        fingerprint: 'none|none|REVIEW_REQUIRED',
+        isAuthor: true,
+        isAssignee: false,
+        isReviewer: false,
+        reviewDecision: 'REVIEW_REQUIRED',
         syncedAt: expect.any(String) as unknown
       }
     ])
@@ -406,6 +478,7 @@ describe('syncPullRequests', () => {
         isAuthor: false,
         isAssignee: true,
         isReviewer: false,
+        reviewDecision: null,
         syncedAt: expect.any(String) as unknown
       }
     ])

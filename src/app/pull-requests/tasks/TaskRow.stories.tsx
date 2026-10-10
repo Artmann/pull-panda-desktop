@@ -19,6 +19,7 @@ const mockPullRequest: PullRequest = {
   approvalCount: 0,
   assignees: [],
   requestedReviewers: [],
+  reviewDecision: null,
   authorAvatarUrl: null,
   authorLogin: 'octocat',
   body: null,

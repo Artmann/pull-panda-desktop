@@ -29,6 +29,7 @@ const basePullRequest: PullRequest = {
   lastViewedAt: null,
   assignees: [],
   requestedReviewers: [],
+  reviewDecision: null,
   syncedAt: '2026-04-23T09:00:00Z',
   detailsSyncedAt: null,
   commentCount: 0,

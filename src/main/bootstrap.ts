@@ -89,6 +89,7 @@ function buildPullRequest(
     number: row.number,
     repositoryName: row.repositoryName,
     repositoryOwner: row.repositoryOwner,
+    reviewDecision: row.reviewDecision,
     state: row.state as PullRequest['state'],
     syncedAt: row.syncedAt,
     title: row.title,
