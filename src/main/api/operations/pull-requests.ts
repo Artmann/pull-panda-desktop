@@ -550,34 +550,53 @@ const combineBranchProtection = (
   }
 }
 
+type PullRequestRule = Extract<BranchRuleData, { type: 'pull_request' }>
+
+type StatusChecksRule = Extract<
+  BranchRuleData,
+  { type: 'required_status_checks' }
+>
+
+const pullRequestRuleToProtection = ({
+  parameters
+}: PullRequestRule): BranchProtection => ({
+  requireCodeOwnerReview: parameters?.require_code_owner_review ?? false,
+  requireConversationResolution:
+    parameters?.required_review_thread_resolution ?? false,
+  requiredApprovingReviewCount:
+    parameters?.required_approving_review_count ?? 0,
+  requiresStrictStatusChecks: false
+})
+
+const statusChecksRuleToProtection = ({
+  parameters
+}: StatusChecksRule): BranchProtection => ({
+  requireCodeOwnerReview: false,
+  requireConversationResolution: false,
+  requiredApprovingReviewCount: 0,
+  requiresStrictStatusChecks:
+    parameters?.strict_required_status_checks_policy ?? false
+})
+
+const ruleToProtection = (rule: BranchRuleData): BranchProtection | null => {
+  switch (rule.type) {
+    case 'pull_request':
+      return pullRequestRuleToProtection(rule)
+    case 'required_status_checks':
+      return statusChecksRuleToProtection(rule)
+    default:
+      return null
+  }
+}
+
 export const branchRulesToProtection = (
   rules: readonly BranchRuleData[]
 ): BranchProtection | null =>
-  rules.reduce<BranchProtection | null>((protection, rule) => {
-    if (rule.type === 'pull_request') {
-      return combineBranchProtection(protection, {
-        requireCodeOwnerReview:
-          rule.parameters?.require_code_owner_review ?? false,
-        requireConversationResolution:
-          rule.parameters?.required_review_thread_resolution ?? false,
-        requiredApprovingReviewCount:
-          rule.parameters?.required_approving_review_count ?? 0,
-        requiresStrictStatusChecks: false
-      })
-    }
-
-    if (rule.type === 'required_status_checks') {
-      return combineBranchProtection(protection, {
-        requireCodeOwnerReview: false,
-        requireConversationResolution: false,
-        requiredApprovingReviewCount: 0,
-        requiresStrictStatusChecks:
-          rule.parameters?.strict_required_status_checks_policy ?? false
-      })
-    }
-
-    return protection
-  }, null)
+  rules.reduce<BranchProtection | null>(
+    (protection, rule) =>
+      combineBranchProtection(protection, ruleToProtection(rule)),
+    null
+  )
 
 async function requestClassicBranchProtection(
   octokit: Octokit,
