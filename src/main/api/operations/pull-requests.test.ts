@@ -1,6 +1,10 @@
 import { describe, expect, it } from 'vitest'
 
-import { buildRequirements, storedPullRequestChanges } from './pull-requests'
+import {
+  branchRulesToProtection,
+  buildRequirements,
+  storedPullRequestChanges
+} from './pull-requests'
 
 type MergeState = Parameters<typeof buildRequirements>[0]
 type Protection = Parameters<typeof buildRequirements>[1]
@@ -8,6 +12,7 @@ type Protection = Parameters<typeof buildRequirements>[1]
 const makeProtection = (
   overrides: Partial<NonNullable<Protection>> = {}
 ): NonNullable<Protection> => ({
+  requireCodeOwnerReview: false,
   requireConversationResolution: false,
   requiredApprovingReviewCount: 0,
   requiresStrictStatusChecks: false,
@@ -103,6 +108,37 @@ describe('buildRequirements', () => {
         key: 'approving-reviews',
         label: '2 approving reviews required',
         satisfied: false
+      })
+    })
+
+    it('asks for a code owner when the branch requires one', () => {
+      const requirements = buildRequirements(
+        makeState({ reviewDecision: 'REVIEW_REQUIRED' }),
+        makeProtection({
+          requireCodeOwnerReview: true,
+          requiredApprovingReviewCount: 1
+        })
+      )
+
+      expect(requirements[2]).toEqual({
+        description: 'Waiting for an approving review from a code owner.',
+        key: 'approving-reviews',
+        label: '1 approving review required, including a code owner',
+        satisfied: false
+      })
+    })
+
+    it('requires a code owner review even without an approval count', () => {
+      const requirements = buildRequirements(
+        makeState({ reviewDecision: 'APPROVED' }),
+        makeProtection({ requireCodeOwnerReview: true })
+      )
+
+      expect(requirements[2]).toEqual({
+        description: 'All required reviews have been provided.',
+        key: 'approving-reviews',
+        label: 'Code owner review required',
+        satisfied: true
       })
     })
 
@@ -339,5 +375,86 @@ describe('storedPullRequestChanges', () => {
         now
       )
     ).toEqual({ body: 'Body', isDraft: true, updatedAt: now })
+  })
+})
+
+type BranchRule = Parameters<typeof branchRulesToProtection>[0][number]
+
+type PullRequestRuleParameters = NonNullable<
+  Extract<BranchRule, { type: 'pull_request' }>['parameters']
+>
+
+const makePullRequestRule = (
+  overrides: Partial<PullRequestRuleParameters> = {}
+): PullRequestRuleParameters => ({
+  dismiss_stale_reviews_on_push: false,
+  require_code_owner_review: false,
+  require_last_push_approval: false,
+  required_approving_review_count: 0,
+  required_review_thread_resolution: false,
+  ...overrides
+})
+
+describe('branchRulesToProtection', () => {
+  it('returns null when no rule affects merging', () => {
+    expect(
+      branchRulesToProtection([
+        { type: 'deletion' },
+        { type: 'non_fast_forward' }
+      ])
+    ).toEqual(null)
+  })
+
+  it('reads review and status check rules from a ruleset', () => {
+    const protection = branchRulesToProtection([
+      { type: 'deletion' },
+      {
+        parameters: makePullRequestRule({
+          require_code_owner_review: true,
+          required_approving_review_count: 1
+        }),
+        type: 'pull_request'
+      },
+      {
+        parameters: {
+          required_status_checks: [{ context: 'Validate API Entry' }],
+          strict_required_status_checks_policy: true
+        },
+        type: 'required_status_checks'
+      }
+    ])
+
+    expect(protection).toEqual({
+      requireCodeOwnerReview: true,
+      requireConversationResolution: false,
+      requiredApprovingReviewCount: 1,
+      requiresStrictStatusChecks: true
+    })
+  })
+
+  it('keeps the strictest setting across overlapping rulesets', () => {
+    const protection = branchRulesToProtection([
+      {
+        parameters: makePullRequestRule({
+          required_approving_review_count: 2,
+          required_review_thread_resolution: true
+        }),
+        type: 'pull_request'
+      },
+      {
+        parameters: makePullRequestRule({
+          require_code_owner_review: true,
+          required_approving_review_count: 1
+        }),
+        type: 'pull_request'
+      }
+    ])
+
+    expect(protection).toEqual({
+      requireCodeOwnerReview: true,
+      requireConversationResolution: true,
+      requiredApprovingReviewCount: 2,
+      requiresStrictStatusChecks: false
+    })
   })
 })

@@ -1,7 +1,7 @@
 import { Effect } from 'effect'
 import { eq } from 'drizzle-orm'
 import { graphql } from '@octokit/graphql'
-import { Octokit } from '@octokit/rest'
+import { Octokit, type RestEndpointMethodTypes } from '@octokit/rest'
 
 import { pullRequests, type NewPullRequest } from '../../../database/schema'
 import { getPullRequest, getPullRequestDetails } from '../../bootstrap'
@@ -30,6 +30,7 @@ interface RepoSettings {
 }
 
 interface BranchProtection {
+  requireCodeOwnerReview: boolean
   requireConversationResolution: boolean
   requiredApprovingReviewCount: number
   requiresStrictStatusChecks: boolean
@@ -500,10 +501,14 @@ async function fetchRepoSettings(
 interface BranchProtectionData {
   required_conversation_resolution?: { enabled?: boolean }
   required_pull_request_reviews?: {
+    require_code_owner_reviews?: boolean
     required_approving_review_count?: number
   }
   required_status_checks?: { strict?: boolean }
 }
+
+type BranchRuleData =
+  RestEndpointMethodTypes['repos']['getBranchRules']['response']['data'][number]
 
 const isNotFoundError = (error: unknown): boolean =>
   error instanceof Error &&
@@ -511,6 +516,8 @@ const isNotFoundError = (error: unknown): boolean =>
   (error as { status: number }).status === 404
 
 const toBranchProtection = (data: BranchProtectionData): BranchProtection => ({
+  requireCodeOwnerReview:
+    data.required_pull_request_reviews?.require_code_owner_reviews ?? false,
   requireConversationResolution:
     data.required_conversation_resolution?.enabled ?? false,
   requiredApprovingReviewCount:
@@ -518,7 +525,80 @@ const toBranchProtection = (data: BranchProtectionData): BranchProtection => ({
   requiresStrictStatusChecks: data.required_status_checks?.strict ?? false
 })
 
-async function requestBranchProtection(
+// Repositories can protect a branch with classic branch protection, rulesets,
+// or both. GitHub enforces the union, so the strictest setting of each wins.
+const combineBranchProtection = (
+  first: BranchProtection | null,
+  second: BranchProtection | null
+): BranchProtection | null => {
+  if (!first || !second) {
+    return first ?? second
+  }
+
+  return {
+    requireCodeOwnerReview:
+      first.requireCodeOwnerReview || second.requireCodeOwnerReview,
+    requireConversationResolution:
+      first.requireConversationResolution ||
+      second.requireConversationResolution,
+    requiredApprovingReviewCount: Math.max(
+      first.requiredApprovingReviewCount,
+      second.requiredApprovingReviewCount
+    ),
+    requiresStrictStatusChecks:
+      first.requiresStrictStatusChecks || second.requiresStrictStatusChecks
+  }
+}
+
+type PullRequestRule = Extract<BranchRuleData, { type: 'pull_request' }>
+
+type StatusChecksRule = Extract<
+  BranchRuleData,
+  { type: 'required_status_checks' }
+>
+
+const pullRequestRuleToProtection = ({
+  parameters
+}: PullRequestRule): BranchProtection => ({
+  requireCodeOwnerReview: parameters?.require_code_owner_review ?? false,
+  requireConversationResolution:
+    parameters?.required_review_thread_resolution ?? false,
+  requiredApprovingReviewCount:
+    parameters?.required_approving_review_count ?? 0,
+  requiresStrictStatusChecks: false
+})
+
+const statusChecksRuleToProtection = ({
+  parameters
+}: StatusChecksRule): BranchProtection => ({
+  requireCodeOwnerReview: false,
+  requireConversationResolution: false,
+  requiredApprovingReviewCount: 0,
+  requiresStrictStatusChecks:
+    parameters?.strict_required_status_checks_policy ?? false
+})
+
+const ruleToProtection = (rule: BranchRuleData): BranchProtection | null => {
+  switch (rule.type) {
+    case 'pull_request':
+      return pullRequestRuleToProtection(rule)
+    case 'required_status_checks':
+      return statusChecksRuleToProtection(rule)
+    default:
+      return null
+  }
+}
+
+export const branchRulesToProtection = (
+  rules: readonly BranchRuleData[]
+): BranchProtection | null =>
+  rules.reduce<BranchProtection | null>(
+    (protection, rule) =>
+      combineBranchProtection(protection, ruleToProtection(rule)),
+    null
+  )
+
+async function requestClassicBranchProtection(
   octokit: Octokit,
   owner: string,
   repo: string,
@@ -539,6 +619,44 @@ async function requestBranchProtection(
 
     throw error
   }
+}
+
+async function requestBranchRules(
+  octokit: Octokit,
+  owner: string,
+  repo: string,
+  branch: string
+): Promise<BranchProtection | null> {
+  try {
+    const rules = await octokit.paginate(octokit.rest.repos.getBranchRules, {
+      branch,
+      owner,
+      per_page: 100,
+      repo
+    })
+
+    return branchRulesToProtection(rules)
+  } catch (error) {
+    if (isNotFoundError(error)) {
+      return null
+    }
+
+    throw error
+  }
+}
+
+async function requestBranchProtection(
+  octokit: Octokit,
+  owner: string,
+  repo: string,
+  branch: string
+): Promise<BranchProtection | null> {
+  const [classic, rules] = await Promise.all([
+    requestClassicBranchProtection(octokit, owner, repo, branch),
+    requestBranchRules(octokit, owner, repo, branch)
+  ])
+
+  return combineBranchProtection(classic, rules)
 }
 
 async function fetchBranchProtection(
@@ -566,7 +684,10 @@ async function fetchBranchProtection(
   return protection
 }
 
-const approvalDescription = (reviewDecision: string | null): string => {
+const approvalDescription = (
+  reviewDecision: string | null,
+  protection: BranchProtection
+): string => {
   if (reviewDecision === 'APPROVED') {
     return 'All required reviews have been provided.'
   }
@@ -575,26 +696,46 @@ const approvalDescription = (reviewDecision: string | null): string => {
     return 'A reviewer has requested changes.'
   }
 
+  if (protection.requireCodeOwnerReview) {
+    return 'Waiting for an approving review from a code owner.'
+  }
+
   return 'Waiting for required approving reviews.'
+}
+
+const approvalLabel = (protection: BranchProtection): string => {
+  const count = protection.requiredApprovingReviewCount
+
+  if (count < 1) {
+    return 'Code owner review required'
+  }
+
+  const reviews =
+    count === 1
+      ? '1 approving review required'
+      : `${count} approving reviews required`
+
+  return protection.requireCodeOwnerReview
+    ? `${reviews}, including a code owner`
+    : reviews
 }
 
 const approvingReviewsRequirement = (
   state: GraphQLMergeState,
   protection: BranchProtection | null
 ): MergeRequirement | null => {
-  const count = protection?.requiredApprovingReviewCount ?? 0
-
-  if (count < 1) {
+  if (
+    !protection ||
+    (protection.requiredApprovingReviewCount < 1 &&
+      !protection.requireCodeOwnerReview)
+  ) {
     return null
   }
 
   return {
-    description: approvalDescription(state.reviewDecision),
+    description: approvalDescription(state.reviewDecision, protection),
     key: 'approving-reviews',
-    label:
-      count === 1
-        ? '1 approving review required'
-        : `${count} approving reviews required`,
+    label: approvalLabel(protection),
     satisfied: state.reviewDecision === 'APPROVED'
   }
 }
@@ -729,7 +870,7 @@ export const fetchMergeOptions = (input: {
             input.token,
             owner,
             repo,
-            pullRequest.headRefName ?? ''
+            pullRequest.baseRefName ?? ''
           )
         ]),
       catch: octokitErrorOf('fetchMergeOptions')

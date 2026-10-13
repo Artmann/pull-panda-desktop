@@ -2,7 +2,11 @@ import { describe, expect, it } from 'vitest'
 
 import type { MergeOptions } from '@/app/lib/api'
 
-import { getMergeButtonLabel } from './merge-button-label'
+import {
+  canMergeNow,
+  getMergeButtonLabel,
+  isReadyToMerge
+} from './merge-button-label'
 
 function createMergeOptions(
   overrides: Partial<MergeOptions> = {}
@@ -46,8 +50,10 @@ describe('getMergeButtonLabel', () => {
   })
 
   it('reports "Merge blocked" when a branch rule blocks the merge', () => {
+    // GitHub reports a conflict-free branch as mergeable even when a required
+    // review, such as a code owner's, is still missing.
     const options = createMergeOptions({
-      mergeable: false,
+      mergeable: true,
       mergeableState: 'blocked'
     })
 
@@ -63,12 +69,72 @@ describe('getMergeButtonLabel', () => {
     expect(getMergeButtonLabel(options)).toEqual('Checks failing')
   })
 
-  it('reports "Cannot merge" for any other blocking state', () => {
+  it('reports "Branch out of date" when the branch must be updated first', () => {
     const options = createMergeOptions({
-      mergeable: false,
+      mergeable: true,
+      mergeableState: 'behind'
+    })
+
+    expect(getMergeButtonLabel(options)).toEqual('Branch out of date')
+  })
+
+  it('reports "Checking..." while the merge state is still unknown', () => {
+    const options = createMergeOptions({
+      mergeable: true,
       mergeableState: 'unknown'
     })
 
+    expect(getMergeButtonLabel(options)).toEqual('Checking...')
+  })
+
+  it('reports "Cannot merge" for any other blocking state', () => {
+    const options = createMergeOptions({
+      mergeable: true,
+      mergeableState: 'draft'
+    })
+
     expect(getMergeButtonLabel(options)).toEqual('Cannot merge')
+  })
+})
+
+describe('canMergeNow', () => {
+  it('allows clean, hooked and unstable pull requests', () => {
+    expect(
+      ['clean', 'has_hooks', 'unstable'].map((mergeableState) =>
+        canMergeNow(createMergeOptions({ mergeable: true, mergeableState }))
+      )
+    ).toEqual([true, true, true])
+  })
+
+  it('refuses blocked, behind and draft pull requests', () => {
+    expect(
+      ['behind', 'blocked', 'draft'].map((mergeableState) =>
+        canMergeNow(createMergeOptions({ mergeable: true, mergeableState }))
+      )
+    ).toEqual([false, false, false])
+  })
+
+  it('refuses before the options have loaded', () => {
+    expect(canMergeNow(null)).toEqual(false)
+  })
+})
+
+describe('isReadyToMerge', () => {
+  it('does not treat failing checks as ready', () => {
+    const options = createMergeOptions({
+      mergeable: true,
+      mergeableState: 'unstable'
+    })
+
+    expect(isReadyToMerge(options)).toEqual(false)
+  })
+
+  it('treats a clean pull request as ready', () => {
+    const options = createMergeOptions({
+      mergeable: true,
+      mergeableState: 'clean'
+    })
+
+    expect(isReadyToMerge(options)).toEqual(true)
   })
 })
