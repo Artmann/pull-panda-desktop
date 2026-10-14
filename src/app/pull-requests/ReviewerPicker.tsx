@@ -12,6 +12,7 @@ import {
 
 import { UserAvatar } from '@/app/components/UserAvatar'
 import { Badge } from '@/app/components/ui/badge'
+import { Button } from '@/app/components/ui/button'
 import { Input } from '@/app/components/ui/input'
 import { cn } from '@/app/lib/utils'
 import type { PullRequest } from '@/types/pull-request'
@@ -27,9 +28,11 @@ import {
 } from './use-reviewer-picker'
 import { useReviewerSuggestionsLoader } from './use-reviewer-suggestions-loader'
 
+type ReviewerPickerVariant = 'button' | 'compact' | 'cta'
+
 interface ReviewerPickerProps {
   pullRequest: PullRequest
-  variant?: 'compact' | 'cta'
+  variant?: ReviewerPickerVariant
 }
 
 const sectionTitles: Record<ReviewerSection, string> = {
@@ -107,13 +110,25 @@ export const ReviewerPicker = memo(function ReviewerPicker({
 
 interface ReviewerPickerTriggerProps {
   onClick: () => void
-  variant: 'compact' | 'cta'
+  variant: ReviewerPickerVariant
 }
 
 function ReviewerPickerTrigger({
   onClick,
   variant
 }: ReviewerPickerTriggerProps): ReactElement {
+  if (variant === 'button') {
+    return (
+      <Button
+        onClick={onClick}
+        size="xs"
+        variant="outline"
+      >
+        Assign reviewers
+      </Button>
+    )
+  }
+
   if (variant === 'cta') {
     return (
       <button
@@ -175,7 +190,9 @@ function ReviewerPickerMenu({
   return (
     <div
       className={cn(
-        'absolute top-full left-0 z-50 mt-2',
+        // The picker sits at the right edge of the Tasks tab, so the menu
+        // opens leftwards to stay inside the content column.
+        'absolute top-full right-0 z-50 mt-2',
         'w-80 rounded-lg border border-border bg-popover shadow-lg',
         'overflow-hidden'
       )}

@@ -180,9 +180,9 @@
   --radius-xl: calc(var(--radius) + 4px);
   /* Tighter than radius-sm, for small square controls like checkboxes. */
   --radius-xs: 0.1875rem;
-  /* Height of the fixed StickyPullRequestHeader; pinned file card headers
-   * sit flush below it via `top-sticky-header`. */
-  --spacing-sticky-header: 75px;
+  /* Height of the pinned pull request tab bar; pinned file card headers sit
+   * flush below it via `top-sticky-header`. */
+  --spacing-sticky-header: 40px;
   /* Height of AppFooter. The footer owns the pull request actions, so
    * viewport-anchored overlays stop above it via `bottom-footer` rather than
    * covering the controls they exist to support. */
@@ -453,37 +453,67 @@ body {
 
 /* GitHub-style markdown in PR descriptions */
 .pull-request-description {
-  font-size: 15px;
+  font-size: 14px;
+  line-height: 1.65;
 
-  /* Compact spacing */
+  /* Headings stay close to the body size so a long description reads as one
+   * document rather than a stack of banners. */
   h1,
   h2,
   h3,
   h4,
   h5,
   h6 {
-    margin-top: 1rem;
+    margin-top: 1.625rem;
     margin-bottom: 0.5rem;
+    font-weight: 600;
+    line-height: 1.35;
+  }
+
+  h1,
+  h2 {
+    font-size: 17px;
+  }
+
+  h3,
+  h4,
+  h5,
+  h6 {
+    font-size: 15px;
   }
 
   p,
   ul,
   ol {
-    margin-top: 0.5rem;
-    margin-bottom: 0.5rem;
+    margin-top: 0;
+    margin-bottom: 0.75rem;
   }
 
   li {
-    margin-top: 0.125rem;
-    margin-bottom: 0.125rem;
+    margin-top: 0.375rem;
+    margin-bottom: 0.375rem;
+  }
+
+  :not(pre) > code {
+    border-radius: var(--radius-xs);
+    background-color: var(--muted);
+    padding: 0.0625rem 0.3125rem;
+    font-size: 0.86em;
   }
 
   /* Code block styling */
   pre {
-    background-color: var(--muted);
+    background-color: var(--card);
+    border: 1px solid var(--border);
     border-radius: var(--radius);
-    padding: 1rem;
+    padding: 0.875rem 1rem;
     overflow-x: auto;
+    font-size: 12.5px;
+    line-height: 1.6;
+  }
+
+  pre code {
+    font-size: inherit;
   }
 
   /* Links */
@@ -511,21 +541,34 @@ body {
     color: var(--muted-foreground);
   }
 
-  /* Tables */
+  /* Tables sit in a rounded card. `separate` borders are what let the
+   * corners round; each cell draws only its top and left edge so the lines
+   * between cells stay one pixel wide. */
   table {
     width: 100%;
-    border-collapse: collapse;
+    border-collapse: separate;
+    border-spacing: 0;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow: hidden;
   }
 
   th,
   td {
-    border: 1px solid var(--border);
-    padding: 0.5rem 0.75rem;
+    border: 0;
+    border-top: 1px solid var(--border);
+    padding: 0.5625rem 0.875rem;
     text-align: left;
+    vertical-align: top;
+  }
+
+  thead th {
+    border-top: 0;
   }
 
   th {
-    background-color: var(--muted);
+    background-color: var(--card);
+    font-size: 12px;
     font-weight: 600;
   }
 

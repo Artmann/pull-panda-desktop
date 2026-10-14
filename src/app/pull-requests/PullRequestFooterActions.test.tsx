@@ -176,7 +176,7 @@ describe('PullRequestFooterActions', () => {
       )
     })
 
-    await userEvent.click(screen.getByText('Ready to merge'))
+    await userEvent.click(screen.getByText('Merge pull request'))
 
     expect(store.getState().mergeDrawer).toEqual({
       openForPullRequestId: 'pr-1'
@@ -193,7 +193,7 @@ describe('PullRequestFooterActions', () => {
     })
 
     expect(screen.queryByText('Merge')).not.toBeInTheDocument()
-    expect(screen.queryByText('Ready to merge')).not.toBeInTheDocument()
+    expect(screen.queryByText('Merge pull request')).not.toBeInTheDocument()
   })
 
   it('swaps the merge button for the review submit actions while a review is open', async () => {

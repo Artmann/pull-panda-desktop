@@ -15,22 +15,11 @@ import {
   ContextMenuSeparator,
   ContextMenuTrigger
 } from '@/app/components/ui/context-menu'
+import { copyToClipboard as copy } from '@/app/lib/clipboard'
 import { useAppDispatch } from '@/app/store/hooks'
 import type { PullRequest } from '@/types/pull-request'
 
 import { setPullRequestHidden } from '../pull-request-actions'
-
-function copy(value: string, message: string): void {
-  navigator.clipboard
-    .writeText(value)
-    .then(() => {
-      toast.success(message)
-    })
-    .catch((error: unknown) => {
-      console.error('Failed to copy to clipboard:', error)
-      toast.error('Could not copy to the clipboard.')
-    })
-}
 
 interface SidebarRowContextMenuProps {
   children: ReactNode

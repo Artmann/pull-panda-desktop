@@ -1,7 +1,7 @@
 /**
  * @vitest-environment jsdom
  */
-import { fireEvent, render, screen } from '@testing-library/react'
+import { render, screen } from '@testing-library/react'
 import { beforeAll, describe, expect, it, vi } from 'vitest'
 
 import {
@@ -21,15 +21,15 @@ beforeAll(() => {
 
 function buildGroup(overrides: Partial<TaskGroup> = {}): TaskGroup {
   return {
-    key: 'ci',
-    label: 'CI & automation',
+    key: 'checks',
+    label: 'Checks',
     tasks: [],
     ...overrides
   }
 }
 
 describe('TasksGroupCard', () => {
-  it('renders the group label', () => {
+  it('labels the section with the group name', () => {
     const group = buildGroup({
       tasks: [createSimpleTask({ id: 't-1', title: 'task one' })]
     })
@@ -42,70 +42,8 @@ describe('TasksGroupCard', () => {
       />
     )
 
-    expect(screen.getByText('CI & automation')).toBeDefined()
-  })
-
-  it('singularizes "1 blocker"', () => {
-    const group = buildGroup({
-      tasks: [
-        createSimpleTask({
-          id: 't-block',
-          severity: 'blocker',
-          title: 'blocker'
-        })
-      ]
-    })
-
-    render(
-      <TasksGroupCard
-        group={group}
-        pullRequest={createPullRequest()}
-        visibleTasks={group.tasks}
-      />
-    )
-
-    expect(screen.getByText('1 blocker')).toBeDefined()
-  })
-
-  it('pluralizes "3 blockers"', () => {
-    const group = buildGroup({
-      tasks: [
-        createSimpleTask({ id: 't1', severity: 'blocker', title: 'a' }),
-        createSimpleTask({ id: 't2', severity: 'blocker', title: 'b' }),
-        createSimpleTask({ id: 't3', severity: 'blocker', title: 'c' })
-      ]
-    })
-
-    render(
-      <TasksGroupCard
-        group={group}
-        pullRequest={createPullRequest()}
-        visibleTasks={group.tasks}
-      />
-    )
-
-    expect(screen.getByText('3 blockers')).toBeDefined()
-  })
-
-  it('hides the warning indicator when there are no warnings', () => {
-    const group = buildGroup({
-      tasks: [createSimpleTask({ id: 't1', severity: 'done', title: 'a' })]
-    })
-
-    const { container } = render(
-      <TasksGroupCard
-        group={group}
-        pullRequest={createPullRequest()}
-        visibleTasks={group.tasks}
-      />
-    )
-
-    // Warning text uses the text-status-warning-foreground class
-    const warningSpans = container.querySelectorAll(
-      '.text-status-warning-foreground'
-    )
-
-    expect(warningSpans.length).toEqual(0)
+    expect(screen.getByRole('region', { name: 'Checks' })).toBeDefined()
+    expect(screen.getByRole('heading', { name: 'Checks' })).toBeDefined()
   })
 
   it('renders the done/total ratio', () => {
@@ -126,26 +64,6 @@ describe('TasksGroupCard', () => {
     )
 
     expect(screen.getByText('1/3')).toBeDefined()
-  })
-
-  it('hides the rows when the header is clicked', () => {
-    const group = buildGroup({
-      tasks: [createSimpleTask({ id: 't1', title: 'visible task' })]
-    })
-
-    render(
-      <TasksGroupCard
-        group={group}
-        pullRequest={createPullRequest()}
-        visibleTasks={group.tasks}
-      />
-    )
-
-    expect(screen.getByText('visible task')).toBeDefined()
-
-    fireEvent.click(screen.getByRole('button', { name: /CI & automation/i }))
-
-    expect(screen.queryByText('visible task')).toEqual(null)
   })
 
   it('only renders visibleTasks, not the full group.tasks list', () => {

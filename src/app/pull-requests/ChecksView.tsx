@@ -1,30 +1,23 @@
 import dayjs from 'dayjs'
-import {
-  AlertTriangleIcon,
-  CheckCircle2Icon,
-  ClockIcon,
-  ExternalLinkIcon,
-  Loader2Icon,
-  XCircleIcon
-} from 'lucide-react'
-import {
-  memo,
-  useEffect,
-  useMemo,
-  useState,
-  type ReactElement,
-  type ReactNode
-} from 'react'
+import { ArrowUpRightIcon } from 'lucide-react'
+import { memo, useEffect, useMemo, useState, type ReactElement } from 'react'
 import { shallowEqual } from 'react-redux'
 
-import { MarkdownBlock } from '@/app/components/MarkdownBlock'
-import { Badge } from '@/app/components/ui/badge'
+import { getLatestChecks } from '@/app/components/check-rollup'
+import {
+  StatusCircle,
+  type StatusCircleState
+} from '@/app/components/StatusCircle'
+import { TimeAgo } from '@/app/components/TimeAgo'
+import { firstPlainLine } from '@/app/lib/plain-text'
 import { cn } from '@/app/lib/utils'
 import { useAppSelector } from '@/app/store/hooks'
 import type { Check } from '@/types/pull-request-details'
 import type { PullRequest } from '@/types/pull-request'
 
 import { Duration } from './components/Duration'
+
+type SuiteStatus = 'cancelled' | 'failure' | 'pending' | 'running' | 'success'
 
 export const ChecksView = memo(function ChecksView({
   pullRequest
@@ -37,21 +30,8 @@ export const ChecksView = memo(function ChecksView({
     shallowEqual
   )
 
-  const { checks, checksGroupedBySuiteName, sortedSuiteNames } = useMemo(() => {
-    // Deduplicate checks by name, keeping the most recent one.
-    const checksByName = new Map<string, Check>()
-
-    for (const check of allChecks) {
-      const existing = checksByName.get(check.name)
-
-      if (!existing || new Date(check.syncedAt) > new Date(existing.syncedAt)) {
-        checksByName.set(check.name, check)
-      }
-    }
-
-    const deduped = Array.from(checksByName.values())
-
-    const grouped = deduped.reduce<Record<string, Check[]>>(
+  const suites = useMemo(() => {
+    const grouped = getLatestChecks(allChecks).reduce<Record<string, Check[]>>(
       (accumulator, check) => {
         const suiteName = check.suiteName ?? 'Unknown'
         ;(accumulator[suiteName] ??= []).push(check)
@@ -61,14 +41,15 @@ export const ChecksView = memo(function ChecksView({
       {}
     )
 
-    return {
-      checks: deduped,
-      checksGroupedBySuiteName: grouped,
-      sortedSuiteNames: Object.keys(grouped).sort()
-    }
+    return Object.keys(grouped)
+      .sort()
+      .map((name) => ({
+        checks: grouped[name].sort((a, b) => a.name.localeCompare(b.name)),
+        name
+      }))
   }, [allChecks])
 
-  if (checks.length === 0) {
+  if (suites.length === 0) {
     return (
       <div className="text-center text-muted-foreground py-8">
         No checks found.
@@ -77,112 +58,190 @@ export const ChecksView = memo(function ChecksView({
   }
 
   return (
-    <div className="flex flex-col gap-6 text-sm pt-6">
-      <div className="flex flex-col gap-6">
-        {sortedSuiteNames.map((suiteName) => {
-          const suiteChecks = (checksGroupedBySuiteName[suiteName] || []).sort(
-            (a, b) => a.name.localeCompare(b.name)
-          )
+    <div className="flex flex-col gap-7 pt-5 text-sm">
+      {suites.map((suite) => (
+        <section
+          aria-label={suite.name}
+          className="flex flex-col"
+          key={suite.name}
+        >
+          <div className="flex items-center justify-between px-0.5 pb-2">
+            <h3 className="text-2xs font-semibold tracking-wider text-muted-foreground uppercase">
+              {suite.name}
+            </h3>
 
-          const hasFailingChecks = suiteChecks.some(
-            (check) =>
-              check.conclusion?.toLowerCase() === 'failure' ||
-              check.conclusion?.toLowerCase() === 'startup_failure'
-          )
-          const hasRunningChecks = suiteChecks.some(isRunning)
-          const hasCancelledChecks = suiteChecks.some(
-            (check) => check.conclusion?.toLowerCase() === 'cancelled'
-          )
-          const allChecksAreSuccessful = suiteChecks.every(
-            (check) => check.conclusion?.toLowerCase() === 'success'
-          )
+            <SuiteStatusPill status={getSuiteStatus(suite.checks)} />
+          </div>
 
-          const getSuiteStatus = () => {
-            if (hasFailingChecks) {
-              return 'failure'
-            }
-
-            if (hasRunningChecks) {
-              return 'running'
-            }
-
-            if (hasCancelledChecks) {
-              return 'cancelled'
-            }
-
-            if (allChecksAreSuccessful) {
-              return 'success'
-            }
-
-            const allChecksCompleted = suiteChecks.every(
-              (check) => check.state?.toLowerCase() === 'completed'
-            )
-
-            if (allChecksCompleted) {
-              return 'success'
-            }
-
-            return 'pending'
-          }
-
-          return (
-            <div key={suiteName}>
-              <div className="flex items-center gap-3 mb-4">
-                <div>
-                  <StatusIcon status={getSuiteStatus()} />
-                </div>
-
-                <div className="font-medium">{suiteName}</div>
-                <div>
-                  <StatusBadge status={getSuiteStatus()} />
-                </div>
-              </div>
-
-              <div className="flex flex-col gap-2 pl-4">
-                {suiteChecks.map((check) => (
-                  <CheckRow key={check.id}>
-                    <div className="mt-1">
-                      <CheckStatusIcon check={check} />
-                    </div>
-
-                    <div className="flex-1">
-                      <div className="font-medium">{check.name}</div>
-                      {check.message && (
-                        <MarkdownBlock
-                          className="text-muted-foreground text-xs [&_a]:text-primary [&_a]:underline"
-                          content={check.message}
-                        />
-                      )}
-                    </div>
-
-                    <div className="text-muted-foreground text-xs mt-0.5">
-                      <CheckDuration check={check} />
-                    </div>
-
-                    <div className="w-4 mt-0.5">
-                      {check.detailsUrl && (
-                        <button
-                          className="text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
-                          onClick={() => {
-                            window.electron.openUrl(check.detailsUrl ?? '')
-                          }}
-                          title="Open on GitHub"
-                          type="button"
-                        >
-                          <ExternalLinkIcon className="size-3" />
-                        </button>
-                      )}
-                    </div>
-                  </CheckRow>
-                ))}
-              </div>
-            </div>
-          )
-        })}
-      </div>
+          <div className="overflow-hidden rounded-lg border border-border bg-card">
+            {suite.checks.map((check) => (
+              <CheckRow
+                check={check}
+                key={check.id}
+              />
+            ))}
+          </div>
+        </section>
+      ))}
     </div>
   )
 })
+
+function CheckRow({ check }: { check: Check }): ReactElement {
+  const state = getCheckState(check)
+  const detailsUrl = check.detailsUrl
+  const summary = firstPlainLine(check.message)
+
+  return (
+    <div className="flex items-center gap-3 border-t border-border px-3.5 py-2.5 first:border-t-0">
+      <StatusCircle
+        label={checkStateLabels[state]}
+        state={state}
+      />
+
+      <div className="min-w-0 flex-1">
+        <div className="font-medium">{check.name}</div>
+
+        {summary ? (
+          // One plain line, like the rest of the row. The full report is a
+          // click away behind Logs.
+          <div
+            className={cn(
+              'truncate text-xs',
+              state === 'failure'
+                ? 'text-status-danger-foreground'
+                : 'text-muted-foreground'
+            )}
+            title={summary}
+          >
+            {summary}
+          </div>
+        ) : (
+          state === 'running' &&
+          check.gitHubCreatedAt && (
+            <div className="text-xs text-muted-foreground">
+              Running · started <TimeAgo dateTime={check.gitHubCreatedAt} />
+            </div>
+          )
+        )}
+      </div>
+
+      <div className="shrink-0 font-mono text-xs text-muted-foreground tabular-nums">
+        <CheckDuration check={check} />
+      </div>
+
+      {detailsUrl && (
+        <button
+          className="flex shrink-0 cursor-pointer items-center gap-0.5 text-xs text-primary hover:underline"
+          onClick={() => {
+            window.electron.openUrl(detailsUrl)
+          }}
+          title="Open the logs on GitHub"
+          type="button"
+        >
+          Logs
+          <ArrowUpRightIcon className="size-3" />
+        </button>
+      )}
+    </div>
+  )
+}
+
+const checkStateLabels: Record<StatusCircleState, string> = {
+  failure: 'Failed',
+  neutral: 'Skipped',
+  running: 'Running',
+  success: 'Passed',
+  warning: 'Needs attention'
+}
+
+const failedConclusions = new Set([
+  'error',
+  'failure',
+  'startup_failure',
+  'timed_out'
+])
+
+function getCheckState(check: Check): StatusCircleState {
+  const conclusion = check.conclusion?.toLowerCase() ?? ''
+
+  if (isRunning(check)) {
+    return 'running'
+  }
+
+  if (failedConclusions.has(conclusion)) {
+    return 'failure'
+  }
+
+  if (conclusion === 'action_required') {
+    return 'warning'
+  }
+
+  if (conclusion === 'success') {
+    return 'success'
+  }
+
+  return 'neutral'
+}
+
+function getSuiteStatus(checks: Check[]): SuiteStatus {
+  const states = checks.map(getCheckState)
+
+  if (states.includes('failure')) {
+    return 'failure'
+  }
+
+  if (states.includes('running')) {
+    return 'running'
+  }
+
+  if (
+    checks.some((check) => check.conclusion?.toLowerCase() === 'cancelled')
+  ) {
+    return 'cancelled'
+  }
+
+  const allCompleted = checks.every(
+    (check) =>
+      check.conclusion !== null || check.state?.toLowerCase() === 'completed'
+  )
+
+  return allCompleted ? 'success' : 'pending'
+}
+
+const suiteStatusPills: Record<SuiteStatus, { className: string; label: string }> =
+  {
+    cancelled: {
+      className: 'bg-status-neutral text-status-neutral-foreground',
+      label: 'Cancelled'
+    },
+    failure: {
+      className: 'bg-status-danger text-status-danger-foreground',
+      label: 'Failing'
+    },
+    pending: {
+      className: 'bg-status-warning text-status-warning-foreground',
+      label: 'Pending'
+    },
+    running: {
+      className: 'bg-status-warning text-status-warning-foreground',
+      label: 'In progress'
+    },
+    success: {
+      className: 'bg-status-success text-status-success-foreground',
+      label: 'All passed'
+    }
+  }
+
+function SuiteStatusPill({ status }: { status: SuiteStatus }): ReactElement {
+  const pill = suiteStatusPills[status]
+
+  return (
+    <span className={cn('rounded-full px-2 text-2xs', pill.className)}>
+      {pill.label}
+    </span>
+  )
+}
 
 function CheckDuration({ check }: { check: Check }): ReactElement {
   const [durationInSeconds, setDurationInSeconds] = useState(
@@ -230,140 +289,4 @@ function calculateRunningCheckDuration(check: Check): number {
   const currentTime = dayjs()
 
   return currentTime.diff(startTime, 'seconds')
-}
-
-function CheckRow({ children }: { children: ReactNode }): ReactElement {
-  return (
-    <div
-      className={cn(
-        'py-2 px-3',
-        'rounded-md',
-        'flex items-start gap-3',
-        'transition-colors hover:bg-muted/50'
-      )}
-    >
-      {children}
-    </div>
-  )
-}
-
-const checkConclusionIcons: Record<string, ReactElement | undefined> = {
-  cancelled: <AlertTriangleIcon className="size-3 text-muted-foreground" />,
-  failure: <XCircleIcon className="size-3 text-status-danger-foreground" />,
-  neutral: <AlertTriangleIcon className="size-3 text-muted-foreground" />,
-  skipped: <AlertTriangleIcon className="size-3 text-muted-foreground" />,
-  stale: <AlertTriangleIcon className="size-3 text-muted-foreground" />,
-  startup_failure: (
-    <XCircleIcon className="size-3 text-status-danger-foreground" />
-  ),
-  success: <CheckCircle2Icon className="size-3 text-status-success-foreground" />
-}
-
-const completedCheckStateIcons: Record<string, ReactElement | undefined> = {
-  action_required: (
-    <AlertTriangleIcon className="size-3 text-status-warning-foreground" />
-  ),
-  timed_out: <ClockIcon className="size-3 text-status-warning-foreground" />
-}
-
-const pendingCheckStateIcons: Record<string, ReactElement | undefined> = {
-  in_progress: (
-    <Loader2Icon className="size-3 text-status-warning-foreground animate-spin" />
-  ),
-  queued: <ClockIcon className="size-3 text-status-warning-foreground" />
-}
-
-function CheckStatusIcon({ check }: { check: Check }): ReactElement {
-  const conclusion = check.conclusion?.toLowerCase() ?? ''
-  const state = check.state?.toLowerCase() ?? ''
-
-  return (
-    pendingCheckStateIcons[state] ??
-    checkConclusionIcons[conclusion] ??
-    completedCheckStateIcons[state] ?? (
-      <ClockIcon className="size-3 text-status-warning-foreground" />
-    )
-  )
-}
-
-function StatusIcon({ status }: { status: string }): ReactElement {
-  if (status === 'success') {
-    return (
-      <CheckCircle2Icon className="size-4 text-status-success-foreground" />
-    )
-  }
-
-  if (status === 'failure') {
-    return <XCircleIcon className="size-4 text-status-danger-foreground" />
-  }
-
-  if (status === 'running') {
-    return (
-      <Loader2Icon className="size-4 text-status-warning-foreground animate-spin" />
-    )
-  }
-
-  if (status === 'pending') {
-    return (
-      <Loader2Icon className="size-4 text-status-warning-foreground animate-spin" />
-    )
-  }
-
-  if (status === 'cancelled') {
-    return <AlertTriangleIcon className="size-4 text-muted-foreground" />
-  }
-
-  return <ClockIcon className="size-4 text-muted-foreground" />
-}
-
-function StatusBadge({ status }: { status: string }): ReactElement {
-  if (status === 'success') {
-    return (
-      <Badge
-        className="bg-status-success text-status-success-foreground border-status-success-border"
-        variant="secondary"
-      >
-        Success
-      </Badge>
-    )
-  }
-
-  if (status === 'running') {
-    return (
-      <Badge
-        className="bg-status-warning text-status-warning-foreground border-status-warning-border"
-        variant="secondary"
-      >
-        Running
-      </Badge>
-    )
-  }
-
-  if (status === 'failure') {
-    return <Badge variant="destructive">Failed</Badge>
-  }
-
-  if (status === 'pending') {
-    return (
-      <Badge
-        className="bg-status-warning text-status-warning-foreground border-status-warning-border"
-        variant="secondary"
-      >
-        Pending
-      </Badge>
-    )
-  }
-
-  if (status === 'cancelled') {
-    return (
-      <Badge
-        className="bg-status-neutral text-status-neutral-foreground border-status-neutral-border"
-        variant="secondary"
-      >
-        Cancelled
-      </Badge>
-    )
-  }
-
-  return <Badge variant="secondary">Unknown</Badge>
 }

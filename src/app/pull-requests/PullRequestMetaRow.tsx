@@ -1,48 +1,73 @@
-import { Fragment, memo, type ReactElement } from 'react'
+import {
+  GitMergeIcon,
+  GitPullRequestClosedIcon,
+  GitPullRequestDraftIcon,
+  type LucideIcon
+} from 'lucide-react'
+import { memo, type ReactElement } from 'react'
 import { shallowEqual } from 'react-redux'
 
+import { TimeAgo } from '@/app/components/TimeAgo'
 import {
-  checkRollupColors,
-  checkRollupIcons,
-  getCheckRollup,
-  getCheckRollupSummary,
-  getCheckTally
-} from '@/app/components/check-rollup'
+  Avatar,
+  AvatarFallback,
+  AvatarImage
+} from '@/app/components/ui/avatar'
 import { formatNumber } from '@/app/lib/numbers'
 import { useAppSelector } from '@/app/store/hooks'
 import type { PullRequest } from '@/types/pull-request'
-import type { Check } from '@/types/pull-request-details'
 
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger
-} from '../components/ui/tooltip'
 import { cn } from '../lib/utils'
-import { ReviewerBar } from './ReviewerBar'
+
+interface StateMarker {
+  className: string
+  icon: LucideIcon
+  label: string
+}
 
 /**
- * The line under the title that answers a reviewer's first four questions: do
- * the checks pass, who is looking at it, how big is it, and can it merge.
- *
- * Only the checks carry a verdict, so they are the only coloured field. A
- * diffstat is a magnitude rather than good or bad news, and colouring it too
- * would put a second green beside the green tick and leave the row saying
- * everything at once.
+ * An open, ready pull request is the normal case and gets no marker. The
+ * other states change what can be done with it, so they lead the row.
+ */
+function getStateMarker(pullRequest: PullRequest): StateMarker | null {
+  if (pullRequest.state === 'MERGED') {
+    return {
+      className: 'text-status-merged-foreground',
+      icon: GitMergeIcon,
+      label: 'Merged'
+    }
+  }
+
+  if (pullRequest.state === 'CLOSED') {
+    return {
+      className: 'text-status-danger-foreground',
+      icon: GitPullRequestClosedIcon,
+      label: 'Closed'
+    }
+  }
+
+  if (pullRequest.isDraft) {
+    return {
+      className: 'text-muted-foreground',
+      icon: GitPullRequestDraftIcon,
+      label: 'Draft'
+    }
+  }
+
+  return null
+}
+
+/**
+ * The line under the title: who opened it and when, where it merges, and how
+ * big it is. Whether it can merge lives in the status strip below.
  */
 export const PullRequestMetaRow = memo(function PullRequestMetaRow({
   pullRequest
 }: {
   pullRequest: PullRequest
 }): ReactElement {
-  const checks: Check[] = useAppSelector(
-    (state) =>
-      state.checks.items.filter((c) => c.pullRequestId === pullRequest.id),
-    shallowEqual
-  )
-
-  // Reduced inside the selector so the row re-renders on the three numbers
-  // changing rather than on any write to the files slice.
+  // Reduced inside the selector so the row re-renders on the numbers changing
+  // rather than on any write to the files slice.
   const files = useAppSelector((state) => {
     const modified = state.modifiedFiles.items.filter(
       (file) => file.pullRequestId === pullRequest.id
@@ -61,91 +86,99 @@ export const PullRequestMetaRow = memo(function PullRequestMetaRow({
     }
   }, shallowEqual)
 
-  // `mergeable: false` is GitHub's word for a conflict specifically, not for
-  // any old blocker — a failing check leaves it true.
-  const hasConflicts = useAppSelector(
-    (state) => state.mergeOptions[pullRequest.id]?.mergeable === false
+  const commitCount = useAppSelector(
+    (state) =>
+      state.commits.items.filter(
+        (commit) => commit.pullRequestId === pullRequest.id
+      ).length
   )
 
-  const rollup = getCheckRollup(checks)
-  const RollupIcon = checkRollupIcons[rollup]
-  const tally = getCheckTally(checks)
-  const segments: ReactElement[] = []
+  const marker = getStateMarker(pullRequest)
+  const author = pullRequest.authorLogin ?? 'Someone'
+  const sizeParts: string[] = []
 
-  // A ratio reads as pass or fail, so an empty suite has nothing to say — the
-  // same reason the Checks tab drops its badge at zero.
-  if (tally.total > 0) {
-    segments.push(
-      <Tooltip key="checks">
-        <TooltipTrigger
-          className={cn(
-            'flex items-center gap-1.5 cursor-default',
-            checkRollupColors[rollup]
-          )}
-        >
-          <RollupIcon className="size-3.5 shrink-0" />
-
-          <span className="tabular-nums">
-            {tally.passing}/{tally.total} checks
-          </span>
-        </TooltipTrigger>
-
-        <TooltipContent>{getCheckRollupSummary(checks)}</TooltipContent>
-      </Tooltip>
+  if (commitCount > 0) {
+    sizeParts.push(
+      `${formatNumber(commitCount)} ${commitCount === 1 ? 'commit' : 'commits'}`
     )
   }
-
-  segments.push(
-    <ReviewerBar
-      key="reviewers"
-      pullRequest={pullRequest}
-    />
-  )
 
   if (files.count > 0) {
-    segments.push(
-      <span
-        className="tabular-nums"
-        key="diffstat"
-      >
-        +{formatNumber(files.additions)} −{formatNumber(files.deletions)}
-      </span>,
-      <span
-        className="tabular-nums"
-        key="files"
-      >
-        {formatNumber(files.count)} {files.count === 1 ? 'file' : 'files'}
-      </span>
-    )
-  }
-
-  if (hasConflicts) {
-    segments.push(
-      <span
-        className="text-status-danger-foreground"
-        key="conflicts"
-      >
-        Conflicts
-      </span>
+    sizeParts.push(
+      `${formatNumber(files.count)} ${files.count === 1 ? 'file' : 'files'}`
     )
   }
 
   return (
-    <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1.5 text-xs text-muted-foreground">
-      {segments.map((segment, index) => (
-        <Fragment key={segment.key}>
-          {index > 0 && (
-            <span
-              aria-hidden
-              className="opacity-40"
-            >
-              ·
-            </span>
-          )}
+    <div className="flex flex-wrap items-center gap-x-3.5 gap-y-1.5 text-xs text-muted-foreground">
+      {marker && (
+        <span
+          className={cn('flex items-center gap-1 font-medium', marker.className)}
+        >
+          <marker.icon
+            aria-hidden
+            className="size-3.5 shrink-0"
+          />
+          {marker.label}
+        </span>
+      )}
 
-          {segment}
-        </Fragment>
-      ))}
+      <span className="flex items-center gap-1.5">
+        <Avatar className="size-4.5">
+          <AvatarImage
+            alt={author}
+            src={pullRequest.authorAvatarUrl ?? undefined}
+          />
+          <AvatarFallback className="text-2xs leading-none uppercase">
+            {author.slice(0, 1)}
+          </AvatarFallback>
+        </Avatar>
+
+        <span className="text-foreground">{author}</span>
+
+        <span>
+          opened <TimeAgo dateTime={pullRequest.createdAt} />
+        </span>
+      </span>
+
+      {pullRequest.headRefName && (
+        <span className="flex min-w-0 items-center gap-1.5 font-mono">
+          <span
+            className="truncate max-w-80 text-foreground/80"
+            title={pullRequest.headRefName}
+          >
+            {pullRequest.headRefName}
+          </span>
+
+          {pullRequest.baseRefName && (
+            <>
+              <span aria-hidden>→</span>
+
+              <span
+                className="truncate max-w-40 text-foreground/80"
+                title={`Merges into ${pullRequest.baseRefName}`}
+              >
+                {pullRequest.baseRefName}
+              </span>
+            </>
+          )}
+        </span>
+      )}
+
+      {files.count > 0 && (
+        <span className="font-mono tabular-nums">
+          <span className="text-status-success-foreground">
+            +{formatNumber(files.additions)}
+          </span>{' '}
+          <span className="text-status-danger-foreground">
+            −{formatNumber(files.deletions)}
+          </span>
+        </span>
+      )}
+
+      {sizeParts.length > 0 && (
+        <span className="tabular-nums">{sizeParts.join(' · ')}</span>
+      )}
     </div>
   )
 })

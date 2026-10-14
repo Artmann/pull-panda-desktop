@@ -35,6 +35,24 @@ function isCheckRunning(check: Check): boolean {
   return runningStates.has(check.state?.toLowerCase() ?? '')
 }
 
+/**
+ * A re-run leaves the earlier run behind under the same name, so only the most
+ * recently synced check of each name counts.
+ */
+export function getLatestChecks(checks: readonly Check[]): Check[] {
+  const byName = new Map<string, Check>()
+
+  for (const check of checks) {
+    const existing = byName.get(check.name)
+
+    if (!existing || new Date(check.syncedAt) > new Date(existing.syncedAt)) {
+      byName.set(check.name, check)
+    }
+  }
+
+  return Array.from(byName.values())
+}
+
 export function getCheckRollup(checks: readonly Check[]): CheckRollup {
   if (checks.length === 0) {
     return 'none'
@@ -60,33 +78,6 @@ export function getCheckRollupLabel(rollup: CheckRollup): string {
   }
 
   return labels[rollup]
-}
-
-export function getCheckRollupSummary(checks: readonly Check[]): string {
-  const tally = getCheckTally(checks)
-  const parts: string[] = []
-
-  if (tally.running > 0) {
-    parts.push(`${tally.running.toString()} running`)
-  }
-
-  if (tally.failed > 0) {
-    parts.push(`${tally.failed.toString()} failed`)
-  }
-
-  if (tally.skipped > 0) {
-    parts.push(`${tally.skipped.toString()} skipped`)
-  }
-
-  if (tally.successful > 0) {
-    parts.push(`${tally.successful.toString()} successful`)
-  }
-
-  if (parts.length === 0) {
-    return `${tally.total.toString()} checks`
-  }
-
-  return parts.join(', ')
 }
 
 export function getCheckTally(checks: readonly Check[]): CheckTally {

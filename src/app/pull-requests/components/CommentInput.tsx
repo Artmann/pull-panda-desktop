@@ -1,5 +1,10 @@
 import { memo, useState, type ReactElement } from 'react'
 
+import {
+  Avatar,
+  AvatarFallback,
+  AvatarImage
+} from '@/app/components/ui/avatar'
 import { Button } from '@/app/components/ui/button'
 import { Textarea } from '@/app/components/ui/textarea'
 import { createComment, syncPullRequestDetails } from '@/app/lib/api'
@@ -91,26 +96,42 @@ export const NewCommentForm = memo(function NewCommentForm({
   }
 
   return (
-    <div className="w-full flex flex-col gap-2 py-2">
-      <Textarea
-        className="h-20 text-sm resize-none border-muted"
-        disabled={isSubmitting}
-        placeholder="Leave a comment..."
-        value={body}
-        onChange={(event) => setBody(event.target.value)}
-        onKeyDown={handleKeyDown}
-      />
+    <div className="flex w-full gap-3 pt-4">
+      <Avatar className="mt-0.5 size-6.5 shrink-0">
+        <AvatarImage
+          alt={user?.login ?? 'You'}
+          src={user?.avatar_url}
+        />
+        <AvatarFallback className="text-2xs uppercase">
+          {(user?.login ?? 'You').slice(0, 1)}
+        </AvatarFallback>
+      </Avatar>
 
-      {error && <div className="text-destructive text-xs">{error}</div>}
+      <div className="flex min-w-0 flex-1 flex-col gap-2">
+        <div className="flex flex-col rounded-lg border border-border bg-card focus-within:border-ring">
+          <Textarea
+            aria-label="Comment"
+            className="min-h-16 resize-none rounded-b-none border-0 bg-transparent text-sm shadow-none focus-visible:ring-0 dark:bg-transparent"
+            disabled={isSubmitting}
+            placeholder="Leave a comment…"
+            value={body}
+            onChange={(event) => setBody(event.target.value)}
+            onKeyDown={handleKeyDown}
+          />
 
-      <div className="flex justify-end">
-        <Button
-          disabled={!body.trim() || isSubmitting}
-          size="sm"
-          onClick={handleSubmit}
-        >
-          Post
-        </Button>
+          <div className="flex justify-end border-t border-border p-2">
+            <Button
+              disabled={!body.trim() || isSubmitting}
+              size="sm"
+              variant="secondary"
+              onClick={handleSubmit}
+            >
+              Comment
+            </Button>
+          </div>
+        </div>
+
+        {error && <div className="text-destructive text-xs">{error}</div>}
       </div>
     </div>
   )

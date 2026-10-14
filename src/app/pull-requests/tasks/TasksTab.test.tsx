@@ -5,6 +5,7 @@ import { fireEvent, render, screen } from '@testing-library/react'
 import { Provider } from 'react-redux'
 import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 
+import { TooltipProvider } from '@/app/components/ui/tooltip'
 import { createStore, type AppStore } from '@/app/store'
 
 import {
@@ -50,7 +51,9 @@ beforeEach(() => {
 function renderWith(store: AppStore) {
   return render(
     <Provider store={store}>
-      <TasksTab pullRequest={createPullRequest()} />
+      <TooltipProvider>
+        <TasksTab pullRequest={createPullRequest({ baseRefName: 'main' })} />
+      </TooltipProvider>
     </Provider>
   )
 }
@@ -76,16 +79,11 @@ function buildPopulatedStore(): AppStore {
     comments: {
       items: [
         createCommentFixture({
+          body: 'Bump the lockfile.',
           gitHubReviewThreadId: 'gh-thread-bot',
           id: 'comment-bot',
           path: null,
           userLogin: 'dependabot'
-        }),
-        createCommentFixture({
-          gitHubReviewThreadId: 'gh-thread-human',
-          id: 'comment-human',
-          path: null,
-          userLogin: 'alice'
         })
       ]
     },
@@ -96,141 +94,70 @@ function buildPopulatedStore(): AppStore {
     modifiedFiles: { items: [] },
     reactions: { byCommentId: {}, byReviewId: {} },
     reviewThreads: {
-      items: [
-        createThread({
-          gitHubId: 'gh-thread-bot',
-          id: 'thread-bot'
-        }),
-        createThread({
-          gitHubId: 'gh-thread-human',
-          id: 'thread-human'
-        })
-      ]
+      items: [createThread({ gitHubId: 'gh-thread-bot', id: 'thread-bot' })]
     },
     reviews: { items: [createReviewFixture({ state: 'APPROVED' })] }
   } as never)
 }
 
-describe('TasksTab', () => {
-  it('renders the readiness summary, filter bar, and one card per non-empty group', () => {
-    const store = buildPopulatedStore()
-    renderWith(store)
+function groupHeadings(): string[] {
+  return screen
+    .getAllByRole('heading')
+    .map((heading) => heading.textContent ?? '')
+}
 
-    expect(screen.getByText(/blockers? before this can merge/i)).toBeDefined()
-    expect(screen.getByRole('button', { name: 'All' })).toBeDefined()
-    expect(screen.getByText('CI & automation')).toBeDefined()
-    expect(screen.getByText('Human reviewers')).toBeDefined()
-    expect(screen.getByText('AI agents & bots')).toBeDefined()
+describe('TasksTab', () => {
+  it('shows the four groups and how many tasks are done', () => {
+    renderWith(buildPopulatedStore())
+
+    expect(groupHeadings()).toEqual([
+      'Checks',
+      'Reviews',
+      'Conversations',
+      'Branch'
+    ])
+    expect(screen.getByText('3 of 5 done')).toBeDefined()
+    expect(screen.getByText('lint is failing')).toBeDefined()
+    expect(screen.getByText('Bump the lockfile.')).toBeDefined()
   })
 
-  it('shows the no-tasks empty state when the store is empty', () => {
-    const store = createStore()
+  it('keeps only the blocking groups when the Blockers filter is active', () => {
+    renderWith(buildPopulatedStore())
+
+    fireEvent.click(screen.getByRole('button', { name: 'Blockers' }))
+
+    expect(groupHeadings()).toEqual(['Checks'])
+  })
+
+  it('hides done tasks when the Open filter is active', () => {
+    renderWith(buildPopulatedStore())
+
+    fireEvent.click(screen.getByRole('button', { name: 'Open' }))
+
+    expect(groupHeadings()).toEqual(['Checks', 'Conversations'])
+    expect(screen.queryByText('1 other check passed')).toEqual(null)
+  })
+
+  it('says nothing blocks the pull request when the Blockers filter is empty', () => {
+    const store = createStore({
+      checks: {
+        items: [createCheck({ conclusion: 'success', state: 'completed' })]
+      },
+      comments: { items: [] },
+      commits: { items: [] },
+      mergeOptions: { 'pr-1': createMergeOptions() },
+      modifiedFiles: { items: [] },
+      reactions: { byCommentId: {}, byReviewId: {} },
+      reviewThreads: { items: [] },
+      reviews: { items: [] }
+    } as never)
+
     renderWith(store)
+
+    fireEvent.click(screen.getByRole('button', { name: 'Blockers' }))
 
     expect(
-      screen.getByText('Nothing to do here. This PR is ready.')
+      screen.getByText('Nothing is blocking this pull request.')
     ).toBeDefined()
-  })
-
-  it('hides non-blocker groups when the Blockers filter is active', () => {
-    const store = createStore({
-      checks: {
-        items: [
-          createCheck({
-            conclusion: 'failure',
-            id: 'check-failed',
-            name: 'lint',
-            state: 'completed'
-          })
-        ]
-      },
-      comments: {
-        items: [
-          createCommentFixture({
-            gitHubReviewThreadId: 'gh-thread-bot',
-            id: 'comment-bot',
-            path: null,
-            userLogin: 'dependabot'
-          })
-        ]
-      },
-      commits: { items: [] },
-      modifiedFiles: { items: [] },
-      reactions: { byCommentId: {}, byReviewId: {} },
-      reviewThreads: {
-        items: [
-          createThread({
-            gitHubId: 'gh-thread-bot',
-            id: 'thread-bot'
-          })
-        ]
-      },
-      reviews: { items: [] }
-    } as never)
-
-    renderWith(store)
-
-    expect(screen.getByText('AI agents & bots')).toBeDefined()
-
-    fireEvent.click(screen.getByRole('button', { name: 'Blockers only' }))
-
-    expect(screen.queryByText('AI agents & bots')).toEqual(null)
-    expect(screen.getByText('CI & automation')).toBeDefined()
-  })
-
-  it('hides done summary tasks when "Hide resolved" is toggled on', () => {
-    const store = createStore({
-      checks: {
-        items: [
-          createCheck({
-            conclusion: 'success',
-            id: 'check-passed',
-            name: 'lint',
-            state: 'completed'
-          })
-        ]
-      },
-      comments: { items: [] },
-      commits: { items: [] },
-      modifiedFiles: { items: [] },
-      reactions: { byCommentId: {}, byReviewId: {} },
-      reviewThreads: { items: [] },
-      reviews: { items: [] }
-    } as never)
-
-    renderWith(store)
-
-    expect(screen.getByText('All checks have passed')).toBeDefined()
-
-    fireEvent.click(screen.getByRole('button', { name: /hide resolved/i }))
-
-    expect(screen.queryByText('All checks have passed')).toEqual(null)
-  })
-
-  it('shows the filtered empty state when no tasks match the active filter', () => {
-    const store = createStore({
-      checks: {
-        items: [
-          createCheck({
-            conclusion: 'success',
-            id: 'check-passed',
-            name: 'lint',
-            state: 'completed'
-          })
-        ]
-      },
-      comments: { items: [] },
-      commits: { items: [] },
-      modifiedFiles: { items: [] },
-      reactions: { byCommentId: {}, byReviewId: {} },
-      reviewThreads: { items: [] },
-      reviews: { items: [] }
-    } as never)
-
-    renderWith(store)
-
-    fireEvent.click(screen.getByRole('button', { name: 'Blockers only' }))
-
-    expect(screen.getByText('No tasks match the current filter.')).toBeDefined()
   })
 })

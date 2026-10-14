@@ -171,10 +171,9 @@ function AppShell({
         {showSidebar && <PullRequestSidebar />}
 
         {/*
-          `relative` makes this box the one StickyPullRequestHeader pins itself
-          to. It is the content column — beside the sidebar, and outside the
-          scroll container below — so an absolute bar inside the page lands
-          across the content and nothing else, at any sidebar width.
+          The content column, beside the sidebar and outside the scroll
+          container below. `relative` lets an absolute overlay inside the page
+          span the content and nothing else, at any sidebar width.
         */}
         <div className="relative flex flex-1 min-w-0 min-h-0">
           {/*
