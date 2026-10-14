@@ -918,6 +918,8 @@ export const fetchMergeOptions = (input: {
 export interface MergePullRequestInput {
   readonly commitMessage?: string
   readonly commitTitle?: string
+  /** Delete the head branch once merged, when it lives in the same repo. */
+  readonly deleteBranch?: boolean
   readonly mergeMethod: 'merge' | 'rebase' | 'squash'
   readonly owner: string
   readonly pullNumber: number
@@ -925,6 +927,38 @@ export interface MergePullRequestInput {
   readonly repo: string
   readonly token: string
 }
+
+/**
+ * Removes a merged pull request's head branch. A branch on a fork belongs to
+ * someone else's repository and is left alone. Failing to delete never fails
+ * the merge, which has already happened by now.
+ */
+const deleteMergedBranch = (octokit: Octokit, input: MergePullRequestInput) =>
+  Effect.tryPromise({
+    try: async () => {
+      const { data } = await octokit.rest.pulls.get({
+        owner: input.owner,
+        pull_number: input.pullNumber,
+        repo: input.repo
+      })
+
+      if (data.head.repo?.full_name !== data.base.repo.full_name) {
+        return
+      }
+
+      await octokit.rest.git.deleteRef({
+        owner: input.owner,
+        ref: `heads/${data.head.ref}`,
+        repo: input.repo
+      })
+    },
+    catch: octokitErrorOf('git.deleteRef')
+  }).pipe(
+    Effect.catchAll((error) =>
+      Effect.logWarning('Could not delete the merged branch', error)
+    ),
+    Effect.withSpan('mergePullRequest.deleteBranch')
+  )
 
 export const mergePullRequest = (input: MergePullRequestInput) =>
   Effect.gen(function* () {
@@ -950,6 +984,10 @@ export const mergePullRequest = (input: MergePullRequestInput) =>
         }),
       catch: octokitErrorOf('pulls.merge')
     })
+
+    if (input.deleteBranch) {
+      yield* deleteMergedBranch(octokit, input)
+    }
 
     const now = new Date().toISOString()
 

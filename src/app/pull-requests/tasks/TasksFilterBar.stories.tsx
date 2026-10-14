@@ -10,10 +10,10 @@ const meta = {
   parameters: { layout: 'padded' },
   tags: ['autodocs'],
   args: {
+    doneCount: 2,
     filter: 'all',
-    hideResolved: false,
     onChangeFilter: () => undefined,
-    onToggleHideResolved: () => undefined
+    totalCount: 9
   }
 } satisfies Meta<typeof TasksFilterBar>
 
@@ -27,16 +27,13 @@ function InteractiveFilterBar({
   initialFilter: TasksFilter
 }) {
   const [filter, setFilter] = useState<TasksFilter>(initialFilter)
-  const [hideResolved, setHideResolved] = useState(false)
 
   return (
     <TasksFilterBar
+      doneCount={2}
       filter={filter}
-      hideResolved={hideResolved}
       onChangeFilter={setFilter}
-      onToggleHideResolved={() => {
-        setHideResolved((value) => !value)
-      }}
+      totalCount={9}
     />
   )
 }
@@ -49,6 +46,6 @@ export const Open: Story = {
   render: () => <InteractiveFilterBar initialFilter="open" />
 }
 
-export const BlockersOnly: Story = {
+export const Blockers: Story = {
   render: () => <InteractiveFilterBar initialFilter="blockers" />
 }

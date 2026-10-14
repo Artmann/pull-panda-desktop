@@ -10,7 +10,7 @@ export function ReviewStateExpansion({
   task
 }: ReviewStateExpansionProps): ReactElement {
   return (
-    <div className="text-sm leading-relaxed text-foreground/80">
+    <div className="text-xs leading-relaxed text-muted-foreground">
       {task.summary}
     </div>
   )

@@ -29,7 +29,7 @@ export function getMergeButtonLabel(options: MergeOptions | null): string {
       return 'Merge blocked'
     case 'clean':
     case 'has_hooks':
-      return 'Ready to merge'
+      return 'Merge pull request'
     case 'dirty':
       return 'Has conflicts'
     case 'unstable':

@@ -72,15 +72,35 @@ describe('TaskRow', () => {
     expect(screen.queryByLabelText(/collapse task/i)).toEqual(null)
   })
 
-  it('shows the check icon for done tasks', () => {
-    const { container } = renderRow(
-      <TaskRow
-        pullRequest={createPullRequest()}
-        task={createSimpleTask({ severity: 'done', title: 'Resolved' })}
-      />
+  it('marks each task with a status that matches its severity', () => {
+    renderRow(
+      <>
+        <TaskRow
+          pullRequest={createPullRequest()}
+          task={createSimpleTask({ id: 'a', severity: 'done' })}
+        />
+        <TaskRow
+          pullRequest={createPullRequest()}
+          task={createSimpleTask({ id: 'b', severity: 'blocker' })}
+        />
+        <TaskRow
+          pullRequest={createPullRequest()}
+          task={createSimpleTask({
+            id: 'c',
+            severity: 'info',
+            status: 'running'
+          })}
+        />
+        <TaskRow
+          pullRequest={createPullRequest()}
+          task={createSimpleTask({ id: 'd', severity: 'info' })}
+        />
+      </>
     )
 
-    expect(container.querySelector('.line-through')).not.toEqual(null)
+    expect(
+      screen.getAllByRole('img').map((image) => image.getAttribute('aria-label'))
+    ).toEqual(['Done', 'Blocking', 'In progress', 'Open'])
   })
 
   it('renders a collapse button on expandable tasks', () => {
@@ -150,14 +170,18 @@ describe('TaskRow', () => {
       <TaskRow
         pullRequest={createPullRequest()}
         task={createCheckTask({
-          action: { label: 'View details', url: 'https://example.com/run/1' },
+          action: {
+            label: 'View logs',
+            type: 'open-url',
+            url: 'https://example.com/run/1'
+          },
           message: 'Build failed at step 3',
           title: 'lint'
         })}
       />
     )
 
-    fireEvent.click(screen.getByRole('button', { name: /view details/i }))
+    fireEvent.click(screen.getByRole('button', { name: 'View logs' }))
 
     expect(window.electron.openUrl).toHaveBeenCalledWith(
       'https://example.com/run/1'
@@ -166,21 +190,18 @@ describe('TaskRow', () => {
     expect(screen.queryByText('Build failed at step 3')).toEqual(null)
   })
 
-  it('hides the action button on done tasks', () => {
+  it('leaves out the resolve action when the thread is unknown', () => {
     renderRow(
       <TaskRow
         pullRequest={createPullRequest()}
-        task={createSimpleTask({
-          action: { label: 'View details', url: 'https://example.com' },
-          severity: 'done',
-          title: 'All checks have passed'
+        task={createThreadTask({
+          action: { type: 'resolve-thread' },
+          thread: null
         })}
       />
     )
 
-    expect(screen.queryByRole('button', { name: /view details/i })).toEqual(
-      null
-    )
+    expect(screen.queryByRole('button', { name: /resolve/i })).toEqual(null)
   })
 
   it('renders thread tasks inline rather than in the appended layout', () => {

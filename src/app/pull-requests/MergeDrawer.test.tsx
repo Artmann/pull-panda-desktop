@@ -4,16 +4,12 @@
 import { act, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { Provider } from 'react-redux'
-import { configureStore } from '@reduxjs/toolkit'
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 
+import { TooltipProvider } from '@/app/components/ui/tooltip'
 import type { MergeOptions } from '@/app/lib/api'
-import type { Check, Review } from '@/types/pull-request-details'
-
-import checksReducer from '@/app/store/checks-slice'
-import mergeOptionsReducer from '@/app/store/merge-options-slice'
-import pullRequestsReducer from '@/app/store/pull-requests-slice'
-import reviewsReducer from '@/app/store/reviews-slice'
+import { createStore } from '@/app/store'
+import type { Check } from '@/types/pull-request-details'
 
 import { createMockPullRequest } from './__test-helpers__/pull-request-fixtures'
 import {
@@ -22,32 +18,20 @@ import {
   resolveInitialMergeMethod
 } from './MergeDrawer'
 
-import { TooltipProvider } from '@/app/components/ui/tooltip'
-
 const mockMergePullRequest = vi.fn()
 
-vi.mock('@/app/lib/api', () => ({
+vi.mock('@/app/lib/api', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@/app/lib/api')>()),
+  fetchCodeowners: () => Promise.resolve([]),
+  fetchCollaborators: () => Promise.resolve([]),
   mergePullRequest: (...args: unknown[]) => mockMergePullRequest(...args)
 }))
 
-function createMockReview(overrides: Partial<Review> = {}): Review {
-  return {
-    id: 'review-1',
-    gitHubId: 'gh-review-1',
-    gitHubNumericId: 1,
-    pullRequestId: 'pr-1',
-    state: 'APPROVED',
-    body: null,
-    bodyHtml: null,
-    url: null,
-    authorLogin: 'reviewer1',
-    authorAvatarUrl: 'https://example.com/avatar1.png',
-    gitHubCreatedAt: '2024-01-01T00:00:00Z',
-    gitHubSubmittedAt: '2024-01-01T00:00:00Z',
-    syncedAt: '2024-01-01T00:00:00Z',
-    ...overrides
-  }
-}
+beforeEach(() => {
+  localStorage.clear()
+  mockMergePullRequest.mockReset()
+  mockMergePullRequest.mockReturnValue(new Promise(() => undefined))
+})
 
 function createMockCheck(overrides: Partial<Check> = {}): Check {
   return {
@@ -70,44 +54,6 @@ function createMockCheck(overrides: Partial<Check> = {}): Check {
   }
 }
 
-interface TestStoreOptions {
-  checks?: Check[]
-  mergeOptions?: Record<string, MergeOptions | null>
-  reviews?: Review[]
-}
-
-function createTestStore({
-  checks = [],
-  mergeOptions = {},
-  reviews = []
-}: TestStoreOptions = {}) {
-  return configureStore({
-    reducer: {
-      checks: checksReducer,
-      mergeOptions: mergeOptionsReducer,
-      pullRequests: pullRequestsReducer,
-      reviews: reviewsReducer
-    },
-    preloadedState: {
-      checks: { items: checks },
-      mergeOptions,
-      pullRequests: { initialized: true, items: [] },
-      reviews: { items: reviews }
-    }
-  })
-}
-
-function renderWithProviders(
-  ui: React.ReactElement,
-  { store = createTestStore() } = {}
-) {
-  return render(
-    <Provider store={store}>
-      <TooltipProvider>{ui}</TooltipProvider>
-    </Provider>
-  )
-}
-
 const mergeableOptions: MergeOptions = {
   allowMergeCommit: true,
   allowRebaseMerge: true,
@@ -117,418 +63,166 @@ const mergeableOptions: MergeOptions = {
   requirements: []
 }
 
+const blockedOptions: MergeOptions = {
+  ...mergeableOptions,
+  mergeableState: 'blocked',
+  requirements: [
+    {
+      description: 'Waiting for an approving review from a code owner.',
+      key: 'approving-reviews',
+      label: '1 approving review required',
+      satisfied: false
+    }
+  ]
+}
+
+async function renderDrawer({
+  checks = [],
+  mergeOptions = mergeableOptions,
+  open = true
+}: {
+  checks?: Check[]
+  mergeOptions?: MergeOptions | null
+  open?: boolean
+} = {}) {
+  const pullRequest = createMockPullRequest({ baseRefName: 'main' })
+  const store = createStore({
+    checks: { items: checks },
+    mergeOptions: mergeOptions ? { 'pr-1': mergeOptions } : {},
+    pullRequests: { initialized: true, items: [pullRequest] }
+  } as never)
+
+  await act(async () => {
+    render(
+      <Provider store={store}>
+        <TooltipProvider>
+          <MergeDrawer
+            onClose={vi.fn()}
+            open={open}
+            pullRequest={pullRequest}
+          />
+        </TooltipProvider>
+      </Provider>
+    )
+  })
+
+  return store
+}
+
 describe('MergeDrawer', () => {
-  beforeEach(() => {
-    mockMergePullRequest.mockReset()
-  })
-
   it('renders nothing when closed', async () => {
-    const pullRequest = createMockPullRequest()
+    await renderDrawer({ open: false })
 
-    await act(async () => {
-      renderWithProviders(
-        <MergeDrawer
-          onClose={vi.fn()}
-          open={false}
-          pullRequest={pullRequest}
-        />
-      )
-    })
-
-    expect(screen.queryByText('Merge pull request')).not.toBeInTheDocument()
+    expect(screen.queryByText('Merge')).not.toBeInTheDocument()
   })
 
-  it('renders header when open', async () => {
-    const pullRequest = createMockPullRequest()
-    const store = createTestStore({
-      mergeOptions: { 'pr-1': mergeableOptions }
-    })
+  it('says the pull request is ready when nothing is in the way', async () => {
+    await renderDrawer({ checks: [createMockCheck()] })
 
-    await act(async () => {
-      renderWithProviders(
-        <MergeDrawer
-          onClose={vi.fn()}
-          open={true}
-          pullRequest={pullRequest}
-        />,
-        { store }
-      )
-    })
-
-    expect(screen.getByText('Merge pull request')).toBeInTheDocument()
-  })
-
-  it('shows reviews section when reviews exist', async () => {
-    const pullRequest = createMockPullRequest({ approvalCount: 1 })
-    const reviews = [createMockReview({ state: 'APPROVED' })]
-    const store = createTestStore({
-      mergeOptions: { 'pr-1': mergeableOptions },
-      reviews
-    })
-
-    await act(async () => {
-      renderWithProviders(
-        <MergeDrawer
-          onClose={vi.fn()}
-          open={true}
-          pullRequest={pullRequest}
-        />,
-        { store }
-      )
-    })
-
-    expect(screen.getByText('reviewer1')).toBeInTheDocument()
-    expect(screen.getByText('1 approval')).toBeInTheDocument()
-  })
-
-  it('shows checks summary when checks exist', async () => {
-    const pullRequest = createMockPullRequest()
-    const checks = [
-      createMockCheck({ id: 'c1', name: 'CI Build', conclusion: 'success' }),
-      createMockCheck({ id: 'c2', name: 'Lint', conclusion: 'failure' })
-    ]
-    const store = createTestStore({
-      checks,
-      mergeOptions: { 'pr-1': mergeableOptions }
-    })
-
-    await act(async () => {
-      renderWithProviders(
-        <MergeDrawer
-          onClose={vi.fn()}
-          open={true}
-          pullRequest={pullRequest}
-        />,
-        { store }
-      )
-    })
-
-    expect(screen.getByText('1 of 2 checks failed')).toBeInTheDocument()
-    expect(screen.getByText('Lint')).toBeInTheDocument()
-  })
-
-  it('shows merge method tabs', async () => {
-    const pullRequest = createMockPullRequest()
-    const store = createTestStore({
-      mergeOptions: { 'pr-1': mergeableOptions }
-    })
-
-    await act(async () => {
-      renderWithProviders(
-        <MergeDrawer
-          onClose={vi.fn()}
-          open={true}
-          pullRequest={pullRequest}
-        />,
-        { store }
-      )
-    })
-
-    expect(screen.getByText('Squash')).toBeInTheDocument()
-    expect(screen.getByText('Merge')).toBeInTheDocument()
-    expect(screen.getByText('Rebase')).toBeInTheDocument()
-  })
-
-  it('shows blocked state when not mergeable', async () => {
-    const pullRequest = createMockPullRequest()
-    const store = createTestStore({
-      mergeOptions: {
-        'pr-1': {
-          ...mergeableOptions,
-          mergeable: false,
-          mergeableState: 'blocked'
-        }
-      }
-    })
-
-    await act(async () => {
-      renderWithProviders(
-        <MergeDrawer
-          onClose={vi.fn()}
-          open={true}
-          pullRequest={pullRequest}
-        />,
-        { store }
-      )
-    })
-
-    const mergeButton = screen.getByRole('button', {
-      name: /merge is blocked/i
-    })
-
-    expect(mergeButton).toBeDisabled()
+    expect(screen.getByText('Ready to merge')).toBeInTheDocument()
     expect(
-      screen.getByText('Blocked by branch protection rules.')
-    ).toBeInTheDocument()
+      screen.getByRole('button', { name: 'Squash and merge' })
+    ).toBeEnabled()
+  })
+
+  it('lists what stands between the pull request and a merge', async () => {
+    await renderDrawer({
+      checks: [createMockCheck({ conclusion: 'failure', name: 'Lint' })]
+    })
+
     expect(
-      screen.getByText('Merge without waiting for requirements')
+      screen.getAllByRole('heading').map((heading) => heading.textContent)
+    ).toEqual(['Merge', 'Checks', 'Reviews', 'Conversations', 'Branch'])
+    expect(screen.getByText('Lint is failing')).toBeInTheDocument()
+    expect(screen.getByText('Needs changes')).toBeInTheDocument()
+  })
+
+  it('switches the merge button and hint with the method', async () => {
+    await renderDrawer()
+
+    await userEvent.click(screen.getByRole('radio', { name: 'Rebase' }))
+
+    expect(
+      screen.getByRole('button', { name: 'Rebase and merge' })
     ).toBeInTheDocument()
+    expect(screen.getByText('Replays 0 commits on top of main.')).toBeDefined()
+    expect(screen.queryByLabelText('Commit title')).not.toBeInTheDocument()
   })
 
-  it('shows conflict requirement when merge is blocked by dirty state', async () => {
-    const pullRequest = createMockPullRequest()
-    const store = createTestStore({
-      mergeOptions: {
-        'pr-1': {
-          ...mergeableOptions,
-          mergeable: false,
-          mergeableState: 'dirty',
-          requirements: [
-            {
-              description: 'This branch has conflicts that must be resolved.',
-              key: 'no-conflicts',
-              label: 'No merge conflicts',
-              satisfied: false
-            }
-          ]
-        }
-      }
-    })
+  it('squashes with the prefilled commit message and deletes the branch', async () => {
+    await renderDrawer()
 
-    await act(async () => {
-      renderWithProviders(
-        <MergeDrawer
-          onClose={vi.fn()}
-          open={true}
-          pullRequest={pullRequest}
-        />,
-        { store }
-      )
-    })
+    expect(screen.getByLabelText('Commit title')).toHaveValue('Test PR (#42)')
 
-    expect(screen.getByText('No merge conflicts')).toBeInTheDocument()
-
-    const conflictTexts = screen.getAllByText(
-      'This branch has conflicts that must be resolved.'
+    await userEvent.click(
+      screen.getByRole('button', { name: 'Squash and merge' })
     )
-
-    expect(conflictTexts.length).toBeGreaterThan(0)
-  })
-
-  it('calls mergePullRequest with selected method on merge', async () => {
-    mockMergePullRequest.mockResolvedValue(
-      createMockPullRequest({
-        state: 'MERGED',
-        mergedAt: '2024-01-02T00:00:00Z'
-      })
-    )
-
-    const onClose = vi.fn()
-    const pullRequest = createMockPullRequest()
-    const store = createTestStore({
-      mergeOptions: { 'pr-1': mergeableOptions }
-    })
-
-    await act(async () => {
-      renderWithProviders(
-        <MergeDrawer
-          onClose={onClose}
-          open={true}
-          pullRequest={pullRequest}
-        />,
-        { store }
-      )
-    })
-
-    const mergeButton = screen.getByRole('button', {
-      name: /squash and merge/i
-    })
-
-    // First click reveals the squash commit fields.
-    await userEvent.click(mergeButton)
-
-    expect(mockMergePullRequest).not.toHaveBeenCalled()
-    expect(screen.getByPlaceholderText('Commit title')).toBeInTheDocument()
-
-    // Second click fires the merge.
-    await userEvent.click(mergeButton)
 
     expect(mockMergePullRequest).toHaveBeenCalledWith({
       commitMessage: 'Test PR body',
       commitTitle: 'Test PR (#42)',
+      deleteBranch: true,
       mergeMethod: 'squash',
       owner: 'owner',
       pullNumber: 42,
       pullRequestId: 'pr-1',
       repo: 'repo'
     })
-
-    expect(onClose).toHaveBeenCalledTimes(1)
   })
 
-  it('shows requirements checklist with all items satisfied', async () => {
-    const pullRequest = createMockPullRequest()
-    const store = createTestStore({
-      mergeOptions: {
-        'pr-1': {
-          ...mergeableOptions,
-          requirements: [
-            {
-              description: 'No merge conflicts.',
-              key: 'no-conflicts',
-              label: 'No merge conflicts',
-              satisfied: true
-            },
-            {
-              description: 'Pull request is ready for review.',
-              key: 'not-draft',
-              label: 'Not a draft',
-              satisfied: true
-            }
-          ]
-        }
-      }
-    })
+  it('keeps the branch when "Delete branch after merge" is unticked', async () => {
+    await renderDrawer()
 
-    await act(async () => {
-      renderWithProviders(
-        <MergeDrawer
-          onClose={vi.fn()}
-          open={true}
-          pullRequest={pullRequest}
-        />,
-        { store }
-      )
-    })
-
-    expect(screen.getByText('Requirements')).toBeInTheDocument()
-    expect(screen.getByText('No merge conflicts')).toBeInTheDocument()
-    expect(screen.getByText('Not a draft')).toBeInTheDocument()
-  })
-
-  it('shows unsatisfied requirements with descriptions', async () => {
-    const pullRequest = createMockPullRequest()
-    const store = createTestStore({
-      mergeOptions: {
-        'pr-1': {
-          ...mergeableOptions,
-          mergeable: false,
-          mergeableState: 'blocked',
-          requirements: [
-            {
-              description: 'No merge conflicts.',
-              key: 'no-conflicts',
-              label: 'No merge conflicts',
-              satisfied: true
-            },
-            {
-              description: 'Waiting for required approving reviews.',
-              key: 'approving-reviews',
-              label: '2 approving reviews required',
-              satisfied: false
-            },
-            {
-              description: '3 unresolved conversations.',
-              key: 'conversations-resolved',
-              label: 'Conversations resolved',
-              satisfied: false
-            }
-          ]
-        }
-      }
-    })
-
-    await act(async () => {
-      renderWithProviders(
-        <MergeDrawer
-          onClose={vi.fn()}
-          open={true}
-          pullRequest={pullRequest}
-        />,
-        { store }
-      )
-    })
-
-    expect(screen.getByText('No merge conflicts')).toBeInTheDocument()
-    expect(screen.getByText('2 approving reviews required')).toBeInTheDocument()
-    expect(
-      screen.getByText('Waiting for required approving reviews.')
-    ).toBeInTheDocument()
-    expect(screen.getByText('Conversations resolved')).toBeInTheDocument()
-    expect(screen.getByText('3 unresolved conversations.')).toBeInTheDocument()
-  })
-
-  it('does not show requirements section when list is empty', async () => {
-    const pullRequest = createMockPullRequest()
-    const store = createTestStore({
-      mergeOptions: {
-        'pr-1': {
-          ...mergeableOptions,
-          requirements: []
-        }
-      }
-    })
-
-    await act(async () => {
-      renderWithProviders(
-        <MergeDrawer
-          onClose={vi.fn()}
-          open={true}
-          pullRequest={pullRequest}
-        />,
-        { store }
-      )
-    })
-
-    expect(screen.queryByText('Requirements')).not.toBeInTheDocument()
-  })
-
-  it('shows blocked summary from failing requirements', async () => {
-    const pullRequest = createMockPullRequest()
-    const store = createTestStore({
-      mergeOptions: {
-        'pr-1': {
-          ...mergeableOptions,
-          mergeable: false,
-          mergeableState: 'blocked',
-          requirements: [
-            {
-              description: 'Waiting for required approving reviews.',
-              key: 'approving-reviews',
-              label: '2 approving reviews required',
-              satisfied: false
-            }
-          ]
-        }
-      }
-    })
-
-    await act(async () => {
-      renderWithProviders(
-        <MergeDrawer
-          onClose={vi.fn()}
-          open={true}
-          pullRequest={pullRequest}
-        />,
-        { store }
-      )
-    })
-
-    // Description appears in both the checklist item and the blocked footer summary.
-    const descriptions = screen.getAllByText(
-      'Waiting for required approving reviews.'
+    await userEvent.click(screen.getByLabelText('Delete branch after merge'))
+    await userEvent.click(screen.getByRole('radio', { name: 'Merge' }))
+    await userEvent.click(
+      screen.getByRole('button', { name: 'Create a merge commit' })
     )
 
-    expect(descriptions).toHaveLength(2)
-    expect(screen.getByText('2 approving reviews required')).toBeInTheDocument()
+    expect(mockMergePullRequest).toHaveBeenCalledWith({
+      deleteBranch: false,
+      mergeMethod: 'merge',
+      owner: 'owner',
+      pullNumber: 42,
+      pullRequestId: 'pr-1',
+      repo: 'repo'
+    })
   })
 
-  it('shows loading state when merge options are being fetched', async () => {
-    const pullRequest = createMockPullRequest()
-    const store = createTestStore({
-      mergeOptions: { 'pr-1': null }
+  it('disables the merge when blocked and asks before bypassing the rules', async () => {
+    await renderDrawer({ mergeOptions: blockedOptions })
+
+    expect(
+      screen.getByRole('button', { name: 'Squash and merge' })
+    ).toBeDisabled()
+    expect(screen.getByText('Fix 1 item above to merge')).toBeInTheDocument()
+
+    await userEvent.click(screen.getByRole('button', { name: 'Bypass rules…' }))
+
+    expect(mockMergePullRequest).not.toHaveBeenCalled()
+
+    await userEvent.click(screen.getByRole('button', { name: 'Merge anyway' }))
+
+    expect(mockMergePullRequest).toHaveBeenCalledTimes(1)
+  })
+
+  it('offers no bypass while the branch has conflicts', async () => {
+    await renderDrawer({
+      mergeOptions: {
+        ...mergeableOptions,
+        mergeable: false,
+        mergeableState: 'dirty'
+      }
     })
 
-    await act(async () => {
-      renderWithProviders(
-        <MergeDrawer
-          onClose={vi.fn()}
-          open={true}
-          pullRequest={pullRequest}
-        />,
-        { store }
-      )
-    })
+    expect(
+      screen.queryByRole('button', { name: 'Bypass rules…' })
+    ).not.toBeInTheDocument()
+    expect(screen.getByText('Resolve merge conflicts')).toBeInTheDocument()
+  })
+
+  it('shows a loading state while merge options are fetched', async () => {
+    await renderDrawer({ mergeOptions: null })
 
     expect(screen.getByText('Loading merge options...')).toBeInTheDocument()
   })

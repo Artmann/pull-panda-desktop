@@ -149,7 +149,7 @@ describe('PullRequestFooterActions', () => {
       )
     })
 
-    const button = screen.getByText('Checking...').closest('button')
+    const button = screen.getByText('Merge…').closest('button')
 
     expect(button?.querySelector('.animate-spin')).toBeInTheDocument()
   })
@@ -176,10 +176,16 @@ describe('PullRequestFooterActions', () => {
       )
     })
 
-    await userEvent.click(screen.getByText('Ready to merge'))
+    await userEvent.click(screen.getByText('Merge…'))
 
     expect(store.getState().mergeDrawer).toEqual({
       openForPullRequestId: 'pr-1'
+    })
+
+    await userEvent.click(screen.getByText('Hide merge'))
+
+    expect(store.getState().mergeDrawer).toEqual({
+      openForPullRequestId: null
     })
   })
 
@@ -193,7 +199,7 @@ describe('PullRequestFooterActions', () => {
     })
 
     expect(screen.queryByText('Merge')).not.toBeInTheDocument()
-    expect(screen.queryByText('Ready to merge')).not.toBeInTheDocument()
+    expect(screen.queryByText('Merge…')).not.toBeInTheDocument()
   })
 
   it('swaps the merge button for the review submit actions while a review is open', async () => {

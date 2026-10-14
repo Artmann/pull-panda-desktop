@@ -17,7 +17,7 @@ export function RequirementExpansion({
 }: RequirementExpansionProps): ReactElement {
   return (
     <div className="flex flex-col gap-3">
-      <div className="text-sm leading-relaxed text-foreground/80">
+      <div className="text-xs leading-relaxed text-muted-foreground">
         {task.description}
       </div>
 

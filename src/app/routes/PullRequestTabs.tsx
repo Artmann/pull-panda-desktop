@@ -1,14 +1,10 @@
-import {
-  FileCodeIcon,
-  ListCheckIcon,
-  ListTodoIcon,
-  MessageSquareIcon
-} from 'lucide-react'
 import { useMemo, type ComponentType, type ReactElement } from 'react'
+import { shallowEqual } from 'react-redux'
 
 import {
-  checkRollupColors,
-  getCheckRollup
+  getCheckRollup,
+  getCheckTally,
+  getLatestChecks
 } from '@/app/components/check-rollup'
 import {
   Tabs,
@@ -18,6 +14,7 @@ import {
 } from '@/app/components/ui/tabs'
 import { cn } from '@/app/lib/utils'
 import { LandmarkScope } from '@/app/pull-requests/PullRequestNavigationProvider'
+import type { StatusTone } from '@/app/pull-requests/status-summary'
 import { useAppSelector } from '@/app/store/hooks'
 import type { PullRequest } from '@/types/pull-request'
 
@@ -25,96 +22,140 @@ import { ChecksView } from '../pull-requests/ChecksView'
 import { FilesView } from '../pull-requests/FilesView'
 import { Overview } from '../pull-requests/Overview'
 import { TasksTab } from '../pull-requests/tasks/TasksTab'
-import {
-  countOpenBlockers,
-  useDerivedTaskGroups
-} from '../pull-requests/tasks/use-derived-tasks'
+import { useDerivedTaskGroups } from '../pull-requests/tasks/use-derived-tasks'
+
+interface TabBadge {
+  label: string
+  tone: StatusTone
+}
 
 interface PullRequestTab {
+  badge?: TabBadge
   content: ComponentType<{ pullRequest: PullRequest }>
-  countColor?: string
-  icon: typeof MessageSquareIcon
   id: string
-  itemCount?: number
   label: string
   width?: 'wide'
 }
 
-function usePullRequestTabs(id: string | undefined): PullRequestTab[] {
-  const checksCount = useAppSelector(
-    (state) => state.checks.items.filter((c) => c.pullRequestId === id).length
-  )
-  // Selecting the rollup rather than the checks themselves keeps this a
-  // primitive, so the page does not re-render on every unrelated check write.
-  const checksRollup = useAppSelector((state) =>
-    getCheckRollup(state.checks.items.filter((c) => c.pullRequestId === id))
-  )
+const badgeClassNames: Record<StatusTone, string> = {
+  danger: 'bg-status-danger text-status-danger-foreground',
+  neutral: 'bg-muted text-muted-foreground',
+  success: 'bg-status-success text-status-success-foreground',
+  warning: 'bg-status-warning text-status-warning-foreground'
+}
+
+function useChecksBadge(id: string | undefined): TabBadge | undefined {
+  // Reduced inside the selector to two numbers and a word, so the page does
+  // not re-render on every unrelated check write.
+  const summary = useAppSelector((state) => {
+    const checks = getLatestChecks(
+      state.checks.items.filter((check) => check.pullRequestId === id)
+    )
+    const tally = getCheckTally(checks)
+
+    return {
+      failed: tally.failed,
+      rollup: getCheckRollup(checks),
+      total: tally.total
+    }
+  }, shallowEqual)
+
+  if (summary.total === 0) {
+    return
+  }
+
+  if (summary.rollup === 'failing') {
+    return { label: `${summary.failed.toString()} failing`, tone: 'danger' }
+  }
+
+  return {
+    label: summary.total.toString(),
+    tone: summary.rollup === 'running' ? 'warning' : 'success'
+  }
+}
+
+// Every task group always carries at least one row, so there is always a
+// badge to show.
+function useTasksBadge(pullRequest: PullRequest): TabBadge {
+  const taskGroups = useDerivedTaskGroups(pullRequest)
+
+  return useMemo((): TabBadge => {
+    const tasks = taskGroups.flatMap((group) => group.tasks)
+    const open = tasks.filter((task) => task.severity !== 'done')
+
+    if (open.length === 0) {
+      return {
+        label: `${tasks.length.toString()}/${tasks.length.toString()}`,
+        tone: 'success'
+      }
+    }
+
+    // Open work is a to-do list rather than an alarm; what is actually broken
+    // is already red in the status strip and the Checks badge.
+    return { label: `${open.length.toString()} open`, tone: 'warning' }
+  }, [taskGroups])
+}
+
+function usePullRequestTabs(
+  id: string | undefined,
+  pullRequest: PullRequest
+): PullRequestTab[] {
+  const checksBadge = useChecksBadge(id)
+  const tasksBadge = useTasksBadge(pullRequest)
   const filesCount = useAppSelector(
     (state) =>
       state.modifiedFiles.items.filter((f) => f.pullRequestId === id).length
-  )
-
-  const taskGroups = useDerivedTaskGroups(id ?? '')
-  const openBlockerCount = useMemo(
-    () => countOpenBlockers(taskGroups),
-    [taskGroups]
   )
 
   return useMemo(
     () => [
       {
         content: Overview,
-        icon: MessageSquareIcon,
         id: 'overview',
         label: 'Overview'
       },
       {
+        badge: tasksBadge,
         content: TasksTab,
-        icon: ListTodoIcon,
         id: 'tasks',
-        itemCount: openBlockerCount > 0 ? openBlockerCount : undefined,
         label: 'Tasks'
       },
       {
+        badge: checksBadge,
         content: ChecksView,
-        // A count is only worth colouring when it says pass or fail; at zero
-        // there is nothing to report, so the badge goes away entirely.
-        countColor: checkRollupColors[checksRollup],
-        icon: ListCheckIcon,
         id: 'checks',
-        itemCount: checksCount > 0 ? checksCount : undefined,
         label: 'Checks'
       },
       {
+        badge: { label: filesCount.toString(), tone: 'neutral' },
         content: FilesView,
-        icon: FileCodeIcon,
         id: 'files',
-        itemCount: filesCount,
         label: 'Files',
         // Diffs wrap badly at 78 characters and file paths are long.
         width: 'wide'
       }
     ],
-    [checksCount, checksRollup, filesCount, openBlockerCount]
+    [checksBadge, filesCount, tasksBadge]
   )
 }
 
 function PullRequestTabTrigger({ tab }: { tab: PullRequestTab }): ReactElement {
   return (
     <TabsTrigger
-      className="px-3 py-2 cursor-pointer text-xs flex items-center"
+      className="flex-none cursor-pointer gap-2 px-3 text-sm after:bg-transparent"
       value={tab.id}
     >
-      <tab.icon className="size-4" /> {tab.label}
-      {tab.itemCount !== undefined && (
-        <div
+      {tab.label}
+
+      {tab.badge && (
+        <span
           className={cn(
-            'text-2xs tabular-nums bg-muted rounded-sm text-center min-w-4 px-1.5 ml-1.5',
-            tab.countColor
+            'min-w-4 rounded-full px-1.5 text-center text-2xs tabular-nums',
+            badgeClassNames[tab.badge.tone]
           )}
         >
-          {tab.itemCount}
-        </div>
+          {tab.badge.label}
+        </span>
       )}
     </TabsTrigger>
   )
@@ -175,7 +216,8 @@ export function PullRequestTabs({
   onTabChange,
   pullRequest
 }: PullRequestTabsProps): ReactElement {
-  const tabs = usePullRequestTabs(id)
+  const tabs = usePullRequestTabs(id, pullRequest)
+  const isWide = tabs.find((tab) => tab.id === activeTab)?.width === 'wide'
 
   return (
     <Tabs
@@ -183,15 +225,24 @@ export function PullRequestTabs({
       value={activeTab}
       onValueChange={onTabChange}
     >
-      <div className="w-full shrink-0 px-6 bg-background">
-        <TabsList className="bg-transparent">
-          {tabs.map((tab) => (
-            <PullRequestTabTrigger
-              key={tab.id}
-              tab={tab}
-            />
-          ))}
-        </TabsList>
+      {/*
+        The tab bar stays pinned while the page scrolls under it. Its height
+        is the `sticky-header` spacing token, which pinned file card headers
+        use to sit flush below it.
+      */}
+      <div className="sticky top-0 z-20 mt-6 w-full shrink-0 bg-background">
+        <div className={cn('px-6', isWide ? 'max-w-wide' : 'max-w-content')}>
+          <div className="border-b border-border">
+            <TabsList className="-mb-px gap-1 bg-transparent">
+              {tabs.map((tab) => (
+                <PullRequestTabTrigger
+                  key={tab.id}
+                  tab={tab}
+                />
+              ))}
+            </TabsList>
+          </div>
+        </div>
       </div>
 
       <div className="flex-1">

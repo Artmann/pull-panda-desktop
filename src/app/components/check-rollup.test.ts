@@ -5,8 +5,8 @@ import type { Check } from '@/types/pull-request-details'
 import {
   getCheckRollup,
   getCheckRollupLabel,
-  getCheckRollupSummary,
-  getCheckTally
+  getCheckTally,
+  getLatestChecks
 } from './check-rollup'
 
 function buildCheck(overrides: Partial<Check> = {}): Check {
@@ -91,24 +91,20 @@ describe('getCheckRollupLabel', () => {
   })
 })
 
-describe('getCheckRollupSummary', () => {
-  it('counts each outcome in a fixed order', () => {
-    const checks = [
-      buildCheck({ id: 'a', conclusion: 'success' }),
-      buildCheck({ id: 'b', conclusion: 'failure' }),
-      buildCheck({ id: 'c', conclusion: 'skipped' }),
-      buildCheck({ id: 'd', conclusion: null, state: 'queued' })
-    ]
+describe('getLatestChecks', () => {
+  it('keeps only the most recently synced run of each check', () => {
+    const oldRun = buildCheck({
+      conclusion: 'failure',
+      id: 'old',
+      syncedAt: '2026-01-01T00:00:00.000Z'
+    })
+    const newRun = buildCheck({
+      id: 'new',
+      syncedAt: '2026-01-02T00:00:00.000Z'
+    })
+    const lint = buildCheck({ id: 'lint', name: 'lint' })
 
-    expect(getCheckRollupSummary(checks)).toEqual(
-      '1 running, 1 failed, 1 skipped, 1 successful'
-    )
-  })
-
-  it('falls back to a plain count when nothing matches', () => {
-    expect(
-      getCheckRollupSummary([buildCheck({ conclusion: 'cancelled' })])
-    ).toEqual('1 checks')
+    expect(getLatestChecks([oldRun, newRun, lint])).toEqual([newRun, lint])
   })
 })
 

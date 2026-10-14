@@ -31,13 +31,13 @@ describe('getMergeButtonLabel', () => {
     expect(getMergeButtonLabel(createMergeOptions())).toEqual('Checking...')
   })
 
-  it('reports "Ready to merge" when the pull request is mergeable', () => {
+  it('offers "Merge pull request" when the pull request is mergeable', () => {
     const options = createMergeOptions({
       mergeable: true,
       mergeableState: 'clean'
     })
 
-    expect(getMergeButtonLabel(options)).toEqual('Ready to merge')
+    expect(getMergeButtonLabel(options)).toEqual('Merge pull request')
   })
 
   it('reports "Has conflicts" for a dirty pull request', () => {

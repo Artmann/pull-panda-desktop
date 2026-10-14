@@ -1,16 +1,10 @@
-import {
-  BotIcon,
-  ChevronDownIcon,
-  ChevronRightIcon,
-  ListChecksIcon,
-  UsersIcon
-} from 'lucide-react'
-import { useMemo, useState, type ReactElement } from 'react'
+import type { ReactElement } from 'react'
 
 import type { PullRequest } from '@/types/pull-request'
 
+import { ReviewerBar } from '../ReviewerBar'
 import { TaskRow } from './TaskRow'
-import type { Task, TaskGroup, TaskGroupKey } from './task-types'
+import type { Task, TaskGroup } from './task-types'
 
 interface TasksGroupCardProps {
   group: TaskGroup
@@ -18,97 +12,48 @@ interface TasksGroupCardProps {
   visibleTasks: Task[]
 }
 
-const groupIcons: Record<TaskGroupKey, typeof ListChecksIcon> = {
-  agents: BotIcon,
-  ci: ListChecksIcon,
-  reviewers: UsersIcon
-}
-
 export function TasksGroupCard({
   group,
   pullRequest,
   visibleTasks
 }: TasksGroupCardProps): ReactElement {
-  const [isCollapsed, setIsCollapsed] = useState(false)
+  const doneCount = group.tasks.filter(
+    (task) => task.severity === 'done'
+  ).length
 
-  const counts = useMemo(() => {
-    const result = { blocker: 0, done: 0, warning: 0 }
-
-    for (const task of group.tasks) {
-      if (task.severity === 'blocker') {
-        result.blocker++
-      } else if (task.severity === 'warning') {
-        result.warning++
-      } else if (task.severity === 'done') {
-        result.done++
-      }
-    }
-
-    return result
-  }, [group.tasks])
-
-  const Icon = groupIcons[group.key]
+  // Who is reviewing, and the picker to add more, sit on the Reviews header.
+  // With nobody assigned, the "No review required" row carries the picker
+  // instead, so it is not shown twice.
+  const showReviewers =
+    group.key === 'reviews' &&
+    !group.tasks.some((task) => task.action?.type === 'assign-reviewers')
 
   return (
-    <div className="overflow-hidden rounded-lg border border-border bg-card">
-      <button
-        className="flex w-full cursor-pointer items-center gap-2.5 bg-muted/50 px-3.5 py-2.5 text-left"
-        onClick={() => {
-          setIsCollapsed((value) => !value)
-        }}
-        type="button"
-      >
-        <Icon className="size-3.5 text-muted-foreground" />
+    <section
+      aria-label={group.label}
+      className="flex flex-col"
+    >
+      <div className="flex min-h-7 items-center justify-between gap-3 px-0.5 pb-2 text-2xs font-semibold tracking-wider text-muted-foreground uppercase">
+        <h3>{group.label}</h3>
 
-        <span className="text-sm font-semibold tracking-tight">
-          {group.label}
-        </span>
+        <div className="flex items-center gap-3">
+          {showReviewers && <ReviewerBar pullRequest={pullRequest} />}
 
-        <div className="flex-1" />
-
-        <div className="flex items-center gap-3 text-xs tabular-nums">
-          {counts.blocker > 0 && (
-            <span className="inline-flex items-center gap-1.5 text-status-danger-foreground">
-              <span className="size-1.5 rounded-full bg-status-danger-foreground" />
-              {counts.blocker === 1
-                ? '1 blocker'
-                : `${counts.blocker.toString()} blockers`}
-            </span>
-          )}
-
-          {counts.warning > 0 && (
-            <span className="inline-flex items-center gap-1.5 text-status-warning-foreground">
-              <span className="size-1.5 rounded-full bg-status-warning-foreground" />
-              {counts.warning}
-            </span>
-          )}
-
-          <span className="text-muted-foreground">
-            {counts.done}/{group.tasks.length}
+          <span className="tabular-nums">
+            {doneCount}/{group.tasks.length}
           </span>
         </div>
+      </div>
 
-        <span className="text-muted-foreground">
-          {isCollapsed ? (
-            <ChevronRightIcon className="size-3.5" />
-          ) : (
-            <ChevronDownIcon className="size-3.5" />
-          )}
-        </span>
-      </button>
-
-      {!isCollapsed && (
-        <div>
-          {visibleTasks.map((task) => (
-            <TaskRow
-              key={task.id}
-              defaultOpen={task.severity === 'blocker'}
-              pullRequest={pullRequest}
-              task={task}
-            />
-          ))}
-        </div>
-      )}
-    </div>
+      <div className="rounded-lg border border-border bg-card">
+        {visibleTasks.map((task) => (
+          <TaskRow
+            key={task.id}
+            pullRequest={pullRequest}
+            task={task}
+          />
+        ))}
+      </div>
+    </section>
   )
 }

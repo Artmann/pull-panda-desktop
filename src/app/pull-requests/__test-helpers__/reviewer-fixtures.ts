@@ -2,6 +2,7 @@ import { configureStore } from '@reduxjs/toolkit'
 
 import type { MergeOptions } from '@/app/lib/api'
 import checksReducer from '@/app/store/checks-slice'
+import commitsReducer from '@/app/store/commits-slice'
 import mergeOptionsReducer from '@/app/store/merge-options-slice'
 import modifiedFilesReducer from '@/app/store/modified-files-slice'
 import pullRequestsReducer from '@/app/store/pull-requests-slice'
@@ -10,7 +11,12 @@ import recentReviewersReducer, {
 } from '@/app/store/recent-reviewers-slice'
 import reviewsReducer from '@/app/store/reviews-slice'
 import type { PullRequest } from '@/types/pull-request'
-import type { Check, ModifiedFile, Review } from '@/types/pull-request-details'
+import type {
+  Check,
+  Commit,
+  ModifiedFile,
+  Review
+} from '@/types/pull-request-details'
 
 const win = window as unknown as {
   electron?: { getApiPort: () => Promise<number | null> }
@@ -55,27 +61,6 @@ export const reviewerStoryPullRequest: PullRequest = {
   url: 'https://example.com'
 }
 
-export function buildCheck(overrides: Partial<Check> = {}): Check {
-  return {
-    commitSha: 'abc123',
-    conclusion: 'success',
-    detailsUrl: null,
-    durationInSeconds: 42,
-    gitHubCreatedAt: '2026-01-01T00:00:00Z',
-    gitHubId: 'gh-check',
-    gitHubUpdatedAt: '2026-01-01T00:01:00Z',
-    id: 'check-1',
-    message: null,
-    name: 'build',
-    pullRequestId: 'pr-1',
-    state: 'completed',
-    suiteName: 'CI',
-    syncedAt: '2026-01-01T00:00:00Z',
-    url: null,
-    ...overrides
-  }
-}
-
 export function buildModifiedFile(
   overrides: Partial<ModifiedFile> = {}
 ): ModifiedFile {
@@ -98,6 +83,7 @@ export function buildModifiedFile(
 
 export function buildReviewerStoryStore(args?: {
   checks?: Check[]
+  commits?: Commit[]
   mergeOptions?: MergeOptions | null
   modifiedFiles?: ModifiedFile[]
   pullRequest?: PullRequest
@@ -105,12 +91,14 @@ export function buildReviewerStoryStore(args?: {
   reviews?: Review[]
 }) {
   const defaultChecks: Check[] = []
+  const defaultCommits: Commit[] = []
   const defaultFiles: ModifiedFile[] = []
   const defaultMergeOptions: MergeOptions | null = null
   const defaultRecents: Record<string, RecentReviewer[]> = {}
   const defaultReviews: Review[] = []
   const options = {
     checks: defaultChecks,
+    commits: defaultCommits,
     mergeOptions: defaultMergeOptions,
     modifiedFiles: defaultFiles,
     pullRequest: reviewerStoryPullRequest,
@@ -127,6 +115,7 @@ export function buildReviewerStoryStore(args?: {
       }),
     preloadedState: {
       checks: { items: options.checks },
+      commits: { items: options.commits },
       mergeOptions: { [options.pullRequest.id]: options.mergeOptions },
       modifiedFiles: { items: options.modifiedFiles },
       pullRequests: { initialized: true, items: [options.pullRequest] },
@@ -135,6 +124,7 @@ export function buildReviewerStoryStore(args?: {
     },
     reducer: {
       checks: checksReducer,
+      commits: commitsReducer,
       mergeOptions: mergeOptionsReducer,
       modifiedFiles: modifiedFilesReducer,
       pullRequests: pullRequestsReducer,

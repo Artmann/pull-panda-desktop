@@ -73,7 +73,7 @@ export function FileCardHeader({
   const sentinelRef = useRef<HTMLDivElement | null>(null)
 
   // The header keeps the card's rounded top corners while at rest, but once
-  // it pins below the sticky pull-request header the transparent corner
+  // it pins below the pull request tab bar the transparent corner
   // notches would let the scrolling diff content peek through. Watch a
   // sentinel placed at the header's resting position and square the corners
   // while pinned.
@@ -96,7 +96,7 @@ export function FileCardHeader({
         // matches the sticky offset, and the huge bottom margin keeps
         // sentinels below the viewport "intersecting" so off-screen cards
         // are not treated as stuck.
-        rootMargin: '-76px 0px 100000px 0px'
+        rootMargin: '-41px 0px 100000px 0px'
       }
     )
 
@@ -118,8 +118,8 @@ export function FileCardHeader({
       />
       <header
         className={cn(
-          // The offset matches the height of the fixed StickyPullRequestHeader
-          // (the sticky-header spacing token) so the pinned header sits flush
+          // The offset matches the height of the pinned tab bar (the
+          // sticky-header spacing token) so the pinned header sits flush
           // against it with no seam.
           'flex items-center gap-2 pl-3 pr-4 py-1 border-border cursor-pointer sticky top-sticky-header z-10 bg-card',
           isStuck ? 'rounded-t-none' : 'rounded-t-md',

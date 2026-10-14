@@ -1,5 +1,5 @@
 import { ArrowLeft } from 'lucide-react'
-import { useRef, type ReactElement } from 'react'
+import { useCallback, useRef, type ReactElement } from 'react'
 import { Link, useParams, useSearchParams } from 'react-router'
 
 import { Button } from '@/app/components/ui/button'
@@ -8,16 +8,13 @@ import { useAppDispatch, useAppSelector } from '@/app/store/hooks'
 import { mergeDrawerActions } from '@/app/store/merge-drawer-slice'
 
 import { MergeDrawer } from '../pull-requests/MergeDrawer'
-import {
-  PullRequestHeader,
-  StickyPullRequestHeader
-} from '../pull-requests/PullRequestHeader'
+import { PullRequestHeader } from '../pull-requests/PullRequestHeader'
 import { ReviewDrawer } from '../pull-requests/ReviewDrawer'
 import { getActiveTab } from './pull-request-tab'
 import { PullRequestTabs } from './PullRequestTabs'
 import {
-  useScrollRestoration,
-  useStickyHeaderProgress
+  useScrollContainerRegistration,
+  useScrollRestoration
 } from './use-pull-request-scroll'
 import {
   useMergeOptionsPolling,
@@ -71,17 +68,20 @@ export function PullRequestPage(): ReactElement {
   usePendingReviewHydration(pullRequest)
   useMergeOptionsPolling(pullRequest, isMergeDrawerOpen)
 
-  const stickyHeaderProgress = useStickyHeaderProgress(containerRef, navigation)
+  useScrollContainerRegistration(containerRef, navigation)
 
   useScrollRestoration(containerRef, navigation, id, activeTab)
 
-  const handleTabChange = (tabId: string) => {
-    if (!id) {
-      return
-    }
+  const handleTabChange = useCallback(
+    (tabId: string) => {
+      if (!id) {
+        return
+      }
 
-    navigation.setActiveTab(id, tabId)
-  }
+      navigation.setActiveTab(id, tabId)
+    },
+    [id, navigation]
+  )
 
   if (!pullRequest) {
     return <PullRequestNotFound />
@@ -92,14 +92,15 @@ export function PullRequestPage(): ReactElement {
       className="w-full max-w-wide mx-auto"
       ref={containerRef}
     >
-      <StickyPullRequestHeader
+      <PullRequestHeader
+        onSelectTab={handleTabChange}
         pullRequest={pullRequest}
-        transitionProgress={stickyHeaderProgress}
       />
 
-      <PullRequestHeader pullRequest={pullRequest} />
-
+      {/* Keyed so an edited commit message never follows you to the next
+          pull request. */}
       <MergeDrawer
+        key={pullRequest.id}
         onClose={() => dispatch(mergeDrawerActions.close())}
         open={isMergeDrawerOpen}
         pullRequest={pullRequest}

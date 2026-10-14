@@ -8,6 +8,7 @@ import {
 import { Fragment, type ReactElement, type ReactNode } from 'react'
 
 import type { MergeOptions } from '@/app/lib/api'
+import { cn } from '@/app/lib/utils'
 import { Button } from '@/app/components/ui/button'
 import {
   DropdownMenu,
@@ -65,6 +66,10 @@ export function PullRequestFooterActions({
 
   const mergeOptions = useAppSelector(
     (state) => state.mergeOptions[pullRequest.id] ?? null
+  )
+
+  const isMergeDrawerOpen = useAppSelector(
+    (state) => state.mergeDrawer.openForPullRequestId === pullRequest.id
   )
 
   const canMerge = pullRequest.state === 'OPEN'
@@ -131,8 +136,13 @@ export function PullRequestFooterActions({
 
       {!review.hasPendingReview && canMerge && (
         <MergeButton
+          isDrawerOpen={isMergeDrawerOpen}
           mergeOptions={mergeOptions}
-          onOpenMergeDrawer={openMergeDrawer}
+          onToggleMergeDrawer={
+            isMergeDrawerOpen
+              ? () => dispatch(mergeDrawerActions.close())
+              : openMergeDrawer
+          }
         />
       )}
     </div>
@@ -308,42 +318,60 @@ function ReviewSubmitActions({
 }
 
 interface MergeButtonProps {
+  isDrawerOpen: boolean
   mergeOptions: MergeOptions | null
-  onOpenMergeDrawer: () => void
+  onToggleMergeDrawer: () => void
 }
 
+// Opens and closes the merge drawer. Whether the merge can go through is said
+// by the status strip and inside the drawer, so the button only carries it as
+// emphasis: filled when ready, outlined otherwise.
 function MergeButton({
+  isDrawerOpen,
   mergeOptions,
-  onOpenMergeDrawer
+  onToggleMergeDrawer
 }: MergeButtonProps): ReactElement {
+  const isChecking = mergeOptions?.mergeable === null
+  const isFilled = !isDrawerOpen && isReadyToMerge(mergeOptions)
+  const Icon = isChecking ? Loader2 : GitMergeIcon
+
   const button = (
     <Button
-      onClick={onOpenMergeDrawer}
+      onClick={onToggleMergeDrawer}
       size="xs"
-      variant={isReadyToMerge(mergeOptions) ? 'default' : 'outline'}
+      variant={isFilled ? 'default' : 'outline'}
     >
-      {mergeOptions?.mergeable === null ? (
-        <Loader2 className="size-3 animate-spin" />
-      ) : (
-        <GitMergeIcon className="size-3" />
-      )}
-      {getMergeButtonLabel(mergeOptions)}
+      <Icon className={cn('size-3', isChecking && 'animate-spin')} />
+      {isDrawerOpen ? 'Hide merge' : 'Merge…'}
     </Button>
   )
 
+  // The tooltip says what is in the way, which the open drawer already shows.
+  if (isDrawerOpen) {
+    return button
+  }
+
+  return <BlockersTooltip mergeOptions={mergeOptions}>{button}</BlockersTooltip>
+}
+
+function BlockersTooltip({
+  children,
+  mergeOptions
+}: {
+  children: ReactElement
+  mergeOptions: MergeOptions | null
+}): ReactElement {
   const blockers = (mergeOptions?.requirements ?? []).filter(
     (requirement) => !requirement.satisfied
   )
 
-  // The label already says *that* the merge is blocked; the tooltip is where
-  // it says what by, so there is nothing to add when nothing blocks it.
   if (blockers.length === 0) {
-    return button
+    return children
   }
 
   return (
     <Tooltip>
-      <TooltipTrigger asChild>{button}</TooltipTrigger>
+      <TooltipTrigger asChild>{children}</TooltipTrigger>
 
       <TooltipContent className="max-w-64">
         <ul className="space-y-1">

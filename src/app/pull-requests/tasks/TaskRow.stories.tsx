@@ -54,14 +54,18 @@ export const FailedCheck: Story = {
   args: {
     pullRequest: mockPullRequest,
     task: {
-      action: { label: 'View details', url: 'https://example.com/checks/1' },
+      action: {
+        label: 'View logs',
+        type: 'open-url',
+        url: 'https://example.com/checks/1'
+      },
       detailsUrl: 'https://example.com/checks/1',
       id: 'check-1',
       kind: 'check',
       message: 'AssertionError: expected 200, got 500',
-      meta: 'CI · Failed',
+      meta: 'AssertionError: expected 200, got 500',
       severity: 'blocker',
-      title: 'test:e2e failed on commit a91f2c4'
+      title: 'test:e2e is failing'
     }
   }
 }
@@ -75,7 +79,7 @@ export const PendingCheck: Story = {
       meta: 'CI · running',
       severity: 'info',
       status: 'running',
-      title: 'preview-deploy still running'
+      title: 'preview-deploy is still running'
     }
   }
 }
@@ -103,11 +107,11 @@ export const ChangesRequested: Story = {
       authorLogin: 'alice',
       id: 'review-state-1',
       kind: 'review-state',
-      meta: 'Required reviewer · changes requested',
+      meta: 'Address the feedback, then re-request a review',
       severity: 'blocker',
       summary:
         'Address the requested changes and re-request review to clear the changes-requested state.',
-      title: 'alice requested changes'
+      title: 'Changes requested by alice'
     }
   }
 }
@@ -120,7 +124,35 @@ export const ApprovedSummary: Story = {
       kind: 'simple',
       meta: 'Latest reviews',
       severity: 'done',
-      title: '2 reviewers approved'
+      title: 'Approved by alice and bob'
+    }
+  }
+}
+
+export const BehindBaseBranch: Story = {
+  args: {
+    pullRequest: mockPullRequest,
+    task: {
+      description:
+        'main has moved on since this branch was created. Update the branch to bring in the latest changes.',
+      id: 'requirement-behind',
+      kind: 'requirement',
+      meta: 'Update the branch before merging',
+      severity: 'warning',
+      title: 'Behind main'
+    }
+  }
+}
+
+export const OpenThread: Story = {
+  args: {
+    pullRequest: mockPullRequest,
+    task: {
+      id: 'thread-1',
+      kind: 'simple',
+      meta: 'src/engine/checkField.ts:142 · mira',
+      severity: 'info',
+      title: 'maxSize error copy says "total size"'
     }
   }
 }

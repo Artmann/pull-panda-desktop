@@ -2,7 +2,7 @@ import type { Comment, ReviewThread } from '@/types/pull-request-details'
 
 export type Severity = 'blocker' | 'warning' | 'info' | 'done'
 
-export type TaskGroupKey = 'ci' | 'reviewers' | 'agents'
+export type TaskGroupKey = 'checks' | 'reviews' | 'conversations' | 'branch'
 
 type TaskKind = 'check' | 'requirement' | 'review-state' | 'thread' | 'simple'
 
@@ -14,14 +14,23 @@ interface BaseTask {
   kind: TaskKind
   meta?: string
   severity: Severity
-  status?: 'running'
+  /**
+   * How the row reads, when severity alone would mislead: `running` for work
+   * in progress, `pending` for a blocker that is waiting to happen rather than
+   * something that went wrong, such as an approval nobody has given yet.
+   */
+  status?: 'pending' | 'running'
   title: string
 }
 
-interface TaskAction {
-  label: string
-  url?: string | null
-}
+/**
+ * The button on the right of a row. Most open a page on GitHub; picking
+ * reviewers and resolving a thread happen in place.
+ */
+export type TaskAction =
+  | { label: string; type: 'open-url'; url: string }
+  | { type: 'assign-reviewers' }
+  | { type: 'resolve-thread' }
 
 export interface CheckTask extends BaseTask {
   detailsUrl: string | null

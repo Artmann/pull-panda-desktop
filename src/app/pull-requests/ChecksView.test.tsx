@@ -87,7 +87,7 @@ describe('ChecksView', () => {
     expect(screen.getByText('deploy')).toBeInTheDocument()
   })
 
-  it('shows Success badge for successful suite', async () => {
+  it('shows All passed for a successful suite', async () => {
     const pullRequest = createChecksViewPullRequest()
     const check = createMockCheck({
       conclusion: 'success'
@@ -100,10 +100,10 @@ describe('ChecksView', () => {
       renderWithProviders(<ChecksView pullRequest={pullRequest} />, store)
     })
 
-    expect(screen.getByText('Success')).toBeInTheDocument()
+    expect(screen.getByText('All passed')).toBeInTheDocument()
   })
 
-  it('shows Failed badge for failed suite', async () => {
+  it('shows Failing for a failed suite', async () => {
     const pullRequest = createChecksViewPullRequest()
     const check = createMockCheck({
       conclusion: 'failure'
@@ -116,10 +116,10 @@ describe('ChecksView', () => {
       renderWithProviders(<ChecksView pullRequest={pullRequest} />, store)
     })
 
-    expect(screen.getByText('Failed')).toBeInTheDocument()
+    expect(screen.getByText('Failing')).toBeInTheDocument()
   })
 
-  it('shows Running badge for in-progress suite', async () => {
+  it('shows In progress for a running suite', async () => {
     const pullRequest = createChecksViewPullRequest()
     const check = createMockCheck({
       state: 'in_progress',
@@ -133,7 +133,7 @@ describe('ChecksView', () => {
       renderWithProviders(<ChecksView pullRequest={pullRequest} />, store)
     })
 
-    expect(screen.getByText('Running')).toBeInTheDocument()
+    expect(screen.getByText('In progress')).toBeInTheDocument()
   })
 
   it('shows Cancelled badge for cancelled suite', async () => {
@@ -179,7 +179,7 @@ describe('ChecksView', () => {
     expect(screen.queryByText('Old build')).not.toBeInTheDocument()
   })
 
-  it('renders external link for check with detailsUrl', async () => {
+  it('links to the logs for a check with detailsUrl', async () => {
     const pullRequest = createChecksViewPullRequest()
     const check = createMockCheck({
       detailsUrl: 'https://github.com/owner/repo/actions/runs/123'
@@ -192,7 +192,7 @@ describe('ChecksView', () => {
       renderWithProviders(<ChecksView pullRequest={pullRequest} />, store)
     })
 
-    const button = screen.getByTitle('Open on GitHub')
+    const button = screen.getByRole('button', { name: 'Logs' })
 
     expect(button).toBeInTheDocument()
   })

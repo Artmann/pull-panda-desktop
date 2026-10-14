@@ -26,6 +26,7 @@ const meta = {
         'sm',
         'lg',
         'xs',
+        '2xs',
         'icon',
         'icon-sm',
         'icon-lg',
@@ -61,7 +62,7 @@ const variants = [
   'link'
 ] as const
 
-const sizes = ['xs', 'sm', 'default', 'lg'] as const
+const sizes = ['2xs', 'xs', 'sm', 'default', 'lg'] as const
 
 export const AllVariants: Story = {
   render: () => (

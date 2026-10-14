@@ -274,12 +274,12 @@ function formatCommentAsPrompt(comment: Comment): string {
 }
 
 interface ResolveThreadButtonProps {
-  appearance?: 'default' | 'quiet' | 'icon'
+  appearance?: 'compact' | 'default' | 'quiet' | 'icon' | 'mini'
   pullRequest: PullRequest
   thread: ReviewThread
 }
 
-const ResolveThreadButton = memo(function ResolveThreadButton({
+export const ResolveThreadButton = memo(function ResolveThreadButton({
   appearance = 'default',
   pullRequest,
   thread
@@ -364,16 +364,27 @@ interface ResolveButtonDisplay {
   ariaLabel: string | undefined
   label: string
   showLabel: boolean
-  size: 'icon-sm' | 'sm'
+  size: '2xs' | 'icon-sm' | 'sm' | 'xs'
   title: string | undefined
   variant: 'ghost' | 'outline'
 }
 
 function resolveButtonDisplay(
-  appearance: 'default' | 'quiet' | 'icon',
+  appearance: 'compact' | 'default' | 'quiet' | 'icon' | 'mini',
   isResolved: boolean
 ): ResolveButtonDisplay {
   const label = isResolved ? 'Unresolve' : 'Resolve'
+
+  if (appearance === 'compact' || appearance === 'mini') {
+    return {
+      ariaLabel: undefined,
+      label,
+      showLabel: true,
+      size: appearance === 'mini' ? '2xs' : 'xs',
+      title: undefined,
+      variant: 'outline'
+    }
+  }
 
   if (appearance === 'icon') {
     return {
