@@ -10,6 +10,14 @@ describe('markdownToPlainText', () => {
       )
     ).toEqual('Final Result: see the agent now')
   })
+
+  it('reads escaped punctuation as the character itself', () => {
+    expect(
+      markdownToPlainText(
+        '**warn** `fallow/css-token-drift`: \\[css-token-drift\\] border-\\[1.5px\\]'
+      )
+    ).toEqual('warn fallow/css-token-drift: [css-token-drift] border-[1.5px]')
+  })
 })
 
 describe('firstPlainLine', () => {
@@ -20,9 +28,6 @@ describe('firstPlainLine', () => {
   })
 
   it('returns null when there is nothing to show', () => {
-    expect([firstPlainLine(null), firstPlainLine('  \n')]).toEqual([
-      null,
-      null
-    ])
+    expect([firstPlainLine(null), firstPlainLine('  \n')]).toEqual([null, null])
   })
 })

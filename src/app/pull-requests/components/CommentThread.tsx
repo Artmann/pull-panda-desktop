@@ -274,7 +274,7 @@ function formatCommentAsPrompt(comment: Comment): string {
 }
 
 interface ResolveThreadButtonProps {
-  appearance?: 'compact' | 'default' | 'quiet' | 'icon'
+  appearance?: 'compact' | 'default' | 'quiet' | 'icon' | 'mini'
   pullRequest: PullRequest
   thread: ReviewThread
 }
@@ -364,23 +364,23 @@ interface ResolveButtonDisplay {
   ariaLabel: string | undefined
   label: string
   showLabel: boolean
-  size: 'icon-sm' | 'sm' | 'xs'
+  size: '2xs' | 'icon-sm' | 'sm' | 'xs'
   title: string | undefined
   variant: 'ghost' | 'outline'
 }
 
 function resolveButtonDisplay(
-  appearance: 'compact' | 'default' | 'quiet' | 'icon',
+  appearance: 'compact' | 'default' | 'quiet' | 'icon' | 'mini',
   isResolved: boolean
 ): ResolveButtonDisplay {
   const label = isResolved ? 'Unresolve' : 'Resolve'
 
-  if (appearance === 'compact') {
+  if (appearance === 'compact' || appearance === 'mini') {
     return {
       ariaLabel: undefined,
       label,
       showLabel: true,
-      size: 'xs',
+      size: appearance === 'mini' ? '2xs' : 'xs',
       title: undefined,
       variant: 'outline'
     }

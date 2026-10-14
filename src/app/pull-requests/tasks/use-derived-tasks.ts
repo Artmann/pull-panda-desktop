@@ -291,8 +291,7 @@ function buildApprovalRequiredTasks({
 }): Task[] {
   const meta = `Required by branch protection on ${baseName}`
   const requirement = mergeOptions?.requirements.find(
-    (candidate) =>
-      candidate.key === 'approving-reviews' && !candidate.satisfied
+    (candidate) => candidate.key === 'approving-reviews' && !candidate.satisfied
   )
 
   // GitHub's description says what the rule is waiting for, which is the one
@@ -400,7 +399,9 @@ function describeCommentCount(comments: Comment[]): string {
   ).length
 
   if (botCount === topLevel.length) {
-    return botCount === 1 ? '1 bot comment' : `${botCount.toString()} bot comments`
+    return botCount === 1
+      ? '1 bot comment'
+      : `${botCount.toString()} bot comments`
   }
 
   return topLevel.length === 1
@@ -476,7 +477,10 @@ function buildBranchGroup({
   const isBehind = mergeOptions.mergeableState === 'behind'
   const isDirty = mergeOptions.mergeableState === 'dirty'
 
-  if (isDirty && !tasks.some((task) => task.id === 'requirement-no-conflicts')) {
+  if (
+    isDirty &&
+    !tasks.some((task) => task.id === 'requirement-no-conflicts')
+  ) {
     tasks.push({
       description:
         'This branch has conflicts with the base branch that must be resolved before it can be merged.',
@@ -547,16 +551,17 @@ function findThreadAnchor(
   )
 }
 
+// Comments are markdown, and bots in particular lead with bold and code
+// spans, so the title is the first line as it reads, not as it is written.
 function buildThreadTitle(comment: Comment): string {
-  const body = (comment.body ?? '').trim().replace(/\s+/g, ' ')
+  const line = firstPlainLine(comment.body)
 
-  if (!body) {
+  if (!line) {
     return `${comment.userLogin ?? 'Reviewer'} left a comment`
   }
 
-  return body.length > 96 ? `${body.slice(0, 96)}…` : body
+  return line.length > 96 ? `${line.slice(0, 96)}…` : line
 }
-
 
 function formatList(names: string[]): string {
   if (names.length <= 2) {

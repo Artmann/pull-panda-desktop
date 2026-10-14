@@ -31,6 +31,8 @@ import { useReviewerSuggestionsLoader } from './use-reviewer-suggestions-loader'
 type ReviewerPickerVariant = 'button' | 'compact' | 'cta'
 
 interface ReviewerPickerProps {
+  /** Size of the `button` variant's trigger. */
+  buttonSize?: '2xs' | 'xs'
   pullRequest: PullRequest
   variant?: ReviewerPickerVariant
 }
@@ -50,6 +52,7 @@ const sectionOrder: ReviewerSection[] = [
 ]
 
 export const ReviewerPicker = memo(function ReviewerPicker({
+  buttonSize = 'xs',
   pullRequest,
   variant = 'compact'
 }: ReviewerPickerProps): ReactElement {
@@ -90,6 +93,7 @@ export const ReviewerPicker = memo(function ReviewerPicker({
       ref={containerRef}
     >
       <ReviewerPickerTrigger
+        buttonSize={buttonSize}
         onClick={toggleOpen}
         variant={variant}
       />
@@ -109,11 +113,13 @@ export const ReviewerPicker = memo(function ReviewerPicker({
 })
 
 interface ReviewerPickerTriggerProps {
+  buttonSize: '2xs' | 'xs'
   onClick: () => void
   variant: ReviewerPickerVariant
 }
 
 function ReviewerPickerTrigger({
+  buttonSize,
   onClick,
   variant
 }: ReviewerPickerTriggerProps): ReactElement {
@@ -121,7 +127,7 @@ function ReviewerPickerTrigger({
     return (
       <Button
         onClick={onClick}
-        size="xs"
+        size={buttonSize}
         variant="outline"
       >
         Assign reviewers

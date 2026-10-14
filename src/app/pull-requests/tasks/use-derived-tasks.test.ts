@@ -100,31 +100,29 @@ describe('buildTaskGroups', () => {
         name: 'Build'
       })
 
-      expect(tasksIn(build({ checks: [failing, passing] }), 'checks')).toEqual(
-        [
-          {
-            action: {
-              label: 'View logs',
-              type: 'open-url',
-              url: 'https://example.com/checks/1'
-            },
-            detailsUrl: 'https://example.com/checks/1',
-            id: 'check-check-1',
-            kind: 'check',
-            message: '2 failing in engine/file.test.ts\nmore output',
-            meta: '2 failing in engine/file.test.ts',
-            severity: 'blocker',
-            title: 'Test is failing'
+      expect(tasksIn(build({ checks: [failing, passing] }), 'checks')).toEqual([
+        {
+          action: {
+            label: 'View logs',
+            type: 'open-url',
+            url: 'https://example.com/checks/1'
           },
-          {
-            id: 'check-summary-passed',
-            kind: 'simple',
-            meta: 'Build',
-            severity: 'done',
-            title: '1 other check passed'
-          }
-        ]
-      )
+          detailsUrl: 'https://example.com/checks/1',
+          id: 'check-check-1',
+          kind: 'check',
+          message: '2 failing in engine/file.test.ts\nmore output',
+          meta: '2 failing in engine/file.test.ts',
+          severity: 'blocker',
+          title: 'Test is failing'
+        },
+        {
+          id: 'check-summary-passed',
+          kind: 'simple',
+          meta: 'Build',
+          severity: 'done',
+          title: '1 other check passed'
+        }
+      ])
     })
 
     it('falls back to the suite and conclusion when a failing check says nothing', () => {
@@ -345,6 +343,22 @@ describe('buildTaskGroups', () => {
       ])
     })
 
+    it('titles a thread with the first line of its comment as plain text', () => {
+      const anchor = createCommentFixture({
+        body: '**warn** `fallow/css-token-drift`: \\[css-token-drift\\] border\n\n<!-- fallow-fingerprint -->',
+        userLogin: 'github-actions[bot]'
+      })
+
+      const tasks = tasksIn(
+        build({ comments: [anchor], reviewThreads: [createThread()] }),
+        'conversations'
+      )
+
+      expect(tasks?.map((task) => task.title)).toEqual([
+        'warn fallow/css-token-drift: [css-token-drift] border'
+      ])
+    })
+
     it('makes human threads blockers once changes are requested', () => {
       const anchor = createCommentFixture({ userLogin: 'bob' })
       const review = createReviewFixture({
@@ -452,7 +466,10 @@ describe('buildTaskGroups', () => {
 
       expect(
         tasksIn(build({ mergeOptions }), 'branch')?.map((task) => task.title)
-      ).toEqual(['Mark pull request as ready for review', 'No conflicts with main'])
+      ).toEqual([
+        'Mark pull request as ready for review',
+        'No conflicts with main'
+      ])
     })
 
     it('says it is still checking before GitHub reports the merge state', () => {

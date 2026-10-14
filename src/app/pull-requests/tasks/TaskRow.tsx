@@ -285,15 +285,19 @@ export const statusLabels: Record<StatusCircleState, string> = {
 export function TaskActionButton({
   action,
   pullRequest,
+  size = 'xs',
   task
 }: {
   action: TaskAction
   pullRequest: PullRequest
+  /** `2xs` for the tighter rows of the merge drawer. */
+  size?: '2xs' | 'xs'
   task: Task
 }): ReactElement | null {
   if (action.type === 'assign-reviewers') {
     return (
       <ReviewerPicker
+        buttonSize={size}
         pullRequest={pullRequest}
         variant="button"
       />
@@ -312,7 +316,7 @@ export function TaskActionButton({
         }}
       >
         <ResolveThreadButton
-          appearance="compact"
+          appearance={size === '2xs' ? 'mini' : 'compact'}
           pullRequest={pullRequest}
           thread={task.thread}
         />
@@ -326,7 +330,7 @@ export function TaskActionButton({
         event.stopPropagation()
         window.electron.openUrl(action.url)
       }}
-      size="xs"
+      size={size}
       variant="outline"
     >
       {action.label}

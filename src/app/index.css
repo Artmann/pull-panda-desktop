@@ -494,14 +494,8 @@ body {
     margin-bottom: 0.375rem;
   }
 
-  :not(pre) > code {
-    border-radius: var(--radius-xs);
-    background-color: var(--muted);
-    padding: 0.0625rem 0.3125rem;
-    font-size: 0.86em;
-  }
-
-  /* Code block styling */
+  /* Code block styling. Inline code chips come from the shared
+   * `.markdown-block` rule. */
   pre {
     background-color: var(--card);
     border: 1px solid var(--border);
@@ -510,10 +504,6 @@ body {
     overflow-x: auto;
     font-size: 12.5px;
     line-height: 1.6;
-  }
-
-  pre code {
-    font-size: inherit;
   }
 
   /* Links */
@@ -542,8 +532,8 @@ body {
   }
 
   /* Tables sit in a rounded card. `separate` borders are what let the
-   * corners round; each cell draws only its top and left edge so the lines
-   * between cells stay one pixel wide. */
+   * corners round; only body cells draw a top edge, so the lines between
+   * rows stay one pixel wide and the card's own border frames the header. */
   table {
     width: 100%;
     border-collapse: separate;
@@ -556,14 +546,13 @@ body {
   th,
   td {
     border: 0;
-    border-top: 1px solid var(--border);
     padding: 0.5625rem 0.875rem;
     text-align: left;
     vertical-align: top;
   }
 
-  thead th {
-    border-top: 0;
+  td {
+    border-top: 1px solid var(--border);
   }
 
   th {

@@ -28,7 +28,7 @@ export const StatusCircle = memo(function StatusCircle({
     <span
       aria-label={label}
       className={cn(
-        'flex size-4.5 shrink-0 items-center justify-center rounded-full border-[1.5px]',
+        'flex size-4.5 shrink-0 items-center justify-center rounded-full border-2',
         stateClassNames[state],
         className
       )}

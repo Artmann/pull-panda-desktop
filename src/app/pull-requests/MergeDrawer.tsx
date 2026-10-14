@@ -547,6 +547,7 @@ function MergeChecklistGroup({
                 <TaskActionButton
                   action={task.action}
                   pullRequest={pullRequest}
+                  size="2xs"
                   task={task}
                 />
               )}
