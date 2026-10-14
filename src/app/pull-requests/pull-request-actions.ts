@@ -3,6 +3,7 @@ import { toast } from 'sonner'
 import {
   getMergeOptions,
   updatePullRequest,
+  updatePullRequestHidden,
   type MergeOptions
 } from '@/app/lib/api'
 import { runOptimisticMutation } from '@/app/lib/mutations/run-optimistic-mutation'
@@ -145,6 +146,53 @@ export function togglePullRequestDraft({
       }
     },
     errorMessage: 'Failed to update draft status'
+  })
+}
+
+interface SetHiddenParameters extends PullRequestActionParameters {
+  hidden: boolean
+}
+
+// Hiding only takes the pull request out of the sidebar's default list. It is
+// still found by search and listed in the Hidden view.
+export function setPullRequestHidden({
+  dispatch,
+  hidden,
+  pullRequest
+}: SetHiddenParameters): void {
+  const originalPullRequest = pullRequest
+
+  runOptimisticMutation({
+    optimistic: () =>
+      dispatch(
+        pullRequestsActions.upsertItem({
+          ...pullRequest,
+          hiddenAt: hidden ? new Date().toISOString() : null
+        })
+      ),
+    request: () => updatePullRequestHidden(pullRequest.id, hidden),
+    commit: (updated) => {
+      dispatch(pullRequestsActions.upsertItem(updated))
+
+      if (hidden) {
+        toast.success('Pull request hidden.', {
+          action: {
+            label: 'Undo',
+            onClick: () =>
+              setPullRequestHidden({
+                dispatch,
+                hidden: false,
+                pullRequest: updated
+              })
+          }
+        })
+      }
+    },
+    rollback: () =>
+      dispatch(pullRequestsActions.upsertItem(originalPullRequest)),
+    errorMessage: hidden
+      ? 'Could not hide the pull request.'
+      : 'Could not unhide the pull request.'
   })
 }
 

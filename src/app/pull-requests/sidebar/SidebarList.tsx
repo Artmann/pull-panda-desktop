@@ -5,8 +5,9 @@ import { maximumJumpShortcuts } from '@/app/commands/sidebar-accessor'
 import { cn } from '@/app/lib/utils'
 
 import { PullRequestSidebarRow } from './PullRequestSidebarRow'
-import { countLabel, type SidebarRow, type SortId } from './sidebar-data'
+import type { SidebarRow, SidebarView, SortId } from './sidebar-data'
 import { SidebarSortMenu } from './SidebarSortMenu'
+import { SidebarViewSwitch } from './SidebarViewSwitch'
 import { useModifierHeld } from './use-modifier-held'
 
 // Two lines of text plus padding, and the 4px gap below each row. Rows are a
@@ -21,23 +22,29 @@ interface SidebarListProps {
   /** Rows on their way out of the list — see `use-departing-rows`. */
   departingIds: ReadonlySet<string>
   hasFilters: boolean
+  hiddenCount: number
   onClearFilters: () => void
   onSelect: (pullRequestId: string) => void
   onSortChange: (sort: SortId) => void
+  onViewChange: (view: SidebarView) => void
   rows: readonly SidebarRow[]
   selectedId: string | undefined
   sort: SortId
+  view: SidebarView
 }
 
 export function SidebarList({
   departingIds,
   hasFilters,
+  hiddenCount,
   onClearFilters,
   onSelect,
   onSortChange,
+  onViewChange,
   rows,
   selectedId,
-  sort
+  sort,
+  view
 }: SidebarListProps): ReactElement {
   const scrollRef = useRef<HTMLDivElement | null>(null)
 
@@ -76,9 +83,12 @@ export function SidebarList({
   return (
     <>
       <div className="text-muted-foreground flex shrink-0 items-center justify-between gap-2 px-3 pt-2.5 pb-3 text-2xs font-semibold tracking-wider uppercase">
-        <span className="shrink-0 whitespace-nowrap">
-          {countLabel(rows.length)}
-        </span>
+        <SidebarViewSwitch
+          count={rows.length}
+          hiddenCount={hiddenCount}
+          onViewChange={onViewChange}
+          view={view}
+        />
 
         <SidebarSortMenu
           onSortChange={onSortChange}
@@ -94,6 +104,7 @@ export function SidebarList({
           <SidebarEmptyState
             hasFilters={hasFilters}
             onClearFilters={onClearFilters}
+            view={view}
           />
         ) : (
           <div
@@ -142,16 +153,26 @@ export function SidebarList({
   )
 }
 
+function emptyMessage(hasFilters: boolean, view: SidebarView): string {
+  if (hasFilters) {
+    return 'No pull requests match'
+  }
+
+  return view === 'hidden' ? 'No hidden pull requests' : 'No open pull requests'
+}
+
 function SidebarEmptyState({
   hasFilters,
-  onClearFilters
+  onClearFilters,
+  view
 }: {
   hasFilters: boolean
   onClearFilters: () => void
+  view: SidebarView
 }): ReactElement {
   return (
     <div className="text-muted-foreground px-3 py-6 text-center text-xs leading-relaxed">
-      {hasFilters ? 'No pull requests match' : 'No open pull requests'}
+      {emptyMessage(hasFilters, view)}
 
       {hasFilters && (
         <>

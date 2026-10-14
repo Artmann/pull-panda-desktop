@@ -152,6 +152,7 @@ function createMockPullRequest(
     isAuthor: true,
     isAssignee: false,
     isReviewer: false,
+    hiddenAt: null,
     labels: [],
     lastViewedAt: null,
     assignees: [],

@@ -69,3 +69,17 @@ export const WithSelection: Story = {
 export const Empty: Story = {
   render: () => <Harness items={[]} />
 }
+
+const withHidden = pullRequests.map((pullRequest, index) =>
+  index >= pullRequests.length - 3
+    ? { ...pullRequest, hiddenAt: new Date().toISOString() }
+    : pullRequest
+)
+
+/**
+ * The oldest three have been hidden. They leave the main list, and a Hidden
+ * entry at the top leads to them. Searching still finds them.
+ */
+export const WithHiddenPullRequests: Story = {
+  render: () => <Harness items={withHidden} />
+}

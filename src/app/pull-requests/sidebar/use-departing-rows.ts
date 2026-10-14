@@ -58,10 +58,26 @@ function departingRow(
 }
 
 /**
+ * Whether the row left because of something done to the pull request itself:
+ * it stopped being open, or it was hidden or unhidden. Anything else means the
+ * reader typed in the search box, changed a filter or switched views.
+ */
+function pullRequestLeft(
+  previous: PullRequest,
+  current: PullRequest | undefined
+): boolean {
+  if (current?.state !== 'OPEN') {
+    return true
+  }
+
+  return current.hiddenAt !== previous.hiddenAt
+}
+
+/**
  * Works out which rows have just left for good. A row whose pull request
- * stopped being open is held back for one fade; a row that went because the
- * reader typed in the search box or changed a filter is dropped straight away,
- * the way it always was.
+ * stopped being open, or was hidden, is held back for one fade; a row that went
+ * because the reader typed in the search box or changed a filter is dropped
+ * straight away, the way it always was.
  */
 export function nextDepartureState(
   state: DepartureState,
@@ -91,7 +107,7 @@ export function nextDepartureState(
 
     const pullRequest = byId.get(pullRequestId)
 
-    if (pullRequest?.state === 'OPEN') {
+    if (!pullRequestLeft(previousRow.pullRequest, pullRequest)) {
       return
     }
 

@@ -177,6 +177,23 @@ export const activatePullRequest = (pullRequestId: string) =>
     return { success: true } as const
   })
 
+// Hiding is local to this app; nothing is sent to GitHub.
+export const setPullRequestHidden = (input: {
+  hidden: boolean
+  pullRequestId: string
+}) =>
+  Effect.gen(function* () {
+    const repository = yield* Repository
+
+    yield* repository.requirePullRequestById(input.pullRequestId)
+
+    return yield* updateStoredPullRequest(
+      'setPullRequestHidden.update',
+      input.pullRequestId,
+      { hiddenAt: input.hidden ? new Date().toISOString() : null }
+    )
+  })
+
 export const fetchPullRequestDetails = (pullRequestId: string) =>
   Effect.tryPromise({
     try: () => getPullRequestDetails(pullRequestId),

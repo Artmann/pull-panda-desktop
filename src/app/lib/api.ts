@@ -445,6 +445,24 @@ export async function updatePullRequest(
   return response.json()
 }
 
+export async function updatePullRequestHidden(
+  pullRequestId: string,
+  hidden: boolean
+): Promise<PullRequest> {
+  const response = await sendJsonRequest(
+    `/api/pull-requests/${pullRequestId}/hidden`,
+    {
+      body: { hidden },
+      errorMessage: hidden
+        ? 'Could not hide the pull request.'
+        : 'Could not unhide the pull request.',
+      method: 'POST'
+    }
+  )
+
+  return response.json()
+}
+
 export async function pickRepoFolder(): Promise<PickFolderResult> {
   const baseUrl = await getApiBaseUrl()
 

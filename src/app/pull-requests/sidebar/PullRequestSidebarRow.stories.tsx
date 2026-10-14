@@ -1,4 +1,8 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
+import { configureStore } from '@reduxjs/toolkit'
+import { Provider } from 'react-redux'
+
+import pullRequestsReducer from '@/app/store/pull-requests-slice'
 
 import { createMockPullRequest } from '../__test-helpers__/pull-request-fixtures'
 import { PullRequestSidebarRow } from './PullRequestSidebarRow'
@@ -6,6 +10,9 @@ import type { SidebarRow } from './sidebar-data'
 
 const hoursAgo = (hours: number): string =>
   new Date(Date.now() - hours * 3_600_000).toISOString()
+
+// The row's context menu dispatches Hide and Unhide.
+const store = configureStore({ reducer: { pullRequests: pullRequestsReducer } })
 
 function buildRow(overrides: Partial<SidebarRow> = {}): SidebarRow {
   return {
@@ -35,9 +42,11 @@ const meta = {
   },
   decorators: [
     (Story) => (
-      <div className="bg-sidebar border-sidebar-border w-85 rounded-lg border p-1.5">
-        <Story />
-      </div>
+      <Provider store={store}>
+        <div className="bg-sidebar border-sidebar-border w-85 rounded-lg border p-1.5">
+          <Story />
+        </div>
+      </Provider>
     )
   ]
 } satisfies Meta<typeof PullRequestSidebarRow>
@@ -138,6 +147,24 @@ export const Draft: Story = {
         repositoryName: 'pmkin-app-remix',
         title: 'Update README.md',
         updatedAt: hoursAgo(24 * 90)
+      })
+    })
+  }
+}
+
+/**
+ * A hidden pull request carries a marker, so when one turns up in search
+ * results it is clear why it was not in the list before.
+ */
+export const Hidden: Story = {
+  args: {
+    row: buildRow({
+      pullRequest: createMockPullRequest({
+        hiddenAt: hoursAgo(2),
+        number: 12,
+        repositoryName: 'esix',
+        title: 'Bump electron to 32.1',
+        updatedAt: hoursAgo(120)
       })
     })
   }

@@ -526,6 +526,54 @@ describe('PullRequestSidebar departures', () => {
     expect(within(sidebar()).getByText('3 pull requests')).toBeInTheDocument()
   })
 
+  it('keeps hidden pull requests in their own view', async () => {
+    const user = userEvent.setup()
+
+    renderSidebar({
+      items: pullRequests.map((pullRequest) =>
+        pullRequest.id === 'pr-c'
+          ? { ...pullRequest, hiddenAt: '2024-02-02T00:00:00Z' }
+          : pullRequest
+      )
+    })
+
+    expect(
+      within(sidebar()).queryByText('A rough draft')
+    ).not.toBeInTheDocument()
+    expect(within(sidebar()).getByText('2 pull requests')).toBeInTheDocument()
+
+    await user.click(
+      within(sidebar()).getByRole('button', { name: '1 hidden' })
+    )
+
+    expect(rowTitles()).toEqual([expect.stringContaining('A rough draft')])
+
+    await user.click(
+      within(sidebar()).getByRole('button', { name: '1 hidden' })
+    )
+
+    expect(within(sidebar()).getByText('2 pull requests')).toBeInTheDocument()
+  })
+
+  it('finds hidden pull requests when searching the main list', async () => {
+    const user = userEvent.setup()
+
+    renderSidebar({
+      items: pullRequests.map((pullRequest) =>
+        pullRequest.id === 'pr-c'
+          ? { ...pullRequest, hiddenAt: '2024-02-02T00:00:00Z' }
+          : pullRequest
+      )
+    })
+
+    await user.type(
+      screen.getByPlaceholderText('Search pull requests'),
+      'draft'
+    )
+
+    expect(within(sidebar()).getByText('A rough draft')).toBeInTheDocument()
+  })
+
   it('does not fade a row that a search hid — only one that has left for good', async () => {
     const user = userEvent.setup()
 

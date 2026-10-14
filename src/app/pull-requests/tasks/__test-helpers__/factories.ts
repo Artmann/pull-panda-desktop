@@ -137,6 +137,7 @@ export function createPullRequest(
     isAuthor: false,
     isDraft: false,
     isReviewer: false,
+    hiddenAt: null,
     labels: [],
     lastViewedAt: null,
     mergedAt: null,

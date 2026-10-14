@@ -36,6 +36,7 @@ const mockPullRequest: PullRequest = {
   isAuthor: true,
   isDraft: false,
   isReviewer: false,
+  hiddenAt: null,
   labels: [],
   lastViewedAt: null,
   mergedAt: null,

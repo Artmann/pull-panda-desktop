@@ -39,6 +39,7 @@ export const reviewerStoryPullRequest: PullRequest = {
   isAuthor: false,
   isDraft: false,
   isReviewer: false,
+  hiddenAt: null,
   labels: [],
   lastViewedAt: null,
   mergedAt: null,
