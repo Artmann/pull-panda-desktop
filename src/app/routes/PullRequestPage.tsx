@@ -97,7 +97,10 @@ export function PullRequestPage(): ReactElement {
         pullRequest={pullRequest}
       />
 
+      {/* Keyed so an edited commit message never follows you to the next
+          pull request. */}
       <MergeDrawer
+        key={pullRequest.id}
         onClose={() => dispatch(mergeDrawerActions.close())}
         open={isMergeDrawerOpen}
         pullRequest={pullRequest}

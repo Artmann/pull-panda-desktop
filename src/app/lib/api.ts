@@ -350,6 +350,7 @@ export async function getMergeOptions(
 interface MergePullRequestRequest {
   commitMessage?: string
   commitTitle?: string
+  deleteBranch?: boolean
   mergeMethod: 'merge' | 'squash' | 'rebase'
   owner: string
   pullNumber: number
@@ -370,6 +371,7 @@ export async function mergePullRequest(
         ...(request.commitTitle !== undefined && {
           commitTitle: request.commitTitle
         }),
+        ...(request.deleteBranch && { deleteBranch: true }),
         mergeMethod: request.mergeMethod,
         owner: request.owner,
         pullNumber: request.pullNumber,

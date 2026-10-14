@@ -168,11 +168,13 @@ pullRequestsRoute.post(
         typeof raw.commitTitle === 'string' ? raw.commitTitle : undefined
       const commitMessage =
         typeof raw.commitMessage === 'string' ? raw.commitMessage : undefined
+      const deleteBranch = raw.deleteBranch === true
       const token = context.get('token')
 
       return yield* mergePullRequest({
         commitMessage,
         commitTitle,
+        deleteBranch,
         mergeMethod,
         owner,
         pullNumber,

@@ -47,38 +47,45 @@ export const PullRequestStatusStrip = memo(function PullRequestStatusStrip({
         borderClassNames[summary.tone]
       )}
     >
-      <div className="grid grid-cols-2 gap-px bg-border sm:grid-cols-4">
-        {summary.cells.map((cell) => (
-          <button
-            className="flex min-w-0 cursor-pointer flex-col gap-0.5 bg-card px-3.5 pt-2.5 pb-3 text-left transition-colors hover:bg-muted/50"
-            key={cell.key}
-            onClick={() => {
-              onSelectTab(cell.tab)
-            }}
-            type="button"
-          >
-            <span className="flex items-center gap-1.5 text-2xs font-semibold tracking-wider text-muted-foreground uppercase">
-              <span
-                aria-hidden
-                className={cn('size-1.5 rounded-full', dotClassNames[cell.tone])}
-              />
-              {cell.label}
-            </span>
-
-            <span
-              className={cn(
-                'truncate text-xs font-semibold',
-                valueClassNames[cell.tone]
-              )}
+      {/* Sized by its own width, not the window's: with the merge drawer open
+          the content column narrows while the window does not. */}
+      <div className="@container">
+        <div className="grid grid-cols-2 gap-px bg-border @xl:grid-cols-4">
+          {summary.cells.map((cell) => (
+            <button
+              className="flex min-w-0 cursor-pointer flex-col gap-0.5 bg-card px-3.5 pt-2.5 pb-3 text-left transition-colors hover:bg-muted/50"
+              key={cell.key}
+              onClick={() => {
+                onSelectTab(cell.tab)
+              }}
+              type="button"
             >
-              {cell.value}
-            </span>
+              <span className="flex items-center gap-1.5 text-2xs font-semibold tracking-wider text-muted-foreground uppercase">
+                <span
+                  aria-hidden
+                  className={cn(
+                    'size-1.5 rounded-full',
+                    dotClassNames[cell.tone]
+                  )}
+                />
+                {cell.label}
+              </span>
 
-            <span className="truncate text-xs text-muted-foreground">
-              {cell.detail}
-            </span>
-          </button>
-        ))}
+              <span
+                className={cn(
+                  'truncate text-xs font-semibold',
+                  valueClassNames[cell.tone]
+                )}
+              >
+                {cell.value}
+              </span>
+
+              <span className="truncate text-xs text-muted-foreground">
+                {cell.detail}
+              </span>
+            </button>
+          ))}
+        </div>
       </div>
     </section>
   )

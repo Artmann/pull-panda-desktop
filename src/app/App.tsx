@@ -39,7 +39,8 @@ import {
   initializeRendererTelemetry,
   startSpan
 } from '@/app/lib/telemetry/tracer'
-import { useAppDispatch } from '@/app/store/hooks'
+import { cn } from '@/app/lib/utils'
+import { useAppDispatch, useAppSelector } from '@/app/store/hooks'
 import { resourceEventToAction } from '@/app/store/resource-event-to-action'
 import { AppFooter } from './AppFooter'
 
@@ -163,19 +164,44 @@ function AppShell({
     isAuthenticated &&
     (pathname === '/' || pathname.startsWith('/pull-requests/'))
 
+  // The merge drawer is a column of its own: the content makes room for it
+  // rather than sliding underneath, and on a narrow window the sidebar steps
+  // aside so the pull request keeps a readable width.
+  const mergeDrawerPullRequestId = useAppSelector(
+    (state) => state.mergeDrawer.openForPullRequestId
+  )
+  const isMergeDrawerOpen =
+    mergeDrawerPullRequestId !== null &&
+    pathname.startsWith(`/pull-requests/${mergeDrawerPullRequestId}`)
+
   return (
     <main className="w-full h-screen flex flex-col overflow-hidden">
       <TitleBar />
 
       <div className="flex-1 min-h-0 flex">
-        {showSidebar && <PullRequestSidebar />}
+        {showSidebar && (
+          <div
+            className={cn(
+              'contents',
+              isMergeDrawerOpen && 'max-[1240px]:hidden'
+            )}
+          >
+            <PullRequestSidebar />
+          </div>
+        )}
 
         {/*
           The content column, beside the sidebar and outside the scroll
           container below. `relative` lets an absolute overlay inside the page
-          span the content and nothing else, at any sidebar width.
+          span the content and nothing else, at any sidebar width. The right
+          margin is the merge drawer's width, which sits fixed beside it.
         */}
-        <div className="relative flex flex-1 min-w-0 min-h-0">
+        <div
+          className={cn(
+            'relative flex flex-1 min-w-0 min-h-0',
+            isMergeDrawerOpen && 'mr-90'
+          )}
+        >
           {/*
             This is the one `.overflow-auto` in the app. PullRequestPage,
             FileCard and use-virtual-list all find their scroll container with

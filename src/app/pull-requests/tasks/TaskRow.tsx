@@ -34,7 +34,7 @@ interface TaskRowProps {
 
 const animationDurationMs = 200
 
-function getStatusCircleState(task: Task): StatusCircleState {
+export function getStatusCircleState(task: Task): StatusCircleState {
   if (task.status === 'running') {
     return 'running'
   }
@@ -274,7 +274,7 @@ function CollapsedRowBody({
   )
 }
 
-const statusLabels: Record<StatusCircleState, string> = {
+export const statusLabels: Record<StatusCircleState, string> = {
   failure: 'Blocking',
   neutral: 'Open',
   running: 'In progress',
@@ -282,7 +282,7 @@ const statusLabels: Record<StatusCircleState, string> = {
   warning: 'Warning'
 }
 
-function TaskActionButton({
+export function TaskActionButton({
   action,
   pullRequest,
   task
