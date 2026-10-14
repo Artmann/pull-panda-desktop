@@ -75,6 +75,7 @@ function buildPullRequest(
     headRefName: row.headRefName ?? null,
     baseRefName: row.baseRefName ?? null,
     detailsSyncedAt: row.detailsSyncedAt,
+    hiddenAt: row.hiddenAt,
     id: row.id,
     isDraft: row.isDraft,
     isAssignee: row.isAssignee,

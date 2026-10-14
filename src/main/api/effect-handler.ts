@@ -92,6 +92,19 @@ export const jsonBody = (
 ): Effect.Effect<Record<string, unknown>, ValidationError> =>
   parseJson(context, (input) => (input ?? {}) as Record<string, unknown>)
 
+export const requireBoolean = (
+  value: unknown,
+  field: string
+): Effect.Effect<boolean, ValidationError> => {
+  if (typeof value !== 'boolean') {
+    return Effect.fail(
+      new ValidationError({ field, message: 'must be a boolean' })
+    )
+  }
+
+  return Effect.succeed(value)
+}
+
 export const requireString = (
   value: unknown,
   field: string

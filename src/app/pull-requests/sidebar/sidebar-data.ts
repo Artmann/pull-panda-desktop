@@ -14,6 +14,9 @@ export type SortId =
   | 'recent'
   | 'repo'
 
+/** The default list, or the pull requests the reader has hidden from it. */
+export type SidebarView = 'hidden' | 'main'
+
 export interface SidebarFilters {
   authors: string[]
   flags: string[]
@@ -189,6 +192,31 @@ export function buildRows(
       unread: isUnread(pullRequest)
     }
   })
+}
+
+export function isHidden(pullRequest: PullRequest): boolean {
+  return pullRequest.hiddenAt !== null
+}
+
+/**
+ * The rows a view starts from, before filters. The main list leaves hidden
+ * pull requests out, except while the reader is searching, so a hidden one
+ * can still be found by name.
+ */
+export function rowsForView(
+  rows: readonly SidebarRow[],
+  view: SidebarView,
+  query: string
+): SidebarRow[] {
+  if (view === 'hidden') {
+    return rows.filter((row) => isHidden(row.pullRequest))
+  }
+
+  if (query.trim().length > 0) {
+    return [...rows]
+  }
+
+  return rows.filter((row) => !isHidden(row.pullRequest))
 }
 
 function matchesQuery(pullRequest: PullRequest, query: string): boolean {

@@ -1,4 +1,10 @@
-import { CopyIcon, ExternalLinkIcon, GitBranchIcon } from 'lucide-react'
+import {
+  CopyIcon,
+  ExternalLinkIcon,
+  EyeIcon,
+  EyeOffIcon,
+  GitBranchIcon
+} from 'lucide-react'
 import { type ReactElement, type ReactNode } from 'react'
 import { toast } from 'sonner'
 
@@ -9,7 +15,10 @@ import {
   ContextMenuSeparator,
   ContextMenuTrigger
 } from '@/app/components/ui/context-menu'
+import { useAppDispatch } from '@/app/store/hooks'
 import type { PullRequest } from '@/types/pull-request'
+
+import { setPullRequestHidden } from '../pull-request-actions'
 
 function copy(value: string, message: string): void {
   navigator.clipboard
@@ -32,7 +41,14 @@ export function SidebarRowContextMenu({
   children,
   pullRequest
 }: SidebarRowContextMenuProps): ReactElement {
+  const dispatch = useAppDispatch()
+
   const branch = pullRequest.headRefName
+  const isHidden = pullRequest.hiddenAt !== null
+
+  const handleToggleHidden = () => {
+    setPullRequestHidden({ dispatch, hidden: !isHidden, pullRequest })
+  }
 
   const handleOpenInGitHub = () => {
     window.electron.openUrl(pullRequest.url).catch((error: unknown) => {
@@ -68,6 +84,13 @@ export function SidebarRowContextMenu({
         >
           <GitBranchIcon />
           Copy branch name
+        </ContextMenuItem>
+
+        <ContextMenuSeparator />
+
+        <ContextMenuItem onSelect={handleToggleHidden}>
+          {isHidden ? <EyeIcon /> : <EyeOffIcon />}
+          {isHidden ? 'Unhide' : 'Hide'}
         </ContextMenuItem>
       </ContextMenuContent>
     </ContextMenu>

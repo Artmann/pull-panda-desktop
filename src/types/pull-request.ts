@@ -36,6 +36,8 @@ export interface PullRequest {
   isAssignee: boolean
   isReviewer: boolean
   labels: PullRequestLabel[]
+  /** When the reader hid it from the sidebar's default list. Local-only. */
+  hiddenAt: string | null
   lastViewedAt: string | null
   assignees: PullRequestAssignee[]
   requestedReviewers: PullRequestRequestedReviewer[]

@@ -4,6 +4,7 @@ import { Hono } from 'hono'
 import {
   effectHandler,
   jsonBody,
+  requireBoolean,
   requireNumber,
   requireString,
   type AppEnv
@@ -17,6 +18,7 @@ import {
   mergePullRequest,
   removeReviewers,
   setFocusedPullRequest,
+  setPullRequestHidden,
   syncPullRequestNow,
   updatePullRequest,
   updatePullRequestBranch
@@ -53,6 +55,24 @@ pullRequestsRoute.post(
       )
 
       return yield* activatePullRequest(pullRequestId)
+    })
+  )
+)
+
+pullRequestsRoute.post(
+  '/:pullRequestId/hidden',
+  effectHandler((context) =>
+    Effect.gen(function* () {
+      const pullRequestId = yield* requireString(
+        context.req.param('pullRequestId'),
+        'pullRequestId'
+      )
+
+      const raw = yield* jsonBody(context)
+
+      const hidden = yield* requireBoolean(raw.hidden, 'hidden')
+
+      return yield* setPullRequestHidden({ hidden, pullRequestId })
     })
   )
 )

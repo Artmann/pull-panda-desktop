@@ -15,6 +15,7 @@ import {
   getMergeReadiness,
   isUnread,
   needsAttention,
+  rowsForView,
   sortRows,
   stepIndex,
   toggleFilterValue,
@@ -146,6 +147,33 @@ describe('buildRows', () => {
     const pullRequest = createMockPullRequest({ id: 'pr-1' })
 
     expect(buildRows([pullRequest], new Map())[0].checkRollup).toEqual('none')
+  })
+})
+
+describe('rowsForView', () => {
+  const rows = [
+    rowOf({ id: 'visible', title: 'Visible' }),
+    rowOf({ hiddenAt: '2024-01-01T00:00:00Z', id: 'hidden', title: 'Hidden' })
+  ]
+
+  it('leaves hidden pull requests out of the main list', () => {
+    expect(titlesOf(rowsForView(rows, 'main', ''))).toEqual(['Visible'])
+  })
+
+  it('includes hidden pull requests in the main list while searching', () => {
+    expect(titlesOf(rowsForView(rows, 'main', 'hid'))).toEqual([
+      'Visible',
+      'Hidden'
+    ])
+  })
+
+  it('treats a query of only spaces as no search', () => {
+    expect(titlesOf(rowsForView(rows, 'main', '   '))).toEqual(['Visible'])
+  })
+
+  it('shows only hidden pull requests in the hidden view', () => {
+    expect(titlesOf(rowsForView(rows, 'hidden', ''))).toEqual(['Hidden'])
+    expect(titlesOf(rowsForView(rows, 'hidden', 'vis'))).toEqual(['Hidden'])
   })
 })
 

@@ -21,6 +21,7 @@ import { SidebarSearchHeader } from './SidebarSearchHeader'
 import { useAdvancePastDeparture } from './use-advance-past-departure'
 import { useDepartingRows } from './use-departing-rows'
 import { useSidebarSelection } from './use-sidebar-selection'
+import { useSidebarView } from './use-sidebar-view'
 import { useSidebarWidth } from './use-sidebar-width'
 
 function buildCheckRollups(checks: Check[]): Map<string, CheckRollup> {
@@ -72,9 +73,14 @@ export function PullRequestSidebar(): ReactElement {
     [checkRollups, listed]
   )
 
+  const { hiddenCount, setView, view, viewRows } = useSidebarView(
+    allRows,
+    filters.query
+  )
+
   const liveRows = useMemo(
-    () => sortRows(filterRows(allRows, filters), sort),
-    [allRows, filters, sort]
+    () => sortRows(filterRows(viewRows, filters), sort),
+    [filters, sort, viewRows]
   )
 
   const advancePastDeparture = useAdvancePastDeparture(liveRows, selectedId)
@@ -95,7 +101,7 @@ export function PullRequestSidebar(): ReactElement {
         style={{ width: `${width.toString()}px` }}
       >
         <SidebarSearchHeader
-          allRows={allRows}
+          allRows={viewRows}
           filters={filters}
           onFiltersChange={setFilters}
           resultCount={visibleRows.length}
@@ -104,9 +110,12 @@ export function PullRequestSidebar(): ReactElement {
         <SidebarList
           departingIds={departingIds}
           hasFilters={hasActiveFilters(filters)}
+          hiddenCount={hiddenCount}
+          view={view}
           onClearFilters={() => setFilters(emptyFilters)}
           onSelect={select}
           onSortChange={setSort}
+          onViewChange={setView}
           rows={visibleRows}
           selectedId={selectedId}
           sort={sort}

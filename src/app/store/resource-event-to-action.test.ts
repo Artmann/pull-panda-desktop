@@ -38,6 +38,7 @@ function createPullRequest(overrides: Partial<PullRequest> = {}): PullRequest {
     isAuthor: true,
     isAssignee: false,
     isReviewer: false,
+    hiddenAt: null,
     labels: [],
     lastViewedAt: null,
     assignees: [],

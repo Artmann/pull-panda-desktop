@@ -26,6 +26,7 @@ export const createPullRequestFixture = (
   isAuthor: true,
   isDraft: false,
   isReviewer: false,
+  hiddenAt: null,
   labels: null,
   lastViewedAt: null,
   mergedAt: null,

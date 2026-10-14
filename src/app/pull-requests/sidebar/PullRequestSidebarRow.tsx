@@ -1,3 +1,4 @@
+import { EyeOffIcon } from 'lucide-react'
 import { type ReactElement } from 'react'
 
 import {
@@ -132,6 +133,13 @@ export function PullRequestSidebarRow({
           <span className="text-muted-foreground min-w-0 flex-1 truncate text-xs">
             {slug}
           </span>
+
+          {pullRequest.hiddenAt !== null && (
+            <EyeOffIcon
+              aria-label="Hidden"
+              className="text-muted-foreground size-3 shrink-0"
+            />
+          )}
 
           {hasStatus && (
             <div className="shrink-0">

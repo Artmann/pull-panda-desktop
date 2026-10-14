@@ -50,8 +50,11 @@ export const pullRequests = sqliteTable('pull_requests', {
   // CHANGES_REQUESTED or REVIEW_REQUIRED), or null when no rule applies.
   reviewDecision: text('review_decision'),
 
-  // Local-only. Never written by the syncer, so it must stay out of the
+  // Local-only. Never written by the syncer, so they must stay out of the
   // `onConflictDoUpdate` set in sync/operations/sync-pull-requests.ts.
+  // `hiddenAt` is set when the reader hides the pull request from the
+  // sidebar's default list.
+  hiddenAt: text('hidden_at'),
   lastViewedAt: text('last_viewed_at')
 })
 

@@ -85,6 +85,27 @@ describe('nextDepartureState', () => {
     expect(next.departures.size).toEqual(0)
   })
 
+  it('holds on to a row whose pull request has been hidden', () => {
+    const hidden = { ...second, hiddenAt: '2024-01-01T00:00:00Z' }
+
+    const next = nextDepartureState(stateOf(open), rowsOf([first, third]), [
+      first,
+      hidden,
+      third
+    ])
+
+    expect([...next.departures.keys()]).toEqual(['pr-b'])
+    expect(next.departures.get('pr-b')?.row.pullRequest).toEqual(hidden)
+  })
+
+  it('holds on to a row whose pull request has been unhidden', () => {
+    const hidden = { ...second, hiddenAt: '2024-01-01T00:00:00Z' }
+
+    const next = nextDepartureState(stateOf([hidden]), rowsOf([]), [second])
+
+    expect([...next.departures.keys()]).toEqual(['pr-b'])
+  })
+
   it('takes several departures at once, each at its own index', () => {
     const next = nextDepartureState(stateOf(open), rowsOf([second]), [
       { ...first, state: 'MERGED' as const },

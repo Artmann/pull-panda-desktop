@@ -67,6 +67,7 @@ export function createMockPullRequest(
     isAuthor: false,
     isAssignee: false,
     isReviewer: false,
+    hiddenAt: null,
     labels: [],
     lastViewedAt: null,
     assignees: [],
