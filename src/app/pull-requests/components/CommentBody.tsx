@@ -1,14 +1,17 @@
 import { memo, type ReactElement } from 'react'
 
 import { MarkdownBlock } from '@/app/components/MarkdownBlock'
+import type { ToggleTaskHandler } from '@/app/components/MarkdownInput'
 
 interface CommentBodyProps {
   content: string
+  onToggleTask?: ToggleTaskHandler
   path?: string
 }
 
 export const CommentBody = memo(function CommentBody({
   content,
+  onToggleTask,
   path
 }: CommentBodyProps): ReactElement {
   const formattedContent = normalizeMarkdownContent(content)
@@ -17,6 +20,7 @@ export const CommentBody = memo(function CommentBody({
     <MarkdownBlock
       className="w-full max-w-full prose-sm prose-headings:mt-2 prose-headings:mb-2 prose-h1:text-base prose-h2:text-sm prose-h3:text-sm prose-h4:text-sm"
       content={formattedContent}
+      onToggleTask={onToggleTask}
       path={path}
     />
   )

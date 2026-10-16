@@ -5,6 +5,8 @@ import { render } from '@testing-library/react'
 import type { ReactElement } from 'react'
 import { beforeEach, describe, expect, it } from 'vitest'
 
+import { ThemeProvider } from '@/app/lib/store/themeContext'
+
 import {
   clearMarkdownCache,
   markdownCacheLimit,
@@ -18,7 +20,8 @@ function renderToContainer(element: ReactElement | null): HTMLElement {
     throw new Error('Expected markdown to parse into an element.')
   }
 
-  return render(element).container
+  // Code blocks read the Shiki themes from the app theme.
+  return render(<ThemeProvider>{element}</ThemeProvider>).container
 }
 
 describe('renderMarkdown', () => {

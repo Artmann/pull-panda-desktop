@@ -11,6 +11,7 @@ import {
 } from '../schemas/github-rest'
 import { Database } from '../services/database'
 import { GitHubRest } from '../services/github-rest'
+import { keepLocallyEditedBody } from '../shared/local-writes'
 import { paginateRest } from '../shared/paginate'
 import {
   reconcileBySoftDelete,
@@ -85,6 +86,7 @@ export const syncComments = (
   Effect.gen(function* () {
     const database = yield* Database
 
+    const fetchedAt = Date.now()
     const result = yield* paginateRest(
       'GET /repos/{owner}/{repo}/issues/{issue_number}/comments',
       {
@@ -127,12 +129,16 @@ export const syncComments = (
         items: commentsData,
         keyOfItem: (comment) => comment.node_id,
         keyOfRow: (row) => row.gitHubId,
-        build: (comment, existingId) =>
-          buildIssueComment(
-            comment,
-            existingId ?? generateId(),
-            params.pullRequestId,
-            now
+        build: (comment, existingId, existingRow) =>
+          keepLocallyEditedBody(
+            buildIssueComment(
+              comment,
+              existingId ?? generateId(),
+              params.pullRequestId,
+              now
+            ),
+            existingRow,
+            fetchedAt
           ),
         now
       })

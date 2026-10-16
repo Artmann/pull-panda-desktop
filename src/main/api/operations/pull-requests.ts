@@ -15,6 +15,10 @@ import { BackgroundSyncer } from '../../../sync/services/background-syncer'
 import { Database } from '../../../sync/services/database'
 import { EtagStore } from '../../../sync/services/etag-store'
 import { NotFoundError } from '../../../sync/errors'
+import {
+  localWriteKeys,
+  trackLocalWrite
+} from '../../../sync/shared/local-writes'
 import { Repository } from '../../services/repository'
 import type {
   MergeAutomation,
@@ -335,19 +339,26 @@ export const updatePullRequest = (input: UpdatePullRequestInput) =>
       input.pullRequestId
     )
 
-    yield* Effect.tryPromise({
-      try: () => sendPullRequestUpdate(input),
-      catch: octokitErrorOf('updatePullRequest')
-    })
+    // Tracked so a sync that fetched the pull request before this lands does
+    // not write the old title or body back over it.
+    return yield* trackLocalWrite(
+      localWriteKeys.pullRequest(input.pullRequestId),
+      Effect.gen(function* () {
+        yield* Effect.tryPromise({
+          try: () => sendPullRequestUpdate(input),
+          catch: octokitErrorOf('updatePullRequest')
+        })
 
-    return yield* updateStoredPullRequest(
-      'updatePullRequest.update',
-      input.pullRequestId,
-      storedPullRequestChanges(
-        input,
-        pullRequest.state,
-        new Date().toISOString()
-      )
+        return yield* updateStoredPullRequest(
+          'updatePullRequest.update',
+          input.pullRequestId,
+          storedPullRequestChanges(
+            input,
+            pullRequest.state,
+            new Date().toISOString()
+          )
+        )
+      })
     )
   })
 

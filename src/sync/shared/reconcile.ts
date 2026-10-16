@@ -30,7 +30,12 @@ interface ReconcileOptions<Table extends SQLiteTable & ReconcileColumns, Item> {
   // match, the existing row's id is reused so the upsert updates in place.
   keyOfItem: (item: Item) => string
   keyOfRow: (row: Table['$inferSelect']) => string
-  build: (item: Item, existingId: string | undefined) => Table['$inferInsert']
+  // `existingRow` is the live row the item matched, if any.
+  build: (
+    item: Item,
+    existingId: string | undefined,
+    existingRow: Table['$inferSelect'] | undefined
+  ) => Table['$inferInsert']
   now: string
   // Live rows for which this predicate returns true are never soft-deleted, even
   // when absent from `items` (e.g. PENDING reviews owned by explicit actions).
@@ -64,7 +69,7 @@ export const reconcileBySoftDelete = <
     syncedKeys.add(key)
 
     const existingRow = existing.find((row) => options.keyOfRow(row) === key)
-    const record = options.build(item, existingRow?.id)
+    const record = options.build(item, existingRow?.id, existingRow)
     const recordId = (record as { id: string }).id
 
     const updatableFields: Record<string, unknown> = { deletedAt: null }
