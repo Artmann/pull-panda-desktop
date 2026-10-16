@@ -195,9 +195,7 @@ function getSuiteStatus(checks: Check[]): SuiteStatus {
     return 'running'
   }
 
-  if (
-    checks.some((check) => check.conclusion?.toLowerCase() === 'cancelled')
-  ) {
+  if (checks.some((check) => check.conclusion?.toLowerCase() === 'cancelled')) {
     return 'cancelled'
   }
 
@@ -209,29 +207,31 @@ function getSuiteStatus(checks: Check[]): SuiteStatus {
   return allCompleted ? 'success' : 'pending'
 }
 
-const suiteStatusPills: Record<SuiteStatus, { className: string; label: string }> =
-  {
-    cancelled: {
-      className: 'bg-status-neutral text-status-neutral-foreground',
-      label: 'Cancelled'
-    },
-    failure: {
-      className: 'bg-status-danger text-status-danger-foreground',
-      label: 'Failing'
-    },
-    pending: {
-      className: 'bg-status-warning text-status-warning-foreground',
-      label: 'Pending'
-    },
-    running: {
-      className: 'bg-status-warning text-status-warning-foreground',
-      label: 'In progress'
-    },
-    success: {
-      className: 'bg-status-success text-status-success-foreground',
-      label: 'All passed'
-    }
+const suiteStatusPills: Record<
+  SuiteStatus,
+  { className: string; label: string }
+> = {
+  cancelled: {
+    className: 'bg-status-neutral text-status-neutral-foreground',
+    label: 'Cancelled'
+  },
+  failure: {
+    className: 'bg-status-danger text-status-danger-foreground',
+    label: 'Failing'
+  },
+  pending: {
+    className: 'bg-status-warning text-status-warning-foreground',
+    label: 'Pending'
+  },
+  running: {
+    className: 'bg-status-warning text-status-warning-foreground',
+    label: 'In progress'
+  },
+  success: {
+    className: 'bg-status-success text-status-success-foreground',
+    label: 'All passed'
   }
+}
 
 function SuiteStatusPill({ status }: { status: SuiteStatus }): ReactElement {
   const pill = suiteStatusPills[status]

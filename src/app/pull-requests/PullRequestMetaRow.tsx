@@ -8,11 +8,7 @@ import { memo, type ReactElement } from 'react'
 import { shallowEqual } from 'react-redux'
 
 import { TimeAgo } from '@/app/components/TimeAgo'
-import {
-  Avatar,
-  AvatarFallback,
-  AvatarImage
-} from '@/app/components/ui/avatar'
+import { Avatar, AvatarFallback, AvatarImage } from '@/app/components/ui/avatar'
 import { formatNumber } from '@/app/lib/numbers'
 import { useAppSelector } from '@/app/store/hooks'
 import type { PullRequest } from '@/types/pull-request'
@@ -113,7 +109,10 @@ export const PullRequestMetaRow = memo(function PullRequestMetaRow({
     <div className="flex flex-wrap items-center gap-x-3.5 gap-y-1.5 text-xs text-muted-foreground">
       {marker && (
         <span
-          className={cn('flex items-center gap-1 font-medium', marker.className)}
+          className={cn(
+            'flex items-center gap-1 font-medium',
+            marker.className
+          )}
         >
           <marker.icon
             aria-hidden

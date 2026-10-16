@@ -19,7 +19,7 @@ const body = [
   '- **Print page.** Print any set of tables as cards or stickers.',
   '',
   '```ts',
-  "const code = createCode({ table: 4 })",
+  'const code = createCode({ table: 4 })',
   '```'
 ].join('\n')
 

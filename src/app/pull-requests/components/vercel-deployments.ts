@@ -17,7 +17,9 @@ export function isVercelBot(login: string | null | undefined): boolean {
  * empty list when the comment has no table it recognises, and the caller
  * falls back to rendering the comment as written.
  */
-export function parseVercelDeployments(body: string | null): VercelDeployment[] {
+export function parseVercelDeployments(
+  body: string | null
+): VercelDeployment[] {
   if (!body) {
     return []
   }
@@ -26,7 +28,12 @@ export function parseVercelDeployments(body: string | null): VercelDeployment[] 
     .split('\n')
     .map((line) => line.trim())
     .filter((line) => line.startsWith('|') && line.endsWith('|'))
-    .map((line) => line.slice(1, -1).split('|').map((cell) => cell.trim()))
+    .map((line) =>
+      line
+        .slice(1, -1)
+        .split('|')
+        .map((cell) => cell.trim())
+    )
 
   const headerIndex = rows.findIndex(
     (cells) =>

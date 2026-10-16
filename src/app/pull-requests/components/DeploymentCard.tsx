@@ -58,7 +58,10 @@ export const DeploymentCard = memo(function DeploymentCard({
           >
             <span
               aria-hidden
-              className={cn('size-2 shrink-0 rounded-full', dotClassNames[tone])}
+              className={cn(
+                'size-2 shrink-0 rounded-full',
+                dotClassNames[tone]
+              )}
             />
 
             <span className="font-medium text-foreground">
