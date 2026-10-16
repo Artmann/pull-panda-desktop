@@ -5,11 +5,7 @@ import type { PullRequest } from '@/types/pull-request'
 import type { Comment, Commit, Review } from '@/types/pull-request-details'
 
 import { TimeAgo } from '@/app/components/TimeAgo'
-import {
-  Avatar,
-  AvatarFallback,
-  AvatarImage
-} from '@/app/components/ui/avatar'
+import { Avatar, AvatarFallback, AvatarImage } from '@/app/components/ui/avatar'
 import { Card, CardContent } from '@/app/components/ui/card'
 import { cn } from '@/app/lib/utils'
 import { useAppSelector } from '@/app/store/hooks'
@@ -275,7 +271,8 @@ function describeItem(item: ActivityItem): {
 
     return {
       avatarUrl: item.data.authorAvatarUrl,
-      eventText: count === 1 ? 'pushed 1 commit' : `pushed ${count.toString()} commits`,
+      eventText:
+        count === 1 ? 'pushed 1 commit' : `pushed ${count.toString()} commits`,
       login: item.data.authorLogin,
       tag: null
     }

@@ -19,6 +19,7 @@ import pullRequestsReducer from '@/app/store/pull-requests-slice'
 import type { PullRequest } from '@/types/pull-request'
 
 import { createMockPullRequest } from './__test-helpers__/pull-request-fixtures'
+import { noMergeAutomation } from './__test-helpers__/merge-options-fixtures'
 import { PullRequestFooterActions } from './PullRequestFooterActions'
 import { PullRequestNavigationProvider } from './PullRequestNavigationProvider'
 
@@ -38,6 +39,7 @@ const mockPullRequest = createMockPullRequest({
 })
 
 const mergeableOptions: MergeOptions = {
+  ...noMergeAutomation,
   allowMergeCommit: true,
   allowRebaseMerge: true,
   allowSquashMerge: true,

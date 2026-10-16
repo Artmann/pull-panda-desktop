@@ -79,4 +79,46 @@ describe('getMergeVerdict', () => {
   it('is checking until GitHub reports whether it can merge', () => {
     expect(verdictFor({ mergeOptions: null }).title).toEqual('Checking')
   })
+
+  it('reports the queue position over running checks', () => {
+    expect(
+      verdictFor({
+        checks: [createCheck({ conclusion: null, state: 'in_progress' })],
+        mergeOptions: createMergeOptions({
+          isMergeQueueEnabled: true,
+          mergeQueueEntry: {
+            enqueuedAt: '2026-10-14T10:00:00Z',
+            estimatedTimeToMerge: null,
+            position: 2,
+            state: 'AWAITING_CHECKS'
+          }
+        })
+      })
+    ).toEqual({
+      blockerCount: 0,
+      detail: 'Number 2 in the queue.',
+      title: 'In merge queue',
+      tone: 'neutral'
+    })
+  })
+
+  it('reports auto-merge over the blocking reason', () => {
+    expect(
+      verdictFor({
+        mergeOptions: createMergeOptions({
+          autoMergeRequest: {
+            enabledAt: '2026-10-14T10:00:00Z',
+            enabledByLogin: 'octocat',
+            mergeMethod: 'squash'
+          },
+          mergeableState: 'blocked'
+        })
+      })
+    ).toEqual({
+      blockerCount: 0,
+      detail: 'Merges once every rule is met.',
+      title: 'Auto-merge enabled',
+      tone: 'neutral'
+    })
+  })
 })

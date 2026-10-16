@@ -7,6 +7,7 @@ import type {
 } from '@/types/pull-request-details'
 import type { PullRequest } from '@/types/pull-request'
 
+import { noMergeAutomation } from '../../__test-helpers__/merge-options-fixtures'
 import type {
   CheckTask,
   RequirementTask,
@@ -103,6 +104,7 @@ export function createMergeOptions(
   overrides: Partial<MergeOptions> = {}
 ): MergeOptions {
   return {
+    ...noMergeAutomation,
     allowMergeCommit: true,
     allowRebaseMerge: true,
     allowSquashMerge: true,

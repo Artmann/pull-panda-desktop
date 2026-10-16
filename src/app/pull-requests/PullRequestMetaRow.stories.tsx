@@ -22,20 +22,23 @@ function files(count: number): ModifiedFile[] {
 }
 
 function commits(count: number): Commit[] {
-  return Array.from({ length: count }, (_, index): Commit => ({
-    authorAvatarUrl: null,
-    authorLogin: 'octocat',
-    gitHubCreatedAt: '2026-01-01T00:00:00Z',
-    gitHubId: `commit-${index.toString()}`,
-    hash: `abc${index.toString()}`,
-    id: `commit-${index.toString()}`,
-    linesAdded: null,
-    linesRemoved: null,
-    message: 'Commit',
-    pullRequestId: 'pr-1',
-    syncedAt: '2026-01-01T00:00:00Z',
-    url: null
-  }))
+  return Array.from(
+    { length: count },
+    (_, index): Commit => ({
+      authorAvatarUrl: null,
+      authorLogin: 'octocat',
+      gitHubCreatedAt: '2026-01-01T00:00:00Z',
+      gitHubId: `commit-${index.toString()}`,
+      hash: `abc${index.toString()}`,
+      id: `commit-${index.toString()}`,
+      linesAdded: null,
+      linesRemoved: null,
+      message: 'Commit',
+      pullRequestId: 'pr-1',
+      syncedAt: '2026-01-01T00:00:00Z',
+      url: null
+    })
+  )
 }
 
 const openPullRequest = {

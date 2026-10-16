@@ -99,7 +99,9 @@ describe('TaskRow', () => {
     )
 
     expect(
-      screen.getAllByRole('img').map((image) => image.getAttribute('aria-label'))
+      screen
+        .getAllByRole('img')
+        .map((image) => image.getAttribute('aria-label'))
     ).toEqual(['Done', 'Blocking', 'In progress', 'Open'])
   })
 

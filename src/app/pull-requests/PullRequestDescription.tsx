@@ -21,10 +21,7 @@ import {
 } from '@/app/components/ui/context-menu'
 import { Textarea } from '@/app/components/ui/textarea'
 import { copyToClipboard } from '@/app/lib/clipboard'
-import {
-  draftsActions,
-  getDraftKeyForComment
-} from '@/app/store/drafts-slice'
+import { draftsActions, getDraftKeyForComment } from '@/app/store/drafts-slice'
 import { useAppDispatch, useAppSelector } from '@/app/store/hooks'
 import type { PullRequest } from '@/types/pull-request'
 
@@ -163,7 +160,10 @@ function DescriptionEditor({
           if (event.key === 'Escape') {
             event.preventDefault()
             onCancel()
-          } else if (event.key === 'Enter' && (event.metaKey || event.ctrlKey)) {
+          } else if (
+            event.key === 'Enter' &&
+            (event.metaKey || event.ctrlKey)
+          ) {
             event.preventDefault()
             onSave()
           }
@@ -310,7 +310,9 @@ function useQuoteIntoComment(pullRequestId: string): (text: string) => void {
       .split('\n')
       .map((line) => `> ${line}`)
       .join('\n')
-    const body = existing.trim() ? `${existing.trimEnd()}\n\n${quote}\n\n` : `${quote}\n\n`
+    const body = existing.trim()
+      ? `${existing.trimEnd()}\n\n${quote}\n\n`
+      : `${quote}\n\n`
 
     dispatch(draftsActions.setDraft({ body, key: draftKey }))
 

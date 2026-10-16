@@ -1,5 +1,11 @@
 import { useCallback, useEffect, useState, type ReactElement } from 'react'
-import { Activity, AlertTriangle, ArrowLeft, Layers, ScrollText } from 'lucide-react'
+import {
+  Activity,
+  AlertTriangle,
+  ArrowLeft,
+  Layers,
+  ScrollText
+} from 'lucide-react'
 import { Link } from 'react-router'
 
 import { Badge } from '@/app/components/ui/badge'
@@ -113,7 +119,10 @@ export function TelemetryPage(): ReactElement {
       <SummaryGrid stats={stats} />
 
       {selected ? (
-        <TraceDetailPanel detail={selected} onClose={() => setSelected(null)} />
+        <TraceDetailPanel
+          detail={selected}
+          onClose={() => setSelected(null)}
+        />
       ) : null}
 
       <div className="grid grid-cols-2 gap-6 items-start">
@@ -144,7 +153,10 @@ export function TelemetryPage(): ReactElement {
               search={search}
             />
 
-            <TraceTable traces={traces} onSelect={openTrace} />
+            <TraceTable
+              traces={traces}
+              onSelect={openTrace}
+            />
           </CardContent>
         </Card>
       </div>
@@ -212,7 +224,9 @@ function SummaryGrid({
         value={stats?.traceCount ?? 0}
       />
       <SummaryCard
-        icon={<AlertTriangle className="h-4 w-4 text-status-danger-foreground" />}
+        icon={
+          <AlertTriangle className="h-4 w-4 text-status-danger-foreground" />
+        }
         label="Error traces"
         value={stats?.errorTraceCount ?? 0}
       />

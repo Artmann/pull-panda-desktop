@@ -75,7 +75,9 @@ function buildChecksCell(checks: Check[]): StatusCell {
 
     return {
       ...base,
-      detail: detail || `${tally.total.toString()} of ${tally.total.toString()} checks`,
+      detail:
+        detail ||
+        `${tally.total.toString()} of ${tally.total.toString()} checks`,
       tone: 'danger',
       value: `${tally.failed.toString()} failing`
     }

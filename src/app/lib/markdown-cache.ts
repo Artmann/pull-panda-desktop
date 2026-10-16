@@ -156,8 +156,9 @@ function rehypeDetectLanguageFromPath(path?: string): Plugin<[], Root> {
         }
 
         if (Array.isArray(node.properties.className)) {
-          const suggestionClassIndex =
-            node.properties.className.indexOf('language-suggestion')
+          const suggestionClassIndex = node.properties.className.indexOf(
+            'language-suggestion'
+          )
 
           if (suggestionClassIndex !== -1) {
             node.properties.className[suggestionClassIndex] = newClassName

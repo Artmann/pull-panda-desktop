@@ -1,10 +1,6 @@
 import { memo, useState, type ReactElement } from 'react'
 
-import {
-  Avatar,
-  AvatarFallback,
-  AvatarImage
-} from '@/app/components/ui/avatar'
+import { Avatar, AvatarFallback, AvatarImage } from '@/app/components/ui/avatar'
 import { Button } from '@/app/components/ui/button'
 import { Textarea } from '@/app/components/ui/textarea'
 import { createComment, syncPullRequestDetails } from '@/app/lib/api'

@@ -64,9 +64,7 @@ describe('PullRequestDescription', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Save' }))
 
     expect(store.getState().pullRequests.items[0].body).toEqual('New text')
-    expect(screen.queryByRole('textbox', { name: 'Description' })).toEqual(
-      null
-    )
+    expect(screen.queryByRole('textbox', { name: 'Description' })).toEqual(null)
   })
 
   it('throws the change away on Cancel', () => {
@@ -85,6 +83,8 @@ describe('PullRequestDescription', () => {
   it('offers Add description when there is no description yet', () => {
     renderDescription(null)
 
-    expect(screen.getByRole('button', { name: 'Add description' })).toBeDefined()
+    expect(
+      screen.getByRole('button', { name: 'Add description' })
+    ).toBeDefined()
   })
 })

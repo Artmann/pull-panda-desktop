@@ -16,7 +16,12 @@ import { Database } from '../../../sync/services/database'
 import { EtagStore } from '../../../sync/services/etag-store'
 import { NotFoundError } from '../../../sync/errors'
 import { Repository } from '../../services/repository'
-import type { MergeRequirement } from '../../../types/merge-requirements'
+import type {
+  MergeAutomation,
+  MergeMethod,
+  MergeQueueEntryState,
+  MergeRequirement
+} from '../../../types/merge-requirements'
 import type { PullRequest } from '../../../types/pull-request'
 import { OctokitError, ValidationError } from '../errors'
 import { octokitErrorOf } from '../octokit-error'
@@ -370,8 +375,30 @@ interface StatusCheckRollup {
   state: string
 }
 
+type GraphQLMergeMethod = 'MERGE' | 'REBASE' | 'SQUASH'
+
+interface GraphQLMergeAutomationNode {
+  autoMergeRequest: {
+    enabledAt: string | null
+    enabledBy: { login: string } | null
+    mergeMethod: GraphQLMergeMethod | null
+  } | null
+  isMergeQueueEnabled: boolean
+  mergeQueue: {
+    configuration: { mergeMethod: GraphQLMergeMethod | null } | null
+  } | null
+  mergeQueueEntry: {
+    enqueuedAt: string | null
+    estimatedTimeToMerge: number | null
+    position: number | null
+    state: MergeQueueEntryState
+  } | null
+  viewerCanDisableAutoMerge: boolean
+  viewerCanEnableAutoMerge: boolean
+}
+
 interface GraphQLMergeStateResponse {
-  node: {
+  node: GraphQLMergeAutomationNode & {
     baseRefName: string
     commits: {
       nodes: Array<{
@@ -395,11 +422,32 @@ const mergeStateQuery = `
   query MergeState($id: ID!, $number: Int!) {
     node(id: $id) {
       ... on PullRequest {
+        autoMergeRequest {
+          enabledAt
+          enabledBy {
+            login
+          }
+          mergeMethod
+        }
         baseRefName
         isDraft
+        isMergeQueueEnabled
         mergeable
+        mergeQueue {
+          configuration {
+            mergeMethod
+          }
+        }
+        mergeQueueEntry {
+          enqueuedAt
+          estimatedTimeToMerge
+          position
+          state
+        }
         mergeStateStatus
         reviewDecision
+        viewerCanDisableAutoMerge
+        viewerCanEnableAutoMerge
         reviewThreads(first: 100) {
           totalCount
           nodes {
@@ -458,19 +506,71 @@ const areRequiredChecksPassing = (
   )
 }
 
+const graphQLClient = (token: string) =>
+  graphql.defaults({
+    headers: { authorization: `token ${token}` }
+  })
+
+const toMergeMethod = (
+  method: GraphQLMergeMethod | null | undefined
+): MergeMethod | null => {
+  switch (method) {
+    case 'MERGE':
+      return 'merge'
+    case 'REBASE':
+      return 'rebase'
+    case 'SQUASH':
+      return 'squash'
+    default:
+      return null
+  }
+}
+
+export function toMergeAutomation(
+  node: GraphQLMergeAutomationNode
+): MergeAutomation {
+  const autoMerge = node.autoMergeRequest
+  const queueEntry = node.mergeQueueEntry
+
+  return {
+    autoMergeRequest: autoMerge
+      ? {
+          enabledAt: autoMerge.enabledAt,
+          enabledByLogin: autoMerge.enabledBy?.login ?? null,
+          mergeMethod: node.isMergeQueueEnabled
+            ? null
+            : toMergeMethod(autoMerge.mergeMethod)
+        }
+      : null,
+    isMergeQueueEnabled: node.isMergeQueueEnabled,
+    mergeQueueEntry: queueEntry
+      ? {
+          enqueuedAt: queueEntry.enqueuedAt,
+          estimatedTimeToMerge: queueEntry.estimatedTimeToMerge,
+          position: queueEntry.position,
+          state: queueEntry.state
+        }
+      : null,
+    mergeQueueMethod: toMergeMethod(
+      node.mergeQueue?.configuration?.mergeMethod
+    ),
+    viewerCanDisableAutoMerge: node.viewerCanDisableAutoMerge,
+    viewerCanEnableAutoMerge: node.viewerCanEnableAutoMerge
+  }
+}
+
 async function fetchMergeStateGraphQL(
   token: string,
   nodeId: string,
   pullNumber: number
-): Promise<GraphQLMergeState> {
-  const client = graphql.defaults({
-    headers: { authorization: `token ${token}` }
-  })
-
-  const response = await client<GraphQLMergeStateResponse>(mergeStateQuery, {
-    id: nodeId,
-    number: pullNumber
-  })
+): Promise<{ automation: MergeAutomation; state: GraphQLMergeState }> {
+  const response = await graphQLClient(token)<GraphQLMergeStateResponse>(
+    mergeStateQuery,
+    {
+      id: nodeId,
+      number: pullNumber
+    }
+  )
 
   const node = response.node
   const rollup = node.commits.nodes[0]?.commit.statusCheckRollup
@@ -478,14 +578,17 @@ async function fetchMergeStateGraphQL(
   const unresolved = threads.filter((thread) => !thread.isResolved).length
 
   return {
-    baseRefName: node.baseRefName,
-    isDraft: node.isDraft,
-    mergeable: node.mergeable,
-    mergeStateStatus: node.mergeStateStatus,
-    requiredChecksPassing: areRequiredChecksPassing(rollup),
-    reviewDecision: node.reviewDecision,
-    totalReviewThreads: node.reviewThreads.totalCount,
-    unresolvedReviewThreads: unresolved
+    automation: toMergeAutomation(node),
+    state: {
+      baseRefName: node.baseRefName,
+      isDraft: node.isDraft,
+      mergeable: node.mergeable,
+      mergeStateStatus: node.mergeStateStatus,
+      requiredChecksPassing: areRequiredChecksPassing(rollup),
+      reviewDecision: node.reviewDecision,
+      totalReviewThreads: node.reviewThreads.totalCount,
+      unresolvedReviewThreads: unresolved
+    }
   }
 }
 
@@ -893,19 +996,20 @@ export const fetchMergeOptions = (input: {
       catch: octokitErrorOf('fetchMergeOptions')
     })
 
-    const [graphqlData, repoSettings, protection] = data
+    const [{ automation, state }, repoSettings, protection] = data
 
     const mergeable =
-      graphqlData.mergeable === 'MERGEABLE'
+      state.mergeable === 'MERGEABLE'
         ? true
-        : graphqlData.mergeable === 'CONFLICTING'
+        : state.mergeable === 'CONFLICTING'
           ? false
           : null
 
-    const mergeableState = graphqlData.mergeStateStatus.toLowerCase()
-    const requirements = buildRequirements(graphqlData, protection)
+    const mergeableState = state.mergeStateStatus.toLowerCase()
+    const requirements = buildRequirements(state, protection)
 
     return {
+      ...automation,
       allowMergeCommit: repoSettings.allowMergeCommit,
       allowRebaseMerge: repoSettings.allowRebaseMerge,
       allowSquashMerge: repoSettings.allowSquashMerge,
@@ -915,12 +1019,154 @@ export const fetchMergeOptions = (input: {
     }
   })
 
+// @octokit/graphql prefixes every error with this line, which reads badly in a
+// toast. The GitHub message after it is the useful part.
+const graphQLErrorPrefix = 'Request failed due to following response errors:'
+
+const stripGraphQLErrorPrefix = (message: string): string =>
+  message.startsWith(graphQLErrorPrefix)
+    ? message
+        .slice(graphQLErrorPrefix.length)
+        .replace(/^\s*-\s*/, '')
+        .trim()
+    : message
+
+// Runs one of the auto-merge or merge queue mutations, then returns the fresh
+// merge options so the renderer can replace its optimistic copy.
+const runMergeAutomationMutation = (input: {
+  readonly mutation: string
+  readonly operation: string
+  readonly pullRequestId: string
+  readonly token: string
+  readonly variables: Record<string, unknown>
+}) =>
+  Effect.gen(function* () {
+    const repository = yield* Repository
+
+    yield* repository.requirePullRequestById(input.pullRequestId)
+
+    yield* Effect.tryPromise({
+      try: () => graphQLClient(input.token)(input.mutation, input.variables),
+      catch: octokitErrorOf(input.operation, {
+        transform: stripGraphQLErrorPrefix
+      })
+    })
+
+    return yield* fetchMergeOptions({
+      pullRequestId: input.pullRequestId,
+      token: input.token
+    })
+  })
+
+const enableAutoMergeMutation = `
+  mutation EnableAutoMerge(
+    $pullRequestId: ID!
+    $mergeMethod: PullRequestMergeMethod
+    $commitHeadline: String
+    $commitBody: String
+  ) {
+    enablePullRequestAutoMerge(
+      input: {
+        pullRequestId: $pullRequestId
+        mergeMethod: $mergeMethod
+        commitHeadline: $commitHeadline
+        commitBody: $commitBody
+      }
+    ) {
+      clientMutationId
+    }
+  }
+`
+
+const disableAutoMergeMutation = `
+  mutation DisableAutoMerge($pullRequestId: ID!) {
+    disablePullRequestAutoMerge(input: { pullRequestId: $pullRequestId }) {
+      clientMutationId
+    }
+  }
+`
+
+const enqueueMutation = `
+  mutation EnqueuePullRequest($pullRequestId: ID!) {
+    enqueuePullRequest(input: { pullRequestId: $pullRequestId }) {
+      clientMutationId
+    }
+  }
+`
+
+const dequeueMutation = `
+  mutation DequeuePullRequest($pullRequestId: ID!) {
+    dequeuePullRequest(input: { id: $pullRequestId }) {
+      clientMutationId
+    }
+  }
+`
+
+export interface EnableAutoMergeInput {
+  readonly commitBody?: string
+  readonly commitHeadline?: string
+  /** Leave out when the base branch uses a merge queue. */
+  readonly mergeMethod?: MergeMethod
+  readonly pullRequestId: string
+  readonly token: string
+}
+
+export const enableAutoMerge = (input: EnableAutoMergeInput) =>
+  runMergeAutomationMutation({
+    mutation: enableAutoMergeMutation,
+    operation: 'enablePullRequestAutoMerge',
+    pullRequestId: input.pullRequestId,
+    token: input.token,
+    variables: {
+      commitBody: input.commitBody,
+      commitHeadline: input.commitHeadline,
+      mergeMethod: input.mergeMethod?.toUpperCase(),
+      pullRequestId: input.pullRequestId
+    }
+  })
+
+export const disableAutoMerge = (input: {
+  readonly pullRequestId: string
+  readonly token: string
+}) =>
+  runMergeAutomationMutation({
+    mutation: disableAutoMergeMutation,
+    operation: 'disablePullRequestAutoMerge',
+    pullRequestId: input.pullRequestId,
+    token: input.token,
+    variables: { pullRequestId: input.pullRequestId }
+  })
+
+export const enqueuePullRequest = (input: {
+  readonly pullRequestId: string
+  readonly token: string
+}) =>
+  runMergeAutomationMutation({
+    mutation: enqueueMutation,
+    operation: 'enqueuePullRequest',
+    pullRequestId: input.pullRequestId,
+    token: input.token,
+    variables: { pullRequestId: input.pullRequestId }
+  })
+
+export const dequeuePullRequest = (input: {
+  readonly pullRequestId: string
+  readonly token: string
+}) =>
+  runMergeAutomationMutation({
+    mutation: dequeueMutation,
+    operation: 'dequeuePullRequest',
+    pullRequestId: input.pullRequestId,
+    token: input.token,
+    variables: { pullRequestId: input.pullRequestId }
+  })
+
 export interface MergePullRequestInput {
   readonly commitMessage?: string
   readonly commitTitle?: string
   /** Delete the head branch once merged, when it lives in the same repo. */
   readonly deleteBranch?: boolean
-  readonly mergeMethod: 'merge' | 'rebase' | 'squash'
+  readonly mergeMethod: MergeMethod
   readonly owner: string
   readonly pullNumber: number
   readonly pullRequestId: string

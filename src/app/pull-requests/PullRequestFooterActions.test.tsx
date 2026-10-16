@@ -22,6 +22,7 @@ import pullRequestsReducer from '@/app/store/pull-requests-slice'
 
 import { createMockPullRequest } from './__test-helpers__/pull-request-fixtures'
 import { PullRequestFooterActions } from './PullRequestFooterActions'
+import { noMergeAutomation } from './__test-helpers__/merge-options-fixtures'
 import { PullRequestNavigationProvider } from './PullRequestNavigationProvider'
 
 import { TooltipProvider } from '@/app/components/ui/tooltip'
@@ -132,6 +133,7 @@ describe('PullRequestFooterActions', () => {
     const store = createTestStore({
       mergeOptions: {
         'pr-1': {
+          ...noMergeAutomation,
           allowMergeCommit: true,
           allowRebaseMerge: true,
           allowSquashMerge: true,
@@ -159,6 +161,7 @@ describe('PullRequestFooterActions', () => {
     const store = createTestStore({
       mergeOptions: {
         'pr-1': {
+          ...noMergeAutomation,
           allowMergeCommit: true,
           allowRebaseMerge: true,
           allowSquashMerge: true,

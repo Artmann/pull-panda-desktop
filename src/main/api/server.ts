@@ -69,17 +69,14 @@ export function startApiServer(getToken: () => string | null): Promise<number> {
     app.use('*', async (context, next) => {
       const traceId = context.req.header(traceIdHeader)
       const parentSpanId = context.req.header(parentSpanIdHeader)
-      const span = startSpan(
-        `http ${context.req.method} ${context.req.path}`,
-        {
-          kind: 'server',
-          attributes: {
-            'http.method': context.req.method,
-            'http.path': context.req.path
-          },
-          parent: traceId && parentSpanId ? { traceId, parentSpanId } : null
-        }
-      )
+      const span = startSpan(`http ${context.req.method} ${context.req.path}`, {
+        kind: 'server',
+        attributes: {
+          'http.method': context.req.method,
+          'http.path': context.req.path
+        },
+        parent: traceId && parentSpanId ? { traceId, parentSpanId } : null
+      })
 
       context.set('traceContext', childContext(span))
 

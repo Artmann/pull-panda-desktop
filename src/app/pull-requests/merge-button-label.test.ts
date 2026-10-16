@@ -1,7 +1,12 @@
 import { describe, expect, it } from 'vitest'
 
 import type { MergeOptions } from '@/app/lib/api'
+import type {
+  AutoMergeRequest,
+  MergeQueueEntry
+} from '@/types/merge-requirements'
 
+import { noMergeAutomation } from './__test-helpers__/merge-options-fixtures'
 import {
   canMergeNow,
   getMergeButtonLabel,
@@ -12,6 +17,7 @@ function createMergeOptions(
   overrides: Partial<MergeOptions> = {}
 ): MergeOptions {
   return {
+    ...noMergeAutomation,
     allowMergeCommit: true,
     allowRebaseMerge: true,
     allowSquashMerge: true,
@@ -20,6 +26,19 @@ function createMergeOptions(
     requirements: [],
     ...overrides
   }
+}
+
+const autoMergeRequest: AutoMergeRequest = {
+  enabledAt: '2026-10-14T10:00:00Z',
+  enabledByLogin: 'octocat',
+  mergeMethod: 'squash'
+}
+
+const queueEntry: MergeQueueEntry = {
+  enqueuedAt: '2026-10-14T10:00:00Z',
+  estimatedTimeToMerge: null,
+  position: 3,
+  state: 'QUEUED'
 }
 
 describe('getMergeButtonLabel', () => {
@@ -136,5 +155,65 @@ describe('isReadyToMerge', () => {
     })
 
     expect(isReadyToMerge(options)).toEqual(true)
+  })
+
+  it('does not treat a queued or auto-merging pull request as ready', () => {
+    const queued = createMergeOptions({
+      mergeable: true,
+      mergeableState: 'clean',
+      mergeQueueEntry: queueEntry
+    })
+    const autoMerging = createMergeOptions({
+      autoMergeRequest,
+      mergeable: true,
+      mergeableState: 'clean'
+    })
+
+    expect([isReadyToMerge(queued), isReadyToMerge(autoMerging)]).toEqual([
+      false,
+      false
+    ])
+  })
+})
+
+describe('getMergeButtonLabel with auto-merge and merge queues', () => {
+  it('reports the queue position while the pull request is queued', () => {
+    const options = createMergeOptions({
+      isMergeQueueEnabled: true,
+      mergeable: true,
+      mergeableState: 'clean',
+      mergeQueueEntry: queueEntry
+    })
+
+    expect(getMergeButtonLabel(options)).toEqual('In merge queue (#3)')
+  })
+
+  it('reports "In merge queue" before GitHub has placed the entry', () => {
+    const options = createMergeOptions({
+      mergeQueueEntry: { ...queueEntry, position: null }
+    })
+
+    expect(getMergeButtonLabel(options)).toEqual('In merge queue')
+  })
+
+  it('reports "Auto-merge enabled" over the blocking reason', () => {
+    const options = createMergeOptions({
+      autoMergeRequest,
+      mergeable: true,
+      mergeableState: 'blocked'
+    })
+
+    expect(getMergeButtonLabel(options)).toEqual('Auto-merge enabled')
+  })
+
+  it('reports "Queued when ready" for merge when ready on a queued branch', () => {
+    const options = createMergeOptions({
+      autoMergeRequest: { ...autoMergeRequest, mergeMethod: null },
+      isMergeQueueEnabled: true,
+      mergeable: true,
+      mergeableState: 'blocked'
+    })
+
+    expect(getMergeButtonLabel(options)).toEqual('Queued when ready')
   })
 })

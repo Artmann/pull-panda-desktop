@@ -3,15 +3,17 @@ const linkPattern = /\[([^\]]*)\]\([^)]*\)/g
 
 /** Flattens a line of markdown to the words a reader would see. */
 export function markdownToPlainText(markdown: string): string {
-  return markdown
-    .replace(imagePattern, '')
-    .replace(linkPattern, '$1')
-    .replace(/<[^>]+>/g, '')
-    .replace(/[*_`#>]/g, '')
-    // Escaped punctuation (`\[`) reads as the character itself.
-    .replace(/\\([^\w\s])/g, '$1')
-    .replace(/\s+/g, ' ')
-    .trim()
+  return (
+    markdown
+      .replace(imagePattern, '')
+      .replace(linkPattern, '$1')
+      .replace(/<[^>]+>/g, '')
+      .replace(/[*_`#>]/g, '')
+      // Escaped punctuation (`\[`) reads as the character itself.
+      .replace(/\\([^\w\s])/g, '$1')
+      .replace(/\s+/g, ' ')
+      .trim()
+  )
 }
 
 /**

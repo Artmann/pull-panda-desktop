@@ -3,8 +3,101 @@ import { describe, expect, it } from 'vitest'
 import {
   branchRulesToProtection,
   buildRequirements,
-  storedPullRequestChanges
+  storedPullRequestChanges,
+  toMergeAutomation
 } from './pull-requests'
+
+type MergeAutomationNode = Parameters<typeof toMergeAutomation>[0]
+
+const makeAutomationNode = (
+  overrides: Partial<MergeAutomationNode> = {}
+): MergeAutomationNode => ({
+  autoMergeRequest: null,
+  isMergeQueueEnabled: false,
+  mergeQueue: null,
+  mergeQueueEntry: null,
+  viewerCanDisableAutoMerge: false,
+  viewerCanEnableAutoMerge: true,
+  ...overrides
+})
+
+describe('toMergeAutomation', () => {
+  it('reports no auto-merge and no queue', () => {
+    expect(toMergeAutomation(makeAutomationNode())).toEqual({
+      autoMergeRequest: null,
+      isMergeQueueEnabled: false,
+      mergeQueueEntry: null,
+      mergeQueueMethod: null,
+      viewerCanDisableAutoMerge: false,
+      viewerCanEnableAutoMerge: true
+    })
+  })
+
+  it('maps an auto-merge request and lowercases its method', () => {
+    const automation = toMergeAutomation(
+      makeAutomationNode({
+        autoMergeRequest: {
+          enabledAt: '2026-10-14T10:00:00Z',
+          enabledBy: { login: 'octocat' },
+          mergeMethod: 'SQUASH'
+        },
+        viewerCanDisableAutoMerge: true,
+        viewerCanEnableAutoMerge: false
+      })
+    )
+
+    expect(automation).toEqual({
+      autoMergeRequest: {
+        enabledAt: '2026-10-14T10:00:00Z',
+        enabledByLogin: 'octocat',
+        mergeMethod: 'squash'
+      },
+      isMergeQueueEnabled: false,
+      mergeQueueEntry: null,
+      mergeQueueMethod: null,
+      viewerCanDisableAutoMerge: true,
+      viewerCanEnableAutoMerge: false
+    })
+  })
+
+  it('drops the auto-merge method and reports the queue entry when a merge queue is used', () => {
+    const automation = toMergeAutomation(
+      makeAutomationNode({
+        autoMergeRequest: {
+          enabledAt: '2026-10-14T10:00:00Z',
+          enabledBy: null,
+          mergeMethod: 'MERGE'
+        },
+        isMergeQueueEnabled: true,
+        mergeQueue: { configuration: { mergeMethod: 'REBASE' } },
+        mergeQueueEntry: {
+          enqueuedAt: '2026-10-14T10:05:00Z',
+          estimatedTimeToMerge: 300,
+          position: 1,
+          state: 'AWAITING_CHECKS'
+        }
+      })
+    )
+
+    expect(automation).toEqual({
+      autoMergeRequest: {
+        enabledAt: '2026-10-14T10:00:00Z',
+        enabledByLogin: null,
+        mergeMethod: null
+      },
+      isMergeQueueEnabled: true,
+      mergeQueueEntry: {
+        enqueuedAt: '2026-10-14T10:05:00Z',
+        estimatedTimeToMerge: 300,
+        position: 1,
+        state: 'AWAITING_CHECKS'
+      },
+      mergeQueueMethod: 'rebase',
+      viewerCanDisableAutoMerge: false,
+      viewerCanEnableAutoMerge: true
+    })
+  })
+})
 
 type MergeState = Parameters<typeof buildRequirements>[0]
 type Protection = Parameters<typeof buildRequirements>[1]
