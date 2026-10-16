@@ -218,8 +218,9 @@ function LandmarkNavigation(): ReactElement {
   const navigation = usePullRequestNavigation()
 
   return (
-    <div className="flex items-center gap-1">
+    <div className="flex items-center">
       <LandmarkButton
+        className="rounded-r-none"
         hotkey="K"
         label="Previous section"
         onClick={() => navigation.jumpToPreviousLandmark()}
@@ -228,6 +229,7 @@ function LandmarkNavigation(): ReactElement {
       </LandmarkButton>
 
       <LandmarkButton
+        className="-ml-px rounded-l-none"
         hotkey="J"
         label="Next section"
         onClick={() => navigation.jumpToNextLandmark()}
@@ -246,11 +248,13 @@ function LandmarkNavigation(): ReactElement {
  */
 function LandmarkButton({
   children,
+  className,
   hotkey,
   label,
   onClick
 }: {
   children: ReactNode
+  className: string
   hotkey: string
   label: string
   onClick: () => void
@@ -260,6 +264,7 @@ function LandmarkButton({
       <TooltipTrigger asChild>
         <Button
           aria-label={label}
+          className={cn('size-7', className)}
           onClick={onClick}
           size="icon-xs"
           variant="outline"
@@ -396,6 +401,7 @@ function OverflowMenu({ actions }: OverflowMenuProps): ReactElement {
       <DropdownMenuTrigger asChild>
         <Button
           aria-label="More actions"
+          className="size-7"
           size="icon-xs"
           title="More actions"
           variant="outline"
