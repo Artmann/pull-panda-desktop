@@ -40,6 +40,7 @@ import { reviewThreadsActions } from '@/app/store/review-threads-slice'
 import { CommentBody } from './CommentBody'
 import { CommentReply } from './CommentReply'
 import { useCopyPrompt } from './use-copy-prompt'
+import { useToggleCommentTask } from './use-toggle-comment-task'
 import { PierreDiff } from '../diffs/PierreDiff'
 
 interface CommentThreadProps {
@@ -116,6 +117,8 @@ const CommentItem = memo(function CommentItem({
   showPromptButton = false,
   variant = 'card'
 }: CommentItemProps): ReactElement {
+  const handleToggleTask = useToggleCommentTask(comment)
+
   return (
     <div className={commentItemClassName(variant)}>
       <CommentItemHeader
@@ -128,6 +131,7 @@ const CommentItem = memo(function CommentItem({
       {comment.body && (
         <CommentBody
           content={comment.body}
+          onToggleTask={handleToggleTask}
           path={comment.path ?? undefined}
         />
       )}

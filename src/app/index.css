@@ -421,6 +421,15 @@ body {
   opacity: 1;
 }
 
+/* Clickable when the reader can edit the text the list lives in. */
+.markdown-block .task-list-item input[type='checkbox']:enabled {
+  cursor: pointer;
+}
+
+.markdown-block .task-list-item input[type='checkbox']:enabled:hover {
+  border-color: var(--primary);
+}
+
 .markdown-block .task-list-item input[type='checkbox']:checked {
   border-color: var(--primary);
   background-color: var(--primary);

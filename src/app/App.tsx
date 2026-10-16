@@ -40,7 +40,8 @@ import {
   startSpan
 } from '@/app/lib/telemetry/tracer'
 import { cn } from '@/app/lib/utils'
-import { useAppDispatch, useAppSelector } from '@/app/store/hooks'
+import { useAppDispatch, useAppSelector, useAppStore } from '@/app/store/hooks'
+import { keepPendingEdits } from '@/app/store/pending-edits'
 import { resourceEventToAction } from '@/app/store/resource-event-to-action'
 import { AppFooter } from './AppFooter'
 
@@ -79,6 +80,7 @@ export function App({ store }: AppProps): ReactElement {
 function AppContent(): ReactElement {
   const { status, isNewSignIn } = useAuth()
   const dispatch = useAppDispatch()
+  const store = useAppStore()
   const navigate = useNavigate()
   const location = useLocation()
 
@@ -109,11 +111,11 @@ function AppContent(): ReactElement {
   // Listen for resource updates from the main process
   useEffect(() => {
     const unsubscribe = window.electron.onResourceUpdated((event) => {
-      dispatch(resourceEventToAction(event))
+      dispatch(resourceEventToAction(keepPendingEdits(event, store.getState())))
     })
 
     return unsubscribe
-  }, [dispatch])
+  }, [dispatch, store])
 
   // SyncComplete just signals the sync is done (no data fetching needed).
   useEffect(() => {

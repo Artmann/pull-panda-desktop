@@ -5,6 +5,7 @@ import type {
   MergeRequirement
 } from '@/types/merge-requirements'
 import type { PullRequest } from '@/types/pull-request'
+import type { Comment } from '@/types/pull-request-details'
 import type {
   CheckoutPullRequestResult,
   CloneRepoResult,
@@ -241,6 +242,19 @@ export async function createComment(
     body: request,
     errorMessage: 'Failed to create comment',
     method: 'POST'
+  })
+
+  return response.json()
+}
+
+export async function updateComment(request: {
+  body: string
+  commentId: string
+}): Promise<Comment> {
+  const response = await sendJsonRequest(`/api/comments/${request.commentId}`, {
+    body: { body: request.body },
+    errorMessage: 'Failed to update comment',
+    method: 'PATCH'
   })
 
   return response.json()

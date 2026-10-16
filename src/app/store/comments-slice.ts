@@ -32,6 +32,16 @@ const commentsSlice = createSlice({
       state.items = action.payload
     },
 
+    updateComment(state, action: PayloadAction<Comment>) {
+      const index = state.items.findIndex(
+        (item) => item.id === action.payload.id
+      )
+
+      if (index !== -1) {
+        state.items[index] = action.payload
+      }
+    },
+
     setForPullRequest(
       state,
       action: PayloadAction<{ items: Comment[]; pullRequestId: string }>
