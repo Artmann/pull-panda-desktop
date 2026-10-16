@@ -1,6 +1,10 @@
 import { toast } from 'sonner'
 
 import {
+  dequeuePullRequest,
+  disableAutoMerge,
+  enableAutoMerge,
+  enqueuePullRequest,
   getMergeOptions,
   updatePullRequest,
   updatePullRequestHidden,
@@ -10,6 +14,7 @@ import { runOptimisticMutation } from '@/app/lib/mutations/run-optimistic-mutati
 import type { AppDispatch } from '@/app/store'
 import { mergeOptionsActions } from '@/app/store/merge-options-slice'
 import { pullRequestsActions } from '@/app/store/pull-requests-slice'
+import type { MergeMethod } from '@/types/merge-requirements'
 import type { PullRequest } from '@/types/pull-request'
 
 // The single implementation of each pull request action, kept free of React so
@@ -193,6 +198,143 @@ export function setPullRequestHidden({
     errorMessage: hidden
       ? 'Could not hide the pull request.'
       : 'Could not unhide the pull request.'
+  })
+}
+
+interface MergeAutomationParameters {
+  dispatch: AppDispatch
+  mergeOptions: MergeOptions
+  pullRequestId: string
+}
+
+interface MergeOptionsMutation extends MergeAutomationParameters {
+  errorMessage: string
+  optimisticOptions: MergeOptions
+  request: () => Promise<MergeOptions>
+}
+
+// The auto-merge and merge queue actions only change merge options, and each
+// request answers with the fresh options, so they share one optimistic flow.
+function runMergeOptionsMutation({
+  dispatch,
+  errorMessage,
+  mergeOptions,
+  optimisticOptions,
+  pullRequestId,
+  request
+}: MergeOptionsMutation): void {
+  const setOptions = (options: MergeOptions) =>
+    dispatch(mergeOptionsActions.setForPullRequest({ options, pullRequestId }))
+
+  runOptimisticMutation({
+    optimistic: () => setOptions(optimisticOptions),
+    request,
+    commit: setOptions,
+    rollback: () => setOptions(mergeOptions),
+    errorMessage
+  })
+}
+
+interface EnableAutoMergeParameters extends MergeAutomationParameters {
+  commitBody?: string
+  commitHeadline?: string
+  /** Leave out when the base branch uses a merge queue. */
+  mergeMethod?: MergeMethod
+}
+
+export function enablePullRequestAutoMerge({
+  commitBody,
+  commitHeadline,
+  dispatch,
+  mergeMethod,
+  mergeOptions,
+  pullRequestId
+}: EnableAutoMergeParameters): void {
+  runMergeOptionsMutation({
+    dispatch,
+    errorMessage: 'Failed to enable auto-merge',
+    mergeOptions,
+    optimisticOptions: {
+      ...mergeOptions,
+      autoMergeRequest: {
+        enabledAt: new Date().toISOString(),
+        enabledByLogin: null,
+        mergeMethod: mergeMethod ?? null
+      },
+      viewerCanDisableAutoMerge: true,
+      viewerCanEnableAutoMerge: false
+    },
+    pullRequestId,
+    request: () =>
+      enableAutoMerge({
+        commitBody,
+        commitHeadline,
+        mergeMethod,
+        pullRequestId
+      })
+  })
+}
+
+export function disablePullRequestAutoMerge({
+  dispatch,
+  mergeOptions,
+  pullRequestId
+}: MergeAutomationParameters): void {
+  runMergeOptionsMutation({
+    dispatch,
+    errorMessage: 'Failed to disable auto-merge',
+    mergeOptions,
+    optimisticOptions: {
+      ...mergeOptions,
+      autoMergeRequest: null,
+      viewerCanDisableAutoMerge: false,
+      viewerCanEnableAutoMerge: true
+    },
+    pullRequestId,
+    request: () => disableAutoMerge(pullRequestId)
+  })
+}
+
+export function addPullRequestToMergeQueue({
+  dispatch,
+  mergeOptions,
+  pullRequestId
+}: MergeAutomationParameters): void {
+  runMergeOptionsMutation({
+    dispatch,
+    errorMessage: 'Failed to add the pull request to the merge queue',
+    mergeOptions,
+    optimisticOptions: {
+      ...mergeOptions,
+      mergeQueueEntry: {
+        enqueuedAt: new Date().toISOString(),
+        estimatedTimeToMerge: null,
+        position: null,
+        state: 'QUEUED'
+      }
+    },
+    pullRequestId,
+    request: () => enqueuePullRequest(pullRequestId)
+  })
+}
+
+// Leaving the queue also cancels "merge when ready", so both are cleared.
+export function removePullRequestFromMergeQueue({
+  dispatch,
+  mergeOptions,
+  pullRequestId
+}: MergeAutomationParameters): void {
+  runMergeOptionsMutation({
+    dispatch,
+    errorMessage: 'Failed to remove the pull request from the merge queue',
+    mergeOptions,
+    optimisticOptions: {
+      ...mergeOptions,
+      autoMergeRequest: null,
+      mergeQueueEntry: null
+    },
+    pullRequestId,
+    request: () => dequeuePullRequest(pullRequestId)
   })
 }
 

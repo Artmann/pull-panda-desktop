@@ -1,4 +1,9 @@
 import { tracedFetch } from '@/app/lib/telemetry/traced-fetch'
+import type {
+  MergeAutomation,
+  MergeMethod,
+  MergeRequirement
+} from '@/types/merge-requirements'
 import type { PullRequest } from '@/types/pull-request'
 import type {
   CheckoutPullRequestResult,
@@ -317,20 +322,88 @@ export async function syncPullRequestDetails(
   })
 }
 
-export interface MergeRequirement {
-  description: string
-  key: string
-  label: string
-  satisfied: boolean
-}
-
-export interface MergeOptions {
+export interface MergeOptions extends MergeAutomation {
   allowMergeCommit: boolean
   allowRebaseMerge: boolean
   allowSquashMerge: boolean
   mergeable: boolean | null
   mergeableState: string
   requirements: MergeRequirement[]
+}
+
+interface EnableAutoMergeRequest {
+  commitBody?: string
+  commitHeadline?: string
+  /** Leave out when the base branch uses a merge queue. */
+  mergeMethod?: MergeMethod
+  pullRequestId: string
+}
+
+export async function enableAutoMerge(
+  request: EnableAutoMergeRequest
+): Promise<MergeOptions> {
+  const response = await sendJsonRequest(
+    `/api/pull-requests/${request.pullRequestId}/auto-merge`,
+    {
+      body: {
+        ...(request.commitBody !== undefined && {
+          commitBody: request.commitBody
+        }),
+        ...(request.commitHeadline !== undefined && {
+          commitHeadline: request.commitHeadline
+        }),
+        ...(request.mergeMethod !== undefined && {
+          mergeMethod: request.mergeMethod
+        })
+      },
+      errorMessage: 'Failed to enable auto-merge',
+      method: 'POST'
+    }
+  )
+
+  return response.json()
+}
+
+export async function disableAutoMerge(
+  pullRequestId: string
+): Promise<MergeOptions> {
+  const response = await sendJsonRequest(
+    `/api/pull-requests/${pullRequestId}/auto-merge`,
+    {
+      errorMessage: 'Failed to disable auto-merge',
+      method: 'DELETE'
+    }
+  )
+
+  return response.json()
+}
+
+export async function enqueuePullRequest(
+  pullRequestId: string
+): Promise<MergeOptions> {
+  const response = await sendJsonRequest(
+    `/api/pull-requests/${pullRequestId}/merge-queue`,
+    {
+      errorMessage: 'Failed to add the pull request to the merge queue',
+      method: 'POST'
+    }
+  )
+
+  return response.json()
+}
+
+export async function dequeuePullRequest(
+  pullRequestId: string
+): Promise<MergeOptions> {
+  const response = await sendJsonRequest(
+    `/api/pull-requests/${pullRequestId}/merge-queue`,
+    {
+      errorMessage: 'Failed to remove the pull request from the merge queue',
+      method: 'DELETE'
+    }
+  )
+
+  return response.json()
 }
 
 export async function getMergeOptions(
@@ -351,7 +424,7 @@ interface MergePullRequestRequest {
   commitMessage?: string
   commitTitle?: string
   deleteBranch?: boolean
-  mergeMethod: 'merge' | 'squash' | 'rebase'
+  mergeMethod: MergeMethod
   owner: string
   pullNumber: number
   pullRequestId: string

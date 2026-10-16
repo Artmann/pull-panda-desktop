@@ -18,6 +18,19 @@ export function getMergeButtonLabel(options: MergeOptions | null): string {
     return 'Merge'
   }
 
+  // A pull request that is already on its way in says so before anything else.
+  if (options.mergeQueueEntry) {
+    return options.mergeQueueEntry.position === null
+      ? 'In merge queue'
+      : `In merge queue (#${options.mergeQueueEntry.position})`
+  }
+
+  if (options.autoMergeRequest) {
+    return options.isMergeQueueEnabled
+      ? 'Queued when ready'
+      : 'Auto-merge enabled'
+  }
+
   if (options.mergeable === null || options.mergeableState === 'unknown') {
     return 'Checking...'
   }
@@ -40,7 +53,14 @@ export function getMergeButtonLabel(options: MergeOptions | null): string {
 }
 
 // Stricter than `canMergeNow`: GitHub lets an unstable pull request merge, but
-// failing checks should not be presented as the go-ahead.
+// failing checks should not be presented as the go-ahead. Nor is there anything
+// left to do once the pull request is queued or set to auto-merge.
 export function isReadyToMerge(options: MergeOptions | null): boolean {
-  return canMergeNow(options) && options?.mergeableState !== 'unstable'
+  return (
+    options !== null &&
+    canMergeNow(options) &&
+    options.mergeableState !== 'unstable' &&
+    !options.autoMergeRequest &&
+    !options.mergeQueueEntry
+  )
 }

@@ -20,10 +20,18 @@ import { runOptimisticMutation } from '@/app/lib/mutations/run-optimistic-mutati
 import { cn } from '@/app/lib/utils'
 import { BranchSyncActions } from '@/app/pull-requests/components/BranchSyncActions'
 import { canMergeNow } from '@/app/pull-requests/merge-button-label'
+import {
+  addPullRequestToMergeQueue,
+  disablePullRequestAutoMerge,
+  enablePullRequestAutoMerge,
+  removePullRequestFromMergeQueue
+} from '@/app/pull-requests/pull-request-actions'
 import { useAppDispatch, useAppSelector } from '@/app/store/hooks'
 import { pullRequestsActions } from '@/app/store/pull-requests-slice'
+import type { MergeMethod } from '@/types/merge-requirements'
 import type { PullRequest } from '@/types/pull-request'
 
+import { AutoMergeStatus, MergeQueueStatus } from './MergeAutomationStatus'
 import { getMergeVerdict, type MergeVerdict } from './merge-verdict'
 import { buildStatusSummary, type StatusTone } from './status-summary'
 import {
@@ -33,8 +41,6 @@ import {
 } from './tasks/TaskRow'
 import type { TaskGroup } from './tasks/task-types'
 import { useDerivedTaskGroups } from './tasks/use-derived-tasks'
-
-type MergeMethod = 'merge' | 'rebase' | 'squash'
 
 const mergeMethodStorageKey = 'pull-panda-merge-method'
 
@@ -143,6 +149,41 @@ export function resolveInitialMergeMethod(
   return allowedMethods[0] ?? null
 }
 
+/**
+ * What the footer's main button does. A branch with a merge queue only merges
+ * through it, and a blocked pull request can be set to merge once it is
+ * unblocked; `status` is a pull request already on its way in.
+ */
+type MergeAction =
+  | 'auto-merge'
+  | 'enqueue'
+  | 'merge'
+  | 'merge-when-ready'
+  | 'status'
+
+export function getMergeAction(
+  mergeOptions: MergeOptions | null,
+  canMerge: boolean
+): MergeAction {
+  if (!mergeOptions) {
+    return 'merge'
+  }
+
+  if (mergeOptions.mergeQueueEntry || mergeOptions.autoMergeRequest) {
+    return 'status'
+  }
+
+  if (mergeOptions.isMergeQueueEnabled && canMerge) {
+    return 'enqueue'
+  }
+
+  if (canMerge || !mergeOptions.viewerCanEnableAutoMerge) {
+    return 'merge'
+  }
+
+  return mergeOptions.isMergeQueueEnabled ? 'merge-when-ready' : 'auto-merge'
+}
+
 interface MergeDrawerProps {
   onClose: () => void
   open: boolean
@@ -174,7 +215,14 @@ export const MergeDrawer = memo(function MergeDrawer({
   const verdict = useMergeVerdict(pullRequest, mergeOptions, taskGroups)
   const settings = useMergeSettings(pullRequest, mergeOptions)
   const executeMerge = useExecuteMerge(pullRequest, onClose)
+  const automation = useMergeAutomationHandlers(
+    pullRequest,
+    mergeOptions,
+    settings
+  )
 
+  const canMerge = canMergeNow(mergeOptions)
+  const action = getMergeAction(mergeOptions, canMerge)
   const baseName = pullRequest.baseRefName ?? 'the base branch'
   const commits =
     commitCount === 1 ? '1 commit' : `${commitCount.toString()} commits`
@@ -202,12 +250,14 @@ export const MergeDrawer = memo(function MergeDrawer({
 
             <BranchSyncActions pullRequest={pullRequest} />
 
-            <MergeSettingsFields
-              allowedMethods={getAllowedMergeMethods(mergeOptions)}
-              baseName={baseName}
-              commits={commits}
-              settings={settings}
-            />
+            {(action === 'merge' || action === 'auto-merge') && (
+              <MergeSettingsFields
+                allowedMethods={getAllowedMergeMethods(mergeOptions)}
+                baseName={baseName}
+                commits={commits}
+                settings={settings}
+              />
+            )}
           </>
         ) : (
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
@@ -218,15 +268,24 @@ export const MergeDrawer = memo(function MergeDrawer({
       </SidePanelContent>
 
       <SidePanelFooter className="border-t border-border px-4 pt-3 pb-3.5">
-        <MergeDrawerFooter
-          baseName={baseName}
-          canMerge={canMergeNow(mergeOptions)}
-          commits={commits}
-          mergeOptions={mergeOptions}
-          onMerge={() => executeMerge(settings)}
-          selectedMethod={settings.method}
-          verdict={verdict}
-        />
+        {action === 'status' && mergeOptions ? (
+          <MergeAutomationState
+            automation={automation}
+            mergeOptions={mergeOptions}
+          />
+        ) : (
+          <MergeDrawerFooter
+            action={action}
+            automation={automation}
+            baseName={baseName}
+            canMerge={canMerge}
+            commits={commits}
+            mergeOptions={mergeOptions}
+            onMerge={() => executeMerge(settings)}
+            selectedMethod={settings.method}
+            verdict={verdict}
+          />
+        )}
       </SidePanelFooter>
     </SidePanel>
   )
@@ -352,6 +411,106 @@ function useExecuteMerge(
       errorMessage: 'Failed to merge pull request'
     })
   }
+}
+
+interface MergeAutomationHandlers {
+  onDequeue: () => void
+  onDisableAutoMerge: () => void
+  onEnableAutoMerge: () => void
+  onEnqueue: () => void
+}
+
+// With a merge queue, GitHub picks the method from the queue's settings, so
+// enabling "merge when ready" sends no method and no commit message.
+function useMergeAutomationHandlers(
+  pullRequest: PullRequest,
+  mergeOptions: MergeOptions | null,
+  { commitMessage, commitTitle, method }: MergeSettings
+): MergeAutomationHandlers {
+  const dispatch = useAppDispatch()
+
+  const withOptions =
+    (run: (options: MergeOptions) => void): (() => void) =>
+    () => {
+      if (mergeOptions) {
+        run(mergeOptions)
+      }
+    }
+
+  const parameters = (options: MergeOptions) => ({
+    dispatch,
+    mergeOptions: options,
+    pullRequestId: pullRequest.id
+  })
+
+  return {
+    onDequeue: withOptions((options) =>
+      removePullRequestFromMergeQueue(parameters(options))
+    ),
+    onDisableAutoMerge: withOptions((options) =>
+      disablePullRequestAutoMerge(parameters(options))
+    ),
+    onEnableAutoMerge: withOptions((options) => {
+      if (options.isMergeQueueEnabled || !method) {
+        enablePullRequestAutoMerge(parameters(options))
+
+        return
+      }
+
+      saveMergeMethod(
+        `${pullRequest.repositoryOwner}/${pullRequest.repositoryName}`,
+        method
+      )
+
+      enablePullRequestAutoMerge({
+        ...parameters(options),
+        ...(method === 'squash' && {
+          commitBody: commitMessage,
+          commitHeadline: commitTitle
+        }),
+        mergeMethod: method
+      })
+    }),
+    onEnqueue: withOptions((options) =>
+      addPullRequestToMergeQueue(parameters(options))
+    )
+  }
+}
+
+// Takes the footer's place once the pull request is queued or set to
+// auto-merge, since there is nothing left to merge by hand.
+function MergeAutomationState({
+  automation,
+  mergeOptions
+}: {
+  automation: MergeAutomationHandlers
+  mergeOptions: MergeOptions
+}): ReactElement | null {
+  if (mergeOptions.mergeQueueEntry) {
+    return (
+      <div className="w-full">
+        <MergeQueueStatus
+          entry={mergeOptions.mergeQueueEntry}
+          onRemove={automation.onDequeue}
+        />
+      </div>
+    )
+  }
+
+  if (mergeOptions.autoMergeRequest) {
+    return (
+      <div className="w-full">
+        <AutoMergeStatus
+          autoMergeRequest={mergeOptions.autoMergeRequest}
+          canDisable={mergeOptions.viewerCanDisableAutoMerge}
+          isMergeQueueEnabled={mergeOptions.isMergeQueueEnabled}
+          onDisable={automation.onDisableAutoMerge}
+        />
+      </div>
+    )
+  }
+
+  return null
 }
 
 function MergeSettingsFields({
@@ -655,7 +814,86 @@ function SectionLabel({ children }: { children: string }): ReactElement {
   )
 }
 
+interface PrimaryButton {
+  disabled: boolean
+  label: string
+  onClick: () => void
+}
+
+function getPrimaryButton({
+  action,
+  automation,
+  canMerge,
+  onMerge,
+  selectedMethod
+}: {
+  action: MergeAction
+  automation: MergeAutomationHandlers
+  canMerge: boolean
+  onMerge: () => void
+  selectedMethod: MergeMethod | null
+}): PrimaryButton {
+  switch (action) {
+    case 'auto-merge':
+      return {
+        disabled: selectedMethod === null,
+        label: 'Enable auto-merge',
+        onClick: automation.onEnableAutoMerge
+      }
+    case 'enqueue':
+      return {
+        disabled: false,
+        label: 'Add to merge queue',
+        onClick: automation.onEnqueue
+      }
+    case 'merge-when-ready':
+      return {
+        disabled: false,
+        label: 'Merge when ready',
+        onClick: automation.onEnableAutoMerge
+      }
+    default:
+      return {
+        disabled: !canMerge || selectedMethod === null,
+        label: selectedMethod ? mergeMethodLabels[selectedMethod] : 'Merge',
+        onClick: onMerge
+      }
+  }
+}
+
+function describeFooter({
+  action,
+  baseName,
+  commits,
+  isReady,
+  mergeOptions,
+  verdict
+}: {
+  action: MergeAction
+  baseName: string
+  commits: string
+  isReady: boolean
+  mergeOptions: MergeOptions | null
+  verdict: MergeVerdict
+}): string {
+  if (action === 'enqueue') {
+    const method = mergeOptions?.mergeQueueMethod
+
+    return method
+      ? `The queue merges with ${mergeMethodShortLabels[method].toLowerCase()}`
+      : `The queue merges it into ${baseName}`
+  }
+
+  if (action === 'auto-merge' || action === 'merge-when-ready') {
+    return 'Merges once every rule is met'
+  }
+
+  return isReady ? `${commits} into ${baseName}` : describeBlocked(verdict)
+}
+
 function MergeDrawerFooter({
+  action,
+  automation,
   baseName,
   canMerge,
   commits,
@@ -664,6 +902,8 @@ function MergeDrawerFooter({
   selectedMethod,
   verdict
 }: {
+  action: MergeAction
+  automation: MergeAutomationHandlers
   baseName: string
   canMerge: boolean
   commits: string
@@ -675,15 +915,22 @@ function MergeDrawerFooter({
   const [isConfirmingBypass, setIsConfirmingBypass] = useState(false)
 
   const isReady = canMerge && selectedMethod !== null
+  const primary = getPrimaryButton({
+    action,
+    automation,
+    canMerge,
+    onMerge,
+    selectedMethod
+  })
 
   return (
     <div className="flex w-full flex-col gap-2">
       <Button
         className="h-8 w-full font-semibold"
-        disabled={!isReady}
-        onClick={onMerge}
+        disabled={primary.disabled}
+        onClick={primary.onClick}
       >
-        {selectedMethod ? mergeMethodLabels[selectedMethod] : 'Merge'}
+        {primary.label}
       </Button>
 
       {isConfirmingBypass ? (
@@ -694,7 +941,14 @@ function MergeDrawerFooter({
       ) : (
         <div className="flex items-center justify-between gap-2 text-xs text-muted-foreground">
           <span className="min-w-0 truncate">
-            {isReady ? `${commits} into ${baseName}` : describeBlocked(verdict)}
+            {describeFooter({
+              action,
+              baseName,
+              commits,
+              isReady,
+              mergeOptions,
+              verdict
+            })}
           </span>
 
           {canBypassRules(canMerge, mergeOptions, selectedMethod) && (

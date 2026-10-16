@@ -46,6 +46,12 @@ export function getMergeVerdict({
     }
   }
 
+  const automationVerdict = getAutomationVerdict(mergeOptions, blockerCount)
+
+  if (automationVerdict) {
+    return automationVerdict
+  }
+
   if (
     summary.tone === 'danger' ||
     (blockerCount > 0 && summary.tone !== 'warning')
@@ -88,6 +94,42 @@ export function getMergeVerdict({
     detail: 'Checks passed, no open conversations, no conflicts.',
     title: 'Ready to merge',
     tone: 'success'
+  }
+}
+
+// Once the pull request is on its way in, that is the answer, whatever is
+// still pending: GitHub merges it when the rest is done.
+function getAutomationVerdict(
+  mergeOptions: MergeOptions,
+  blockerCount: number
+): MergeVerdict | null {
+  if (mergeOptions.mergeQueueEntry) {
+    const position = mergeOptions.mergeQueueEntry.position
+
+    return {
+      blockerCount,
+      detail:
+        position === null
+          ? 'GitHub is adding it to the queue.'
+          : `Number ${position.toString()} in the queue.`,
+      title: 'In merge queue',
+      tone: 'neutral'
+    }
+  }
+
+  if (!mergeOptions.autoMergeRequest) {
+    return null
+  }
+
+  const isQueue = mergeOptions.isMergeQueueEnabled
+
+  return {
+    blockerCount,
+    detail: isQueue
+      ? 'Joins the merge queue once every rule is met.'
+      : 'Merges once every rule is met.',
+    title: isQueue ? 'Merge when ready' : 'Auto-merge enabled',
+    tone: 'neutral'
   }
 }
 

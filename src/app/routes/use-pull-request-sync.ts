@@ -7,7 +7,7 @@ import {
   markPullRequestActive,
   setFocusedPullRequest
 } from '@/app/lib/api'
-import { useAppDispatch } from '@/app/store/hooks'
+import { useAppDispatch, useAppSelector } from '@/app/store/hooks'
 import { mergeOptionsActions } from '@/app/store/merge-options-slice'
 import { pendingReviewsActions } from '@/app/store/pending-reviews-slice'
 import type { PullRequest } from '@/types/pull-request'
@@ -98,13 +98,23 @@ export function usePendingReviewHydration(
 
 /**
  * Fetches merge options for an open pull request, retrying while GitHub is
- * still computing mergeability. Opening the merge drawer fetches them again.
+ * still computing mergeability, and refreshing every so often while it is in a
+ * merge queue or set to auto-merge, so the queue position stays current.
+ * Opening the merge drawer fetches them again.
  */
 export function useMergeOptionsPolling(
   pullRequest: PullRequest | undefined,
   isMergeDrawerOpen: boolean
 ): void {
   const dispatch = useAppDispatch()
+
+  // Restarts the polling below when the reader queues the pull request or turns
+  // on auto-merge from the drawer.
+  const isWaitingToMerge = useAppSelector((state) => {
+    const options = pullRequest ? state.mergeOptions[pullRequest.id] : null
+
+    return Boolean(options?.mergeQueueEntry ?? options?.autoMergeRequest)
+  })
 
   useEffect(
     function fetchMergeOptions() {
@@ -131,6 +141,8 @@ export function useMergeOptionsPolling(
 
             if (options.mergeable === null) {
               retryTimeout = setTimeout(fetch, 3000)
+            } else if (options.mergeQueueEntry || options.autoMergeRequest) {
+              retryTimeout = setTimeout(fetch, 15000)
             }
           })
           .catch(() => {
@@ -148,6 +160,12 @@ export function useMergeOptionsPolling(
         }
       }
     },
-    [dispatch, isMergeDrawerOpen, pullRequest?.id, pullRequest?.state]
+    [
+      dispatch,
+      isMergeDrawerOpen,
+      isWaitingToMerge,
+      pullRequest?.id,
+      pullRequest?.state
+    ]
   )
 }

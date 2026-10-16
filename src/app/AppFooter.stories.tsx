@@ -21,6 +21,7 @@ import { AppFooter } from './AppFooter'
 import { CommandContextProvider } from './commands/context'
 import { AuthProvider } from './lib/store/authContext'
 import { TasksProvider } from './lib/store/tasksContext'
+import { noMergeAutomation } from './pull-requests/__test-helpers__/merge-options-fixtures'
 import { PullRequestNavigationProvider } from './pull-requests/PullRequestNavigationProvider'
 
 const win = window as unknown as {
@@ -56,6 +57,7 @@ const mockPullRequest = createMockPullRequest({
 })
 
 const mergeableOptions: MergeOptions = {
+  ...noMergeAutomation,
   allowMergeCommit: true,
   allowRebaseMerge: true,
   allowSquashMerge: true,

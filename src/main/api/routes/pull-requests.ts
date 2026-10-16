@@ -13,6 +13,10 @@ import {
   activatePullRequest,
   addReviewers,
   clearFocusedPullRequest,
+  dequeuePullRequest,
+  disableAutoMerge,
+  enableAutoMerge,
+  enqueuePullRequest,
   fetchMergeOptions,
   fetchPullRequestDetails,
   mergePullRequest,
@@ -23,6 +27,7 @@ import {
   updatePullRequest,
   updatePullRequestBranch
 } from '../operations/pull-requests'
+import type { MergeMethod } from '../../../types/merge-requirements'
 
 export const pullRequestsRoute = new Hono<AppEnv>()
 
@@ -181,6 +186,89 @@ pullRequestsRoute.post(
         pullRequestId,
         repo,
         token
+      })
+    })
+  )
+)
+
+const mergeMethods = new Set(['merge', 'rebase', 'squash'])
+
+const optionalMergeMethod = (value: unknown): MergeMethod | undefined =>
+  typeof value === 'string' && mergeMethods.has(value)
+    ? (value as MergeMethod)
+    : undefined
+
+const optionalString = (value: unknown): string | undefined =>
+  typeof value === 'string' ? value : undefined
+
+pullRequestsRoute.post(
+  '/:pullRequestId/auto-merge',
+  effectHandler((context) =>
+    Effect.gen(function* () {
+      const pullRequestId = yield* requireString(
+        context.req.param('pullRequestId'),
+        'pullRequestId'
+      )
+
+      const raw = yield* jsonBody(context)
+
+      return yield* enableAutoMerge({
+        commitBody: optionalString(raw.commitBody),
+        commitHeadline: optionalString(raw.commitHeadline),
+        mergeMethod: optionalMergeMethod(raw.mergeMethod),
+        pullRequestId,
+        token: context.get('token')
+      })
+    })
+  )
+)
+
+pullRequestsRoute.delete(
+  '/:pullRequestId/auto-merge',
+  effectHandler((context) =>
+    Effect.gen(function* () {
+      const pullRequestId = yield* requireString(
+        context.req.param('pullRequestId'),
+        'pullRequestId'
+      )
+
+      return yield* disableAutoMerge({
+        pullRequestId,
+        token: context.get('token')
+      })
+    })
+  )
+)
+
+pullRequestsRoute.post(
+  '/:pullRequestId/merge-queue',
+  effectHandler((context) =>
+    Effect.gen(function* () {
+      const pullRequestId = yield* requireString(
+        context.req.param('pullRequestId'),
+        'pullRequestId'
+      )
+
+      return yield* enqueuePullRequest({
+        pullRequestId,
+        token: context.get('token')
+      })
+    })
+  )
+)
+
+pullRequestsRoute.delete(
+  '/:pullRequestId/merge-queue',
+  effectHandler((context) =>
+    Effect.gen(function* () {
+      const pullRequestId = yield* requireString(
+        context.req.param('pullRequestId'),
+        'pullRequestId'
+      )
+
+      return yield* dequeuePullRequest({
+        pullRequestId,
+        token: context.get('token')
       })
     })
   )

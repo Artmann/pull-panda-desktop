@@ -11,17 +11,27 @@ import type { MergeOptions } from '@/app/lib/api'
 import { createStore } from '@/app/store'
 import type { Check } from '@/types/pull-request-details'
 
+import { noMergeAutomation } from './__test-helpers__/merge-options-fixtures'
 import { createMockPullRequest } from './__test-helpers__/pull-request-fixtures'
 import {
   getAllowedMergeMethods,
+  getMergeAction,
   MergeDrawer,
   resolveInitialMergeMethod
 } from './MergeDrawer'
 
+const mockDequeuePullRequest = vi.fn()
+const mockDisableAutoMerge = vi.fn()
+const mockEnableAutoMerge = vi.fn()
+const mockEnqueuePullRequest = vi.fn()
 const mockMergePullRequest = vi.fn()
 
 vi.mock('@/app/lib/api', async (importOriginal) => ({
   ...(await importOriginal<typeof import('@/app/lib/api')>()),
+  dequeuePullRequest: (...args: unknown[]) => mockDequeuePullRequest(...args),
+  disableAutoMerge: (...args: unknown[]) => mockDisableAutoMerge(...args),
+  enableAutoMerge: (...args: unknown[]) => mockEnableAutoMerge(...args),
+  enqueuePullRequest: (...args: unknown[]) => mockEnqueuePullRequest(...args),
   fetchCodeowners: () => Promise.resolve([]),
   fetchCollaborators: () => Promise.resolve([]),
   mergePullRequest: (...args: unknown[]) => mockMergePullRequest(...args)
@@ -29,8 +39,17 @@ vi.mock('@/app/lib/api', async (importOriginal) => ({
 
 beforeEach(() => {
   localStorage.clear()
-  mockMergePullRequest.mockReset()
-  mockMergePullRequest.mockReturnValue(new Promise(() => undefined))
+
+  for (const mock of [
+    mockDequeuePullRequest,
+    mockDisableAutoMerge,
+    mockEnableAutoMerge,
+    mockEnqueuePullRequest,
+    mockMergePullRequest
+  ]) {
+    mock.mockReset()
+    mock.mockReturnValue(new Promise(() => undefined))
+  }
 })
 
 function createMockCheck(overrides: Partial<Check> = {}): Check {
@@ -55,6 +74,7 @@ function createMockCheck(overrides: Partial<Check> = {}): Check {
 }
 
 const mergeableOptions: MergeOptions = {
+  ...noMergeAutomation,
   allowMergeCommit: true,
   allowRebaseMerge: true,
   allowSquashMerge: true,
@@ -225,6 +245,204 @@ describe('MergeDrawer', () => {
     await renderDrawer({ mergeOptions: null })
 
     expect(screen.getByText('Loading merge options...')).toBeInTheDocument()
+  })
+})
+
+describe('MergeDrawer auto-merge and merge queue', () => {
+  const autoMergeOptions: MergeOptions = {
+    ...blockedOptions,
+    viewerCanEnableAutoMerge: true
+  }
+
+  const queueOptions: MergeOptions = {
+    ...mergeableOptions,
+    isMergeQueueEnabled: true,
+    mergeQueueMethod: 'squash'
+  }
+
+  it('enables auto-merge with the chosen method and commit message', async () => {
+    const enabledOptions: MergeOptions = {
+      ...autoMergeOptions,
+      autoMergeRequest: {
+        enabledAt: '2026-10-14T10:00:00Z',
+        enabledByLogin: 'octocat',
+        mergeMethod: 'squash'
+      },
+      viewerCanDisableAutoMerge: true,
+      viewerCanEnableAutoMerge: false
+    }
+
+    mockEnableAutoMerge.mockResolvedValue(enabledOptions)
+
+    const store = await renderDrawer({ mergeOptions: autoMergeOptions })
+
+    await userEvent.click(
+      screen.getByRole('button', { name: 'Enable auto-merge' })
+    )
+
+    expect(mockEnableAutoMerge).toHaveBeenCalledWith({
+      commitBody: 'Test PR body',
+      commitHeadline: 'Test PR (#42)',
+      mergeMethod: 'squash',
+      pullRequestId: 'pr-1'
+    })
+    expect(store.getState().mergeOptions['pr-1']).toEqual(enabledOptions)
+    expect(
+      screen.getByRole('button', { name: 'Disable auto-merge' })
+    ).toBeInTheDocument()
+  })
+
+  it('disables auto-merge', async () => {
+    mockDisableAutoMerge.mockResolvedValue(autoMergeOptions)
+
+    const store = await renderDrawer({
+      mergeOptions: {
+        ...autoMergeOptions,
+        autoMergeRequest: {
+          enabledAt: '2026-10-14T10:00:00Z',
+          enabledByLogin: 'octocat',
+          mergeMethod: 'merge'
+        },
+        viewerCanDisableAutoMerge: true,
+        viewerCanEnableAutoMerge: false
+      }
+    })
+
+    expect(
+      screen.getByText(
+        'It will be merged with a merge commit once all requirements are met. Enabled by octocat.'
+      )
+    ).toBeInTheDocument()
+
+    await userEvent.click(
+      screen.getByRole('button', { name: 'Disable auto-merge' })
+    )
+
+    expect(mockDisableAutoMerge).toHaveBeenCalledWith('pr-1')
+    expect(store.getState().mergeOptions['pr-1']).toEqual(autoMergeOptions)
+  })
+
+  it('adds a ready pull request to the merge queue instead of merging it', async () => {
+    const store = await renderDrawer({ mergeOptions: queueOptions })
+
+    expect(
+      screen.queryByRole('radio', { name: 'Squash' })
+    ).not.toBeInTheDocument()
+    expect(screen.getByText('The queue merges with squash')).toBeInTheDocument()
+
+    await userEvent.click(
+      screen.getByRole('button', { name: 'Add to merge queue' })
+    )
+
+    expect(mockEnqueuePullRequest).toHaveBeenCalledWith('pr-1')
+    expect(mockMergePullRequest).not.toHaveBeenCalled()
+    expect(store.getState().mergeOptions['pr-1']?.mergeQueueEntry).toEqual({
+      enqueuedAt: expect.any(String),
+      estimatedTimeToMerge: null,
+      position: null,
+      state: 'QUEUED'
+    })
+  })
+
+  it('rolls back when adding to the merge queue fails', async () => {
+    mockEnqueuePullRequest.mockRejectedValue(new Error('Queue is closed'))
+
+    const store = await renderDrawer({ mergeOptions: queueOptions })
+
+    await userEvent.click(
+      screen.getByRole('button', { name: 'Add to merge queue' })
+    )
+
+    expect(store.getState().mergeOptions['pr-1']).toEqual(queueOptions)
+  })
+
+  it('offers "Merge when ready" without a method when a queued branch is blocked', async () => {
+    await renderDrawer({
+      mergeOptions: {
+        ...queueOptions,
+        mergeableState: 'blocked',
+        viewerCanEnableAutoMerge: true
+      }
+    })
+
+    await userEvent.click(
+      screen.getByRole('button', { name: 'Merge when ready' })
+    )
+
+    expect(mockEnableAutoMerge).toHaveBeenCalledWith({
+      pullRequestId: 'pr-1'
+    })
+  })
+
+  it('shows the queue position and removes the pull request from the queue', async () => {
+    mockDequeuePullRequest.mockResolvedValue(queueOptions)
+
+    const store = await renderDrawer({
+      mergeOptions: {
+        ...queueOptions,
+        mergeQueueEntry: {
+          enqueuedAt: '2026-10-14T10:00:00Z',
+          estimatedTimeToMerge: 600,
+          position: 2,
+          state: 'AWAITING_CHECKS'
+        }
+      }
+    })
+
+    expect(screen.getByText('In merge queue')).toBeInTheDocument()
+    expect(
+      screen.getByText(
+        'The queue is running checks on this pull request. About 10 minutes until it merges.'
+      )
+    ).toBeInTheDocument()
+
+    await userEvent.click(
+      screen.getByRole('button', { name: 'Remove from merge queue' })
+    )
+
+    expect(mockDequeuePullRequest).toHaveBeenCalledWith('pr-1')
+    expect(store.getState().mergeOptions['pr-1']).toEqual(queueOptions)
+  })
+})
+
+describe('getMergeAction', () => {
+  const queued: MergeOptions = {
+    ...mergeableOptions,
+    isMergeQueueEnabled: true
+  }
+
+  it('picks the action for each state', () => {
+    expect([
+      getMergeAction(null, false),
+      getMergeAction(mergeableOptions, true),
+      getMergeAction(blockedOptions, false),
+      getMergeAction(
+        { ...blockedOptions, viewerCanEnableAutoMerge: true },
+        false
+      ),
+      getMergeAction(queued, true),
+      getMergeAction({ ...queued, viewerCanEnableAutoMerge: true }, false),
+      getMergeAction(
+        {
+          ...queued,
+          mergeQueueEntry: {
+            enqueuedAt: null,
+            estimatedTimeToMerge: null,
+            position: 1,
+            state: 'QUEUED'
+          }
+        },
+        true
+      )
+    ]).toEqual([
+      'merge',
+      'merge',
+      'merge',
+      'auto-merge',
+      'enqueue',
+      'merge-when-ready',
+      'status'
+    ])
   })
 })
 
