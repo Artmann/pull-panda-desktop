@@ -578,3 +578,11 @@ body {
     margin: 1.5rem 0;
   }
 }
+
+/* Primary buttons in dark themes. The primary hue and chroma with the
+ * lightness capped, so light text on top stays readable when a theme's
+ * primary is a light color. */
+@theme inline {
+  --color-primary-dim: oklch(from var(--primary) min(l, 0.5) c h);
+  --color-primary-dim-hover: oklch(from var(--primary) min(l, 0.55) c h);
+}
