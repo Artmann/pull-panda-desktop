@@ -36,7 +36,7 @@
   --accent-foreground: oklch(0.22 0.01 95);
   --destructive: oklch(0.55 0.16 25);
   --destructive-foreground: oklch(0.985 0.003 95);
-  --border: oklch(0.92 0.006 95);
+  --border: oklch(0.935 0.005 95);
   --input: oklch(0.892 0.007 95);
   --titlebar: oklch(0.945 0.006 95);
   --ring: oklch(0.52 0.19 262);
@@ -52,7 +52,7 @@
   --sidebar-primary-foreground: oklch(0.985 0.003 95);
   --sidebar-accent: oklch(0.905 0.009 95);
   --sidebar-accent-foreground: oklch(0.32 0.012 95);
-  --sidebar-border: oklch(0.92 0.006 95);
+  --sidebar-border: oklch(0.935 0.005 95);
   --sidebar-ring: oklch(0.52 0.19 262);
 
   --status-danger: oklch(0.92 0.036 25);
@@ -339,10 +339,28 @@ body {
 }
 
 /* Comment threads embed a small excerpt of the diff for context; render it a
- * step smaller than the full file view so it reads as a quote, not a diff. */
+ * step smaller than the full file view so it reads as a quote, not a diff.
+ * The excerpt is usually all changed lines, so the strong change colours
+ * fill the whole block and weigh the card down; the pale status border tones
+ * still mark the change, with a lighter line fill and change bar. The line
+ * numbers derive from the same base, so they repeat the neutral number
+ * colour used for fully-added files below to stay readable. */
 .pierre-diff--compact {
   --diffs-font-size: 11px;
   --diffs-line-height: 17px;
+
+  --diffs-addition-color-override: var(--status-success-border);
+  --diffs-deletion-color-override: var(--status-danger-border);
+  --diffs-fg-number-addition-override: color-mix(
+    in lab,
+    var(--foreground) 65%,
+    var(--card)
+  );
+  --diffs-fg-number-deletion-override: color-mix(
+    in lab,
+    var(--foreground) 65%,
+    var(--card)
+  );
 }
 
 /* Fully-added and fully-deleted files: every line is a change, so per-line
