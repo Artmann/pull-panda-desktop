@@ -432,11 +432,21 @@ body {
   height: 1em;
   margin: 0 0.5em 0.2em -1.5em;
   vertical-align: middle;
-  border: 1px solid var(--input);
+  border: 1px solid var(--task-checkbox-border, var(--input));
   border-radius: 0.25rem;
   background-color: var(--background);
-  cursor: default;
+  cursor: var(--task-checkbox-cursor, default);
   opacity: 1;
+}
+
+/* Clickable when the reader can edit the text the list lives in. These set
+ * the variables the rule above reads, so they stay simple selectors. */
+.task-checkbox-clickable {
+  --task-checkbox-cursor: pointer;
+}
+
+.task-checkbox-clickable:hover {
+  --task-checkbox-border: var(--primary);
 }
 
 .markdown-block .task-list-item input[type='checkbox']:checked {
@@ -585,4 +595,12 @@ body {
     border-top: 1px solid var(--border);
     margin: 1.5rem 0;
   }
+}
+
+/* Primary buttons in dark themes. The primary hue and chroma with the
+ * lightness capped, so light text on top stays readable when a theme's
+ * primary is a light color. */
+@theme inline {
+  --color-primary-dim: oklch(from var(--primary) min(l, 0.5) c h);
+  --color-primary-dim-hover: oklch(from var(--primary) min(l, 0.55) c h);
 }

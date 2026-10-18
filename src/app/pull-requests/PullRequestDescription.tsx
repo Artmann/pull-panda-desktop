@@ -20,9 +20,14 @@ import {
   ContextMenuTrigger
 } from '@/app/components/ui/context-menu'
 import { Textarea } from '@/app/components/ui/textarea'
+import { updatePullRequest } from '@/app/lib/api'
 import { copyToClipboard } from '@/app/lib/clipboard'
+import { runSerialMutation } from '@/app/lib/mutations/run-serial-mutation'
+import { toggleTaskListItem } from '@/app/lib/task-list'
 import { draftsActions, getDraftKeyForComment } from '@/app/store/drafts-slice'
 import { useAppDispatch, useAppSelector } from '@/app/store/hooks'
+import { pendingEditKeys } from '@/app/store/pending-edits'
+import { pullRequestsActions } from '@/app/store/pull-requests-slice'
 import type { PullRequest } from '@/types/pull-request'
 
 import { useInlineEditField } from './use-inline-edit-field'
@@ -38,6 +43,7 @@ export function PullRequestDescription({
 }: {
   pullRequest: PullRequest
 }): ReactElement {
+  const dispatch = useAppDispatch()
   const {
     cancel: handleCancel,
     draft,
@@ -75,6 +81,34 @@ export function PullRequestDescription({
 
   const canEdit = !isMerged
 
+  const handleToggleTask = (taskIndex: number) => {
+    const body = pullRequest.body ?? ''
+    const nextBody = toggleTaskListItem(body, taskIndex)
+
+    if (nextBody === null) {
+      return
+    }
+
+    runSerialMutation({
+      commit: (updated) => dispatch(pullRequestsActions.upsertItem(updated)),
+      errorMessage: 'Could not update the task list in the description.',
+      key: pendingEditKeys.pullRequestBody(pullRequest.id),
+      optimistic: () =>
+        dispatch(
+          pullRequestsActions.upsertItem({ ...pullRequest, body: nextBody })
+        ),
+      request: () =>
+        updatePullRequest({
+          body: nextBody,
+          owner: pullRequest.repositoryOwner,
+          pullNumber: pullRequest.number,
+          pullRequestId: pullRequest.id,
+          repo: pullRequest.repositoryName
+        }),
+      rollback: () => dispatch(pullRequestsActions.upsertItem(pullRequest))
+    })
+  }
+
   return (
     <DescriptionContextMenu
       canEdit={canEdit}
@@ -98,6 +132,7 @@ export function PullRequestDescription({
           <MarkdownBlock
             className="pull-request-description *:first:mt-0!"
             content={pullRequest.body}
+            onToggleTask={canEdit ? handleToggleTask : undefined}
           />
         </div>
       ) : (

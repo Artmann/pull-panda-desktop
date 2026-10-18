@@ -20,6 +20,7 @@ import {
 import { Database } from '../services/database'
 import { EtagStore } from '../services/etag-store'
 import { GitHubRest } from '../services/github-rest'
+import { keepLocallyEditedBody } from '../shared/local-writes'
 import { paginateRest } from '../shared/paginate'
 import {
   reconcileBySoftDelete,
@@ -309,7 +310,7 @@ const upsertReviewComments = (
   params: SyncReviewsParams,
   commentsData: ReadonlyArray<ReviewComment>,
   reviewIdMap: Map<number, string>,
-  now: string
+  { fetchedAt, now }: { fetchedAt: number; now: string }
 ) =>
   Effect.gen(function* () {
     const database = yield* Database
@@ -326,7 +327,7 @@ const upsertReviewComments = (
           items: commentsData,
           keyOfItem: (comment) => comment.node_id,
           keyOfRow: (row) => row.gitHubId,
-          build: (commentData, existingId) => {
+          build: (commentData, existingId, existingRow) => {
             const reviewId = commentData.pull_request_review_id
               ? (reviewIdMap.get(commentData.pull_request_review_id) ?? null)
               : null
@@ -336,13 +337,17 @@ const upsertReviewComments = (
               commentsData
             )
 
-            return buildComment(
-              commentData,
-              existingId,
-              reviewId,
-              parentCommentGitHubId,
-              params.pullRequestId,
-              now
+            return keepLocallyEditedBody(
+              buildComment(
+                commentData,
+                existingId,
+                reviewId,
+                parentCommentGitHubId,
+                params.pullRequestId,
+                now
+              ),
+              existingRow,
+              fetchedAt
             )
           },
           now
@@ -390,6 +395,7 @@ export const syncReviews = (
         .pipe(Effect.catchAll(() => Effect.void))
     }
 
+    const commentsFetchedAt = Date.now()
     const commentsResult = yield* fetchReviewComments(params)
 
     if (Option.isNone(reviewsResult) && Option.isNone(commentsResult)) {
@@ -410,6 +416,9 @@ export const syncReviews = (
 
       const commentsData = commentsResult.value as ReadonlyArray<ReviewComment>
 
-      yield* upsertReviewComments(params, commentsData, reviewIdMap, now)
+      yield* upsertReviewComments(params, commentsData, reviewIdMap, {
+        fetchedAt: commentsFetchedAt,
+        now
+      })
     }
   })

@@ -12,6 +12,8 @@ import { type Plugin, unified } from 'unified'
 import { visit } from 'unist-util-visit'
 
 import { Link } from '@/app/components/Link'
+import { MarkdownCodeBlock } from '@/app/components/MarkdownCodeBlock'
+import { MarkdownInput } from '@/app/components/MarkdownInput'
 import { getLanguageFromPath } from '@/app/lib/highlighter'
 import { startSpan } from '@/app/lib/telemetry/tracer'
 
@@ -26,17 +28,23 @@ import { startSpan } from '@/app/lib/telemetry/tracer'
 export interface MarkdownRendering {
   // `null` when parsing threw. Callers fall back to showing the source.
   element: ReactElement | null
-  // Changes whenever this is a freshly parsed tree. `MarkdownBlock` uses it as
-  // a React key so a new body remounts instead of being diffed into the old
-  // one, which Shiki's in-place DOM rewriting cannot survive.
+  // Changes whenever this is a freshly parsed tree, which tells a cache hit
+  // from a new parse.
   id: number
 }
 
 export const markdownCacheLimit = 200
 
 // Render markdown links with our external-link component so clicks open in the
-// user's browser instead of navigating inside the Electron window.
-const markdownComponents = { a: Link }
+// user's browser instead of navigating inside the Electron window. Inputs go
+// through `MarkdownInput`, which reads whether task list checkboxes are
+// clickable from context, so the cached tree stays the same for every caller.
+// Fenced code goes through `MarkdownCodeBlock`, which highlights it with Shiki.
+const markdownComponents = {
+  a: Link,
+  input: MarkdownInput,
+  pre: MarkdownCodeBlock
+}
 
 // Anything that changes the output has to be part of the cache key. Today that
 // is the source and the path, which decides the language for a fence that
@@ -104,6 +112,8 @@ function parseMarkdown(content: string, path?: string): ReactElement | null {
       .use(remarkParse)
       .use([remarkGemoji, remarkGfm])
       .use(remarkRehype, { allowDangerousHtml: true })
+      // Before `rehypeRaw`, so checkboxes written as raw HTML are not counted.
+      .use(rehypeNumberTaskCheckboxes)
       .use(rehypeRaw)
       .use(rehypeDetectLanguageFromPath(path))
       .use(rehypeReact, {
@@ -123,6 +133,42 @@ function parseMarkdown(content: string, path?: string): ReactElement | null {
   } finally {
     span.end()
   }
+}
+
+// Number each task list checkbox in document order, which is the order
+// `toggleTaskListItem` counts the items in the source. A tight list puts the
+// checkbox straight in the `li`; a loose one puts it in the item's first `p`.
+const rehypeNumberTaskCheckboxes: Plugin<[], Root> = () => {
+  return (tree: Root) => {
+    let taskIndex = 0
+
+    visit(tree, 'element', (node: HastElement) => {
+      if (node.tagName !== 'li' || !hasClass(node, 'task-list-item')) {
+        return
+      }
+
+      const firstChild = node.children.find((child) => child.type === 'element')
+      const container =
+        firstChild?.tagName === 'p' ? firstChild : (node as HastElement)
+      const checkbox = container.children.find(
+        (child): child is HastElement =>
+          child.type === 'element' && child.tagName === 'input'
+      )
+
+      if (!checkbox) {
+        return
+      }
+
+      checkbox.properties.dataTaskIndex = taskIndex
+      taskIndex += 1
+    })
+  }
+}
+
+function hasClass(node: HastElement, className: string): boolean {
+  const classNames = node.properties.className
+
+  return Array.isArray(classNames) && classNames.includes(className)
 }
 
 // Fences in a review comment carry no language of their own — a suggestion

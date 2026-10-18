@@ -1,7 +1,7 @@
 /**
  * @vitest-environment jsdom
  */
-import { render, screen } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import type { ReactElement } from 'react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
@@ -28,7 +28,13 @@ vi.mock('@/app/lib/highlighter', () => ({
   ensureLanguageLoaded: () => Promise.resolve('typescript'),
   getLanguageFromPath: (): string | undefined => undefined,
   getLoadedHighlighter: () => highlighterMock.state.loaded,
-  getSharedHighlighter: () => Promise.resolve(highlighterMock.highlighter),
+  // Like the real one, loading the highlighter makes it available to the
+  // synchronous path from then on.
+  getSharedHighlighter: () => {
+    highlighterMock.state.loaded = highlighterMock.highlighter
+
+    return Promise.resolve(highlighterMock.highlighter)
+  },
   resolveLoadedLanguage: () => 'typescript',
   warmHighlighter: (): void => undefined
 }))
@@ -119,21 +125,57 @@ describe('MarkdownBlock', () => {
     expect(document.querySelectorAll('pre.shiki')).toHaveLength(1)
   })
 
-  it('highlights a code block without detaching the node React owns', async () => {
+  it('highlights a code block once the highlighter loads', async () => {
     const { rerender } = renderMarkdownBlock(descriptionWithCode)
+
+    expect(document.querySelectorAll('pre.shiki')).toHaveLength(0)
 
     await lazyBrowser.flushIdleCallbacks()
 
-    expect(document.querySelectorAll('pre.shiki')).toHaveLength(1)
+    await waitFor(() => {
+      expect(document.querySelectorAll('pre.shiki')).toHaveLength(1)
+    })
 
     // Moving to another pull request swaps `content` on the same mounted
-    // block, so React unmounts the highlighted tree. It can only do that when
-    // highlighting left its `pre` in place; replacing the element used to
-    // throw "The node to be removed is not a child of this node" here.
+    // block, so React has to unmount the highlighted block cleanly.
     rerender(markdownBlock('A plain description.'))
 
     expect(screen.getByText('A plain description.')).toBeInTheDocument()
     expect(document.querySelectorAll('pre.shiki')).toHaveLength(0)
+  })
+
+  it('keeps the focused checkbox in place when the body changes', () => {
+    const onToggleTask = vi.fn()
+    const { rerender } = render(
+      <ThemeProvider>
+        <MarkdownBlock
+          content={'Notes\n\n```ts\nconst answer = 42\n```\n\n- [ ] Ship it'}
+          onToggleTask={onToggleTask}
+        />
+      </ThemeProvider>
+    )
+
+    const checkbox = screen.getByRole('checkbox', { name: /Mark task as/ })
+
+    checkbox.focus()
+
+    // A toggle swaps the body. Replacing the parsed tree instead of updating
+    // it would remove the focused element, which makes Chromium scroll the
+    // page to the top.
+    rerender(
+      <ThemeProvider>
+        <MarkdownBlock
+          content={'Notes\n\n```ts\nconst answer = 42\n```\n\n- [x] Ship it'}
+          onToggleTask={onToggleTask}
+        />
+      </ThemeProvider>
+    )
+
+    expect(screen.getByRole('checkbox', { name: /Mark task as/ })).toBe(
+      checkbox
+    )
+    expect(document.activeElement).toBe(checkbox)
+    expect(checkbox).toBeChecked()
   })
 
   it('swaps a highlighted code block for different code', async () => {
@@ -145,9 +187,8 @@ describe('MarkdownBlock', () => {
 
     expect(screen.getByText('const first = 1')).toBeInTheDocument()
 
-    // Both bodies put a fenced block in the same position, so without a key on
-    // the parsed tree React reuses the `pre` that highlighting already rewrote
-    // and the reader keeps seeing the previous pull request's code.
+    // Both bodies put a fenced block in the same position, so React reuses
+    // the `pre` and has to swap its highlighted contents.
     rerender(markdownBlock('Before:\n\n```ts\nconst second = 2\n```\n'))
 
     expect(screen.getByText('const second = 2')).toBeInTheDocument()
@@ -160,5 +201,43 @@ describe('MarkdownBlock', () => {
     renderMarkdownBlock('# Broken note')
 
     expect(screen.getByText('# Broken note')).toBeInTheDocument()
+  })
+
+  it('keeps task list checkboxes read-only without a toggle handler', () => {
+    renderMarkdownBlock('- [ ] Write tests\n- [x] Ship it')
+
+    const checkboxes = screen.getAllByRole('checkbox')
+
+    expect(
+      checkboxes.map((checkbox) => checkbox.hasAttribute('disabled'))
+    ).toEqual([true, true])
+  })
+
+  it('reports the clicked task in document order, skipping raw HTML inputs', () => {
+    const onToggleTask = vi.fn()
+
+    render(
+      <ThemeProvider>
+        <MarkdownBlock
+          content={[
+            '<input type="checkbox"> raw',
+            '',
+            '- [ ] First',
+            '',
+            '  - [x] Nested',
+            '- [ ] Last'
+          ].join('\n')}
+          onToggleTask={onToggleTask}
+        />
+      </ThemeProvider>
+    )
+
+    const tasks = screen.getAllByRole('checkbox', { name: /Mark task as/ })
+
+    fireEvent.click(tasks[1])
+    fireEvent.click(tasks[2])
+
+    expect(tasks.length).toEqual(3)
+    expect(onToggleTask.mock.calls).toEqual([[1], [2]])
   })
 })

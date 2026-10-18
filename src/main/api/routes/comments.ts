@@ -9,6 +9,7 @@ import {
   type AppEnv
 } from '../effect-handler'
 import { createComment } from '../operations/create-comment'
+import { updateComment } from '../operations/update-comment'
 
 export const commentsRoute = new Hono<AppEnv>()
 
@@ -38,6 +39,26 @@ commentsRoute.post(
         reviewCommentId,
         token
       })
+    })
+  )
+)
+
+commentsRoute.patch(
+  '/:commentId',
+  effectHandler((context) =>
+    Effect.gen(function* () {
+      const commentId = yield* requireString(
+        context.req.param('commentId'),
+        'commentId'
+      )
+
+      const raw = yield* jsonBody(context)
+
+      const body = yield* requireString(raw.body, 'body')
+
+      const token = context.get('token')
+
+      return yield* updateComment({ body, commentId, token })
     })
   )
 )

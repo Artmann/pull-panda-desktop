@@ -18,6 +18,7 @@ import {
 import type { ProbeEntry, RelationFlags, SyncResult } from '../schemas/domain'
 import { Database } from '../services/database'
 import { GitHubGraphQL } from '../services/github-graphql'
+import { hasLocalWriteSince, localWriteKeys } from '../shared/local-writes'
 import { deletePullRequestData } from './delete-pull-request'
 
 const hydrationBatchSize = 25
@@ -279,9 +280,19 @@ function transformNode(
   }
 }
 
-const persistPullRequest = (record: NewPullRequest) =>
+// `fetchedAt` is when the request for `record` went out. If the user edited
+// the pull request in the app since, the stored title and body are newer than
+// the fetched ones, so they are kept.
+const persistPullRequest = (record: NewPullRequest, fetchedAt: number) =>
   Effect.gen(function* () {
     const database = yield* Database
+
+    const editedText = hasLocalWriteSince(
+      localWriteKeys.pullRequest(record.id),
+      fetchedAt
+    )
+      ? {}
+      : { body: record.body, bodyHtml: record.bodyHtml, title: record.title }
 
     yield* database.use('persistPullRequest', (db) => {
       db.insert(pullRequests)
@@ -289,10 +300,8 @@ const persistPullRequest = (record: NewPullRequest) =>
         .onConflictDoUpdate({
           target: pullRequests.id,
           set: {
+            ...editedText,
             number: record.number,
-            title: record.title,
-            body: record.body,
-            bodyHtml: record.bodyHtml,
             headRefName: record.headRefName,
             baseRefName: record.baseRefName,
             state: record.state,
@@ -499,6 +508,7 @@ const hydrateAndPersistPullRequests = (
     const errors: string[] = []
     let syncedCount = 0
 
+    const fetchedAt = Date.now()
     const hydrated = yield* hydratePullRequestNodes(ids).pipe(
       Effect.catchTag('SyncHydrationFailedError', (error) => {
         errors.push(`Failed to hydrate PRs: ${String(error.cause)}`)
@@ -515,7 +525,7 @@ const hydrateAndPersistPullRequests = (
         continue
       }
 
-      yield* persistPullRequest(transformNode(node, entry, now))
+      yield* persistPullRequest(transformNode(node, entry, now), fetchedAt)
       syncedCount++
     }
 
