@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.3.0](https://github.com/Artmann/pull-panda-desktop/compare/v1.2.0...v1.3.0) (2026-10-18)
+
+
+### Features
+
+* release the sidebar redesign and merge improvements ([7c22028](https://github.com/Artmann/pull-panda-desktop/commit/7c220285aa6007f5d049ee8ba241425d8c26ad5a))
+
 ## [1.2.0](https://github.com/Artmann/pull-panda-desktop/compare/v1.1.0...v1.2.0) (2026-08-07)
 
 ### Features
