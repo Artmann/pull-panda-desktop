@@ -92,6 +92,10 @@ export function PullRequestPage(): ReactElement {
       className="w-full max-w-wide mx-auto"
       ref={containerRef}
     >
+      {/* React hoists this into <head> and drops it on unmount, so the window
+          title falls back to "Pull Panda" when you leave the pull request. */}
+      <title>{`${pullRequest.repositoryOwner}/${pullRequest.repositoryName}`}</title>
+
       <PullRequestHeader
         onSelectTab={handleTabChange}
         pullRequest={pullRequest}

@@ -7,6 +7,14 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { TitleBar } from './TitleBar'
 
 const mockNavigate = vi.fn()
+const mockMatch: { current: { params: { id: string } } | null } = {
+  current: null
+}
+const mockPullRequests: {
+  id: string
+  repositoryName: string
+  repositoryOwner: string
+}[] = []
 const mockLocation: {
   pathname: string
   search: string
@@ -22,8 +30,17 @@ const mockLocation: {
 }
 
 vi.mock('react-router', () => ({
-  useNavigate: () => mockNavigate,
-  useLocation: () => mockLocation
+  useLocation: () => mockLocation,
+  useMatch: () => mockMatch.current,
+  useNavigate: () => mockNavigate
+}))
+
+vi.mock('@/app/store/hooks', () => ({
+  useAppSelector: (
+    selector: (state: {
+      pullRequests: { items: typeof mockPullRequests }
+    }) => unknown
+  ) => selector({ pullRequests: { items: mockPullRequests } })
 }))
 
 function setHistoryState(state: { idx: number | null } | undefined) {
@@ -41,6 +58,8 @@ describe('TitleBar', () => {
   beforeEach(() => {
     mockNavigate.mockClear()
     mockLocation.pathname = '/'
+    mockMatch.current = null
+    mockPullRequests.length = 0
 
     setHistoryState({ idx: 0 })
 
@@ -71,6 +90,28 @@ describe('TitleBar', () => {
   })
 
   it('renders the title', () => {
+    render(<TitleBar />)
+
+    expect(screen.getByText('Pull Panda')).toBeInTheDocument()
+  })
+
+  it('renders the repository of the open pull request as the title', () => {
+    mockMatch.current = { params: { id: 'pr-1' } }
+    mockPullRequests.push({
+      id: 'pr-1',
+      repositoryName: 'pull-panda',
+      repositoryOwner: 'artmann'
+    })
+
+    render(<TitleBar />)
+
+    expect(screen.getByText('artmann/pull-panda')).toBeInTheDocument()
+    expect(screen.queryByText('Pull Panda')).toEqual(null)
+  })
+
+  it('renders the app name when the open pull request is not loaded', () => {
+    mockMatch.current = { params: { id: 'pr-missing' } }
+
     render(<TitleBar />)
 
     expect(screen.getByText('Pull Panda')).toBeInTheDocument()

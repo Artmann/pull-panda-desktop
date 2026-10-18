@@ -25,20 +25,27 @@ export function PandaMark({
   )
 }
 
-export function Wordmark({ className }: { className?: string }): ReactElement {
+interface WordmarkProps {
+  className?: string
+  title?: string
+}
+
+export function Wordmark({
+  className,
+  title = 'Pull Panda'
+}: WordmarkProps): ReactElement {
   return (
     <div
       className={
-        'flex items-center gap-2 text-foreground select-none ' +
+        'flex min-w-0 items-center text-foreground select-none ' +
         (className ?? '')
       }
     >
-      <PandaMark size={16} />
       <span
-        className="text-xs font-bold tracking-tight"
+        className="truncate text-xs font-bold tracking-tight"
         style={{ letterSpacing: '-0.01em' }}
       >
-        Pull Panda
+        {title}
       </span>
     </div>
   )
