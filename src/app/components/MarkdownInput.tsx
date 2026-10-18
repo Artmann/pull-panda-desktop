@@ -5,6 +5,8 @@ import {
   type ReactElement
 } from 'react'
 
+import { cn } from '@/app/lib/utils'
+
 // Called with the position of a task list checkbox, counted in document
 // order, when the reader clicks it. `null` keeps the checkboxes read-only.
 export type ToggleTaskHandler = (taskIndex: number) => void
@@ -32,6 +34,7 @@ export function MarkdownInput(props: MarkdownInputProps): ReactElement {
     <input
       {...props}
       aria-label={props.checked ? 'Mark task as not done' : 'Mark task as done'}
+      className={cn(props.className, 'task-checkbox-clickable')}
       disabled={false}
       onChange={() => onToggleTask(Number(taskIndex))}
     />
