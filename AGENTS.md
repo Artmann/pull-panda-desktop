@@ -28,6 +28,22 @@ Vite.
   4. On error: rollback the Redux changes and show an error toast with a
      descriptive, helpful error message.
 
+## Commit messages and pull request titles
+
+Releases are automated with release-please, which only counts commits that
+follow [Conventional Commits](https://www.conventionalcommits.org/). Commits
+that don't match are silently ignored, and no release pull request is opened.
+
+- Always write commit messages as `<type>: <description>`, e.g.
+  `feat: support auto-merge and merge queues` or
+  `fix: keep word-diff highlights readable in dark themes`.
+- Use `feat` for user-visible features (minor bump), `fix` for bug fixes (patch
+  bump), and `chore`, `docs`, `refactor`, `test`, `ci`, `build`, `perf` or
+  `style` for everything else. Mark breaking changes with `!` (`feat!: …`) or a
+  `BREAKING CHANGE:` footer.
+- Pull request titles must follow the same format, because squash merges use the
+  title as the commit message on `main`.
+
 ## Commands
 
 - `yarn start` - Start development server
