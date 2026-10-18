@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.4.0](https://github.com/Artmann/pull-panda-desktop/compare/v1.3.0...v1.4.0) (2026-10-18)
+
+
+### Features
+
+* lighten Paper Panda cards and clean up merge status borders ([#99](https://github.com/Artmann/pull-panda-desktop/issues/99)) ([9b989c0](https://github.com/Artmann/pull-panda-desktop/commit/9b989c0e1081fed482fa6287b72dc80361b7257f))
+* make task list checkboxes clickable ([#97](https://github.com/Artmann/pull-panda-desktop/issues/97)) ([a07e1c8](https://github.com/Artmann/pull-panda-desktop/commit/a07e1c829bf730e6f3cad0425348cbd9528ea08f))
+
 ## [1.3.0](https://github.com/Artmann/pull-panda-desktop/compare/v1.2.0...v1.3.0) (2026-10-18)
 
 
