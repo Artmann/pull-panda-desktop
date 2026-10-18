@@ -163,6 +163,24 @@ function renderWithProviders(
 }
 
 describe('PullRequestPage', () => {
+  it('uses the repository owner and name as the window title', async () => {
+    const pullRequest = createMockPullRequest({
+      id: 'pr-1',
+      repositoryName: 'pull-panda',
+      repositoryOwner: 'artmann'
+    })
+
+    const store = createTestStore({
+      pullRequests: [pullRequest]
+    })
+
+    await act(async () => {
+      renderWithProviders('pr-1', { store })
+    })
+
+    expect(document.title).toEqual('artmann/pull-panda')
+  })
+
   describe('tab item counts', () => {
     it('displays item counts for checks and files tabs', async () => {
       const pullRequest = createMockPullRequest({ id: 'pr-1', isAuthor: true })

@@ -7,10 +7,11 @@ import {
   XIcon
 } from 'lucide-react'
 import { type ReactElement, useEffect, useRef } from 'react'
-import { useLocation, useNavigate } from 'react-router'
+import { useLocation, useMatch, useNavigate } from 'react-router'
 
 import { cn } from '@/app/lib/utils'
 import { closeSettings } from '@/app/settings/close-settings'
+import { useAppSelector } from '@/app/store/hooks'
 import { Wordmark } from './PandaMark'
 
 const isMac = navigator.platform.toLowerCase().includes('mac')
@@ -19,6 +20,19 @@ export function TitleBar(): ReactElement {
   const navigate = useNavigate()
   const location = useLocation()
   const maxHistoryIndexRef = useRef(0)
+
+  const pullRequestId = useMatch('/pull-requests/:id')?.params.id
+
+  // An open pull request names its repository; everywhere else it's the app.
+  const title = useAppSelector((state) => {
+    const pullRequest = pullRequestId
+      ? state.pullRequests.items.find((item) => item.id === pullRequestId)
+      : undefined
+
+    return pullRequest
+      ? `${pullRequest.repositoryOwner}/${pullRequest.repositoryName}`
+      : undefined
+  })
 
   const historyIndex = (window.history.state?.idx as number) ?? 0
 
@@ -104,7 +118,7 @@ export function TitleBar(): ReactElement {
         className="flex-1 h-full min-w-90 flex items-center justify-center"
         style={{ WebkitAppRegion: 'drag' } as React.CSSProperties}
       >
-        <Wordmark />
+        <Wordmark title={title} />
       </div>
 
       <div className="h-full flex-1 max-w-50">

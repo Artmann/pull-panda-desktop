@@ -31,3 +31,7 @@ export const Sizes: Story = {
 export const WithWordmark: Story = {
   render: () => <Wordmark />
 }
+
+export const WithCustomTitle: Story = {
+  render: () => <Wordmark title="artmann/pull-panda" />
+}
