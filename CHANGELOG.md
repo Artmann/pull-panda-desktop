@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.5.0](https://github.com/Artmann/pull-panda-desktop/compare/v1.4.0...v1.5.0) (2026-10-18)
+
+
+### Features
+
+* show the repository in the title bar when a pull request is open ([6bd1778](https://github.com/Artmann/pull-panda-desktop/commit/6bd1778f14485e16b18308e0335e069a75872ed3))
+
 ## [1.4.0](https://github.com/Artmann/pull-panda-desktop/compare/v1.3.0...v1.4.0) (2026-10-18)
 
 
