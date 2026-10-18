@@ -4,13 +4,14 @@ import { cn } from '@/app/lib/utils'
 
 import type { StatusCell, StatusSummary, StatusTone } from './status-summary'
 
-// A faint wash of the status colour rather than the solid status border, so
-// the outline reads as a tint of the gray dividers inside, not a second frame.
+// The pale status border at partial strength rather than a wash of the dark
+// status text: a dark tone thinned over the card turns gray and muddy, while
+// the pale tone stays a clean tint that sits close to the gray dividers inside.
 const borderClassNames: Record<StatusTone, string> = {
-  danger: 'border-status-danger-foreground/30',
+  danger: 'border-status-danger-border/70',
   neutral: 'border-border',
-  success: 'border-status-success-foreground/30',
-  warning: 'border-status-warning-foreground/30'
+  success: 'border-status-success-border/70',
+  warning: 'border-status-warning-border/70'
 }
 
 const dotClassNames: Record<StatusTone, string> = {
