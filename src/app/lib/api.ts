@@ -1,9 +1,11 @@
+import { trackEvent } from '@/app/lib/product-analytics'
 import { tracedFetch } from '@/app/lib/telemetry/traced-fetch'
 import type {
   MergeAutomation,
   MergeMethod,
   MergeRequirement
 } from '@/types/merge-requirements'
+import { toCountBucket } from '@/types/product-analytics'
 import type { PullRequest } from '@/types/pull-request'
 import type { Comment } from '@/types/pull-request-details'
 import type {
@@ -166,6 +168,12 @@ export async function getPendingReview(
   return response.json()
 }
 
+const reviewVerdicts = {
+  APPROVE: 'approve',
+  COMMENT: 'comment',
+  REQUEST_CHANGES: 'request_changes'
+} as const
+
 export async function submitReview(
   request: SubmitReviewRequest
 ): Promise<void> {
@@ -180,6 +188,14 @@ export async function submitReview(
     },
     errorMessage: 'Failed to submit review',
     method: 'POST'
+  })
+
+  trackEvent({
+    name: 'review_submitted',
+    properties: {
+      commentCount: toCountBucket(request.comments?.length ?? 0),
+      verdict: reviewVerdicts[request.event]
+    }
   })
 }
 
@@ -220,6 +236,8 @@ export async function resolveReviewThread(
     method: 'POST'
   })
 
+  trackEvent({ name: 'thread_resolved' })
+
   return response.json()
 }
 
@@ -242,6 +260,13 @@ export async function createComment(
     body: request,
     errorMessage: 'Failed to create comment',
     method: 'POST'
+  })
+
+  trackEvent({
+    name: 'comment_posted',
+    properties: {
+      kind: request.reviewCommentId === undefined ? 'conversation' : 'reply'
+    }
   })
 
   return response.json()
@@ -375,6 +400,8 @@ export async function enableAutoMerge(
     }
   )
 
+  trackEvent({ name: 'auto_merge_enabled' })
+
   return response.json()
 }
 
@@ -402,6 +429,8 @@ export async function enqueuePullRequest(
       method: 'POST'
     }
   )
+
+  trackEvent({ name: 'merge_queue_joined' })
 
   return response.json()
 }
@@ -468,6 +497,11 @@ export async function mergePullRequest(
       method: 'POST'
     }
   )
+
+  trackEvent({
+    name: 'pull_request_merged',
+    properties: { method: request.mergeMethod }
+  })
 
   return response.json()
 }
@@ -604,6 +638,8 @@ export async function setConnectedRepo(args: {
     errorMessage: 'Failed to save connected repository',
     method: 'POST'
   })
+
+  trackEvent({ name: 'repo_connected' })
 }
 
 export async function checkoutPullRequestBranch(
@@ -614,6 +650,8 @@ export async function checkoutPullRequestBranch(
     errorMessage: 'Failed to check out branch',
     method: 'POST'
   })
+
+  trackEvent({ name: 'branch_checked_out' })
 
   return response.json()
 }
@@ -634,6 +672,11 @@ export async function requestReviewers(
       method: 'POST'
     }
   )
+
+  trackEvent({
+    name: 'reviewers_requested',
+    properties: { count: toCountBucket(request.logins.length) }
+  })
 
   return response.json()
 }

@@ -1,6 +1,8 @@
 import { useCallback, useMemo, useState } from 'react'
 import { useHotkeys, type Options } from 'react-hotkeys-hook'
 
+import { trackCommand } from '@/app/lib/product-analytics'
+
 import {
   getAdjacentId,
   groupCommands,
@@ -68,6 +70,7 @@ export function useCommandPalette() {
       }
 
       void command.execute(context)
+      trackCommand(command.id, 'palette')
       closePalette()
     },
     [closePalette, context, showParams]
@@ -80,6 +83,7 @@ export function useCommandPalette() {
       }
 
       void activeCommand.execute(context, option.value)
+      trackCommand(activeCommand.id, 'palette')
       closePalette()
     },
     [activeCommand, closePalette, context]

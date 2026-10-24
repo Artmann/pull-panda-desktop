@@ -11,6 +11,7 @@ export const ipcChannels = {
   GetTasks: 'tasks:get',
   NavigateTo: 'navigate:to',
   OpenUrl: 'shell:open-url',
+  ProductAnalyticsTrack: 'product-analytics:track',
   ResourceUpdated: 'resource:updated',
   SyncComplete: 'sync:complete',
   TaskUpdate: 'tasks:update',

@@ -114,6 +114,16 @@ startup and hourly (`src/main/usage-ping.ts`). Users can turn it off in Settings
 → Privacy; the install id and flag live in `usage-settings.json` in `userData`
 (`src/main/usage-settings.ts`).
 
+The same switch gates anonymous product analytics sent to PostHog (EU cloud)
+from the main process (`src/main/product-analytics.ts`), keyed on the same
+install id. Every event is declared in `src/types/product-analytics.ts` and may
+only carry fixed values, counts or `CountBucket` ranges — never names, titles,
+paths, ids or typed text. The renderer sends events through
+`trackEvent`/`trackScreen` in `src/app/lib/product-analytics.ts`, and the main
+process drops anything not in the catalog. Dev builds send nothing unless
+`PULL_PANDA_PRODUCT_ANALYTICS=1` is set; `PULL_PANDA_POSTHOG_HOST` points it at
+a local server for testing. `DO_NOT_TRACK=1` disables it.
+
 - Spans/logs are stored in `pull-panda-telemetry.db` (separate from
   `pull-panda.db`), gated on `!app.isPackaged` so end users are never traced.
 - Instrument new Effect code with `Effect.withSpan('name', { attributes })`;

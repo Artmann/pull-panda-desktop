@@ -12,6 +12,7 @@ import type {
   TraceSummary
 } from './telemetry/types'
 import type { DeviceCodeResponse, GitHubUser } from './types/auth'
+import type { RendererProductEvent } from './types/product-analytics'
 import type { ResourceUpdatedEvent } from './types/ipc-events'
 import type { MonitoringData } from './types/syncer-monitoring'
 import type { Task, TaskUpdateEvent } from './types/task'
@@ -108,7 +109,11 @@ const usageApi = {
     ipcRenderer.invoke(ipcChannels.UsageGetReportingEnabled),
 
   setReportingEnabled: (enabled: boolean): Promise<void> =>
-    ipcRenderer.invoke(ipcChannels.UsageSetReportingEnabled, enabled)
+    ipcRenderer.invoke(ipcChannels.UsageSetReportingEnabled, enabled),
+
+  trackEvent: (event: RendererProductEvent): void => {
+    ipcRenderer.send(ipcChannels.ProductAnalyticsTrack, event)
+  }
 }
 
 const authApi = {

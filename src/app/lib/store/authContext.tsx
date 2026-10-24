@@ -7,6 +7,7 @@ import {
   useMemo,
   type ReactNode
 } from 'react'
+import { trackEvent } from '@/app/lib/product-analytics'
 import type { AuthStatus, GitHubUser } from '@/types/auth'
 
 interface AuthContextValue {
@@ -70,6 +71,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setUser(authenticatedUser)
         setStatus('authenticated')
         setIsNewSignIn(true)
+        trackEvent({ name: 'signed_in' })
         setUserCode(null)
         setVerificationUri(null)
         setDeviceCode(null)
@@ -109,6 +111,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const logout = useCallback(async () => {
     await window.auth.clearToken()
+    trackEvent({ name: 'signed_out' })
     setUser(null)
     setStatus('idle')
     setUserCode(null)
