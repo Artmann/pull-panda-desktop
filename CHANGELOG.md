@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.6.0](https://github.com/Artmann/pull-panda-desktop/compare/v1.5.1...v1.6.0) (2026-10-24)
+
+
+### Features
+
+* add anonymous product analytics with PostHog ([#106](https://github.com/Artmann/pull-panda-desktop/issues/106)) ([0e79d8b](https://github.com/Artmann/pull-panda-desktop/commit/0e79d8b682f6ec8fbd62fb279f487cfd1adb3b5d))
+
 ## [1.5.1](https://github.com/Artmann/pull-panda-desktop/compare/v1.5.0...v1.5.1) (2026-10-24)
 
 
