@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.5.1](https://github.com/Artmann/pull-panda-desktop/compare/v1.5.0...v1.5.1) (2026-10-24)
+
+
+### Miscellaneous Chores
+
+* release 1.5.1 ([da1538c](https://github.com/Artmann/pull-panda-desktop/commit/da1538c360416b99bf0b45432eaee6f6eef70c0b))
+
 ## [1.5.0](https://github.com/Artmann/pull-panda-desktop/compare/v1.4.0...v1.5.0) (2026-10-18)
 
 
