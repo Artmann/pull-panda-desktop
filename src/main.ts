@@ -41,6 +41,12 @@ import {
   sendPullRequestResourceEvents,
   setCachedUserLogin
 } from './main/send-resource-events'
+import {
+  parseRendererProductEvent,
+  shutdownProductAnalytics,
+  startProductAnalytics,
+  trackProductEvent
+} from './main/product-analytics'
 import { setManualSyncHandler } from './main/sync-requests'
 import { taskManager } from './main/task-manager'
 import { startUsagePingScheduler } from './main/usage-ping'
@@ -232,6 +238,14 @@ function setupIpcHandlers(): void {
       setUsageReportingEnabled(enabled)
     }
   )
+
+  ipcMain.on(ipcChannels.ProductAnalyticsTrack, (_event, payload: unknown) => {
+    const event = parseRendererProductEvent(payload)
+
+    if (event) {
+      trackProductEvent(event)
+    }
+  })
 
   // Telemetry handlers are registered directly (not via handleWithSpan) so that
   // observing the telemetry does not itself generate telemetry.
@@ -636,6 +650,7 @@ app.on('ready', async () => {
   await startBackgroundSync(runtime)
 
   startUsagePingScheduler()
+  startProductAnalytics()
 })
 
 let staleSyncInFlight = false
@@ -817,10 +832,12 @@ app.on('before-quit', (event) => {
   const runtime = tryGetAppRuntime()
 
   if (!runtime) {
-    stopApiServer()
-    shutdownTelemetry()
-    closeDatabase()
-    app.quit()
+    void shutdownProductAnalytics().finally(() => {
+      stopApiServer()
+      shutdownTelemetry()
+      closeDatabase()
+      app.quit()
+    })
 
     return
   }
@@ -839,6 +856,7 @@ app.on('before-quit', (event) => {
         console.error('Failed to dispose sync runtime:', error)
       })
     )
+    .then(() => shutdownProductAnalytics())
     .finally(() => {
       stopApiServer()
       shutdownTelemetry()

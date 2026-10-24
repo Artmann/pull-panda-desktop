@@ -18,7 +18,7 @@ export function PrivacySettings(): ReactElement {
   return (
     <SettingsSection title="Privacy">
       <SettingRow
-        description="Sends an anonymous hourly ping with the app version, OS and locale. Never your account, repositories or code."
+        description="Sends anonymous usage statistics: the app version, OS and locale, and which features you use, like submitting a review. Never your account, repositories, code or anything you type."
         label="Share anonymous usage data"
       >
         <Switch

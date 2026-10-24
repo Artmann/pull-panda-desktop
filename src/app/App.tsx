@@ -34,6 +34,7 @@ import { PullRequestPage } from '@/app/routes/PullRequestPage'
 import { SettingsPage } from '@/app/routes/SettingsPage'
 import { SignInPage } from '@/app/routes/SignInPage'
 import { TelemetryPage } from '@/app/routes/TelemetryPage'
+import { trackScreen } from '@/app/lib/product-analytics'
 import { getSavedRoute, saveRoute } from '@/app/lib/routePersistence'
 import {
   initializeRendererTelemetry,
@@ -97,6 +98,7 @@ function AppContent(): ReactElement {
     startSpan(`navigate ${location.pathname}`, {
       attributes: { path: location.pathname }
     }).end()
+    trackScreen(location.pathname)
   }, [location.pathname])
 
   // Listen for navigation requests from the main process

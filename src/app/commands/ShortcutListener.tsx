@@ -1,5 +1,7 @@
 import { useHotkeys } from 'react-hotkeys-hook'
 
+import { trackCommand } from '@/app/lib/product-analytics'
+
 import { openCommandPaletteWithCommand } from './CommandPalette'
 import { useCommandContext } from './context'
 import { commandRegistry } from './registry'
@@ -60,6 +62,7 @@ export function ShortcutListener(): null {
         openCommandPaletteWithCommand(command)
       } else {
         command.execute(context)
+        trackCommand(command.id, 'shortcut')
       }
     },
     {
