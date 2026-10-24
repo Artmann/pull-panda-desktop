@@ -1,0 +1,12 @@
+{
+  "version": 1,
+  "skills": {
+    "before-and-after": {
+      "source": "vercel-labs/before-and-after",
+      "ref": "main",
+      "sourceType": "github",
+      "skillPath": "skill/SKILL.md",
+      "computedHash": "a6b9ff4eba3d153a3039894b62c12f6db889568551889d3d2201dafa4717ea4c"
+    }
+  }
+}
