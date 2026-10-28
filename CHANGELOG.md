@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.7.0](https://github.com/Artmann/pull-panda-desktop/compare/v1.6.0...v1.7.0) (2026-10-28)
+
+
+### Features
+
+* update the app in place from GitHub releases ([#108](https://github.com/Artmann/pull-panda-desktop/issues/108)) ([2728361](https://github.com/Artmann/pull-panda-desktop/commit/2728361ae0cca599d50b5bf1b7d26f3804ffc090))
+
 ## [1.6.0](https://github.com/Artmann/pull-panda-desktop/compare/v1.5.1...v1.6.0) (2026-10-24)
 
 
