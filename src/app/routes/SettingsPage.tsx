@@ -4,6 +4,7 @@ import { AccountSettings } from '@/app/settings/account'
 import { AppearanceSettings } from '@/app/settings/appearance'
 import { CloseSettingsButton } from '@/app/settings/close-settings'
 import { PrivacySettings } from '@/app/settings/privacy'
+import { UpdateSettings } from '@/app/settings/updates'
 
 export function SettingsPage(): ReactElement {
   return (
@@ -18,6 +19,7 @@ export function SettingsPage(): ReactElement {
         <AccountSettings />
         <AppearanceSettings />
         <PrivacySettings />
+        <UpdateSettings />
       </div>
     </div>
   )

@@ -198,6 +198,13 @@ describe('App', () => {
         })
       })
 
+      vi.stubGlobal('updater', {
+        getStatus: vi.fn().mockResolvedValue(null),
+        onStatusChanged: vi.fn().mockReturnValue(() => {
+          // Unsubscribe mock
+        })
+      })
+
       vi.stubGlobal('auth', {
         getToken: vi.fn().mockResolvedValue('test-token'),
         getUser: vi.fn().mockResolvedValue({

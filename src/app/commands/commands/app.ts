@@ -1,7 +1,8 @@
-import { RefreshCw, Search } from 'lucide-react'
+import { CircleArrowUp, RefreshCw, Search } from 'lucide-react'
 import { toast } from 'sonner'
 
 import { triggerSync } from '@/app/lib/api'
+import { checkForUpdates } from '@/app/lib/updates'
 
 import { commandRegistry } from '../registry'
 
@@ -36,5 +37,16 @@ commandRegistry.register({
         error instanceof Error ? error.message : 'Failed to trigger sync'
       toast.error(message)
     }
+  }
+})
+
+commandRegistry.register({
+  id: 'app.check-for-updates',
+  label: 'Check for Updates',
+  icon: CircleArrowUp,
+  group: 'app',
+  isAvailable: () => true,
+  execute: () => {
+    checkForUpdates()
   }
 })

@@ -1,6 +1,7 @@
 import { contextBridge, ipcRenderer } from 'electron'
 
 import { ipcChannels } from './lib/ipc/channels'
+import type { UpdateStatus } from './lib/updates'
 import type { BootstrapData } from './main/bootstrap'
 import type {
   LogRecord,
@@ -116,6 +117,27 @@ const usageApi = {
   }
 }
 
+const updaterApi = {
+  check: (): Promise<UpdateStatus | null> =>
+    ipcRenderer.invoke(ipcChannels.UpdaterCheck),
+
+  getStatus: (): Promise<UpdateStatus | null> =>
+    ipcRenderer.invoke(ipcChannels.UpdaterGetStatus),
+
+  install: (): Promise<UpdateStatus> =>
+    ipcRenderer.invoke(ipcChannels.UpdaterInstall),
+
+  onStatusChanged: (callback: (status: UpdateStatus) => void): (() => void) => {
+    const handler = (_event: unknown, status: UpdateStatus) => callback(status)
+
+    ipcRenderer.on(ipcChannels.UpdaterStatusChanged, handler)
+
+    return () => {
+      ipcRenderer.removeListener(ipcChannels.UpdaterStatusChanged, handler)
+    }
+  }
+}
+
 const authApi = {
   requestDeviceCode: (): Promise<DeviceCodeResponse> =>
     ipcRenderer.invoke(ipcChannels.AuthRequestDeviceCode),
@@ -142,6 +164,7 @@ const authApi = {
 contextBridge.exposeInMainWorld('electron', electronApi)
 contextBridge.exposeInMainWorld('auth', authApi)
 contextBridge.exposeInMainWorld('telemetry', telemetryApi)
+contextBridge.exposeInMainWorld('updater', updaterApi)
 contextBridge.exposeInMainWorld('usage', usageApi)
 
 // TypeScript declarations for the exposed API
@@ -150,6 +173,7 @@ declare global {
     auth: typeof authApi
     electron: typeof electronApi
     telemetry: typeof telemetryApi
+    updater: typeof updaterApi
     usage: typeof usageApi
   }
 }
