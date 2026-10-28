@@ -49,6 +49,13 @@ import {
 } from './main/product-analytics'
 import { setManualSyncHandler } from './main/sync-requests'
 import { taskManager } from './main/task-manager'
+import {
+  checkForUpdates,
+  getUpdateStatus,
+  installUpdate,
+  startUpdates,
+  stopUpdates
+} from './main/updates/service'
 import { startUsagePingScheduler } from './main/usage-ping'
 import {
   isUsageReportingEnabled,
@@ -193,6 +200,18 @@ function setupIpcHandlers(): void {
     await shell.openExternal(url)
 
     return { success: true }
+  })
+
+  handleWithSpan(ipcChannels.UpdaterCheck, () => {
+    return checkForUpdates()
+  })
+
+  handleWithSpan(ipcChannels.UpdaterGetStatus, () => {
+    return getUpdateStatus()
+  })
+
+  handleWithSpan(ipcChannels.UpdaterInstall, () => {
+    return installUpdate()
   })
 
   handleWithSpan(ipcChannels.AuthGetUser, async () => {
@@ -641,6 +660,12 @@ app.on('ready', async () => {
   const userLogin = await getUserLogin()
   pendingBootstrap = bootstrap(userLogin)
 
+  // Started before the window so the renderer's first status request has an
+  // updater to ask.
+  startUpdates((status) => {
+    mainWindow?.webContents.send(ipcChannels.UpdaterStatusChanged, status)
+  })
+
   createWindow()
 
   if (mainWindow) {
@@ -825,9 +850,13 @@ app.on('before-quit', (event) => {
     return
   }
 
+  // `autoUpdater.quitAndInstall()` also lands here. Its installer runs once
+  // this process exits, so the shutdown below finishing with `app.quit()` is
+  // all an update needs.
   event.preventDefault()
   isShuttingDown = true
   listSyncScheduler.stop()
+  stopUpdates()
 
   const runtime = tryGetAppRuntime()
 

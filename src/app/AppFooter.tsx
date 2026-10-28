@@ -1,6 +1,7 @@
 import { ReactElement, useMemo } from 'react'
 import { Loader2 } from 'lucide-react'
 
+import { UpdateIndicator } from './components/UpdateIndicator'
 import { useCommandContext } from './commands/context'
 import { useAuth } from './lib/store/authContext'
 import { useTasks } from './lib/store/tasksContext'
@@ -61,6 +62,8 @@ export function AppFooter(): ReactElement {
       </div>
 
       <div className="flex-1" />
+
+      <UpdateIndicator />
 
       {pullRequest ? (
         <PullRequestFooterActions pullRequest={pullRequest} />

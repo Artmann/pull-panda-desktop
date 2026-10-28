@@ -36,6 +36,7 @@ import { SignInPage } from '@/app/routes/SignInPage'
 import { TelemetryPage } from '@/app/routes/TelemetryPage'
 import { trackScreen } from '@/app/lib/product-analytics'
 import { getSavedRoute, saveRoute } from '@/app/lib/routePersistence'
+import { showUpdateReadyToast } from '@/app/lib/updates'
 import {
   initializeRendererTelemetry,
   startSpan
@@ -118,6 +119,18 @@ function AppContent(): ReactElement {
 
     return unsubscribe
   }, [dispatch, store])
+
+  // The footer only shows a small indicator, so say it once, louder, when an
+  // update finishes downloading.
+  useEffect(() => {
+    const unsubscribe = window.updater.onStatusChanged((status) => {
+      if (status.state === 'ready') {
+        showUpdateReadyToast(status)
+      }
+    })
+
+    return unsubscribe
+  }, [])
 
   // SyncComplete just signals the sync is done (no data fetching needed).
   useEffect(() => {
