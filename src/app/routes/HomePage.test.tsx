@@ -129,11 +129,12 @@ describe('HomePage', () => {
   })
 
   describe('summary', () => {
-    it('always points at the sidebar', () => {
+    it('always shows the keyboard hints', () => {
       renderWithProviders(<HomePage />)
 
+      expect(screen.getByText(/to search everything/)).toBeInTheDocument()
       expect(
-        screen.getByText('Pick a pull request from the sidebar to get started.')
+        screen.getByText(/to open the top pull request/)
       ).toBeInTheDocument()
     })
 
@@ -163,13 +164,14 @@ describe('HomePage', () => {
       renderWithProviders(<HomePage />, { store })
 
       expect(
-        screen.getByText(
-          '2 pull requests are waiting for your review and 1 of yours is open.'
-        )
+        screen.getByRole('group', { name: '2 reviews waiting on you' })
+      ).toBeInTheDocument()
+      expect(
+        screen.getByRole('group', { name: '1 pull request of yours open' })
       ).toBeInTheDocument()
     })
 
-    it('names the noun when only your own pull requests are open', () => {
+    it('shows both cards when only your own pull requests are open', () => {
       const store = createTestStore([
         createMockPullRequest({ id: 'pr-1', isAuthor: true }),
         createMockPullRequest({ id: 'pr-2', isAuthor: true })
@@ -178,11 +180,14 @@ describe('HomePage', () => {
       renderWithProviders(<HomePage />, { store })
 
       expect(
-        screen.getByText('2 of your pull requests are open.')
+        screen.getByRole('group', { name: '0 reviews waiting on you' })
+      ).toBeInTheDocument()
+      expect(
+        screen.getByRole('group', { name: '2 pull requests of yours open' })
       ).toBeInTheDocument()
     })
 
-    it('says only that a single pull request needs your review', () => {
+    it('uses the singular when a single review is waiting on you', () => {
       const store = createTestStore([
         createMockPullRequest({ id: 'pr-1', isAuthor: false, isReviewer: true })
       ])
@@ -190,19 +195,7 @@ describe('HomePage', () => {
       renderWithProviders(<HomePage />, { store })
 
       expect(
-        screen.getByText('1 pull request is waiting for your review.')
-      ).toBeInTheDocument()
-    })
-
-    it('keeps the singular reading when one of your own is open', () => {
-      const store = createTestStore([
-        createMockPullRequest({ id: 'pr-1', isAuthor: true })
-      ])
-
-      renderWithProviders(<HomePage />, { store })
-
-      expect(
-        screen.getByText('1 of your pull requests is open.')
+        screen.getByRole('group', { name: '1 review waiting on you' })
       ).toBeInTheDocument()
     })
 
