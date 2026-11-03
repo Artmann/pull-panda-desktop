@@ -1,7 +1,10 @@
 import dayjs from 'dayjs'
 import { type ReactElement } from 'react'
 
+import { Kbd, shortcutLabel } from '@/app/components/Kbd'
+import { PandaMark } from '@/app/components/PandaMark'
 import { useAuth } from '@/app/lib/store/authContext'
+import { cn } from '@/app/lib/utils'
 import { useAppSelector } from '@/app/store/hooks'
 
 export function HomePage(): ReactElement {
@@ -23,57 +26,160 @@ export function HomePage(): ReactElement {
   ).length
 
   return (
-    <div className="h-full w-full flex items-center justify-center p-8">
-      <div className="flex max-w-md flex-col items-center gap-3 text-center">
-        <div className="text-2xs font-semibold uppercase tracking-wider text-primary">
-          {dayjs().format('dddd, MMMM D')}
+    <div className="relative h-full w-full overflow-hidden">
+      <Glow />
+
+      <div className="relative flex h-full w-full items-center justify-center p-8">
+        <div className="flex max-w-lg flex-col items-center text-center">
+          <div className="relative mb-6 motion-safe:animate-in motion-safe:fade-in motion-safe:zoom-in-75 motion-safe:duration-500">
+            <div className="absolute inset-0 rounded-full bg-primary/30 blur-xl" />
+            <div className="relative flex size-24 items-center justify-center rounded-full border border-border bg-card shadow-lg">
+              <PandaMark
+                className="motion-safe:animate-float"
+                size={52}
+              />
+            </div>
+          </div>
+
+          <div className="mb-3 rounded-full border border-primary/30 bg-primary/10 px-3 py-1 text-2xs font-semibold uppercase tracking-wider text-primary motion-safe:animate-in motion-safe:fade-in motion-safe:slide-in-from-bottom-2 motion-safe:delay-100 motion-safe:duration-500 motion-safe:fill-mode-both">
+            {dayjs().format('dddd, MMMM D')}
+          </div>
+
+          <Greetings name={displayName} />
+
+          <p className="mt-2 text-sm text-muted-foreground motion-safe:animate-in motion-safe:fade-in motion-safe:delay-300 motion-safe:duration-500 motion-safe:fill-mode-both">
+            {pickQuip()}
+          </p>
+
+          <div className="mt-8 w-full motion-safe:animate-in motion-safe:fade-in motion-safe:slide-in-from-bottom-4 motion-safe:delay-500 motion-safe:duration-500 motion-safe:fill-mode-both">
+            <Summary
+              initialized={initialized}
+              waitingOnYou={waitingOnYou}
+              yours={yours}
+            />
+          </div>
+
+          <div className="mt-8 flex flex-wrap items-center justify-center gap-x-5 gap-y-2 text-xs text-muted-foreground motion-safe:animate-in motion-safe:fade-in motion-safe:delay-700 motion-safe:duration-500 motion-safe:fill-mode-both">
+            <span className="flex items-center gap-1.5">
+              <Kbd>{shortcutLabel('K')}</Kbd> to search everything
+            </span>
+            <span className="flex items-center gap-1.5">
+              <Kbd>{shortcutLabel('1')}</Kbd> to open the top pull request
+            </span>
+          </div>
         </div>
-
-        <Greetings name={displayName} />
-
-        <p className="text-muted-foreground text-sm">
-          {initialized
-            ? summarize(waitingOnYou, yours)
-            : 'Loading your pull requests…'}
-        </p>
-
-        <p className="text-muted-foreground/70 text-xs">
-          Pick a pull request from the sidebar to get started.
-        </p>
       </div>
     </div>
   )
 }
 
-function summarize(waitingOnYou: number, yours: number): string {
+function Glow(): ReactElement {
+  return (
+    <div
+      aria-hidden
+      className="pointer-events-none absolute inset-0"
+    >
+      <div className="absolute -top-1/4 left-1/4 size-[28rem] rounded-full bg-primary/20 blur-3xl motion-safe:animate-drift" />
+      <div className="absolute top-1/3 -right-24 size-[24rem] rounded-full bg-chart-1/15 blur-3xl motion-safe:animate-drift motion-safe:[animation-delay:-6s]" />
+      <div className="absolute -bottom-1/4 -left-16 size-[26rem] rounded-full bg-chart-4/15 blur-3xl motion-safe:animate-drift motion-safe:[animation-delay:-12s]" />
+    </div>
+  )
+}
+
+interface SummaryProps {
+  initialized: boolean
+  waitingOnYou: number
+  yours: number
+}
+
+function Summary({
+  initialized,
+  waitingOnYou,
+  yours
+}: SummaryProps): ReactElement {
+  if (!initialized) {
+    return (
+      <p className="text-sm text-muted-foreground">
+        Loading your pull requests…
+      </p>
+    )
+  }
+
   if (waitingOnYou === 0 && yours === 0) {
-    return 'Nothing open right now. Enjoy the quiet.'
-  }
-
-  const parts: string[] = []
-
-  if (waitingOnYou > 0) {
-    parts.push(
-      waitingOnYou === 1
-        ? '1 pull request is waiting for your review'
-        : `${waitingOnYou.toString()} pull requests are waiting for your review`
+    return (
+      <p className="text-sm text-muted-foreground">
+        Nothing open right now. Enjoy the quiet.
+      </p>
     )
   }
 
-  if (yours > 0) {
-    // 'yours' only has something to point at once the clause above has named
-    // pull requests. On its own this clause has to spell the noun out, or it
-    // reads as a fragment: '8 of your own are open.'
-    const noun = parts.length > 0 ? 'yours' : 'your pull requests'
+  return (
+    <div className="grid grid-cols-2 gap-3">
+      <StatCard
+        className={
+          waitingOnYou > 0
+            ? 'border-status-warning-border bg-status-warning text-status-warning-foreground'
+            : 'border-status-success-border bg-status-success text-status-success-foreground'
+        }
+        count={waitingOnYou}
+        label={
+          waitingOnYou === 1
+            ? 'Review waiting on you'
+            : 'Reviews waiting on you'
+        }
+      />
+      <StatCard
+        className="border-status-merged-border bg-status-merged text-status-merged-foreground"
+        count={yours}
+        label={
+          yours === 1
+            ? 'Pull request of yours open'
+            : 'Pull requests of yours open'
+        }
+      />
+    </div>
+  )
+}
 
-    parts.push(
-      yours === 1
-        ? `1 of ${noun} is open`
-        : `${yours.toString()} of ${noun} are open`
-    )
-  }
+interface StatCardProps {
+  className: string
+  count: number
+  label: string
+}
 
-  return `${parts.join(' and ')}.`
+function StatCard({ className, count, label }: StatCardProps): ReactElement {
+  return (
+    <div
+      aria-label={`${count.toString()} ${label.toLowerCase()}`}
+      className={cn(
+        'flex flex-col items-center gap-1 rounded-xl border px-4 py-4 shadow-sm',
+        className
+      )}
+      role="group"
+    >
+      <span className="text-4xl font-bold tabular-nums tracking-tight">
+        {count}
+      </span>
+      <span className="text-xs font-medium">{label}</span>
+    </div>
+  )
+}
+
+const quips = [
+  'Fresh bamboo, fresh diffs.',
+  'May your builds be green and your conflicts few.',
+  'A small pull request is a happy pull request.',
+  'Every great merge starts with a single review.',
+  'Pandas spend half the day eating. You can spare ten minutes for a review.',
+  'Ship it, then have a snack.',
+  'Nap, review, merge, repeat.'
+]
+
+function pickQuip(): string {
+  // One quip per day, so it doesn't change every time you come back here.
+  const day = dayjs().startOf('day').diff(dayjs(0).startOf('day'), 'day')
+
+  return quips[day % quips.length] ?? quips[0]
 }
 
 const greetings: Record<string, string> = {
@@ -88,8 +194,11 @@ function Greetings({ name }: { name: string }): ReactElement {
   const greeting = greetings[timeOfDay] ?? greetings.morning
 
   return (
-    <h1 className="text-2xl font-semibold text-foreground">
-      {greeting}, {name}
+    <h1 className="text-4xl font-bold tracking-tight text-foreground motion-safe:animate-in motion-safe:fade-in motion-safe:slide-in-from-bottom-2 motion-safe:delay-200 motion-safe:duration-500 motion-safe:fill-mode-both">
+      {greeting},{' '}
+      <span className="bg-gradient-to-r from-primary via-chart-1 to-chart-2 bg-clip-text text-transparent">
+        {name}
+      </span>
     </h1>
   )
 }

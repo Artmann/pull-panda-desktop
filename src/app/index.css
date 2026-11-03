@@ -228,6 +228,33 @@
     'IBM Plex Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   --font-sans--font-feature-settings: 'ss01';
   --font-mono: 'IBM Plex Mono', ui-monospace, 'SF Mono', Consolas, monospace;
+
+  /* Welcome screen motion: the panda bobs and the background glows drift.
+   * Both are slow enough to sit in the corner of the eye. */
+  --animate-drift: drift 18s ease-in-out infinite alternate;
+  --animate-float: float 4s ease-in-out infinite;
+
+  @keyframes drift {
+    0% {
+      transform: translate(0, 0) scale(1);
+    }
+    50% {
+      transform: translate(6%, -4%) scale(1.08);
+    }
+    100% {
+      transform: translate(-4%, 5%) scale(0.95);
+    }
+  }
+
+  @keyframes float {
+    0%,
+    100% {
+      transform: translateY(0) rotate(-3deg);
+    }
+    50% {
+      transform: translateY(-8px) rotate(3deg);
+    }
+  }
 }
 
 html,
