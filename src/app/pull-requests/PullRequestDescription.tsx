@@ -118,15 +118,21 @@ export function PullRequestDescription({
       {pullRequest.body ? (
         <div>
           {/*
-            Floated so the first lines of the description wrap around it
-            instead of running underneath.
+            Floated so the first line of the description wraps around it
+            instead of running underneath. Icon-only and borderless, so it
+            takes a small corner rather than a column of the text.
           */}
           {canEdit && (
-            <EditButton
-              className="float-right mb-2 ml-4"
-              label="Edit"
+            <Button
+              aria-label="Edit description"
+              className="float-right -mt-0.5 mb-1 ml-3 text-muted-foreground hover:text-foreground"
               onClick={handleStartEdit}
-            />
+              size="icon-xs"
+              title="Edit description"
+              variant="ghost"
+            >
+              <PencilIcon className="size-3.5" />
+            </Button>
           )}
 
           <MarkdownBlock
@@ -151,17 +157,14 @@ export function PullRequestDescription({
 }
 
 function EditButton({
-  className,
   label,
   onClick
 }: {
-  className?: string
   label: string
   onClick: () => void
 }): ReactElement {
   return (
     <Button
-      className={className}
       onClick={onClick}
       size="xs"
       variant="outline"

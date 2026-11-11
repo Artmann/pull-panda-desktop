@@ -9,6 +9,7 @@ import {
   defaultDarkThemeValue,
   defaultLightThemeValue,
   getThemeByValue,
+  getThemeForMode,
   type ThemePalette
 } from './themes'
 
@@ -103,6 +104,29 @@ function componentFiles(directory: string): string[] {
     return entry.name.endsWith('.tsx') ? [entryPath] : []
   })
 }
+
+describe('getThemeForMode', () => {
+  it('returns the stored theme when it is made for the mode', () => {
+    expect([
+      getThemeForMode('catppuccin-latte', 'light').label,
+      getThemeForMode('catppuccin-mocha', 'dark').label
+    ]).toEqual(['Catppuccin Latte', 'Catppuccin Mocha'])
+  })
+
+  it('falls back to the default when the theme is made for the other mode', () => {
+    expect([
+      getThemeForMode('catppuccin-mocha', 'light').label,
+      getThemeForMode('catppuccin-latte', 'dark').label
+    ]).toEqual(['Paper Panda', 'Midnight Panda'])
+  })
+
+  it('falls back to the default for a value that names no theme', () => {
+    expect([
+      getThemeForMode('gone', 'light').label,
+      getThemeForMode('gone', 'dark').label
+    ]).toEqual(['Paper Panda', 'Midnight Panda'])
+  })
+})
 
 describe('the signature palettes', () => {
   // Going through the public API pins the defaults as well, so renaming a

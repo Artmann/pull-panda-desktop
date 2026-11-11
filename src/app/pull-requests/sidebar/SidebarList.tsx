@@ -12,7 +12,7 @@ import { useModifierHeld } from './use-modifier-held'
 
 // Two lines of text plus padding, and the 4px gap below each row. Rows are a
 // fixed height in practice; `measureElement` corrects anything that is not.
-const estimatedRowHeight = 64
+const estimatedRowHeight = 70
 
 function initialViewportHeight(): number {
   return typeof window === 'undefined' ? 800 : window.innerHeight
@@ -98,7 +98,7 @@ export function SidebarList({
 
       <div
         ref={scrollRef}
-        className="min-h-0 flex-1 overflow-y-auto pr-2 pb-4"
+        className="min-h-0 flex-1 overflow-y-auto px-2 pb-4"
       >
         {rows.length === 0 ? (
           <SidebarEmptyState

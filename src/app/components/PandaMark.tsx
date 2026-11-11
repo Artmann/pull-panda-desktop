@@ -42,7 +42,7 @@ export function Wordmark({
       }
     >
       <span
-        className="truncate text-xs font-bold tracking-tight"
+        className="truncate text-xs font-semibold tracking-tight"
         style={{ letterSpacing: '-0.01em' }}
       >
         {title}

@@ -180,7 +180,7 @@ function PageShell({ children }: { children: ReactElement | ReactElement[] }) {
           </Button>
         </Link>
 
-        <h1 className="text-xl font-bold">Telemetry</h1>
+        <h1 className="text-xl font-semibold">Telemetry</h1>
         <p className="text-muted-foreground text-xs">
           Local OTEL-style traces and logs. Nothing leaves this machine.
         </p>

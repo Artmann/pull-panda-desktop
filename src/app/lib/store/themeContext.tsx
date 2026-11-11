@@ -23,6 +23,7 @@ import {
   defaultDarkThemeValue,
   defaultLightThemeValue,
   getThemeByValue,
+  getThemeForMode,
   type AppTheme
 } from '@/app/lib/themes'
 
@@ -50,7 +51,7 @@ function ThemeProviderInner({ children }: { children: ReactNode }) {
   )
 
   const activeValue = mode === 'dark' ? darkThemeValue : lightThemeValue
-  const appTheme = getThemeByValue(activeValue)
+  const appTheme = getThemeForMode(activeValue, mode)
 
   const setAppTheme = useCallback(
     (value: string) => {
