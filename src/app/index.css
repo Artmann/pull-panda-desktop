@@ -200,6 +200,9 @@
    */
   --container-content: 48rem;
   --container-wide: 60rem;
+  /* A sidebar row: a 16px icon column and the text beside it, via
+   * `grid-cols-icon-row`. */
+  --grid-template-columns-icon-row: 1rem 1fr;
   /* Type scale. Two body sizes plus one step below them; everything above
    * uses the Tailwind defaults. No arbitrary `text-[Npx]`.
    *

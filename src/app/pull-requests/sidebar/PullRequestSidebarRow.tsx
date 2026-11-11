@@ -74,7 +74,7 @@ export function PullRequestSidebarRow({
           // column starts on the same 12px line as the list caption above.
           // Both lines are a fixed 20px tall, so a row with a status pill is
           // the same height as one without.
-          'grid w-full grid-cols-[1rem_1fr] gap-x-2 gap-y-1.5 text-left',
+          'grid w-full grid-cols-icon-row gap-x-2 gap-y-1.5 text-left',
           'rounded-md px-1 py-2.5',
           'cursor-pointer transition-colors',
           'focus-visible:ring-sidebar-ring outline-none focus-visible:ring-2',
