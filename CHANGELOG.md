@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.8.0](https://github.com/Artmann/pull-panda-desktop/compare/v1.7.0...v1.8.0) (2026-11-11)
+
+
+### Features
+
+* calmer welcome screen and a tidier look across the app ([#112](https://github.com/Artmann/pull-panda-desktop/issues/112)) ([3f3fb44](https://github.com/Artmann/pull-panda-desktop/commit/3f3fb44338d7ed0708c458d223094b8b8ba5364e))
+* give the welcome screen more color and personality ([#110](https://github.com/Artmann/pull-panda-desktop/issues/110)) ([314dced](https://github.com/Artmann/pull-panda-desktop/commit/314dcedeac7c57b466cd28bfe676a39cb2bb38ef))
+
 ## [1.7.0](https://github.com/Artmann/pull-panda-desktop/compare/v1.6.0...v1.7.0) (2026-10-28)
 
 
