@@ -41,7 +41,7 @@ describe('PullRequestDescription', () => {
   it('shows an Edit button that opens the editor with the current text', () => {
     renderDescription()
 
-    fireEvent.click(screen.getByRole('button', { name: 'Edit' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Edit description' }))
 
     expect(screen.getByRole('textbox', { name: 'Description' })).toHaveProperty(
       'value',
@@ -52,7 +52,7 @@ describe('PullRequestDescription', () => {
   it('saves only when Save is pressed, not when the editor loses focus', () => {
     const store = renderDescription()
 
-    fireEvent.click(screen.getByRole('button', { name: 'Edit' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Edit description' }))
 
     const editor = screen.getByRole('textbox', { name: 'Description' })
 
@@ -70,7 +70,7 @@ describe('PullRequestDescription', () => {
   it('throws the change away on Cancel', () => {
     renderDescription()
 
-    fireEvent.click(screen.getByRole('button', { name: 'Edit' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Edit description' }))
     fireEvent.change(screen.getByRole('textbox', { name: 'Description' }), {
       target: { value: 'New text' }
     })

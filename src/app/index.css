@@ -26,7 +26,7 @@
   --card-foreground: oklch(0.22 0.01 95);
   --popover: oklch(0.997 0.003 95);
   --popover-foreground: oklch(0.22 0.01 95);
-  --primary: oklch(0.52 0.19 262);
+  --primary: oklch(0.48 0.17 262);
   --primary-foreground: oklch(0.985 0.003 95);
   --secondary: oklch(0.928 0.008 95);
   --secondary-foreground: oklch(0.22 0.01 95);
@@ -36,10 +36,10 @@
   --accent-foreground: oklch(0.22 0.01 95);
   --destructive: oklch(0.55 0.16 25);
   --destructive-foreground: oklch(0.985 0.003 95);
-  --border: oklch(0.935 0.005 95);
-  --input: oklch(0.892 0.007 95);
+  --border: oklch(0.9 0.006 95);
+  --input: oklch(0.86 0.008 95);
   --titlebar: oklch(0.945 0.006 95);
-  --ring: oklch(0.52 0.19 262);
+  --ring: oklch(0.48 0.17 262);
   --chart-1: oklch(0.53 0.2 25);
   --chart-2: oklch(0.65 0.15 55);
   --chart-3: oklch(0.75 0.15 95);
@@ -48,12 +48,12 @@
   --radius: 0.5rem;
   --sidebar: oklch(0.945 0.006 95);
   --sidebar-foreground: oklch(0.36 0.012 95);
-  --sidebar-primary: oklch(0.52 0.19 262);
+  --sidebar-primary: oklch(0.48 0.17 262);
   --sidebar-primary-foreground: oklch(0.985 0.003 95);
   --sidebar-accent: oklch(0.905 0.009 95);
   --sidebar-accent-foreground: oklch(0.32 0.012 95);
-  --sidebar-border: oklch(0.935 0.005 95);
-  --sidebar-ring: oklch(0.52 0.19 262);
+  --sidebar-border: oklch(0.9 0.006 95);
+  --sidebar-ring: oklch(0.48 0.17 262);
 
   --status-danger: oklch(0.92 0.036 25);
   --status-danger-border: oklch(0.86 0.07 25);
@@ -64,9 +64,9 @@
   --status-neutral: oklch(0.92 0.012 95);
   --status-neutral-border: oklch(0.86 0.02 95);
   --status-neutral-foreground: oklch(0.45 0.02 95);
-  --status-success: oklch(0.92 0.085 160);
-  --status-success-border: oklch(0.86 0.13 160);
-  --status-success-foreground: oklch(0.47 0.1 160);
+  --status-success: oklch(0.94 0.05 160);
+  --status-success-border: oklch(0.87 0.08 160);
+  --status-success-foreground: oklch(0.42 0.08 160);
   --status-warning: oklch(0.92 0.065 80);
   --status-warning-border: oklch(0.86 0.105 80);
   --status-warning-foreground: oklch(0.42 0.082 80);
@@ -80,8 +80,8 @@
   --card-foreground: oklch(0.95 0.005 258);
   --popover: oklch(0.27 0.01 258);
   --popover-foreground: oklch(0.95 0.005 258);
-  --primary: oklch(0.56 0.21 262);
-  --primary-foreground: oklch(0.985 0.004 258);
+  --primary: oklch(0.72 0.14 262);
+  --primary-foreground: oklch(0.175 0.014 258);
   --secondary: oklch(0.3 0.009 258);
   --secondary-foreground: oklch(0.95 0.005 258);
   --muted: oklch(0.3 0.009 258);
@@ -101,8 +101,8 @@
   --chart-5: oklch(0.77 0.112 255);
   --sidebar: oklch(0.175 0.014 258);
   --sidebar-foreground: oklch(0.95 0.005 258);
-  --sidebar-primary: oklch(0.56 0.21 262);
-  --sidebar-primary-foreground: oklch(0.985 0.004 258);
+  --sidebar-primary: oklch(0.72 0.14 262);
+  --sidebar-primary-foreground: oklch(0.175 0.014 258);
   --sidebar-accent: oklch(0.34 0.009 258);
   --sidebar-accent-foreground: oklch(0.95 0.005 258);
   --sidebar-border: oklch(0.32 0.008 258);
@@ -228,33 +228,6 @@
     'IBM Plex Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   --font-sans--font-feature-settings: 'ss01';
   --font-mono: 'IBM Plex Mono', ui-monospace, 'SF Mono', Consolas, monospace;
-
-  /* Welcome screen motion: the panda bobs and the background glows drift.
-   * Both are slow enough to sit in the corner of the eye. */
-  --animate-drift: drift 18s ease-in-out infinite alternate;
-  --animate-float: float 4s ease-in-out infinite;
-
-  @keyframes drift {
-    0% {
-      transform: translate(0, 0) scale(1);
-    }
-    50% {
-      transform: translate(6%, -4%) scale(1.08);
-    }
-    100% {
-      transform: translate(-4%, 5%) scale(0.95);
-    }
-  }
-
-  @keyframes float {
-    0%,
-    100% {
-      transform: translateY(0) rotate(-3deg);
-    }
-    50% {
-      transform: translateY(-8px) rotate(3deg);
-    }
-  }
 }
 
 html,

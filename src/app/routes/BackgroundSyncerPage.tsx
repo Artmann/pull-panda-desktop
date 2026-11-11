@@ -70,7 +70,7 @@ export function BackgroundSyncerPage(): ReactElement {
         </Link>
 
         <div className="flex items-center justify-between">
-          <h1 className="text-2xl font-bold">Background Syncer Monitor</h1>
+          <h1 className="text-2xl font-semibold">Background Syncer Monitor</h1>
 
           <Link to="/telemetry">
             <Button

@@ -16,7 +16,7 @@ export const SubmittedComment = memo(function SubmittedComment({
   const authorAvatar = comment.userAvatarUrl ?? undefined
 
   return (
-    <div className="border-l-3 border-l-blue-500 border-border border-y bg-background px-3 py-4 font-normal font-sans">
+    <div className="border-l-3 border-l-primary border-border border-y bg-background px-3 py-4 font-normal font-sans">
       <div className="flex gap-3">
         <Avatar className="size-6 shrink-0">
           <AvatarImage

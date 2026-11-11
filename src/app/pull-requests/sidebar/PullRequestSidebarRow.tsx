@@ -21,13 +21,13 @@ import { cn } from '@/app/lib/utils'
 import type { SidebarRow } from './sidebar-data'
 import { SidebarRowContextMenu } from './SidebarRowContextMenu'
 
-/** The stripe down the left edge: attention outranks unread. */
-function accentBorder(needsAttention: boolean, unread: boolean): string {
+/** The dot under the check icon: attention outranks unread. */
+function markerColor(needsAttention: boolean, unread: boolean): string | null {
   if (needsAttention) {
-    return 'border-l-status-danger-foreground'
+    return 'bg-status-danger-foreground'
   }
 
-  return unread ? 'border-l-primary' : 'border-l-transparent'
+  return unread ? 'bg-primary' : null
 }
 
 function titleColor(isSelected: boolean, unread: boolean): string {
@@ -63,19 +63,21 @@ export function PullRequestSidebarRow({
   // worked out from its absence elsewhere.
   const hasStatus = getPullRequestStatus(pullRequest) !== 'Pending'
 
+  const marker = markerColor(needsAttention, unread)
+
   return (
     <SidebarRowContextMenu pullRequest={pullRequest}>
       <button
         aria-current={isSelected ? 'true' : undefined}
         className={cn(
-          // The stripe is inside the row box, so the padding is 3px short of
-          // the 12px the list caption above uses; the icon column then starts
-          // on the same vertical line as the caption.
-          'grid w-full grid-cols-[1rem_1fr] gap-x-2 gap-y-2 text-left',
-          'rounded-r-md border-l-3 py-2.5 pr-3 pl-2.25',
+          // The list has 8px of side padding and the row 4px, so the icon
+          // column starts on the same 12px line as the list caption above.
+          // Both lines are a fixed 20px tall, so a row with a status pill is
+          // the same height as one without.
+          'grid w-full grid-cols-[1rem_1fr] gap-x-2 gap-y-1.5 text-left',
+          'rounded-md px-1 py-2.5',
           'cursor-pointer transition-colors',
           'focus-visible:ring-sidebar-ring outline-none focus-visible:ring-2',
-          accentBorder(needsAttention, unread),
           isSelected ? 'bg-sidebar-accent' : 'hover:bg-sidebar-accent/50'
         )}
         onClick={() => onSelect(pullRequest.id)}
@@ -87,7 +89,7 @@ export function PullRequestSidebarRow({
         */}
         <Tooltip>
           <TooltipTrigger asChild>
-            <span className="flex items-center justify-center">
+            <span className="flex h-5 items-center justify-center">
               <CheckIcon
                 aria-label={getCheckRollupLabel(checkRollup)}
                 className={cn(
@@ -101,10 +103,10 @@ export function PullRequestSidebarRow({
           <TooltipContent>{getCheckRollupLabel(checkRollup)}</TooltipContent>
         </Tooltip>
 
-        <div className="flex min-w-0 items-center gap-2">
+        <div className="flex min-w-0 items-start gap-2">
           <span
             className={cn(
-              'min-w-0 truncate text-sm leading-tight',
+              'line-clamp-2 min-w-0 text-sm leading-5',
               unread || isSelected ? 'font-semibold' : 'font-medium',
               titleColor(isSelected, unread)
             )}
@@ -118,7 +120,17 @@ export function PullRequestSidebarRow({
           />
         </div>
 
-        <div className="col-start-2 flex min-w-0 items-center gap-2">
+        <span className="flex h-5 items-center justify-center">
+          {marker !== null && (
+            <span
+              aria-label={needsAttention ? 'Needs attention' : 'Unread'}
+              className={cn('size-1.5 rounded-full', marker)}
+              role="img"
+            />
+          )}
+        </span>
+
+        <div className="flex h-5 min-w-0 items-center gap-2">
           <Avatar className="size-4 shrink-0">
             <AvatarImage
               alt={pullRequest.authorLogin ?? 'Author'}
@@ -174,7 +186,7 @@ function RowTrailing({
     <span className="relative ml-auto shrink-0">
       <span
         className={cn(
-          'text-muted-foreground block text-xs tabular-nums whitespace-nowrap',
+          'text-muted-foreground block text-xs leading-5 tabular-nums whitespace-nowrap',
           hotkey !== undefined && 'invisible'
         )}
       >

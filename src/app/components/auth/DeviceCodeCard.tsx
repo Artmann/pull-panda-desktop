@@ -45,7 +45,7 @@ export function DeviceCodeCard({
       </CardHeader>
       <CardContent className="space-y-6">
         <div className="flex items-center gap-2">
-          <code className="rounded-lg bg-muted px-6 py-4 text-3xl font-bold tracking-widest">
+          <code className="rounded-lg bg-muted px-6 py-4 text-3xl font-semibold tracking-widest">
             {userCode}
           </code>
           <Button

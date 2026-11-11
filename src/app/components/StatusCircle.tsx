@@ -53,7 +53,7 @@ export const StatusCircle = memo(function StatusCircle({
       )}
 
       {state === 'warning' && (
-        <span className="text-2xs leading-none font-bold">!</span>
+        <span className="text-2xs leading-none font-semibold">!</span>
       )}
     </span>
   )

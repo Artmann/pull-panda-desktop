@@ -126,13 +126,18 @@ function CheckRow({ check }: { check: Check }): ReactElement {
         )}
       </div>
 
-      <div className="shrink-0 font-mono text-xs text-muted-foreground tabular-nums">
-        <CheckDuration check={check} />
-      </div>
+      {state === 'neutral' ? (
+        // A skipped check never ran, so it has no duration worth showing.
+        <div className="shrink-0 text-xs text-muted-foreground">Skipped</div>
+      ) : (
+        <div className="shrink-0 font-mono text-xs text-muted-foreground tabular-nums">
+          <CheckDuration check={check} />
+        </div>
+      )}
 
       {detailsUrl && (
         <button
-          className="flex shrink-0 cursor-pointer items-center gap-0.5 text-xs text-primary hover:underline"
+          className="flex shrink-0 cursor-pointer items-center gap-0.5 text-xs text-muted-foreground transition-colors hover:text-primary focus-visible:text-primary"
           onClick={() => {
             window.electron.openUrl(detailsUrl)
           }}

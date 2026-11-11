@@ -2,7 +2,6 @@ import dayjs from 'dayjs'
 import { type ReactElement } from 'react'
 
 import { Kbd, shortcutLabel } from '@/app/components/Kbd'
-import { PandaMark } from '@/app/components/PandaMark'
 import { useAuth } from '@/app/lib/store/authContext'
 import { cn } from '@/app/lib/utils'
 import { useAppSelector } from '@/app/store/hooks'
@@ -26,62 +25,33 @@ export function HomePage(): ReactElement {
   ).length
 
   return (
-    <div className="relative h-full w-full overflow-hidden">
-      <Glow />
+    <div className="flex h-full w-full items-center justify-center p-8">
+      <div className="flex w-full max-w-sm flex-col motion-safe:animate-in motion-safe:fade-in motion-safe:slide-in-from-bottom-1 motion-safe:duration-300">
+        <p className="text-2xs font-semibold uppercase tracking-wider text-muted-foreground">
+          {dayjs().format('dddd, MMMM D')}
+        </p>
 
-      <div className="relative flex h-full w-full items-center justify-center p-8">
-        <div className="flex max-w-lg flex-col items-center text-center">
-          <div className="relative mb-6 motion-safe:animate-in motion-safe:fade-in motion-safe:zoom-in-75 motion-safe:duration-500">
-            <div className="absolute inset-0 rounded-full bg-primary/30 blur-xl" />
-            <div className="relative flex size-24 items-center justify-center rounded-full border border-border bg-card shadow-lg">
-              <PandaMark
-                className="motion-safe:animate-float"
-                size={52}
-              />
-            </div>
-          </div>
+        <Greetings name={displayName} />
 
-          <div className="mb-3 rounded-full border border-primary/30 bg-primary/10 px-3 py-1 text-2xs font-semibold uppercase tracking-wider text-primary motion-safe:animate-in motion-safe:fade-in motion-safe:slide-in-from-bottom-2 motion-safe:delay-100 motion-safe:duration-500 motion-safe:fill-mode-both">
-            {dayjs().format('dddd, MMMM D')}
-          </div>
+        <p className="mt-1 text-sm text-muted-foreground">{pickQuip()}</p>
 
-          <Greetings name={displayName} />
+        <div className="mt-6">
+          <Summary
+            initialized={initialized}
+            waitingOnYou={waitingOnYou}
+            yours={yours}
+          />
+        </div>
 
-          <p className="mt-2 text-sm text-muted-foreground motion-safe:animate-in motion-safe:fade-in motion-safe:delay-300 motion-safe:duration-500 motion-safe:fill-mode-both">
-            {pickQuip()}
-          </p>
-
-          <div className="mt-8 w-full motion-safe:animate-in motion-safe:fade-in motion-safe:slide-in-from-bottom-4 motion-safe:delay-500 motion-safe:duration-500 motion-safe:fill-mode-both">
-            <Summary
-              initialized={initialized}
-              waitingOnYou={waitingOnYou}
-              yours={yours}
-            />
-          </div>
-
-          <div className="mt-8 flex flex-wrap items-center justify-center gap-x-5 gap-y-2 text-xs text-muted-foreground motion-safe:animate-in motion-safe:fade-in motion-safe:delay-700 motion-safe:duration-500 motion-safe:fill-mode-both">
-            <span className="flex items-center gap-1.5">
-              <Kbd>{shortcutLabel('K')}</Kbd> to search everything
-            </span>
-            <span className="flex items-center gap-1.5">
-              <Kbd>{shortcutLabel('1')}</Kbd> to open the top pull request
-            </span>
-          </div>
+        <div className="mt-6 flex flex-wrap items-center gap-x-5 gap-y-2 text-xs text-muted-foreground">
+          <span className="flex items-center gap-1.5">
+            <Kbd>{shortcutLabel('K')}</Kbd> to search everything
+          </span>
+          <span className="flex items-center gap-1.5">
+            <Kbd>{shortcutLabel('1')}</Kbd> to open the top pull request
+          </span>
         </div>
       </div>
-    </div>
-  )
-}
-
-function Glow(): ReactElement {
-  return (
-    <div
-      aria-hidden
-      className="pointer-events-none absolute inset-0"
-    >
-      <div className="absolute -top-1/4 left-1/4 size-[28rem] rounded-full bg-primary/20 blur-3xl motion-safe:animate-drift" />
-      <div className="absolute top-1/3 -right-24 size-[24rem] rounded-full bg-chart-1/15 blur-3xl motion-safe:animate-drift motion-safe:[animation-delay:-6s]" />
-      <div className="absolute -bottom-1/4 -left-16 size-[26rem] rounded-full bg-chart-4/15 blur-3xl motion-safe:animate-drift motion-safe:[animation-delay:-12s]" />
     </div>
   )
 }
@@ -114,13 +84,8 @@ function Summary({
   }
 
   return (
-    <div className="grid grid-cols-2 gap-3">
-      <StatCard
-        className={
-          waitingOnYou > 0
-            ? 'border-status-warning-border bg-status-warning text-status-warning-foreground'
-            : 'border-status-success-border bg-status-success text-status-success-foreground'
-        }
+    <div className="divide-y divide-border rounded-lg border border-border bg-card">
+      <StatRow
         count={waitingOnYou}
         label={
           waitingOnYou === 1
@@ -128,8 +93,7 @@ function Summary({
             : 'Reviews waiting on you'
         }
       />
-      <StatCard
-        className="border-status-merged-border bg-status-merged text-status-merged-foreground"
+      <StatRow
         count={yours}
         label={
           yours === 1
@@ -141,26 +105,27 @@ function Summary({
   )
 }
 
-interface StatCardProps {
-  className: string
+interface StatRowProps {
   count: number
   label: string
 }
 
-function StatCard({ className, count, label }: StatCardProps): ReactElement {
+function StatRow({ count, label }: StatRowProps): ReactElement {
   return (
     <div
       aria-label={`${count.toString()} ${label.toLowerCase()}`}
-      className={cn(
-        'flex flex-col items-center gap-1 rounded-xl border px-4 py-4 shadow-sm',
-        className
-      )}
+      className="flex items-center justify-between gap-4 px-4 py-3"
       role="group"
     >
-      <span className="text-4xl font-bold tabular-nums tracking-tight">
+      <span className="text-sm text-foreground">{label}</span>
+      <span
+        className={cn(
+          'text-sm font-semibold tabular-nums',
+          count > 0 ? 'text-foreground' : 'text-muted-foreground'
+        )}
+      >
         {count}
       </span>
-      <span className="text-xs font-medium">{label}</span>
     </div>
   )
 }
@@ -194,11 +159,8 @@ function Greetings({ name }: { name: string }): ReactElement {
   const greeting = greetings[timeOfDay] ?? greetings.morning
 
   return (
-    <h1 className="text-4xl font-bold tracking-tight text-foreground motion-safe:animate-in motion-safe:fade-in motion-safe:slide-in-from-bottom-2 motion-safe:delay-200 motion-safe:duration-500 motion-safe:fill-mode-both">
-      {greeting},{' '}
-      <span className="bg-gradient-to-r from-primary via-chart-1 to-chart-2 bg-clip-text text-transparent">
-        {name}
-      </span>
+    <h1 className="mt-2 text-2xl font-semibold tracking-tight text-foreground">
+      {greeting}, {name}
     </h1>
   )
 }

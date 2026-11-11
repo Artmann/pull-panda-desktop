@@ -178,7 +178,7 @@ const pullPandaPaperPalette: ThemePalette = {
   accent: 'oklch(0.905 0.009 95)',
   accentForeground: 'oklch(0.22 0.01 95)',
   background: 'oklch(0.968 0.004 95)',
-  border: 'oklch(0.935 0.005 95)',
+  border: 'oklch(0.9 0.006 95)',
   card: 'oklch(0.997 0.003 95)',
   cardForeground: 'oklch(0.22 0.01 95)',
   chart1: 'oklch(0.53 0.2 25)',
@@ -189,24 +189,24 @@ const pullPandaPaperPalette: ThemePalette = {
   destructive: 'oklch(0.55 0.16 25)',
   destructiveForeground: 'oklch(0.985 0.003 95)',
   foreground: 'oklch(0.22 0.01 95)',
-  input: 'oklch(0.892 0.007 95)',
+  input: 'oklch(0.86 0.008 95)',
   muted: 'oklch(0.928 0.008 95)',
   mutedForeground: 'oklch(0.45 0.008 95)',
   popover: 'oklch(0.997 0.003 95)',
   popoverForeground: 'oklch(0.22 0.01 95)',
-  primary: 'oklch(0.52 0.19 262)',
+  primary: 'oklch(0.48 0.17 262)',
   primaryForeground: 'oklch(0.985 0.003 95)',
-  ring: 'oklch(0.52 0.19 262)',
+  ring: 'oklch(0.48 0.17 262)',
   secondary: 'oklch(0.928 0.008 95)',
   secondaryForeground: 'oklch(0.22 0.01 95)',
   sidebar: 'oklch(0.945 0.006 95)',
   sidebarAccent: 'oklch(0.905 0.009 95)',
   sidebarAccentForeground: 'oklch(0.32 0.012 95)',
-  sidebarBorder: 'oklch(0.935 0.005 95)',
+  sidebarBorder: 'oklch(0.9 0.006 95)',
   sidebarForeground: 'oklch(0.36 0.012 95)',
-  sidebarPrimary: 'oklch(0.52 0.19 262)',
+  sidebarPrimary: 'oklch(0.48 0.17 262)',
   sidebarPrimaryForeground: 'oklch(0.985 0.003 95)',
-  sidebarRing: 'oklch(0.52 0.19 262)',
+  sidebarRing: 'oklch(0.48 0.17 262)',
   statusDanger: 'oklch(0.92 0.036 25)',
   statusDangerBorder: 'oklch(0.86 0.07 25)',
   statusDangerForeground: 'oklch(0.4 0.14 25)',
@@ -216,9 +216,9 @@ const pullPandaPaperPalette: ThemePalette = {
   statusNeutral: 'oklch(0.92 0.012 95)',
   statusNeutralBorder: 'oklch(0.86 0.02 95)',
   statusNeutralForeground: 'oklch(0.45 0.02 95)',
-  statusSuccess: 'oklch(0.92 0.085 160)',
-  statusSuccessBorder: 'oklch(0.86 0.13 160)',
-  statusSuccessForeground: 'oklch(0.47 0.1 160)',
+  statusSuccess: 'oklch(0.94 0.05 160)',
+  statusSuccessBorder: 'oklch(0.87 0.08 160)',
+  statusSuccessForeground: 'oklch(0.42 0.08 160)',
   statusWarning: 'oklch(0.92 0.065 80)',
   statusWarningBorder: 'oklch(0.86 0.105 80)',
   statusWarningForeground: 'oklch(0.42 0.082 80)',
@@ -245,8 +245,8 @@ const pullPandaMidnightPalette: ThemePalette = {
   mutedForeground: 'oklch(0.68 0.012 258)',
   popover: 'oklch(0.27 0.01 258)',
   popoverForeground: 'oklch(0.95 0.005 258)',
-  primary: 'oklch(0.56 0.21 262)',
-  primaryForeground: 'oklch(0.985 0.004 258)',
+  primary: 'oklch(0.72 0.14 262)',
+  primaryForeground: 'oklch(0.175 0.014 258)',
   ring: 'oklch(0.7 0.15 262)',
   secondary: 'oklch(0.3 0.009 258)',
   secondaryForeground: 'oklch(0.95 0.005 258)',
@@ -255,8 +255,8 @@ const pullPandaMidnightPalette: ThemePalette = {
   sidebarAccentForeground: 'oklch(0.95 0.005 258)',
   sidebarBorder: 'oklch(0.32 0.008 258)',
   sidebarForeground: 'oklch(0.95 0.005 258)',
-  sidebarPrimary: 'oklch(0.56 0.21 262)',
-  sidebarPrimaryForeground: 'oklch(0.985 0.004 258)',
+  sidebarPrimary: 'oklch(0.72 0.14 262)',
+  sidebarPrimaryForeground: 'oklch(0.175 0.014 258)',
   sidebarRing: 'oklch(0.7 0.15 262)',
   statusDanger: 'oklch(0.315 0.05 25)',
   statusDangerBorder: 'oklch(0.45 0.07 25)',
@@ -1051,6 +1051,28 @@ export function getThemesForMode(mode: 'dark' | 'light'): AppTheme[] {
 
 export function getThemeByValue(value: string): AppTheme {
   return appThemes.find((t) => t.value === value) ?? appThemes[0]
+}
+
+/**
+ * The theme to show for a stored value in the given mode. A stored value can
+ * name a theme made for the other mode (older settings were saved without a
+ * mode), and such a theme only carries a stand-in palette for this one. Those
+ * fall back to the default theme of the mode.
+ */
+export function getThemeForMode(
+  value: string,
+  mode: 'dark' | 'light'
+): AppTheme {
+  const theme = getThemesForMode(mode).find(
+    (candidate) => candidate.value === value
+  )
+
+  return (
+    theme ??
+    getThemeByValue(
+      mode === 'dark' ? defaultDarkThemeValue : defaultLightThemeValue
+    )
+  )
 }
 
 // All unique Shiki theme names used across all app themes.

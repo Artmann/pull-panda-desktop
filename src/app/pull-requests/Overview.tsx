@@ -56,8 +56,8 @@ export const Overview = memo(function Overview({
 
       <LinkedIssues issues={issues} />
 
-      <section className="mt-4 border-t border-border pt-6">
-        <h2 className="mb-4 text-xs font-semibold tracking-wider text-muted-foreground uppercase">
+      <section className="border-t border-border pt-6">
+        <h2 className="mb-4 text-base leading-tight font-semibold text-foreground">
           Activity
         </h2>
 
